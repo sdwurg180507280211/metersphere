@@ -6,46 +6,21 @@ import io.metersphere.base.mapper.ext.BaseProjectMapper;
 import io.metersphere.commons.constants.*;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.user.SessionUser;
-import io.metersphere.commons.utils.*;
+import io.metersphere.commons.utils.CodingUtil;
+import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.dto.GroupResourceDTO;
 import io.metersphere.dto.UserDTO;
 import io.metersphere.dto.UserGroupPermissionDTO;
-import io.metersphere.dto.dingtalk.DingTalkCreator;
-import io.metersphere.dto.dingtalk.DingTalkInfoDTO;
-import io.metersphere.dto.dingtalk.DingTalkTokenParamDTO;
-import io.metersphere.dto.lark.LarkBaseParamDTO;
-import io.metersphere.dto.lark.LarkCreator;
-import io.metersphere.dto.lark.LarkInfoDTO;
-import io.metersphere.dto.lark.LarkTokenParamDTO;
-import io.metersphere.dto.wecom.WeComCreator;
-import io.metersphere.dto.wecom.WeComInfoDTO;
-import io.metersphere.gateway.client.QrCodeClient;
 import io.metersphere.i18n.Translator;
-import io.metersphere.log.service.OperatingLogService;
-import io.metersphere.log.vo.DetailColumn;
-import io.metersphere.log.vo.OperatingLogDetails;
 import io.metersphere.request.LoginRequest;
-import io.metersphere.request.member.UserRequest;
+import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.ibatis.session.ExecutorType;
-import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.apache.shiro.SecurityUtils;
-import org.apache.shiro.authc.*;
-import org.apache.shiro.authz.UnauthorizedException;
-import org.jetbrains.annotations.NotNull;
-import org.mybatis.spring.SqlSessionUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.WebSession;
-
-import jakarta.annotation.Resource;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -66,24 +41,27 @@ public class UserLoginService {
     @Resource
     private BaseProjectMapper baseProjectMapper;
 
+    public Optional<SessionUser> loginLocal(LoginRequest request, WebSession session, Locale locale) {
+        if (locale != null) {
+            LocaleContextHolder.setLocale(locale, true);
+        }
+        UserDTO userDTO = loginLocalMode(request.getUsername(), request.getPassword());
+        autoSwitch(session, userDTO);
+        SessionUser sessionUser = SessionUser.fromUser(userDTO, session.getId());
+        session.getAttributes().put(SessionConstants.ATTR_USER, sessionUser);
+        return Optional.of(sessionUser);
+    }
+
     public Optional<SessionUser> login(LoginRequest request, WebSession session, Locale locale) {
         UserDTO userDTO;
         if (locale != null) {
             LocaleContextHolder.setLocale(locale, true);
         }
-        switch (request.getAuthenticate()) {
-            case "OIDC":
-            case "CAS":
-            case "OAuth2":
-                userDTO = loginSsoMode(request.getUsername(), request.getAuthenticate());
-                break;
-            case "LDAP":
-                userDTO = loginLdapMode(request.getUsername());
-                break;
-            default:
-                userDTO = loginLocalMode(request.getUsername(), request.getPassword());
-                break;
-        }
+        userDTO = switch (request.getAuthenticate()) {
+            case "OIDC", "CAS", "OAuth2" -> loginSsoMode(request.getUsername(), request.getAuthenticate());
+            case "LDAP" -> loginLdapMode(request.getUsername());
+            default -> loginLocalMode(request.getUsername(), request.getPassword());
+        };
         autoSwitch(session, userDTO);
         SessionUser sessionUser = SessionUser.fromUser(userDTO, session.getId());
         session.getAttributes().put(SessionConstants.ATTR_USER, sessionUser);

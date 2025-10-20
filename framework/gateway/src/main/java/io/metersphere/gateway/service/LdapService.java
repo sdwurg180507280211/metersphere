@@ -3,7 +3,6 @@ package io.metersphere.gateway.service;
 
 import io.metersphere.base.domain.User;
 import io.metersphere.commons.constants.ParamConstants;
-import io.metersphere.commons.constants.SessionConstants;
 import io.metersphere.commons.constants.UserSource;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.user.SessionUser;
@@ -13,6 +12,7 @@ import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.i18n.Translator;
 import io.metersphere.ldap.service.SSLLdapContextSource;
 import io.metersphere.request.LoginRequest;
+import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.ldap.AuthenticationException;
@@ -30,7 +30,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.WebSession;
 
-import jakarta.annotation.Resource;
 import javax.naming.directory.DirContext;
 import java.util.*;
 

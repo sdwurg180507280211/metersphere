@@ -17,7 +17,6 @@ import io.metersphere.gateway.service.BaseDisplayService;
 import io.metersphere.gateway.service.SystemParameterService;
 import io.metersphere.gateway.service.UserLoginService;
 import io.metersphere.request.LoginRequest;
-import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -84,7 +83,7 @@ public class LoginController {
     @PostMapping(value = "/signin")
     @MsAuditLog(module = OperLogModule.AUTH_TITLE, type = OperLogConstants.LOGIN, title = "登录")
     public Mono<ResultHolder> login(@RequestBody LoginRequest request, WebSession session, Locale locale) {
-        return Mono.just(userLoginService.login(request, session, locale))
+        return Mono.just(userLoginService.loginLocal(request, session, locale))
                 .subscribeOn(Schedulers.boundedElastic())
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not found user info or invalid password")))
                 .map(ResultHolder::success)
