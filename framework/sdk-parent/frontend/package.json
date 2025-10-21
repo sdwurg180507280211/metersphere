@@ -50,7 +50,7 @@
     "core-js": "^3.19.1",
     "eslint": "^7.32.0",
     "eslint-plugin-vue": "^7.20.0",
-    "jspdf": "^3.0.2",
+    "jspdf": "^2.3.1",
     "mockjs": "^1.1.0",
     "sass": "^1.43.4",
     "sass-loader": "^10.1.1",
