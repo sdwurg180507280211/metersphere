@@ -20,7 +20,12 @@ module.exports = defineConfig({
     allowedHosts: "all",
     webSocketServer: "sockjs",
     proxy: {
-      ["^((?!/login)(?!/document))"]: {
+      "/workflow": {
+        target: "http://localhost:8008",
+        ws: false,
+        changeOrigin: true,
+      },
+      ["^((?!/login)(?!/document)(?!/workflow))"]: {
         target: "http://localhost:8001",
         ws: false,
       },
