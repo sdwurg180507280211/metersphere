@@ -42,6 +42,9 @@ export default {
         if (child.meta.xpack && !hasLicense()) {
           continue;
         }
+        if (child.meta && child.meta.menu === false) {
+          continue;
+        }
         if (child.meta[group] === true) {
           let menu = {index: Setting.path + "/" + child.path};
           menu.title = child.meta.title;
@@ -62,7 +65,8 @@ export default {
       systemPermission: [
         'SYSTEM_USER:READ', 'SYSTEM_ORGANIZATION:READ', 'SYSTEM_GROUP:READ',
         'SYSTEM_WORKSPACE:READ', 'SYSTEM_TEST_POOL:READ',
-        'SYSTEM_SETTING:READ', 'SYSTEM_QUOTA:READ', 'SYSTEM_AUTH:READ'
+        'SYSTEM_SETTING:READ', 'SYSTEM_QUOTA:READ', 'SYSTEM_AUTH:READ',
+        'SYSTEM_WORKFLOW:READ'
       ],
       workspacePermission: ['WORKSPACE_USER:READ', 'WORKSPACE_SERVICE:READ',
         'WORKSPACE_PROJECT_MANAGER:READ', 'WORKSPACE_PROJECT_ENVIRONMENT:READ',
