@@ -107,6 +107,7 @@
         <module>system-setting</module>
         <module>test-track</module>
         <module>workstation</module>
+        <module>workflow-service</module>
     </modules>
 
     <dependencies>
