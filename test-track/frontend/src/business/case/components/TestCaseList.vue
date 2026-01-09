@@ -142,6 +142,16 @@
         </ms-table-column>
 
         <ms-table-column
+          v-if="item.id === 'demandName'"
+          prop="demandName"
+          :field="item"
+          :fields-width="fieldsWidth"
+          :label="$t('test_track.case.demand_num')"
+          min-width="160"
+          :show-overflow-tooltip="true"
+        />
+
+        <ms-table-column
           :label="$t('test_track.case.case_desc')"
           prop="desc"
           :field="item"
@@ -553,6 +563,12 @@ export default {
           permissions: ["PROJECT_TRACK_CASE:READ"],
         },
         {
+          tip: this.$t("commons.edit"),
+          isTextButton: true,
+          exec: this.handleDirectEdit,
+          permissions: ["PROJECT_TRACK_CASE:READ+EDIT"],
+        },
+        {
           tip: this.$t("commons.copy"),
           isTextButton: true,
           exec: this.handleCopy,
@@ -588,6 +604,7 @@ export default {
       fields: getCustomTableHeader("TRACK_TEST_CASE"),
       fieldsWidth: getCustomTableWidth("TRACK_TEST_CASE"),
       memberMap: new Map(),
+      associatedSystemMap: new Map(),
       rowCase: {},
       rowCaseResult: { loading: false },
       userFilter: [],
@@ -725,6 +742,28 @@ export default {
     },
   },
   methods: {
+    getEditRedirectQuery(mode) {
+      // 我在做：统一组装跳转编辑页需要的 query 参数（mode + redirect）
+      // 目的是：确保任意入口都能“严格回到来源页”，并支持 view/edit 两种显式模式
+      // 如果不这样做,就无法实现：各入口一致的返回策略（容易漏传/传错 redirect 导致返回不准）
+      return {
+        mode: mode || 'view',
+        redirect: this.$route.fullPath,
+        projectId: this.routeProjectId,
+      };
+    },
+    routerToCaseEdit(caseId, mode) {
+      // 我在做：列表页同页打开用例编辑路由
+      // 目的是：替换原先 openCaseEdit 的新标签行为，满足“同页 + redirect 返回”的交互目标
+      // 如果不这样做,就无法实现：mode/redirect 在编辑页生效（因为新标签/外部打开无法继承当前上下文）
+      if (!caseId) {
+        return;
+      }
+      this.$router.push({
+        path: '/track/case/edit/' + caseId,
+        query: this.getEditRedirectQuery(mode),
+      });
+    },
     async getTemplateField() {
       this.loading = true;
       // 防止第一次渲染版本字段展示顺序错乱
@@ -736,7 +775,16 @@ export default {
         });
       });
       let p2 = getTestTemplateForList();
-      Promise.all([p1, p2]).then((data) => {
+      let p3 = this.$get('/associatedSystem/list/all').then((response) => {
+        if (response.data) {
+          response.data.forEach((item) => {
+            this.associatedSystemMap.set(item.id, item.name);
+          });
+        }
+      }).catch(() => {
+        // 忽略错误，系统可能没有所属系统数据
+      });
+      Promise.all([p1, p2, p3]).then((data) => {
         this.loading = false;
         let template = data[1];
         this.testCaseTemplate = template;
@@ -847,6 +895,17 @@ export default {
           value === "Trash"
             ? this.$t("test_track.plan.plan_status_trash")
             : value;
+      } else if (field.name === "所属系统") {
+        // 处理所属系统字段，将ID转换为名称
+        if (value) {
+          if (Array.isArray(value)) {
+            // 多选所属系统
+            return value.map(id => this.associatedSystemMap.get(id) || id).join(', ');
+          } else {
+            // 单选所属系统
+            return this.associatedSystemMap.get(value) || value;
+          }
+        }
       }
       return value ? value : defaultVal;
     },
@@ -1005,15 +1064,18 @@ export default {
     toggleAdvanceSearch() {
       this.$refs.advanceSearch.toggle();
     },
-    reloadTable() {
+    resetHeader() {
       this.$refs.table.resetHeader();
     },
     handleEdit(testCase) {
-      openCaseEdit({ caseId: testCase.id }, this);
+      this.routerToCaseEdit(testCase.id, 'view');
+    },
+    handleDirectEdit(testCase) {
+      this.routerToCaseEdit(testCase.id, 'edit');
     },
     getCase(id) {
       this.$refs.testCasePreview.open();
-      this.rowCaseResult.loading = true;
+      this.rowCaseResult = { loading: true };
 
       getTestCaseStep(id).then((response) => {
         this.rowCaseResult.loading = false;
