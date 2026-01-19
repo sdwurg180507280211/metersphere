@@ -83,11 +83,10 @@ h1 {
 }
 
 .ms-system-header {
-  width: 400px;
-  position: fixed;
-  right: 0;
-  z-index: 2000;
-  top: 6px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 0;
 }
 </style>
 

@@ -35,6 +35,8 @@ public class TestCaseExcelData {
     private String stepResult;
     @ExcelIgnore
     private String stepModel;
+    @ExcelIgnore
+    private String demand;
 
     /**
      * 责任人
@@ -74,9 +76,20 @@ public class TestCaseExcelData {
 
         while (iterator.hasNext()) {
             List<String> head = iterator.next();
+            // 移除ID列(当不需要时)
             if (StringUtils.equals(head.get(0), TestCaseImportFiled.ID.getFiledLangMap().get(lang)) && !needNum) {
                 iterator.remove();
-                break;
+                continue;
+            }
+            // 移除责任人列
+            if (StringUtils.equals(head.get(0), TestCaseImportFiled.MAINTAINER.getFiledLangMap().get(lang))) {
+                iterator.remove();
+                continue;
+            }
+            // 移除用例状态列
+            if (StringUtils.equals(head.get(0), TestCaseImportFiled.STATUS.getFiledLangMap().get(lang))) {
+                iterator.remove();
+                continue;
             }
         }
 

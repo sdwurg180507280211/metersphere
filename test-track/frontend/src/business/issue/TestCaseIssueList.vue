@@ -13,7 +13,13 @@
       @refresh="initTableData"
       ref="table"
     >
-      <ms-table-column :label="$t('commons.id')" prop="num"> </ms-table-column>
+      <ms-table-column :label="$t('commons.id')" prop="num">
+        <template v-slot:default="scope">
+          <el-link @click="openTestCaseDetail(scope.row)" type="primary">
+            <span>{{ scope.row.num }}</span>
+          </el-link>
+        </template>
+      </ms-table-column>
 
       <ms-table-column :label="$t('commons.name')" prop="name">
       </ms-table-column>
@@ -56,6 +62,8 @@ import PriorityTableItem from "@/business/common/tableItems/planview/PriorityTab
 import TypeTableItem from "@/business/common/tableItems/planview/TypeTableItem";
 import TestCaseRelateList from "@/business/issue/TestCaseRelateList";
 import {getTestCaseIssueList} from "@/api/testCase";
+import {getUUID} from "metersphere-frontend/src/utils";
+import { getCurrentProjectID } from "metersphere-frontend/src/utils/token";
 
 export default {
   name: "TestCaseIssueList",
@@ -91,7 +99,14 @@ export default {
   },
   watch: {
     issuesId: {
-      handler(val) {
+      handler(val, oldVal) {
+        // 当 issuesId 从一个值变为另一个值时（切换不同的缺陷），清空缓存
+        // 注意：从 undefined 变为有值时不清空，因为 clear() 已在 open() 中被调用
+        if (oldVal && val && oldVal !== val) {
+          this.cacheAddRows = [];
+          this.addIds.clear();
+          this.deleteIds.clear();
+        }
         if (val) {
           this.initTableData();
         }
@@ -104,11 +119,16 @@ export default {
       this.testCaseContainIds.delete(item.id);
       this.tableData.splice(index, 1);
       this.deleteIds.add(item.id);
-      this.cacheAddRows.splice(index, 1);
+      // 根据ID从 cacheAddRows 中删除，而不是根据索引（因为顺序可能不一致）
+      const cacheIndex = this.cacheAddRows.findIndex(cacheItem => cacheItem.id === item.id);
+      if (cacheIndex !== -1) {
+        this.cacheAddRows.splice(cacheIndex, 1);
+      }
     },
     clear() {
       this.addIds.clear();
       this.deleteIds.clear();
+      this.cacheAddRows = []; // 清空缓存，避免新建和编辑缺陷时缓存混乱
     },
     initTableData() {
       this.tableData = [];
@@ -122,9 +142,44 @@ export default {
           this.tableData.forEach((item) => {
             this.testCaseContainIds.add(item.id);
           });
+
+          // 合并未保存的关联用例（cacheAddRows）到 tableData 中
+          this.mergeUnsavedCases();
+
           this.$refs.table.reloadTable();
           this.result.loading = false;
         });
+      } else {
+        // 新建缺陷时（issuesId 为空），直接显示 cacheAddRows 中已关联的用例
+        this.mergeUnsavedCases();
+        this.$refs.table.reloadTable();
+      }
+    },
+    mergeUnsavedCases() {
+      // 合并未保存的关联用例（cacheAddRows）到 tableData 中
+      if (this.cacheAddRows && this.cacheAddRows.length > 0) {
+        // 获取已保存用例的ID集合，用于去重
+        const savedCaseIds = new Set(this.tableData.map(item => item.id));
+
+        // 过滤出未保存且未被删除的关联用例
+        const unsavedCases = this.cacheAddRows.filter(caseItem => {
+          // 排除已在服务器数据中存在的用例（避免重复）
+          // 排除在删除列表中的用例
+          return caseItem.id &&
+                 !savedCaseIds.has(caseItem.id) &&
+                 !this.deleteIds.has(caseItem.id);
+        });
+
+        // 将未保存的关联用例合并到 tableData
+        if (unsavedCases.length > 0) {
+          this.tableData.push(...unsavedCases);
+          // 更新 testCaseContainIds，确保这些用例的ID也被记录
+          unsavedCases.forEach((item) => {
+            if (item.id) {
+              this.testCaseContainIds.add(item.id);
+            }
+          });
+        }
       }
     },
     relateTestCase() {
@@ -141,6 +196,17 @@ export default {
       });
       this.tableData.push(...selectData);
       this.cacheAddRows.push(...selectData);
+    },
+    openTestCaseDetail(row) {
+      // 打开测试用例详情页
+      const projectId = row.projectId || getCurrentProjectID();
+      let routeUrl = this.$router.resolve({
+        path: `/track/case/edit/${row.id}`,
+        query: {
+          projectId: projectId,
+        },
+      });
+      window.open(routeUrl.href, '_blank');
     },
   },
 };

@@ -148,6 +148,7 @@ export default {
       selfEditable: false,
       hoverEditable: false,
       memberOptions: [],
+      associatedSystemOptions: [],
       isCustomNone: false,
       optionPlatform: '',
       optionPlatformValue: ''
@@ -195,6 +196,8 @@ export default {
         case "cascadingSelect":
         case "member":
         case "multipleMember":
+        case "associatedSystem":
+        case "multipleAssociatedSystem":
         case "input":
           type = "select";
           break;
@@ -222,6 +225,14 @@ export default {
         this.contentObject.content.type === "multipleMember")
     ) {
       this.getMemberOptions();
+    }
+    if (
+      this.contentObject.content &&
+      this.contentObject.content.type &&
+      (this.contentObject.content.type === "associatedSystem" ||
+        this.contentObject.content.type === "multipleAssociatedSystem")
+    ) {
+      this.getAssociatedSystemOptions();
     }
   },
   methods: {
@@ -266,6 +277,13 @@ export default {
           this.contentObject.content.type === "multipleMember")
       ) {
         options = this.memberOptions;
+      }
+      if (
+        this.contentObject.content.type &&
+        (this.contentObject.content.type === "associatedSystem" ||
+          this.contentObject.content.type === "multipleAssociatedSystem")
+      ) {
+        options = this.associatedSystemOptions;
       }
       if (options && options.length > 0) {
         let tempValue = this.contentObject.content.value && this.contentObject.content.value.length > 0
@@ -474,6 +492,25 @@ export default {
     handleReadTextHover() {
       this.selfEditable = true;
     },
+    getAssociatedSystemOptions() {
+      // 调用API获取所属系统列表
+      this.$get('/associatedSystem/list/all')
+        .then((r) => {
+          this.handleAssociatedSystemOptions(r.data);
+        });
+    },
+    handleAssociatedSystemOptions(data) {
+      let tempOptions = data || [];
+      let tempArr = [];
+      tempOptions.forEach((e) => {
+        tempArr.push({
+          value: e.id,
+          text: e.name,
+          description: e.description
+        });
+      });
+      this.associatedSystemOptions = tempArr;
+    }
   },
 };
 </script>

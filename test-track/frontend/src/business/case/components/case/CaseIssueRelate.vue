@@ -109,29 +109,9 @@
                 v-if="field.name === '状态'"
             >
               <template v-slot="scope">
-                <el-dropdown
-                    class="test-case-status"
-                    @command="statusChange"
-                    placement="bottom"
-                    trigger="click"
-                >
-                  <span class="el-dropdown-link">
-                    {{
-                      getCustomFieldValue(scope.row, field)
-                          ? getCustomFieldValue(scope.row, field)
-                          : issueStatusMap[scope.row.status]
-                    }}
-                  </span>
-                  <el-dropdown-menu slot="dropdown" chang>
-                    <span v-for="(item, index) in status" :key="index">
-                      <el-dropdown-item
-                          :command="{ id: scope.row.id, status: item.value }"
-                      >
-                        {{ item.system ? $t(item.text) : item.text }}
-                      </el-dropdown-item>
-                    </span>
-                  </el-dropdown-menu>
-                </el-dropdown>
+                <span>
+                  {{ getIssueStatusDisplay(scope.row, field) }}
+                </span>
               </template>
             </ms-table-column>
           </span>
@@ -188,7 +168,6 @@ import {
   getIssuePartTemplateWithProject,
   getIssuesByCaseIdWithSearch,
   getPlatformStatus,
-  issueStatusChange,
   like,
   parseFields,
 } from "@/api/issue";
@@ -217,6 +196,7 @@ export default {
       },
       isThirdPart: false,
       issueTemplate: {},
+      members: [],
       fields: [],
       operators: [
         {
@@ -226,7 +206,6 @@ export default {
           exec: this.deleteIssue,
         },
       ],
-      status: [],
       issueRelateVisible: false,
       condition: {},
       platformStatus: [],
@@ -264,15 +243,6 @@ export default {
       } else {
         this.isThirdPart = true;
       }
-      if (template) {
-        let customFields = template.customFields;
-        for (let fields of customFields) {
-          if (fields.name === "状态") {
-            this.status = fields.options;
-            break;
-          }
-        }
-      }
       this.fields = getTableHeaderWithCustomFields(
           "ISSUE_LIST",
           this.issueTemplate.customFields
@@ -309,14 +279,29 @@ export default {
     hasPermissions(permission) {
       return hasPermissions(permission);
     },
+    /**
+     * 我在做：对齐“缺陷管理列表页”的状态回显逻辑，确保关联缺陷表格也能稳定展示状态。
+     * 目的是：解决个别缺陷（例如编号 100021）在本页不展示状态，但在缺陷列表页可展示的问题。
+     * 如果不这样做，就无法实现：当缺陷的状态值/选项与前端模板不完全一致时，本页会出现空白回显。
+     */
+    getIssueStatusDisplay(row, field) {
+      if (row && row.displayValueMap && row.displayValueMap[field && field.name]) {
+        return row.displayValueMap[field.name];
+      }
+
+      const customVal = getCustomFieldValue(row, field, this.members);
+      if (customVal) {
+        return customVal;
+      }
+
+      if (row && row.status) {
+        return this.issueStatusMap[row.status] || row.status;
+      }
+
+      return "--";
+    },
     search() {
       this.getIssues();
-    },
-    statusChange(param) {
-      issueStatusChange(param).then(() => {
-        this.getIssues();
-        this.$success(this.$t("commons.modify_success"), false);
-      });
     },
     getCustomFieldValue(row, field) {
       return getCustomFieldValue(row, field, this.members);

@@ -742,6 +742,14 @@ export default {
     },
   },
   methods: {
+    reloadTable() {
+      // 我在做：修复字段选择后表格不刷新的问题
+      // 目的是：确保用户选择字段后能立即看到表格更新
+      // 如果不这样做，就无法实现：字段选择功能的实时响应
+      if (this.$refs.table) {
+        this.$refs.table.resetHeader();
+      }
+    },
     getEditRedirectQuery(mode) {
       // 我在做：统一组装跳转编辑页需要的 query 参数（mode + redirect）
       // 目的是：确保任意入口都能“严格回到来源页”，并支持 view/edit 两种显式模式

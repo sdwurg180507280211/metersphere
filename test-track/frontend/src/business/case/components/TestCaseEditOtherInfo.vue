@@ -15,25 +15,22 @@
     </el-tab-pane>
 
     <el-tab-pane :label="$t('test_track.related_requirements')" name="demand">
-      <el-col :span="8">
+      <!-- 隐藏关联需求下拉框 -->
+      <el-col :span="8" style="display: none;">
         <el-form-item :label="$t('test_track.related_requirements')" :label-width="labelWidth"
                       prop="demandId">
-
           <el-cascader v-if="!readOnly" v-model="demandValue" :show-all-levels="false" :options="demandOptions"
                        clearable filterable :filter-method="filterDemand">
             <template slot-scope="{ data }">
               <span class="demand-span" :title="data.label">{{ data.label }}</span>
             </template>
           </el-cascader>
-
-          <el-input class="demandInput" v-else :disabled="readOnly" :value="demandLabel">
-
-          </el-input>
+          <el-input class="demandInput" v-else :disabled="readOnly" :value="demandLabel"></el-input>
         </el-form-item>
       </el-col>
-      <el-col :span="8" :offset="2">
-        <el-form-item :label="$t('test_track.case.demand_name_id')" :label-width="labelWidth" prop="demandName"
-                      v-if="form.demandId=='other'">
+      <!-- 直接显示需求号输入框 -->
+      <el-col :span="8">
+        <el-form-item :label="$t('test_track.case.demand_num')" :label-width="labelWidth" prop="demandName">
           <el-input :disabled="readOnly" v-model="form.demandName"></el-input>
         </el-form-item>
       </el-col>
@@ -258,6 +255,10 @@ export default {
   },
   created() {
     this.comments = [];
+    // 自动设置 demandId 为 "other"
+    if (!this.form.demandId) {
+      this.form.demandId = 'other';
+    }
   },
   methods: {
     updateRemark(text) {

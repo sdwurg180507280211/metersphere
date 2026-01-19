@@ -120,11 +120,6 @@ const Setting = {
       component: () => import('../../business/system/plugin/PluginConfig'),
       meta: {system: true, title: 'plugin.title', permissions: ['SYSTEM_PLUGIN:READ']}
     },
-    {
-      path: 'comprehensive-query',
-      component: () => import('../../business/system/query/ComprehensiveQuery'),
-      meta: {system: true, title: 'comprehensive_query.title', permissions: ['SYSTEM_SETTING:READ']}
-    },
   ]
 };
 

@@ -30,5 +30,7 @@ public class TestCaseTemplate implements Serializable {
 
     private String projectId;
 
+    private String excelTemplateFile;
+
     private static final long serialVersionUID = 1L;
 }

@@ -508,10 +508,23 @@ public class SystemParameterService {
         return systemParameterMapper.selectByPrimaryKey(key);
     }
 
+    /**
+     * 编辑或新增系统参数
+     * 如果参数已存在则更新，不存在则插入
+     * @param systemParameter 系统参数对象
+     */
     public void editInfo(SystemParameter systemParameter) {
         if (StringUtils.isBlank(systemParameter.getParamKey())) {
             return;
         }
-        systemParameterMapper.updateByPrimaryKeySelective(systemParameter);
+        // 检查参数是否已存在
+        SystemParameter existing = systemParameterMapper.selectByPrimaryKey(systemParameter.getParamKey());
+        if (existing != null) {
+            // 已存在，更新
+            systemParameterMapper.updateByPrimaryKeySelective(systemParameter);
+        } else {
+            // 不存在，插入新记录
+            systemParameterMapper.insert(systemParameter);
+        }
     }
 }

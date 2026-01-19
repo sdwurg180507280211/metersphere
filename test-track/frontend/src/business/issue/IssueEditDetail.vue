@@ -117,11 +117,13 @@
           class="case-form"
         >
           <custom-filed-form-item
+            :key="customFieldRenderKey"
             :form="customFieldForm"
             :default-open="richTextDefaultOpen"
             :form-label-width="formLabelWidth"
             :issue-template="issueTemplate"
             form-prop="id"
+            :field-disabled="checkFieldDisabled"
             @inputSearch="handleInputSearch"
             ref="customFieldItem"
           />
@@ -315,6 +317,18 @@
               </el-col>
             </el-row>
           </el-tab-pane>
+
+          <el-tab-pane :label="$t('test_track.issue.transition_history')" name="transitionHistory">
+            <el-row style="margin-top: 10px">
+              <el-col :span="20" :offset="1">
+                <issue-transition-history
+                  v-if="form.id"
+                  :issue-id="form.id"
+                  ref="issueTransitionHistory"
+                />
+              </el-col>
+            </el-row>
+          </el-tab-pane>
         </el-tabs>
 
         <issue-comment
@@ -354,6 +368,7 @@ import {
   getComments,
   getFollow,
   getIssuePartTemplateWithProject,
+  getAvailableTransitions,
   getPlatformFormOption,
   getPlatformTransitions,
   getTapdCurrentOwner,
@@ -372,13 +387,14 @@ import {
 import CustomFiledFormItem from "metersphere-frontend/src/components/form/CustomFiledFormItem";
 import MsMarkDownText from "metersphere-frontend/src/components/MsMarkDownText";
 import IssueComment from "@/business/issue/IssueComment";
+import IssueTransitionHistory from "@/business/issue/components/IssueTransitionHistory";
 import ReviewCommentItem from "@/business/review/commom/ReviewCommentItem";
 import {TokenKey} from "metersphere-frontend/src/utils/constants";
 import TestCaseAttachment from "@/business/case/components/TestCaseAttachment";
 import axios from "axios";
 import MsFileMetadataList from "metersphere-frontend/src/components/environment/commons/variable/QuoteFileList";
 import MsFileBatchMove from "metersphere-frontend/src/components/environment/commons/variable/FileBatchMove";
-import {parseMdImage, saveMarkDownImg} from "@/business/utils/sdk-utils";
+import {parseMdImage, saveMarkDownImg, filterFieldsForForm} from "@/business/utils/sdk-utils";
 import {getUploadSizeLimit} from "metersphere-frontend/src/utils/index";
 
 export default {
@@ -394,6 +410,7 @@ export default {
     MsMarkDownText,
     IssueComment,
     ReviewCommentItem,
+    IssueTransitionHistory,
     TestCaseAttachment,
     MsFileMetadataList,
     MsFileBatchMove,
@@ -409,6 +426,8 @@ export default {
       showFollow: false,
       formLabelWidth: "150px",
       issueTemplate: {},
+      issueTemplateOrigin: null,
+      customFieldRenderKey: 0,
       customFieldForm: null,
       customFieldRules: {},
       rules: {
@@ -536,10 +555,21 @@ export default {
         }
       } else if (this.tabActiveName === "relateTestCase") {
         this.$refs.testCaseIssueList.initTableData();
+      } else if (this.tabActiveName === "transitionHistory") {
+        // 切换到流转历史Tab时主动刷新，避免组件复用导致展示旧数据
+        if (this.$refs.issueTransitionHistory && this.$refs.issueTransitionHistory.refresh) {
+          this.$refs.issueTransitionHistory.refresh();
+        }
       }
     },
   },
   methods: {
+    cloneIssueTemplate(template) {
+      if (!template) {
+        return template;
+      }
+      return JSON.parse(JSON.stringify(template));
+    },
     resetForm() {
       this.form = {
         title: "",
@@ -552,9 +582,69 @@ export default {
       this.customFieldForm = null;
       this.issueTemplate = {};
       if (this.$refs.testCaseIssueList) {
+        this.$refs.testCaseIssueList.clear(); // 清空缓存，包括 cacheAddRows
         this.$refs.testCaseIssueList.tableData = [];
       }
       this.$refs.form.clearValidate();
+    },
+    resetFormForContinue() {
+      // 恢复模板字段(包含 customFields[*].defaultValue)
+      if (this.issueTemplateOrigin) {
+        this.issueTemplate = this.cloneIssueTemplate(this.issueTemplateOrigin);
+        // 再次确保过滤掉不在创建和编辑页面显示的字段
+        if (this.issueTemplate.customFields) {
+          this.issueTemplate.customFields = filterFieldsForForm(this.issueTemplate.customFields, 'issue');
+        }
+      }
+
+      this.form = {
+        title: this.issueTemplate.title || "",
+        description: this.issueTemplate.content || "",
+        creator: getCurrentUserId(),
+        remark: null,
+        tapdUsers: [],
+        platformStatus: null,
+        copyIssueId: "",
+      };
+      this.customFieldForm = parseCustomFieldForId(
+        this.form,
+        this.issueTemplate,
+        this.issueTemplate.customFields
+      );
+
+      // 强制重建自定义字段组件，清空其内部缓存状态(如远程搜索originOptions/loading)
+      this.customFieldRenderKey += 1;
+
+      this.tableData = [];
+      this.fileList = [];
+      this.uploadFiles = [];
+      this.relateFiles = [];
+      this.unRelateFiles = [];
+      this.filterCopyFiles = [];
+      if (this.$refs.testCaseIssueList) {
+        this.$refs.testCaseIssueList.clear();
+        this.$refs.testCaseIssueList.tableData = [];
+      }
+      this.comments = [];
+      this.issueId = null;
+      this.url = "issues/add";
+      this.type = "add";
+      this.tabActiveName = "relateTestCase";
+      this.platformTransitions = null;
+      this.hasTapdId = false;
+      this.richTextDefaultOpen = "edit";
+
+      // 重新按模板/平台计算三方相关信息
+      this.getThirdPartyInfo();
+
+      this.$nextTick(() => {
+        if (this.$refs.form) {
+          this.$refs.form.clearValidate();
+        }
+        if (this.$refs.customFieldForm) {
+          this.$refs.customFieldForm.clearValidate();
+        }
+      });
     },
     open(data, type) {
       this.uploadFiles = [];
@@ -611,11 +701,76 @@ export default {
     currentUser: () => {
       return getCurrentUser();
     },
+    // 检查字段是否应该被禁用
+    checkFieldDisabled(field) {
+      // 如果是状态字段，并且是新增和复制页面，始终禁用
+      if (field && field.name === "状态" && this.type !== "edit") {
+        return true;
+      }
+      // 其他字段使用readOnly控制
+      return this.readOnly;
+    },
     init(template, data) {
-      this.issueTemplate = template;
+      // 由于自定义字段组件会直接修改 issueTemplate.customFields[*].defaultValue
+      // 这里需要保留一份初始快照用于"保存后继续"场景的重置
+      this.issueTemplateOrigin = this.cloneIssueTemplate(template);
+      this.issueTemplate = this.cloneIssueTemplate(template);
+
+      // 过滤掉不在创建和编辑页面显示的字段（如"复测次数"）
+      if (this.issueTemplate.customFields) {
+        this.issueTemplate.customFields = filterFieldsForForm(this.issueTemplate.customFields, 'issue');
+      }
+
+      // 同时过滤掉模板快照中的字段
+      if (this.issueTemplateOrigin.customFields) {
+        this.issueTemplateOrigin.customFields = filterFieldsForForm(this.issueTemplateOrigin.customFields, 'issue');
+      }
+
       this.initEdit(data);
+      this.initStatusFieldTransitionOptions();
       this.getThirdPartyInfo();
       this.result.loading = false;
+    },
+    initStatusFieldTransitionOptions() {
+      // 仅编辑页允许修改状态字段，且此处只处理“回显”问题：
+      // 按可流转状态过滤 options，但必须保留当前状态对应的 option，避免下拉回显为空/被清空。
+      if (this.type !== 'edit' || !this.form || !this.form.id) {
+        return;
+      }
+
+      if (!this.issueTemplate || !this.issueTemplate.customFields) {
+        return;
+      }
+
+      const statusField = this.issueTemplate.customFields.find((f) => f && f.name === '状态');
+      if (!statusField || !statusField.options) {
+        return;
+      }
+
+      const currentVal = statusField.defaultValue;
+      const currentOption = statusField.options.find((o) => o && o.value === currentVal);
+
+      getAvailableTransitions(this.form.id)
+        .then((response) => {
+          const availableValues = response && response.data ? response.data : [];
+          let filtered = statusField.options.filter((o) => o && availableValues.includes(o.value));
+
+          // 关键：始终保留当前状态对应的 option 用于回显
+          if (currentVal && currentOption && !filtered.find((o) => o.value === currentVal)) {
+            filtered = [currentOption, ...filtered];
+          }
+
+          // 如果没有任何可流转状态，也至少保留当前值的 option（防止回显丢失）
+          if (filtered.length === 0 && currentVal && currentOption) {
+            filtered = [currentOption];
+          }
+
+          // 直接替换 options（与列表页一致：用后端可流转集进行过滤）
+          this.$set(statusField, 'options', filtered);
+        })
+        .catch(() => {
+          // 获取失败不做过滤，保持原 options，避免影响回显
+        });
     },
     getThirdPartyInfo() {
       let platform = this.issueTemplate.platform;
@@ -765,13 +920,20 @@ export default {
       this.result.loading = true;
       saveOrUpdateIssue(option.url, option.data)
         .then((response) => {
-          this.$emit("close");
           this.$success(this.$t("commons.save_success"));
           this.$emit("refresh", response.data);
 
           param.id = response.data.id;
           this.handleMdImages(param);
           this.result.loading = false;
+
+          // 保存成功后重置表单，继续创建下一个缺陷
+          if (this.type === 'add' || this.type === 'copy') {
+            this.resetFormForContinue();
+          } else {
+            // 编辑模式下保存后关闭抽屉
+            this.$emit("close");
+          }
         })
         .catch(() => {
           this.result.loading = false;

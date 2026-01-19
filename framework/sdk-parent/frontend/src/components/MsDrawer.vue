@@ -1,12 +1,20 @@
 <template>
-  <div
-    v-if="visible"
-    id="ms-drawer"
-    class="ms-drawer"
-    :class="directionStyle"
-    :style="{ width: w + 'px', height: h + 'px' }"
-    ref="msDrawer"
-  >
+  <div class="ms-drawer-wrapper">
+    <!-- 遮罩层 -->
+    <div
+      v-if="visible && mask"
+      class="ms-drawer-mask"
+      @click="handleMaskClick"
+    ></div>
+    
+    <div
+      v-if="visible"
+      id="ms-drawer"
+      class="ms-drawer"
+      :class="[directionStyle, { 'ms-drawer-no-mask': !mask, 'with-footer': showFooter }]"
+      :style="{ width: w + 'px', height: h + 'px' }"
+      ref="msDrawer"
+    >
     <ms-bottom2-top-drag-bar v-if="direction == 'bottom'" />
 
     <ms-right2-left-drag-bar v-if="direction == 'right'" />
@@ -14,18 +22,67 @@
     <ms-right2-left-drag-bar v-if="direction == 'default'" />
 
     <div class="ms-drawer-header">
-      <slot name="header"></slot>
-      <i v-if="isShowClose" class="el-icon-close" @click="close" />
-      <ms-full-screen-button
-        v-if="showFullScreen"
-        :is-full-screen.sync="isFullScreen"
-      />
+      <div class="ms-drawer-header-content">
+        <div class="ms-drawer-header-left">
+          <slot name="titleLeft"></slot>
+          <slot name="header">
+            <span v-if="title" class="ms-drawer-title">{{ title }}</span>
+          </slot>
+        </div>
+        <div class="ms-drawer-header-right">
+          <slot name="titleRight"></slot>
+          <ms-full-screen-button
+            v-if="showFullScreen"
+            :is-full-screen.sync="isFullScreen"
+          />
+          <i v-if="isShowClose" class="el-icon-close" @click="close" />
+        </div>
+      </div>
     </div>
     <div class="ms-drawer-body">
       <slot></slot>
     </div>
 
+    <!-- 页脚区域 -->
+    <div v-if="showFooter" class="ms-drawer-footer">
+      <div class="ms-drawer-footer-content">
+        <div class="ms-drawer-footer-left">
+          <slot name="footerLeft"></slot>
+        </div>
+        <div class="ms-drawer-footer-right">
+          <slot name="footerRight">
+            <el-button
+              v-if="showCancel"
+              :disabled="okLoading"
+              @click="handleCancel"
+            >
+              {{ cancelText || $t('commons.cancel') }}
+            </el-button>
+            <el-button
+              v-if="showContinue"
+              type="primary"
+              :loading="okLoading"
+              :disabled="okDisabled"
+              @click="handleContinue"
+            >
+              {{ saveContinueText || $t('commons.save_continue') }}
+            </el-button>
+            <el-button
+              v-if="showOk"
+              type="primary"
+              :loading="okLoading"
+              :disabled="okDisabled"
+              @click="handleOk"
+            >
+              {{ okText || $t('commons.confirm') }}
+            </el-button>
+          </slot>
+        </div>
+      </div>
+    </div>
+
     <ms-left2-right-drag-bar v-if="direction == 'left'" />
+    </div>
   </div>
 </template>
 
@@ -90,6 +147,66 @@ export default {
       default() {
         return true;
       },
+    },
+    // 是否显示遮罩
+    mask: {
+      type: Boolean,
+      default: true,
+    },
+    // 点击遮罩是否关闭
+    maskClosable: {
+      type: Boolean,
+      default: true,
+    },
+    // 标题
+    title: {
+      type: String,
+      default: "",
+    },
+    // 是否显示页脚
+    showFooter: {
+      type: Boolean,
+      default: false,
+    },
+    // 是否显示取消按钮
+    showCancel: {
+      type: Boolean,
+      default: true,
+    },
+    // 是否显示确认按钮
+    showOk: {
+      type: Boolean,
+      default: true,
+    },
+    // 是否显示保存并继续按钮
+    showContinue: {
+      type: Boolean,
+      default: false,
+    },
+    // 确认按钮文字
+    okText: {
+      type: String,
+      default: "",
+    },
+    // 取消按钮文字
+    cancelText: {
+      type: String,
+      default: "",
+    },
+    // 保存并继续按钮文字
+    saveContinueText: {
+      type: String,
+      default: "",
+    },
+    // 确认按钮loading状态
+    okLoading: {
+      type: Boolean,
+      default: false,
+    },
+    // 确认按钮禁用状态
+    okDisabled: {
+      type: Boolean,
+      default: false,
     },
   },
   mounted() {
@@ -187,7 +304,23 @@ export default {
     },
     close() {
       this.$emit("close");
+      this.$emit("update:visible", false);
       window.removeEventListener("resize", this.listenScreenChange);
+    },
+    handleMaskClick() {
+      if (this.maskClosable) {
+        this.close();
+      }
+    },
+    handleOk() {
+      this.$emit("confirm");
+    },
+    handleCancel() {
+      this.$emit("cancel");
+      this.close();
+    },
+    handleContinue() {
+      this.$emit("continue");
     },
     listenScreenChange() {
       if (this.isFullScreen) {
@@ -224,6 +357,23 @@ export default {
 </script>
 
 <style scoped>
+/* 根容器 - 不占用布局空间 */
+.ms-drawer-wrapper {
+  position: relative;
+  display: contents;
+}
+
+/* 遮罩层 */
+.ms-drawer-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+}
+
 .ms-drawer {
   background-color: white;
   border: 1px #dcdfe6 solid;
@@ -234,6 +384,11 @@ export default {
   z-index: 999 !important;
   position: fixed;
   overflow: auto;
+}
+
+/* 无遮罩模式 */
+.ms-drawer-no-mask {
+  box-shadow: 0 4px 10px -1px rgba(100, 100, 102, 0.15);
 }
 
 .left-style {
@@ -259,14 +414,80 @@ export default {
 
 .ms-drawer-body {
   margin-top: 10px;
+  padding: 0 15px;
   height: calc(100vh - 40px);
   overflow: scroll;
+}
+
+/* 有页脚时调整body高度 */
+.ms-drawer.with-footer .ms-drawer-body {
+  height: calc(100vh - 100px);
+}
+
+/* 页脚样式 */
+.ms-drawer-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 15px;
+  border-top: 1px solid #e4e7ed;
+  background-color: white;
+  z-index: 999;
+}
+
+.ms-drawer-footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ms-drawer-footer-left {
+  display: flex;
+  align-items: center;
+}
+
+.ms-drawer-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .ms-drawer-header {
   z-index: 999;
   width: 100%;
   margin: 0;
+  padding: 10px 15px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.ms-drawer-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.ms-drawer-header-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
+}
+
+.ms-drawer-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ms-drawer-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bottom-style .ms-drawer-header {
@@ -274,22 +495,14 @@ export default {
 }
 
 .el-icon-close {
-  position: absolute;
   font-size: 20px;
-  right: 10px;
-  top: 10px;
   color: gray;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
-.bottom-style .el-icon-close {
-  right: 10px;
-  top: 13px;
-}
-
-.right-style .el-icon-close {
-  position: fixed;
-  right: 10px;
-  top: 10px;
+.el-icon-close:hover {
+  color: red;
 }
 
 .el-icon-close:hover {

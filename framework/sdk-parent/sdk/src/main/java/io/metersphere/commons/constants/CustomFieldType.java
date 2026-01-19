@@ -13,6 +13,8 @@ public enum CustomFieldType {
     CHECKBOX("checkbox", true),
     MEMBER("member", true),
     MULTIPLE_MEMBER("multipleMember", true),
+    ASSOCIATED_SYSTEM("associatedSystem", true),
+    MULTIPLE_ASSOCIATED_SYSTEM("multipleAssociatedSystem", true),
     DATE("date", false),
     DATETIME("datetime", false),
     INT("int", false),

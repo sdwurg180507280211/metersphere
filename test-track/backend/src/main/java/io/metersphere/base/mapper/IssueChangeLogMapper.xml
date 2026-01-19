@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.base.mapper.IssueChangeLogMapper">
+  <resultMap id="BaseResultMap" type="io.metersphere.base.domain.IssueChangeLog">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="issue_id" jdbcType="VARCHAR" property="issueId" />
+    <result column="project_id" jdbcType="VARCHAR" property="projectId" />
+    <result column="operator" jdbcType="VARCHAR" property="operator" />
+    <result column="operator_name" jdbcType="VARCHAR" property="operatorName" />
+    <result column="source" jdbcType="VARCHAR" property="source" />
+    <result column="create_time" jdbcType="BIGINT" property="createTime" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, issue_id, project_id, operator, operator_name, source, create_time
+  </sql>
+
+  <insert id="insert" parameterType="io.metersphere.base.domain.IssueChangeLog">
+    insert into issue_change_log (id, issue_id, project_id, operator, operator_name, source, create_time)
+    values (#{id,jdbcType=VARCHAR}, #{issueId,jdbcType=VARCHAR}, #{projectId,jdbcType=VARCHAR}, #{operator,jdbcType=VARCHAR}, #{operatorName,jdbcType=VARCHAR}, #{source,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT})
+  </insert>
+
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from issue_change_log
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectByIssueId" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from issue_change_log
+    where issue_id = #{issueId}
+    order by create_time desc
+  </select>
+</mapper>

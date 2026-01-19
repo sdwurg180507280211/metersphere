@@ -197,8 +197,8 @@
           </base-edit-item-component>
         </div>
       </div>
-      <!-- 关联需求  -->
-      <div class="story-row case-wrap">
+      <!-- 关联需求 - 隐藏 -->
+      <div class="story-row case-wrap" style="display: none;">
         <div class="case-title-wrap">
           <div class="name title-wrap">
             {{ $t("test_track.related_requirements") }}
@@ -260,11 +260,12 @@
           </base-edit-item-component>
         </div>
       </div>
-      <!-- 需求名称: 选择了关联需求后展示，并且必填 -->
-      <div class="story-name-row case-wrap" v-if="form.demandId === 'other'">
+      <!-- 需求ID/名称: 直接显示 -->
+      <div class="story-name-row case-wrap">
         <div class="case-title-wrap">
           <div class="name title-wrap">
-            {{ $t("test_track.case.demand_name_id") }}
+<!--            {{ $t("test_track.case.demand_name_id") }}-->
+            {{ $t("test_track.case.demand_num") }}
           </div>
           <div class="required required-item"></div>
         </div>
@@ -487,6 +488,11 @@ export default {
   },
   mounted() {
     this.init();
+    // 默认设置关联需求为 'other'
+    if (!this.form.demandId) {
+      this.form.demandId = 'other';
+      this.demandValue = ['other'];
+    }
   },
   methods: {
     init() {

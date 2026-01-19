@@ -48,6 +48,14 @@ export function getComments(id) {
   return get(BASE_URL + "comment/list/" + id);
 }
 
+export function getTransitionHistory(id) {
+  return get(BASE_URL + "transition/history/" + id);
+}
+
+export function getAvailableTransitions(issueId) {
+  return get(BASE_URL + "transition/available/" + issueId);
+}
+
 export function saveComment(param) {
   return post(BASE_URL + "comment/save", param);
 }

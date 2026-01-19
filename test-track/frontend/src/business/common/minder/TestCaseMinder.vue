@@ -676,12 +676,29 @@ export default {
           },
         ],
         tags: "[]",
-        stepModel: "STEP",
+        stepModel: "",
       };
       if (data.changed) isChange = true;
       let steps = [];
       let stepNum = 1;
       if (node.children) {
+
+        // 文本模式仅允许单一线性分支：过滤掉前置条件/备注/缺陷节点，校验同级步骤节点数量
+        const stepNodes = node.children.filter((childNode) => {
+          const childData = childNode.data || {};
+          const resource = childData.resource;
+          const isPrerequisite =
+            resource &&
+            resource.indexOf(this.$t("test_track.case.prerequisite")) > -1;
+          const isRemark =
+            resource && resource.indexOf(this.$t("commons.remark")) > -1;
+          return childData.type !== "issue" && !isPrerequisite && !isRemark;
+        });
+        if (data.stepModel === "TEXT" && stepNodes.length > 1) {
+          this.throwError(
+            "[" + testCase.name + "]文本模式下不能创建多个分支！"
+          );
+        }
         let prerequisiteNodes = node.children.filter(
           (childNode) =>
             childNode.data.resource &&

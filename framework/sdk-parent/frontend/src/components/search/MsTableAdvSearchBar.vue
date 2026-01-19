@@ -59,8 +59,22 @@
 
 <script>
 import components from "./search-components";
+import { BUILTIN_ADV_SEARCH_KEYS } from "./search-components";
 import {cloneDeep, concat, slice} from "lodash-es";
 import {_findByKey, _findIndexByKey} from "./custom-component";
+
+ // 高级搜索参数组装规则（非常关键）：
+ // 1) 内置字段 key：由 search-components.js 统一维护（BUILTIN_ADV_SEARCH_KEYS），后端直接识别 combine[key]。
+ // 2) 非内置字段：一律视为 custom_field 体系字段（包含 system=1 系统字段 + system=0 普通字段），必须走 combine.customs[]。
+ // 3) 下面额外补充 request 级别的固定字段（并非 search-components.js 配置项，但确实属于内置参数）。
+ const BUILTIN_ADV_SEARCH_KEY_SET = new Set([
+   ...(Array.isArray(BUILTIN_ADV_SEARCH_KEYS) ? BUILTIN_ADV_SEARCH_KEYS : []),
+   'workspaceId',
+   'projectId',
+   'creatorName',
+   'operator',
+   'operatorName',
+ ]);
 
 export default {
   components: {...components},
@@ -148,23 +162,17 @@ export default {
       this.visible = false;
     },
     setCondition(condition, component) {
-      // 某些字段储存在自定义表但是其 custom 的值是 false
-      // 因为需求要把这些字段在有选项分类时归为 系统字段 ？
-      if (
-          component.custom ||
-          [
-            "严重程度",
-            "处理人",
-            "状态",
-            "用例状态",
-            "责任人",
-            "用例等级",
-          ].indexOf(component.label) > -1
-      ) {
+      // 说明：
+      // - 只要不是内置字段（白名单），就统一走 custom_field 过滤结构（condition.customs）。
+      // - component.custom 只是“字段是否为普通自定义字段”的标识；即便 custom=false，只要它来自模板字段（system字段也属于此类），
+      //   同样需要走 condition.customs，否则后端不会生效。
+      const key = component && component.key ? String(component.key) : '';
+      const isBuiltin = BUILTIN_ADV_SEARCH_KEY_SET.has(key);
+      if (!isBuiltin) {
         this.handleCustomField(condition, component);
         return;
       }
-      condition[component.key] = {
+      condition[key] = {
         operator: component.operator.value,
         value: component.value,
       };

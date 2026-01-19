@@ -11,7 +11,7 @@
               :data="item"
               :form="form"
               :default-open="defaultOpen"
-              :disabled="isPublic"
+              :disabled="getFieldDisabled(item)"
               :form-prop="formProp"
               @inputSearch="handleInputSearch"
               ref="customFiled"
@@ -30,6 +30,7 @@
                  :form="form"
                  :form-prop="formProp"
                  prop="defaultValue"
+                 :disabled="getFieldDisabled(item)"
                  @inputSearch="handleInputSearch"
                  ref="customFiled"/>
             </el-form-item>
@@ -73,6 +74,11 @@ export default {
         return 'preview';
       }
     },
+    // 字段级别的disabled控制函数，接收字段对象，返回boolean
+    fieldDisabled: {
+      type: Function,
+      default: null
+    },
   },
   computed: {
     customFieldRowNums() {
@@ -105,6 +111,14 @@ export default {
       this.$refs.customFiled.forEach(item => {
         item.stopLoading();
       });
+    },
+    getFieldDisabled(field) {
+      // 如果提供了字段级别的disabled函数，使用它
+      if (this.fieldDisabled && typeof this.fieldDisabled === 'function') {
+        return this.fieldDisabled(field);
+      }
+      // 否则使用全局的isPublic
+      return this.isPublic;
     },
   }
 }
