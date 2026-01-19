@@ -46,6 +46,7 @@ public class TestCaseExportConverterFactory {
            put(TestCaseExportOtherField.CREATOR.getValue(), TestCaseExportCreatorConverter.class);
            put(TestCaseExportOtherField.CREATE_TIME.getValue(), TestCaseExportCreateTimeConverter.class);
            put(TestCaseExportOtherField.UPDATE_TIME.getValue(), TestCaseExportUpdateTimeConverter.class);
+           put(TestCaseExportOtherField.DEMAND.getValue(), TestCaseExportDemandConverter.class);
         }};
     }
 }

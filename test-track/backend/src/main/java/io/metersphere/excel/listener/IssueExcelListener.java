@@ -7,6 +7,7 @@ import com.alibaba.excel.util.DateUtils;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.metersphere.base.domain.AssociatedSystem;
 import io.metersphere.base.domain.Issues;
 import io.metersphere.commons.constants.CustomFieldType;
 import io.metersphere.commons.exception.MSException;
@@ -22,6 +23,7 @@ import io.metersphere.excel.utils.ExcelImportType;
 import io.metersphere.excel.utils.ExcelValidateHelper;
 import io.metersphere.i18n.Translator;
 import io.metersphere.request.issues.IssueImportRequest;
+import io.metersphere.service.BaseAssociatedSystemService;
 import io.metersphere.service.IssuesService;
 import io.metersphere.xpack.track.dto.PlatformStatusDTO;
 import io.metersphere.xpack.track.dto.request.IssuesUpdateRequest;
@@ -66,6 +68,13 @@ public class IssueExcelListener extends AnalysisEventListener<Map<Integer, Strin
     private List<PlatformStatusDTO> platformStatusList;
     private List<String> tapdUsers;
     private Map<String, String> headFieldTransferDic = new HashMap<>();
+    /**
+     * 所属系统映射：名称/简称/ID -> 系统ID
+     * 目的是：Excel导入时将用户填写的系统名称或简称转换为系统ID，确保高级搜索能正确匹配
+     */
+    private Map<String, String> associatedSystemNameMap = new HashMap<>();
+    private Map<String, String> associatedSystemDescMap = new HashMap<>();
+    private Map<String, String> associatedSystemIdMap = new HashMap<>();
 
     /**
      * 每超过2000条数据, 则插入数据库
@@ -97,6 +106,42 @@ public class IssueExcelListener extends AnalysisEventListener<Map<Integer, Strin
         this.memberMap = memberMap;
         this.platformStatusList = platformStatusList;
         this.tapdUsers = tapdUsers;
+        // 初始化所属系统映射
+        // 目的是：Excel导入时能将系统名称/简称转换为系统ID，确保高级搜索能正确匹配
+        initAssociatedSystemMap();
+    }
+
+    /**
+     * 初始化所属系统映射
+     * 构建三个映射：名称->ID、简称->ID、ID->ID
+     * 目的是：支持用户在Excel中填写系统名称、简称或ID，都能正确转换为系统ID存储
+     */
+    private void initAssociatedSystemMap() {
+        try {
+            String workspaceId = SessionUtils.getCurrentWorkspaceId();
+            if (StringUtils.isBlank(workspaceId)) {
+                return;
+            }
+            BaseAssociatedSystemService associatedSystemService = CommonBeanFactory.getBean(BaseAssociatedSystemService.class);
+            List<AssociatedSystem> systems = associatedSystemService.getAllAssociatedSystems(workspaceId);
+            if (CollectionUtils.isEmpty(systems)) {
+                return;
+            }
+            // 构建名称映射（忽略大小写）
+            systems.forEach(system -> {
+                if (StringUtils.isNotBlank(system.getName())) {
+                    associatedSystemNameMap.put(system.getName().toLowerCase().trim(), system.getId());
+                }
+                // 构建简称/描述映射
+                if (StringUtils.isNotBlank(system.getDescription())) {
+                    associatedSystemDescMap.put(system.getDescription().toLowerCase().trim(), system.getId());
+                }
+                // 构建ID映射（用于已经是ID的情况）
+                associatedSystemIdMap.put(system.getId().toLowerCase(), system.getId());
+            });
+        } catch (Exception e) {
+            LogUtil.error("初始化所属系统映射失败", e);
+        }
     }
 
     @Override
@@ -481,6 +526,22 @@ public class IssueExcelListener extends AnalysisEventListener<Map<Integer, Strin
                             v = DateUtils.format(vDate, "yyyy-MM-dd'T'HH:mm");
                             customFieldItemDTO.setValue(v.toString());
                             customFieldResourceDTO.setValue("\"" + v + "\"");
+                        } else if (StringUtils.equalsAnyIgnoreCase(type, CustomFieldType.ASSOCIATED_SYSTEM.getValue())) {
+                            // 单选所属系统字段处理
+                            // 目的是：将Excel中填写的系统名称/简称转换为系统ID，确保高级搜索能正确匹配
+                            String systemId = parseAssociatedSystemValue(v.toString());
+                            customFieldItemDTO.setValue(systemId);
+                            // 存储时需要加引号，与其他单选字段保持一致，否则前端 JSON.parse 会失败
+                            customFieldResourceDTO.setValue("\"" + systemId + "\"");
+                        } else if (StringUtils.equalsAnyIgnoreCase(type, CustomFieldType.MULTIPLE_ASSOCIATED_SYSTEM.getValue())) {
+                            // 多选所属系统字段处理
+                            // 目的是：将Excel中填写的多个系统名称/简称转换为系统ID数组
+                            if (!v.toString().contains("[")) {
+                                v = List.of("\"" + v + "\"");
+                            }
+                            String parseStr = parseMultipleAssociatedSystemValue(v.toString());
+                            customFieldItemDTO.setValue(parseStr);
+                            customFieldResourceDTO.setValue(parseStr);
                         } else {
                             customFieldItemDTO.setValue(v.toString());
                             customFieldResourceDTO.setValue("\"" + v + "\"");
@@ -669,6 +730,63 @@ public class IssueExcelListener extends AnalysisEventListener<Map<Integer, Strin
             return null;
         } else {
             return jsonObjects.get(0);
+        }
+    }
+
+    /**
+     * 解析单选所属系统字段值（名称/简称/ID -> 系统ID）
+     * 目的是：将Excel中用户填写的系统名称、简称或ID统一转换为系统ID
+     * 如果不这样做，高级搜索时前端传的是ID，但数据库存的是名称，永远匹配不上
+     *
+     * @param value Excel中填写的值（可能是名称、简称或ID）
+     * @return 系统ID，如果找不到则返回原值
+     */
+    private String parseAssociatedSystemValue(String value) {
+        if (StringUtils.isBlank(value)) {
+            return StringUtils.EMPTY;
+        }
+        String valueLower = value.toLowerCase().trim();
+        
+        // 优先匹配ID（如果用户直接填写了ID）
+        if (associatedSystemIdMap.containsKey(valueLower)) {
+            return associatedSystemIdMap.get(valueLower);
+        }
+        // 其次匹配简称/描述
+        if (associatedSystemDescMap.containsKey(valueLower)) {
+            return associatedSystemDescMap.get(valueLower);
+        }
+        // 最后匹配名称
+        if (associatedSystemNameMap.containsKey(valueLower)) {
+            return associatedSystemNameMap.get(valueLower);
+        }
+        // 都不匹配，返回原值（会在校验阶段报错）
+        return value;
+    }
+
+    /**
+     * 解析多选所属系统字段值（名称/简称/ID数组 -> 系统ID数组）
+     * 目的是：将Excel中用户填写的多个系统名称、简称或ID统一转换为系统ID数组
+     *
+     * @param tarVal Excel中填写的值（JSON数组格式）
+     * @return 系统ID数组的JSON字符串
+     */
+    private String parseMultipleAssociatedSystemValue(String tarVal) {
+        if (StringUtils.isBlank(tarVal) || StringUtils.equalsAny(tarVal, "null", "[]")) {
+            return "[]";
+        }
+        try {
+            List<String> tarArr = JSONArray.parseArray(tarVal, String.class);
+            List<String> parseArr = new ArrayList<>();
+            for (String item : tarArr) {
+                String systemId = parseAssociatedSystemValue(item);
+                if (StringUtils.isNotBlank(systemId)) {
+                    parseArr.add("\"" + systemId + "\"");
+                }
+            }
+            return parseArr.toString();
+        } catch (Exception e) {
+            LogUtil.error("解析多选所属系统字段失败: " + tarVal, e);
+            return tarVal;
         }
     }
 }

@@ -48,6 +48,11 @@ public class TestCaseExcelDataTw extends TestCaseExcelData {
     private String remark;
 
     @ColumnWidth(50)
+    @ExcelProperty("需求號")
+    @NotRequired
+    private String demand;
+
+    @ColumnWidth(50)
     @ExcelProperty("步驟描述")
     private String stepDesc;
 

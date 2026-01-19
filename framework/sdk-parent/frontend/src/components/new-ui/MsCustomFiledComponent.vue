@@ -115,6 +115,24 @@
        </el-option>
     </el-select>
 
+    <el-select v-else-if="data.type === 'associatedSystem' || data.type === 'multipleAssociatedSystem'"
+               @click.native="clickPane"
+               :multiple="data.type === 'multipleAssociatedSystem'"
+               :class="{'ms-select-tag' : data.type === 'multipleAssociatedSystem'}"
+               @change="handleChange"
+               clearable
+               :disabled="disabled"
+               filterable
+               v-model="data[prop]"
+               :placeholder="$t('commons.default')">
+       <el-option
+         v-for="(item) in data.options ? data.options : []"
+         :key="item.value"
+         :label="(item.description ? item.description + ' / ' : '') + item.text"
+         :value="item.value">
+       </el-option>
+    </el-select>
+
     <ms-input-tag v-else-if="data.type === 'multipleInput'"
                   @click.native="clickPane"
                   @input="handleChange"
@@ -178,6 +196,7 @@ export default {
     this.clearDeletedOption();
     this.setFormData();
     this.getMemberOptions();
+    this.getAssociatedSystemOptions();
   },
   watch: {
     form() {
@@ -289,6 +308,28 @@ export default {
       if (this.form && this.data && this.data[this.prop]) {
         this.$set(this.form, this.data.name, this.data[this.prop]);
       }
+    },
+    getAssociatedSystemOptions() {
+      if (['associatedSystem', 'multipleAssociatedSystem'].indexOf(this.data.type) < 0) {
+        return;
+      }
+      // 调用API获取所属系统列表
+      this.$get('/associatedSystem/list/all')
+        .then((r) => {
+          this.handleAssociatedSystemOptions(r.data);
+        });
+    },
+    handleAssociatedSystemOptions(data) {
+      this.data.options = data || [];
+      this.data.options.forEach(item => {
+        item.value = item.id;
+        item.text = item.name;
+      });
+      if ('multipleAssociatedSystem' === this.data.type) {
+        this.clearDeletedMultipleOption();
+      } else {
+        this.clearDeletedSingleOption();
+      }
     }
   }
 };
@@ -296,6 +337,10 @@ export default {
 
 <style scoped>
 .el-select {
+  width: 100%;
+}
+
+.el-cascader {
   width: 100%;
 }
 
@@ -309,6 +354,15 @@ export default {
 
 :deep( .el-input--suffix .el-input__inner) {
   height: 32px;
+}
+
+/* 级联下拉框选中后展示文本：加宽到 160px，避免换行 */
+:deep(.el-cascader .el-cascader__label) {
+  width: 160px;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 :deep(.ms-select-tag.el-select span.el-tag--light) {

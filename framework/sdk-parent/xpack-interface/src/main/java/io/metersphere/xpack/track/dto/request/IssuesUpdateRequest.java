@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -66,4 +67,16 @@ public class IssuesUpdateRequest extends IssuesWithBLOBs {
     private List<String> batchDeleteIds;
 
     private Boolean batchDeleteAll;
+
+    private String name;
+
+    private Map<String, List<String>> filters;
+
+    private Map<String, Object> combine;
+
+    private List<String> unSelectIds;
+
+    private List<String> moduleIds;
+
+    private List<String> nodeIds;
 }

@@ -1048,3 +1048,53 @@ export const TEST_TRACK_ISSUE_LIST = [NAME, PLATFORM, CREATE_TIME, UPDATE_TIME, 
 
 // 测试跟踪-测试用例-关联缺陷
 export const TEST_CASE_RELEVANCE_ISSUE_LIST = [NAME, PLATFORM, CREATE_TIME, CREATOR];
+
+// =========================
+// 高级搜索：内置字段 key 白名单（统一维护入口）
+// =========================
+// 说明：
+// 1) 这里的 key 指“业务表/接口参数层可直接识别的字段”，后端通常会在主表 SQL（或固定字段）上做过滤。
+// 2) 这些 key 不应该走 combine.customs[]（custom_field_issues）那套自定义字段过滤逻辑。
+// 3) 你已确认“内置字段不会再新增”，因此把全集集中到这里，避免各处散落维护导致漏项。
+// 4) 该集合来源于本文件内所有高级搜索配置对象的 key（已去重）。
+export const BUILTIN_ADV_SEARCH_KEYS = [
+  'name',
+  'id',
+  'createTime',
+  'updateTime',
+  'projectName',
+  'testName',
+  'testPlanName',
+  'status',
+  'case_status',
+  'exec_result',
+  'lastResult',
+  'method',
+  'path',
+  'tags',
+  'creator',
+  'executor',
+  'followPeople',
+  'isReference',
+  'triggerMode',
+  'priority',
+  'type',
+  'module',
+  'principal',
+  'reviewer',
+  'maintainer',
+  'stage',
+  'reviewStatus',
+  'planCaseStatus',
+  'stepCount',
+  'actualStartTime',
+  'actualEndTime',
+  'planStartTime',
+  'planEndTime',
+  'endTime',
+  'demand',
+  'platform',
+  'platformStatus',
+  'moduleIds',
+];
+

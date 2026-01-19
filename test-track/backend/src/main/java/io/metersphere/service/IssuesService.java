@@ -53,6 +53,7 @@ import io.metersphere.service.issue.platform.IssueFactory;
 import io.metersphere.service.issue.platform.TapdPlatform;
 import io.metersphere.service.remote.project.TrackCustomFieldTemplateService;
 import io.metersphere.service.remote.project.TrackIssueTemplateService;
+import io.metersphere.service.BaseAssociatedSystemService;
 import io.metersphere.service.wapper.TrackProjectService;
 import io.metersphere.service.wapper.UserService;
 import io.metersphere.utils.DistinctKeyUtil;
@@ -115,7 +116,7 @@ public class IssuesService {
     private TestPlanService testPlanService;
     @Lazy
     @Resource
-    private io.metersphere.service.TestCaseService testCaseService;
+    private TestCaseService testCaseService;
     @Resource
     private IssuesMapper issuesMapper;
     @Resource
@@ -142,6 +143,8 @@ public class IssuesService {
     @Resource
     private CustomFieldIssuesMapper customFieldIssuesMapper;
     @Resource
+    private IssueStatusTransitionService issueStatusTransitionService;
+    @Resource
     StringRedisTemplate stringRedisTemplate;
     @Resource
     private AttachmentService attachmentService;
@@ -166,6 +169,9 @@ public class IssuesService {
     @Resource
     private TrackService trackService;
 
+    @Resource
+    private IssueChangeLogService issueChangeLogService;
+
     private static final String SYNC_THIRD_PARTY_ISSUES_KEY = "ISSUE:SYNC";
     private static final String SYNC_THIRD_PARTY_ISSUES_ERROR_KEY = "ISSUE:SYNC:ERROR";
 
@@ -175,7 +181,6 @@ public class IssuesService {
         IssuesPlatform abstractPlatform = IssueFactory.createPlatform(platform, issuesRequest);
         abstractPlatform.testAuth();
     }
-
 
     public IssuesWithBLOBs addIssues(IssuesUpdateRequest issuesRequest, List<MultipartFile> files) {
         Project project = baseProjectService.getProjectById(issuesRequest.getProjectId());
@@ -377,6 +382,8 @@ public class IssuesService {
     }
 
     public IssuesWithBLOBs updateIssues(IssuesUpdateRequest issuesRequest) {
+        IssuesWithBLOBs before = issuesService.getIssue(issuesRequest.getId());
+
         PlatformIssuesUpdateRequest platformIssuesUpdateRequest = JSON.parseObject(JSON.toJSONString(issuesRequest), PlatformIssuesUpdateRequest.class);
         Project project = baseProjectService.getProjectById(issuesRequest.getProjectId());
         if (StringUtils.isNotBlank(project.getPlatform()) && StringUtils.isNotBlank(issuesRequest.getPlatform()) &&
@@ -422,7 +429,10 @@ public class IssuesService {
         customFieldIssuesService.editFields(issuesRequest.getId(), issuesRequest.getEditFields());
         customFieldIssuesService.addFields(issuesRequest.getId(), issuesRequest.getAddFields());
 
-        return getIssue(issuesRequest.getId());
+        IssuesWithBLOBs after = issuesService.getIssue(issuesRequest.getId());
+        this.trySaveIssueChangeLog(before, after);
+
+        return after;
     }
 
     public void saveFollows(String issueId, List<String> follows) {
@@ -571,7 +581,6 @@ public class IssuesService {
         return platforms;
     }
 
-
     /**
      * 是否关联平台
      */
@@ -679,6 +688,15 @@ public class IssuesService {
             IssuesRequest issuesRequest = new IssuesRequest();
             issuesRequest.setWorkspaceId(SessionUtils.getCurrentWorkspaceId());
             issuesRequest.setProjectId(SessionUtils.getCurrentProjectId());
+            issuesRequest.setSelectAll(true);
+            issuesRequest.setUnSelectIds(request.getUnSelectIds());
+            issuesRequest.setModuleIds(request.getModuleIds());
+            issuesRequest.setNodeIds(request.getNodeIds());
+            issuesRequest.setName(request.getName());
+            issuesRequest.setFilters(request.getFilters());
+            issuesRequest.setCombine(request.getCombine());
+
+            // 复用列表查询条件（含高级搜索/过滤器），避免误删全量数据
             List<IssuesDao> issuesDaos = listByWorkspaceId(issuesRequest);
             if (CollectionUtils.isNotEmpty(issuesDaos)) {
                 issuesDaos.forEach(issuesDao -> {
@@ -779,7 +797,6 @@ public class IssuesService {
         data.forEach(i -> i.setFields(fieldMap.get(i.getId())));
     }
 
-
     private Map<String, String> getGlobalProjectIdMap(String projectId) {
         // 查询全局的内置字段
         CustomFieldExample example = new CustomFieldExample();
@@ -864,6 +881,11 @@ public class IssuesService {
         List<User> projectMemberList = baseUserService.getProjectMemberList(memberRequest);
         Map<String, String> memberMap = projectMemberList.stream().collect(Collectors.toMap(User::getId, User::getName));
 
+        // 我在做：构建“所属系统”映射（系统ID -> 系统名称）。
+        // 目的是：导出时把“缺陷所属系统”这类字段从ID转换为可读名称，避免 Excel 里出现一串ID。
+        // 如果不这样做,就无法实现：导出数据对业务人员可读（只能看到ID，无法直接理解）。
+        Map<String, String> associatedSystemMap = getAssociatedSystemMap();
+
         try {
             Map<String, CustomField> fieldMaps = customFields.stream().collect(Collectors.toMap(CustomFieldDao::getId, field -> (CustomField) field));
             for (Map.Entry<String, List<CustomFieldDao>> entry : fieldMap.entrySet()) {
@@ -874,19 +896,32 @@ public class IssuesService {
                         if (StringUtils.equalsAnyIgnoreCase(customField.getType(), CustomFieldType.RICH_TEXT.getValue(), CustomFieldType.TEXTAREA.getValue())) {
                             fieldDao.setValue(fieldDao.getTextValue());
                         }
-                        if (StringUtils.equalsAnyIgnoreCase(customField.getType(), CustomFieldType.DATETIME.getValue()) && StringUtils.isNotEmpty(fieldDao.getValue()) && !StringUtils.equals(fieldDao.getValue(), "null")) {
-                            Date date = null;
-                            if (fieldDao.getValue().contains("T") && fieldDao.getValue().length() == 18) {
-                                date = DateUtils.parseDate(fieldDao.getValue().replaceAll("\"", StringUtils.EMPTY), "yyyy-MM-dd'T'HH:mm");
-                            } else if (fieldDao.getValue().contains("T") && fieldDao.getValue().length() == 21) {
-                                date = DateUtils.parseDate(fieldDao.getValue().replaceAll("\"", StringUtils.EMPTY), "yyyy-MM-dd'T'HH:mm:ss");
-                            } else if (fieldDao.getValue().contains("T") && fieldDao.getValue().length() > 21) {
-                                date = DateUtils.parseDate(fieldDao.getValue().replaceAll("\"", StringUtils.EMPTY).substring(0, 19), "yyyy-MM-dd'T'HH:mm:ss");
-                            } else {
-                                date = DateUtils.parseDate(fieldDao.getValue().replaceAll("\"", StringUtils.EMPTY));
+                        if (StringUtils.equalsAnyIgnoreCase(customField.getType(), CustomFieldType.DATETIME.getValue())
+                                && StringUtils.isNotEmpty(fieldDao.getValue())
+                                && !StringUtils.equalsAny(fieldDao.getValue(), "null", "", "\"\"")) {
+                            try {
+                                Date date = null;
+                                String value = fieldDao.getValue().replaceAll("\"", StringUtils.EMPTY);
+                                if (StringUtils.isEmpty(value)) {
+                                    // 处理 "\"\"" 这样的空值情况
+                                    fieldDao.setValue("");
+                                    continue;
+                                }
+                                if (value.contains("T") && value.length() == 18) {
+                                    date = DateUtils.parseDate(value, "yyyy-MM-dd'T'HH:mm");
+                                } else if (value.contains("T") && value.length() == 21) {
+                                    date = DateUtils.parseDate(value, "yyyy-MM-dd'T'HH:mm:ss");
+                                } else if (value.contains("T") && value.length() > 21) {
+                                    date = DateUtils.parseDate(value.substring(0, 19), "yyyy-MM-dd'T'HH:mm:ss");
+                                } else {
+                                    date = DateUtils.parseDate(value);
+                                }
+                                String format = DateUtils.format(date, "yyyy-MM-dd HH:mm:ss");
+                                fieldDao.setValue("\"" + format + "\"");
+                            } catch (Exception e) {
+                                // 日期格式化失败，保留原值，避免导出异常
+                                LogUtil.warn("导出时日期格式化失败，字段ID: " + customField.getId() + ", 值: " + fieldDao.getValue(), e);
                             }
-                            String format = DateUtils.format(date, "yyyy-MM-dd HH:mm:ss");
-                            fieldDao.setValue("\"" + format + "\"");
                         }
                         if (StringUtils.equalsAnyIgnoreCase(customField.getType(), CustomFieldType.SELECT.getValue(),
                                 CustomFieldType.MULTIPLE_SELECT.getValue(), CustomFieldType.CHECKBOX.getValue(), CustomFieldType.RADIO.getValue())
@@ -896,26 +931,33 @@ public class IssuesService {
                         if (StringUtils.equalsAnyIgnoreCase(customField.getType(), CustomFieldType.CASCADING_SELECT.getValue())) {
                             fieldDao.setValue(parseCascadingOptionValue(customField.getOptions(), fieldDao.getValue()));
                         }
+                        if (StringUtils.equalsAnyIgnoreCase(customField.getType(), CustomFieldType.ASSOCIATED_SYSTEM.getValue(), CustomFieldType.MULTIPLE_ASSOCIATED_SYSTEM.getValue())) {
+                            // 我在做：对“所属系统”类型字段做ID->名称转换。
+                            // 目的是：导出 Excel 时展示系统名称，而不是内部ID。
+                            // 如果不这样做,就无法实现：业务侧可读的导出结果。
+                            fieldDao.setValue(parseAssociatedSystemOptionValue(associatedSystemMap, fieldDao.getValue()));
+                        }
                         if (StringUtils.equalsAnyIgnoreCase(customField.getType(), CustomFieldType.MEMBER.getValue(),
                                     CustomFieldType.MULTIPLE_MEMBER.getValue(), CustomFieldType.MULTIPLE_MEMBER.getValue())) {
                             fieldDao.setValue(parseMemberOptionValue(memberMap, fieldDao.getValue()));
                         }
                     }
                 }
+
+                Map<String, String> globalProjectIdMap = getGlobalProjectIdMap(data.get(0).getProjectId());
+                fieldMap.values().forEach(fields -> {
+                    Set<String> fileIdSet = fields.stream().map(CustomFieldDao::getId).collect(Collectors.toSet());
+                    fields.forEach(field -> {
+                        // 如果是全局字段, 并且项目中有对应的字段, 则替换为项目字段
+                        if (globalProjectIdMap.containsKey(field.getId()) && !fileIdSet.contains(globalProjectIdMap.get(field.getId()))) {
+                            field.setId(globalProjectIdMap.get(field.getId()));
+                        }
+                    });
+                });
+
+                data.forEach(i -> i.setFields(fieldMap.get(i.getId())));
             }
 
-            Map<String, String> globalProjectIdMap = getGlobalProjectIdMap(data.get(0).getProjectId());
-            fieldMap.values().forEach(fields -> {
-                Set<String> fileIdSet = fields.stream().map(CustomFieldDao::getId).collect(Collectors.toSet());
-                fields.forEach(field -> {
-                    // 如果是全局字段, 并且项目中有对应的字段, 则替换为项目字段
-                    if (globalProjectIdMap.containsKey(field.getId()) && !fileIdSet.contains(globalProjectIdMap.get(field.getId()))) {
-                        field.setId(globalProjectIdMap.get(field.getId()));
-                    }
-                });
-            });
-
-            data.forEach(i -> i.setFields(fieldMap.get(i.getId())));
         } catch (Exception e) {
             MSException.throwException(e.getMessage());
         }
@@ -1086,7 +1128,7 @@ public class IssuesService {
                 syncThirdPartyIssues(platform::syncIssues, project, issues);
             }
         } catch (Exception e) {
-            LogUtil.error(e);
+            LogUtil.error(e.getMessage(), e);
             // 同步缺陷异常, 当前同步错误信息 -> Redis(check接口获取)
             setSyncErrorMsg(project.getId(), e.getMessage());
         } finally {
@@ -1305,7 +1347,6 @@ public class IssuesService {
         return allMsAttachments;
     }
 
-
     /**
      * 获取默认的自定义字段的取值，同步之后更新成第三方平台的值
      *
@@ -1407,7 +1448,6 @@ public class IssuesService {
         abstractPlatform.userAuth(authUserIssueRequest);
     }
 
-
     public void calculateReportByIssueList(List<IssuesDao> issueList, TestPlanReportDataStruct report, String projectId) {
         if (CollectionUtils.isNotEmpty(issueList)) {
             List<PlanReportIssueDTO> planReportIssueDTOList = new ArrayList<>();
@@ -1490,6 +1530,8 @@ public class IssuesService {
                             String value = field.getValue();
                             if (StringUtils.isNotBlank(value)) {
                                 value = (String) JSON.parseObject(value);
+                                // 移除JSON字符串的引号，例如："accepted" -> accepted
+                                //value = value.replaceAll("\"", StringUtils.EMPTY);
                             }
                             if (StringUtils.equals(option.getValue(), value)) {
                                 if (option.getSystem()) {
@@ -1512,22 +1554,162 @@ public class IssuesService {
         if (StringUtils.isBlank(issuesId) || StringUtils.isBlank(status)) {
             return;
         }
-        IssuesWithBLOBs issue = issuesMapper.selectByPrimaryKey(issuesId);
-        IssueTemplateDao issueTemplate = getIssueTemplateByProjectId(issue.getProjectId());
-        if (issueTemplate == null) {
+        // 旧接口入口收敛：统一走状态流转服务，确保责任人校验+流转规则校验+历史记录一致
+        // 注意：若流转不允许，transitionStatus 将抛出业务异常，阻止非法状态写入，从而保证历史可信。
+        issueStatusTransitionService.transitionStatus(issuesId, status, null);
+    }
+
+    private void trySaveIssueChangeLog(IssuesWithBLOBs before, IssuesWithBLOBs after) {
+        if (before == null || after == null) {
             return;
         }
-        if (StringUtils.isNotBlank(issueTemplate.getId())) {
-            // 模版对于同一个系统字段应该只关联一次
-            CustomField customField = baseCustomFieldService.getCustomFieldByName(issue.getProjectId(), SystemCustomField.ISSUE_STATUS);
-            if (customField != null) {
-                String fieldId = customField.getId();
-                CustomFieldResourceDTO resource = new CustomFieldResourceDTO();
-                resource.setFieldId(fieldId);
-                resource.setResourceId(issue.getId());
-                resource.setValue(JSON.toJSONString(status));
-                customFieldIssuesService.editFields(issue.getId(), Collections.singletonList(resource));
+        if (issueChangeLogService == null) {
+            return;
+        }
+        try {
+            List<IssueChangeLogDetailDTO> changes = new ArrayList<>();
+
+            addSimpleChange(changes, "title", "标题", before.getTitle(), after.getTitle());
+            addSimpleChange(changes, "description", "描述", before.getDescription(), after.getDescription());
+
+            IssuesDao beforeDao = (IssuesDao) before;
+            IssuesDao afterDao = (IssuesDao) after;
+            List<CustomFieldDao> beforeFields = beforeDao.getFields();
+            List<CustomFieldDao> afterFields = afterDao.getFields();
+            Map<String, CustomFieldDao> beforeMap = toFieldMap(beforeFields);
+            Map<String, CustomFieldDao> afterMap = toFieldMap(afterFields);
+
+            Set<String> fieldIds = new HashSet<>();
+            fieldIds.addAll(beforeMap.keySet());
+            fieldIds.addAll(afterMap.keySet());
+
+            Map<String, String> fieldNameMap = new HashMap<>();
+            Map<String, CustomField> fieldMetaMap = new HashMap<>();
+            if (!fieldIds.isEmpty()) {
+                List<CustomField> fields = baseCustomFieldService.getFieldByIds(new ArrayList<>(fieldIds));
+                for (CustomField field : fields) {
+                    if (field != null && StringUtils.isNotBlank(field.getId())) {
+                        fieldNameMap.put(field.getId(), field.getName());
+                        fieldMetaMap.put(field.getId(), field);
+                    }
+                }
             }
+
+            for (String fieldId : fieldIds) {
+                CustomFieldDao b = beforeMap.get(fieldId);
+                CustomFieldDao a = afterMap.get(fieldId);
+                CustomField meta = fieldMetaMap.get(fieldId);
+                String oldVal = b == null ? null : normalizeFieldValue(b);
+                String newVal = a == null ? null : normalizeFieldValue(a);
+                oldVal = toDisplayValue(meta, oldVal);
+                newVal = toDisplayValue(meta, newVal);
+                if (StringUtils.equals(oldVal, newVal)) {
+                    continue;
+                }
+                IssueChangeLogDetailDTO d = new IssueChangeLogDetailDTO();
+                d.setFieldType(IssueChangeLogService.FIELD_TYPE_CUSTOM);
+                d.setFieldId(fieldId);
+                d.setFieldName(fieldNameMap.getOrDefault(fieldId, fieldId));
+                d.setOldValue(oldVal);
+                d.setNewValue(newVal);
+                changes.add(d);
+            }
+
+            if (changes.isEmpty()) {
+                return;
+            }
+
+            issueChangeLogService.saveLog(after.getId(), after.getProjectId(), IssueChangeLogService.SOURCE_UPDATE, changes);
+        } catch (Exception e) {
+            LogUtil.error("记录缺陷字段变更历史失败: " + e.getMessage());
+        }
+    }
+
+    private void addSimpleChange(List<IssueChangeLogDetailDTO> changes, String fieldKey, String fieldName, Object oldValue, Object newValue) {
+        String oldVal = oldValue == null ? null : oldValue.toString();
+        String newVal = newValue == null ? null : newValue.toString();
+        if (StringUtils.equals(oldVal, newVal)) {
+            return;
+        }
+        IssueChangeLogDetailDTO d = new IssueChangeLogDetailDTO();
+        d.setFieldType(IssueChangeLogService.FIELD_TYPE_SYSTEM);
+        d.setFieldKey(fieldKey);
+        d.setFieldName(fieldName);
+        d.setOldValue(oldVal);
+        d.setNewValue(newVal);
+        changes.add(d);
+    }
+
+    private Map<String, CustomFieldDao> toFieldMap(List<CustomFieldDao> fields) {
+        if (CollectionUtils.isEmpty(fields)) {
+            return new HashMap<>();
+        }
+        Map<String, CustomFieldDao> map = new HashMap<>();
+        for (CustomFieldDao field : fields) {
+            if (field != null && StringUtils.isNotBlank(field.getId())) {
+                map.put(field.getId(), field);
+            }
+        }
+        return map;
+    }
+
+    private String normalizeFieldValue(CustomFieldDao field) {
+        if (field == null) {
+            return null;
+        }
+        if (StringUtils.isNotBlank(field.getTextValue())) {
+            return field.getTextValue();
+        }
+        String value = field.getValue();
+        if (StringUtils.isBlank(value)) {
+            return value;
+        }
+        String v = value.trim();
+        if (v.startsWith("[") || v.startsWith("{")) {
+            return v;
+        }
+        if (v.startsWith("\"") && v.endsWith("\"") && v.length() >= 2) {
+            return v.substring(1, v.length() - 1);
+        }
+        return v;
+    }
+
+    private String toDisplayValue(CustomField meta, String rawVal) {
+        if (meta == null || StringUtils.isBlank(rawVal)) {
+            return rawVal;
+        }
+        try {
+            String type = meta.getType();
+            String options = meta.getOptions();
+            if (StringUtils.isBlank(type) || StringUtils.isBlank(options)) {
+                return rawVal;
+            }
+            if (StringUtils.equals(type, "cascadingSelect")) {
+                return this.parseCascadingOptionValue(options, rawVal);
+            }
+            if (StringUtils.equalsAny(type, "select", "radio", "multipleSelect", "checkbox")) {
+                return this.parseOptionValue(options, rawVal);
+            }
+            return rawVal;
+        } catch (Exception e) {
+            return rawVal;
+        }
+    }
+
+    private String buildStatusChangeComment(String fromStatus, String toStatus) {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("type", "issue_change");
+            Map<String, Object> item = new HashMap<>();
+            item.put("type", "system");
+            item.put("fieldKey", "status");
+            item.put("fieldName", "状态");
+            item.put("oldValue", fromStatus);
+            item.put("newValue", toStatus);
+            payload.put("changes", Collections.singletonList(item));
+            return JSON.toJSONString(payload);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -1613,6 +1795,7 @@ public class IssuesService {
                 return fields;
             }
             Map metaData = JSON.parseMap(plugin.getFormScript());
+            //Map metaData = JSON.parseObject(plugin.getFormScript(), Map.class);
             Object issueConfig = metaData.get("issueConfig");
             List<ThirdPartIssueField> thirdPartIssueFields = null;
             if (issueConfig != null) {
@@ -2071,7 +2254,7 @@ public class IssuesService {
             return StringUtils.EMPTY;
         }
         List<String> tarVals = new ArrayList<>();
-        List<String> vals = JSON.parseArray(tarVal, String.class);
+        List<String> vals = parseArrayOrSingle(tarVal);
         List<Map> optionList = JSON.parseArray(options, Map.class);
         for (Map option : optionList) {
             String text = option.get("text").toString();
@@ -2103,17 +2286,12 @@ public class IssuesService {
             return StringUtils.EMPTY;
         }
         JSONArray options = JSONArray.parseArray(cascadingOption);
-        JSONArray talVals = new JSONArray();
-        if (tarVal.contains("[") || tarVal.contains("]")) {
-            talVals = JSONArray.parseArray(tarVal);
-        } else {
-            talVals = JSONArray.parseArray("[" + tarVal + "]");
-        }
+        List<String> talVals = parseArrayOrSingle(tarVal);
         if (options.size() == 0 || talVals.size() == 0) {
             return StringUtils.EMPTY;
         }
         for (int i = 0; i < talVals.size(); i++) {
-            String val = talVals.get(i).toString();
+            String val = talVals.get(i);
             JSONObject jsonOption = findJsonOption(options, val);
             if (jsonOption == null) {
                 return StringUtils.EMPTY;
@@ -2296,5 +2474,62 @@ public class IssuesService {
     @MsAuditLog(module = OperLogModule.TRACK_TEST_CASE, type = OperLogConstants.ASSOCIATE_ISSUE, content = "#msClass.getIssueLogDetails(#caseId, #refId, #issuesId)", msClass = TestCaseIssueService.class)
     public void insertIssueRelateLog(String issuesId, String caseId, String refId, String refType) {
         testCaseIssueService.add(issuesId, caseId, refId, refType);
+    }
+    /**
+     * 我在做：获取所属系统映射（系统ID -> 系统名称）。
+     * 目的是：给导出/展示时提供ID到名称的转换来源。
+     * 如果不这样做,就无法实现：所属系统字段在导出时从ID转换为名称。
+     */
+    private Map<String, String> getAssociatedSystemMap() {
+        try {
+            String workspaceId = SessionUtils.getCurrentWorkspaceId();
+            if (StringUtils.isBlank(workspaceId)) {
+                return new HashMap<>();
+            }
+            BaseAssociatedSystemService associatedSystemService = CommonBeanFactory.getBean(BaseAssociatedSystemService.class);
+            List<AssociatedSystem> systems = associatedSystemService.getAllAssociatedSystems(workspaceId);
+            return systems.stream().collect(Collectors.toMap(
+                    AssociatedSystem::getId,
+                    AssociatedSystem::getName,
+                    (v1, v2) -> v1
+            ));
+        } catch (Exception e) {
+            LogUtil.error("获取所属系统映射失败", e);
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * 我在做：把所属系统字段的原始值（可能是单值/数组/带引号）转换为名称。
+     * 目的是：导出结果可读。
+     * 如果不这样做,就无法实现：导出时所属系统展示 name 而不是 id。
+     */
+    private String parseAssociatedSystemOptionValue(Map<String, String> associatedSystemMap, String tarVal) {
+        if (MapUtils.isEmpty(associatedSystemMap) || StringUtils.isEmpty(tarVal) || StringUtils.equalsAny(tarVal, "null", "[]")) {
+            return StringUtils.EMPTY;
+        }
+        List<String> ids = parseArrayOrSingle(tarVal);
+        List<String> names = new ArrayList<>();
+        ids.forEach(id -> {
+            String name = associatedSystemMap.get(id);
+            names.add(name == null ? id : name);
+        });
+        return names.toString();
+    }
+
+    private List<String> parseArrayOrSingle(String tarVal) {
+        if (StringUtils.isEmpty(tarVal) || StringUtils.equalsAny(tarVal, "null", "[]")) {
+            return new ArrayList<>();
+        }
+        String val = StringUtils.trim(tarVal);
+        if (StringUtils.startsWith(val, "[")) {
+            return JSON.parseArray(val, String.class);
+        }
+        if (StringUtils.startsWith(val, "\"") && StringUtils.endsWith(val, "\"") && val.length() >= 2) {
+            val = val.substring(1, val.length() - 1);
+        }
+        List<String> list = new ArrayList<>();
+        list.add(val);
+        return list;
     }
 }

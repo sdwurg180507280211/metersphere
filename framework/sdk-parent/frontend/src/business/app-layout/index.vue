@@ -6,10 +6,10 @@
           <mx-license-message/>
         </el-col>
       </el-row>
-      <el-row v-if="changePassword">
+      <el-row v-if="announcementContent && announcementEnabled">
         <el-col>
-          <div class="change-password-tip">
-            {{ $t('commons.change_password_tips') }}
+          <div class="announcement-tip" :class="{ 'announcement-scroll': announcementScroll }" :style="announcementStyle">
+            <span class="announcement-text">{{ announcementContent }}</span>
           </div>
         </el-col>
       </el-row>
@@ -51,7 +51,7 @@ import MxTheme from "../../components/MxTheme";
 import {hasLicense} from "../../utils/permission";
 import {setAsideColor, setColor, setCustomizeColor, setDefaultTheme, setLightColor} from "../../utils";
 import {ORIGIN_COLOR} from "../../utils/constants";
-import {getDisplayInfo, getSystemTheme, isLogin} from "../../api/user";
+import {getDisplayInfo, getSystemTheme, isLogin, getSystemParameter} from "../../api/user";
 import {useUserStore} from "@/store";
 import {getModuleList} from "../../api/module";
 
@@ -74,17 +74,18 @@ export default {
       sideTheme: "",
       sysTitle: undefined,
       isFullScreen: false,
+      announcementContent: '',
+      announcementEnabled: true,
+      announcementStyleConfig: {
+        styleType: 'warning',
+        backgroundColor: '#E6A23C',
+        textColor: '#FFFFFF'
+      },
+      announcementScroll: false,
     };
   },
-  computed: {
-    changePassword() {
-      return JSON.parse(sessionStorage.getItem("changePassword"));
-    },
-  },
   created() {
-    if (this.licenseHeader != null || this.changePassword) {
-      this.headerHeight = "30px";
-    }
+    this.loadAnnouncement();
     this.initSessionTimer();
     getModuleList()
       .then(response => {
@@ -114,9 +115,14 @@ export default {
     this.$EventBus.$on("toggleFullScreen", (param) => {
       this.isFullScreen = param
     });
+
+    // 监听公告更新事件，收到事件后重新加载公告内容
+    this.$EventBus.$on('announcement-updated', this.loadAnnouncement);
   },
   destroyed() {
     this.$EventBus.$off("toggleFullScreen");
+    // 移除公告更新事件监听，防止内存泄漏
+    this.$EventBus.$off('announcement-updated', this.loadAnnouncement);
   },
   // 提供可注入子组件属性
   provide() {
@@ -125,7 +131,81 @@ export default {
       reloadTopMenus: this.reloadTopMenus,
     };
   },
+  computed: {
+    /**
+     * 公告栏动态样式
+     * 根据样式配置返回背景色和文字颜色
+     */
+    announcementStyle() {
+      return {
+        backgroundColor: this.announcementStyleConfig.backgroundColor,
+        color: this.announcementStyleConfig.textColor
+      };
+    }
+  },
   methods: {
+    loadAnnouncement() {
+      // 获取公告内容
+      getSystemParameter('announcement.content').then(response => {
+        if (response.data && response.data.paramValue) {
+          this.announcementContent = response.data.paramValue;
+        } else {
+          this.announcementContent = '';
+        }
+        this.updateHeaderHeight();
+      }).catch(() => {
+        this.announcementContent = '';
+      });
+
+      // 获取公告启用状态
+      getSystemParameter('announcement.enabled').then(response => {
+        if (response.data && response.data.paramValue) {
+          this.announcementEnabled = response.data.paramValue === 'true';
+        } else {
+          this.announcementEnabled = true;  // 默认启用
+        }
+        this.updateHeaderHeight();
+      }).catch(() => {
+        this.announcementEnabled = true;
+      });
+
+      // 获取公告样式配置
+      getSystemParameter('announcement.style').then(response => {
+        if (response.data && response.data.paramValue) {
+          try {
+            const styleConfig = JSON.parse(response.data.paramValue);
+            this.announcementStyleConfig = {
+              styleType: styleConfig.styleType || 'warning',
+              backgroundColor: styleConfig.backgroundColor || '#E6A23C',
+              textColor: styleConfig.textColor || '#FFFFFF'
+            };
+          } catch (e) {
+            // JSON 解析失败，使用默认样式
+          }
+        }
+      }).catch(() => {
+        // 忽略错误，使用默认样式
+      });
+
+      // 获取公告滚动配置
+      getSystemParameter('announcement.scroll').then(response => {
+        if (response.data && response.data.paramValue) {
+          this.announcementScroll = response.data.paramValue === 'true';
+        } else {
+          this.announcementScroll = false;
+        }
+      }).catch(() => {
+        this.announcementScroll = false;
+      });
+    },
+    updateHeaderHeight() {
+      if (this.licenseHeader != null || (this.announcementContent && this.announcementEnabled)) {
+        // 公告栏支持自动换行，高度自适应
+        this.headerHeight = "auto";
+      } else {
+        this.headerHeight = "0px";
+      }
+    },
     getDisplayInfo() {
       this.result = getDisplayInfo()
         .then(response => {
@@ -248,12 +328,36 @@ export default {
   border-radius: 2px;
 }
 
-.change-password-tip {
-  height: 30px;
-  background: #e6a23c;
-  text-align: center;
+.announcement-tip {
+  min-height: 30px;
+  text-align: left;
   line-height: 30px;
-  color: white;
+  padding: 0 20px;
+  word-wrap: break-word;
+  word-break: break-all;
+}
+
+/* 公告滚动动画样式 */
+.announcement-scroll {
+  overflow: hidden;
+  white-space: nowrap;
+  word-wrap: normal;
+  word-break: normal;
+}
+
+.announcement-scroll .announcement-text {
+  display: inline-block;
+  padding-left: 100%;
+  animation: scroll-left 15s linear infinite;
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 .ms-left-aside {
@@ -303,6 +407,7 @@ export default {
 .ms-header-w {
   width: 100%;
   padding: 0px;
+  height: auto !important;
 }
 
 .ms-header-fixed {

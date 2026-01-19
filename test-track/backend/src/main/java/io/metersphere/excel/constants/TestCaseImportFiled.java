@@ -24,6 +24,7 @@ public enum TestCaseImportFiled {
     STEP_RESULT("stepResult","预期结果", "預期結果", "Step result", TestCaseExcelData::getStepResult),
     STEP_MODEL("stepModel","编辑模式", "編輯模式", "Edit Model", TestCaseExcelData::getStepModel),
     REMARK("remark","备注", "備註", "Remark", TestCaseExcelData::getRemark),
+    DEMAND("demand","需求号", "需求號", "Demand", TestCaseImportFiled::parseDemand),
     STATUS("status","用例状态", "用例狀態", "Case status", TestCaseExcelData::getStatus),
     MAINTAINER("maintainer","责任人", "責任人", "Maintainer", TestCaseExcelData::getMaintainer),
     PRIORITY("priority","用例等级", "用例等級", "Priority", TestCaseExcelData::getPriority);
@@ -67,6 +68,10 @@ public enum TestCaseImportFiled {
             LogUtil.error(e);
         }
         return tags;
+    }
+
+    private static String parseDemand(TestCaseExcelData excelData) {
+        return StringUtils.defaultString(excelData.getDemand());
     }
 
     public boolean containsHead(String head) {

@@ -3,17 +3,20 @@ FROM registry.cn-qingdao.aliyuncs.com/metersphere/alpine-openjdk17-jre
 LABEL maintainer="FIT2CLOUD <support@fit2cloud.com>"
 
 ARG MS_VERSION=dev
-ARG DEPENDENCY=backend/target/dependency
+ARG DEPENDENCY=test-track/backend/target/dependency
 
 COPY ${DEPENDENCY}/BOOT-INF/lib /app/lib
 COPY ${DEPENDENCY}/META-INF /app/META-INF
 COPY ${DEPENDENCY}/BOOT-INF/classes /app
 
+#  xpack jar 包
+COPY xpack-lib/*.jar /app/lib
+
 # html 文件
-COPY backend/src/main/resources/public /app/public
+COPY test-track/backend/src/main/resources/public /app/public
 
 # 静态文件
-COPY backend/src/main/resources/static /app/static
+COPY test-track/backend/src/main/resources/static /app/static
 
 
 RUN mv /app/lib/ms-jmeter-core-*.jar /app/lib/ms-jmeter-core.jar

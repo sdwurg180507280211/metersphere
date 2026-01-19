@@ -23,6 +23,9 @@
       <el-tab-pane v-if="hasLicense()" :label="$t('system_parameter_setting.qrcode_setting')" name="qrcode">
         <qr-code-config/>
       </el-tab-pane>
+      <el-tab-pane :label="$t('announcement.setting')" name="announcement">
+        <announcement-setting/>
+      </el-tab-pane>
     </el-tabs>
   </el-card>
 </template>
@@ -35,6 +38,7 @@ import MxAuth from "./MxAuth";
 import MxDisplay from "./MxDisplay";
 import MsModule from "./MsModule";
 import QrCodeConfig from "./QrCodeConfig";
+import AnnouncementSetting from "./AnnouncementSetting";
 import {hasLicense} from 'metersphere-frontend/src/utils/permission';
 
 export default {
@@ -46,7 +50,8 @@ export default {
     MxAuth,
     MxDisplay,
     MsModule,
-    QrCodeConfig
+    QrCodeConfig,
+    AnnouncementSetting
   },
   data() {
     return {

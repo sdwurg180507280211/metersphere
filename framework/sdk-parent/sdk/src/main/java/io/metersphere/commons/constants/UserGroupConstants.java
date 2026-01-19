@@ -13,4 +13,6 @@ public class UserGroupConstants {
     public static final String PROJECT_ADMIN = "project_admin";
     public static final String PROJECT_MEMBER = "project_member";
     public static final String READ_ONLY = "read_only";
+    public static final String DEVELOPER = "developer";
+    public static final String TESTER = "tester";
 }

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.base.mapper.IssueChangeLogDetailMapper">
+  <resultMap id="BaseResultMap" type="io.metersphere.base.domain.IssueChangeLogDetail">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="log_id" jdbcType="VARCHAR" property="logId" />
+    <result column="field_type" jdbcType="VARCHAR" property="fieldType" />
+    <result column="field_key" jdbcType="VARCHAR" property="fieldKey" />
+    <result column="field_id" jdbcType="VARCHAR" property="fieldId" />
+    <result column="field_name" jdbcType="VARCHAR" property="fieldName" />
+    <result column="old_value" jdbcType="LONGVARCHAR" property="oldValue" />
+    <result column="new_value" jdbcType="LONGVARCHAR" property="newValue" />
+    <result column="create_time" jdbcType="BIGINT" property="createTime" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, log_id, field_type, field_key, field_id, field_name, old_value, new_value, create_time
+  </sql>
+
+  <insert id="insert" parameterType="io.metersphere.base.domain.IssueChangeLogDetail">
+    insert into issue_change_log_detail (id, log_id, field_type, field_key, field_id, field_name, old_value, new_value, create_time)
+    values (#{id,jdbcType=VARCHAR}, #{logId,jdbcType=VARCHAR}, #{fieldType,jdbcType=VARCHAR}, #{fieldKey,jdbcType=VARCHAR}, #{fieldId,jdbcType=VARCHAR}, #{fieldName,jdbcType=VARCHAR}, #{oldValue,jdbcType=LONGVARCHAR}, #{newValue,jdbcType=LONGVARCHAR}, #{createTime,jdbcType=BIGINT})
+  </insert>
+
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from issue_change_log_detail
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <select id="selectByLogIds" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from issue_change_log_detail
+    where log_id in
+    <foreach collection="logIds" item="id" open="(" close=")" separator=",">
+      #{id}
+    </foreach>
+    order by create_time desc
+  </select>
+</mapper>
