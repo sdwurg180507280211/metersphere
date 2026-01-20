@@ -11,6 +11,14 @@
     <version>${revision}</version>
     <name>domain</name>
     <description>domain</description>
+    <dependencies>
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis</artifactId>
+            <version>3.5.14</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
 
     <build>
         <resources>

@@ -89,6 +89,12 @@ const Setting = {
       meta: {workspace: true, title: 'project.manager', permissions: ['WORKSPACE_PROJECT_MANAGER:READ']}
     },
     {
+      path: 'workspace/associatedSystem',
+      component: () => import('../../business/workspace/associatedSystem/MsAssociatedSystem'),
+      meta: {workspace: true, title: 'organization.associated_system', permissions: ['WORKSPACE_PROJECT_MANAGER:READ']}
+
+    },
+    {
       path: 'wsenvlist',
       component: () => import('../../business/workspace/environment/EnvironmentManage'),
       meta: {

@@ -44,6 +44,7 @@ import io.metersphere.request.ProjectVersionRequest;
 import io.metersphere.request.ResetOrderRequest;
 import io.metersphere.request.member.QueryMemberRequest;
 import io.metersphere.request.testcase.*;
+import io.metersphere.service.BaseAssociatedSystemService;
 import io.metersphere.service.issue.platform.IssueFactory;
 import io.metersphere.service.remote.api.RelevanceApiCaseService;
 import io.metersphere.service.remote.performance.RelevanceLoadCaseService;
@@ -1280,6 +1281,11 @@ public class TestCaseService {
                     .extraRead(CellExtraTypeEnum.MERGE).sheet().doRead();
 
             TestCaseNoModelDataListener easyExcelListener = new TestCaseNoModelDataListener(request, clazz, mergeInfoSet);
+            
+            // 设置Excel文件名到模板处理器上下文（用于模板特定的处理逻辑）
+            if (multipartFile.getOriginalFilename() != null) {
+                easyExcelListener.setExcelFileName(multipartFile.getOriginalFilename());
+            }
 
             //读取excel数据
             EasyExcelFactory.read(multipartFile.getInputStream(), easyExcelListener).sheet().doRead();
@@ -1559,14 +1565,17 @@ public class TestCaseService {
             testCaseDTO.setPriority("P" + i % 4);
             testCaseDTO.setRemark(Translator.get("remark_optional"));
             testCaseDTO.setPrerequisite(Translator.get("preconditions_optional"));
-            List steps = new ArrayList();
-            for (int j = 1; j <= 2; j++) {
-                Map stepItem = new LinkedHashMap<>();
-                stepItem.put("desc", Translator.get("test_case_step_desc") + j);
-                stepItem.put("result", Translator.get("test_case_step_result") + j);
-                steps.add(stepItem);
-            }
-            testCaseDTO.setSteps(JSON.toJSONString(steps));
+           // List steps = new ArrayList();
+//            for (int j = 1; j <= 2; j++) {
+//                Map stepItem = new LinkedHashMap<>();
+//                stepItem.put("desc", Translator.get("test_case_step_desc") + j);
+//                stepItem.put("result", Translator.get("test_case_step_result") + j);
+//                steps.add(stepItem);
+//            }
+            //testCaseDTO.setSteps(JSON.toJSONString(steps));
+            testCaseDTO.setStepDescription("文本描述");
+            testCaseDTO.setExpectedResult("预期结果");
+            testCaseDTO.setStepModel("TEXT");
             testCaseDTO.setProjectId(projectId);
             list.add(testCaseDTO);
         }
@@ -1701,6 +1710,7 @@ public class TestCaseService {
             private static final long serialVersionUID = 5726921174161850104L;
 
             {
+
                 addAll(request.getBaseHeaders()
                         .stream()
                         .map(item -> Arrays.asList(item.getName()))
@@ -1715,10 +1725,23 @@ public class TestCaseService {
                         .collect(Collectors.toList()));
             }
         };
+        List<String> demand=new ArrayList<>();
+        demand.add("需求号");
+        headList.add(demand);
         return headList;
     }
 
     public void testCaseTemplateExport(String projectId, String importType, HttpServletResponse response) {
+        // 获取项目绑定的用例模板
+        TestCaseTemplateDao testCaseTemplate = trackTestCaseTemplateService.getTemplate(projectId);
+        
+        // 如果模板配置了Excel模板文件，使用静态模板文件
+        if (testCaseTemplate != null && StringUtils.isNotBlank(testCaseTemplate.getExcelTemplateFile())) {
+            downloadExcelTemplate(testCaseTemplate.getExcelTemplateFile(), response);
+            return;
+        }
+        
+        // 否则使用原来的动态生成方式
         //导入更新 or 开启使用自定义ID时，导出ID列
         boolean needIdCol = trackProjectService.useCustomNum(projectId) || StringUtils.equals(importType, ExcelImportType.Update.name());
 
@@ -1739,6 +1762,39 @@ public class TestCaseService {
         new EasyExcelExporter(testCaseExcelData.getClass())
                 .exportByCustomWriteHandler(response, heads, data, Translator.get("test_case_import_template_name"),
                         Translator.get("test_case_import_template_sheet"), handler, writeHandler);
+    }
+    
+    /**
+     * 下载静态Excel模板文件
+     */
+    private void downloadExcelTemplate(String fileName, HttpServletResponse response) {
+        if (StringUtils.isEmpty(fileName)) {
+            MSException.throwException("Excel模板文件名不能为空");
+        }
+        try {
+            response.setContentType("application/vnd.ms-excel");
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.setHeader("Content-disposition", 
+                    "attachment;filename=" + URLEncoder.encode("测试用例导入模板", StandardCharsets.UTF_8) + ".xlsx");
+            
+            byte[] buff = new byte[1024];
+            try (OutputStream outputStream = response.getOutputStream();
+                 BufferedInputStream bis = new BufferedInputStream(
+                         TestCaseService.class.getClassLoader().getResourceAsStream("excel-templates/" + fileName))) {
+                if (bis == null) {
+                    MSException.throwException("Excel模板文件不存在: " + fileName);
+                }
+                int i = bis.read(buff);
+                while (i != -1) {
+                    outputStream.write(buff, 0, i);
+                    outputStream.flush();
+                    i = bis.read(buff);
+                }
+            }
+        } catch (IOException e) {
+            LogUtil.error("下载Excel模板失败: " + fileName, e);
+            MSException.throwException("下载Excel模板失败: " + e.getMessage());
+        }
     }
 
     private List<List<String>> getExportTemplateHeads(String projectId, boolean needIdCol) {
@@ -1910,6 +1966,7 @@ public class TestCaseService {
             BeanUtils.copyBean(data, t);
             data.setMaintainer(userMap.get(data.getMaintainer()));
             buildExportCustomNum(isUseCustomId, t, data);
+            buildExportDemand(t, data);
             if (hasStepHeader) {
                 buildExportStep(t, stepDescList, stepResultList, data);
             }
@@ -1972,6 +2029,17 @@ public class TestCaseService {
             } else {
                 data.setCustomNum(String.valueOf(t.getNum()));
             }
+        }
+    }
+
+    private void buildExportDemand(TestCaseDTO t, TestCaseExcelData data) {
+        // 优先使用需求名称,如果没有则使用需求ID
+        if (StringUtils.isNotBlank(t.getDemandName())) {
+            data.setDemand(t.getDemandName());
+        } else if (StringUtils.isNotBlank(t.getDemandId())) {
+            data.setDemand(t.getDemandId());
+        } else {
+            data.setDemand(StringUtils.EMPTY);
         }
     }
 
@@ -2079,6 +2147,9 @@ public class TestCaseService {
 
     private void buildExportCustomFieldMap(Map<String, String> userMap, Map<String, Map<String, String>> customSelectValueMap,
                                            Map<String, String> customNameMap, List<CustomFieldDao> customFieldList, Set<String> textFields) {
+        // 获取所属系统映射（ID -> 名称）
+        Map<String, String> associatedSystemMap = getAssociatedSystemMap();
+        
         for (CustomFieldDao dto : customFieldList) {
             Map<String, String> map = new HashMap<>();
             if (CustomFieldType.getHasOptionValueSet().contains(dto.getType())) {
@@ -2106,12 +2177,48 @@ public class TestCaseService {
             if (StringUtils.equalsAny(dto.getType(), CustomFieldType.TEXTAREA.getValue(), CustomFieldType.RICH_TEXT.getValue())) {
                 textFields.add(dto.getId());
             }
+            // 处理成员字段：使用用户映射
             if (StringUtils.equalsAny(dto.getType(), CustomFieldType.MULTIPLE_MEMBER.getValue(), CustomFieldType.MEMBER.getValue())) {
                 customSelectValueMap.put(dto.getId(), userMap);
-            } else {
+            } 
+            // 处理所属系统字段：使用所属系统映射
+            else if (StringUtils.equalsAny(dto.getType(), CustomFieldType.ASSOCIATED_SYSTEM.getValue(), CustomFieldType.MULTIPLE_ASSOCIATED_SYSTEM.getValue())) {
+                customSelectValueMap.put(dto.getId(), associatedSystemMap);
+            } 
+            else {
                 customSelectValueMap.put(dto.getId(), map);
             }
             customNameMap.put(dto.getId(), dto.getName());
+        }
+    }
+    
+    /**
+     * 获取所属系统映射（ID -> 系统名称）
+     * 用于导出时将系统ID转换为系统名称
+     */
+    private Map<String, String> getAssociatedSystemMap() {
+        try {
+            String workspaceId = SessionUtils.getCurrentWorkspaceId();
+            if (StringUtils.isBlank(workspaceId)) {
+                return new HashMap<>();
+            }
+            BaseAssociatedSystemService associatedSystemService = CommonBeanFactory.getBean(BaseAssociatedSystemService.class);
+            List<AssociatedSystem> systems = associatedSystemService.getAllAssociatedSystems(workspaceId);
+            return systems.stream()
+                    .collect(Collectors.toMap(
+                            AssociatedSystem::getId,
+                            system -> {
+                                // 优先显示：系统名称 (系统简称)
+                                if (StringUtils.isNotBlank(system.getDescription())) {
+                                    return system.getName();
+                                }
+                                return system.getName();
+                            },
+                            (v1, v2) -> v1  // 如果有重复ID，保留第一个
+                    ));
+        } catch (Exception e) {
+            LogUtil.error("获取所属系统映射失败", e);
+            return new HashMap<>();
         }
     }
 
@@ -2581,6 +2688,24 @@ public class TestCaseService {
                     BeanUtils.copyBean(editRequest, item);
                     editRequest.setCustomFields(null);
                     editRequest.setTags(null);
+                    // 如果 stepModel 为空，先尝试从数据库获取原值，如果原值也为空，则从模板获取默认值
+                    // 注意：前端传递的字段名是 stepModel，不是 step
+                    if (StringUtils.isBlank(editRequest.getStepModel())) {
+                        TestCaseWithBLOBs originCase = testCaseMapper.selectByPrimaryKey(editRequest.getId());
+                        if (originCase != null && StringUtils.isNotBlank(originCase.getStepModel())) {
+                            // 保留数据库中的原值
+                            editRequest.setStepModel(originCase.getStepModel());
+                        } else {
+                            // 如果数据库中也为空，从模板获取默认值
+                            TestCaseTemplateDao template = trackTestCaseTemplateService.getTemplate(request.getProjectId());
+                            if (template != null && StringUtils.isNotBlank(template.getStepModel())) {
+                                editRequest.setStepModel(template.getStepModel());
+                            } else {
+                                // 如果模板也没有配置，默认使用 STEP
+                                editRequest.setStepModel(TestCaseConstants.StepModel.STEP.name());
+                            }
+                        }
+                    }
                     editTestCase(editRequest, false, (repeatCase) -> {
                         TestCaseMinderEditRequest.TestCaseMinderEditItem testCaseMinderEditItem = caseMap.get(repeatCase.getId());
                         if (testCaseMinderEditItem != null) {
@@ -2623,6 +2748,18 @@ public class TestCaseService {
 
     private void setCustomDefault(EditTestCaseRequest request) {
         Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
+        
+        // 如果 stepModel 为空，从模板获取默认值
+        if (StringUtils.isBlank(request.getStepModel())) {
+            TestCaseTemplateDao template = trackTestCaseTemplateService.getTemplate(request.getProjectId());
+            if (template != null && StringUtils.isNotBlank(template.getStepModel())) {
+                request.setStepModel(template.getStepModel());
+            } else {
+                // 如果模板也没有配置，默认使用 STEP
+                request.setStepModel(TestCaseConstants.StepModel.STEP.name());
+            }
+        }
+        
         List<CustomFieldDao> customFields = trackCustomFieldTemplateService.getCustomFieldByTemplateId(project.getCaseTemplateId());
         if (CollectionUtils.isNotEmpty(customFields)) {
             // 过滤出模板中有默认值的非系统自定义字段(系统自定义字段前台保存时已经传默认值, 无需处理)

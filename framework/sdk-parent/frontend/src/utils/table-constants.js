@@ -9,6 +9,8 @@ export const CUSTOM_FIELD_TYPE_OPTION = [
   {value: 'multipleSelect', text: 'workspace.custom_filed.multipleSelect', hasOption: true},
   {value: 'radio', text: 'workspace.custom_filed.radio', hasOption: true},
   {value: 'checkbox', text: 'workspace.custom_filed.checkbox', hasOption: true},
+  {value: 'associatedSystem', text: 'workspace.custom_filed.associatedSystem', hasOption: true},
+  {value: 'multipleAssociatedSystem', text: 'workspace.custom_filed.multipleAssociatedSystem', hasOption: true},
   {value: 'member', text: 'workspace.custom_filed.member', hasOption: true},
   {value: 'multipleMember', text: 'workspace.custom_filed.multipleMember', hasOption: true},
   {value: 'date', text: 'workspace.custom_filed.date'},
@@ -16,7 +18,8 @@ export const CUSTOM_FIELD_TYPE_OPTION = [
   {value: 'richText', text: 'workspace.custom_filed.richText'},
   {value: 'int', text: 'workspace.custom_filed.int'},
   {value: 'float', text: 'workspace.custom_filed.float'},
-  {value: 'multipleInput', text: 'workspace.custom_filed.multipleInput'}
+  {value: 'multipleInput', text: 'workspace.custom_filed.multipleInput'},
+  {value: 'cascadingSelect', text: 'workspace.custom_filed.cascadingSelect'}
 ];
 
 export function CUSTOM_FIELD_TYPE_FILTERS(_this) {
@@ -34,7 +37,8 @@ export function CUSTOM_FIELD_TYPE_FILTERS(_this) {
     {value: 'richText', text: _this.$t('workspace.custom_filed.richText')},
     {value: 'int', text: _this.$t('workspace.custom_filed.int')},
     {value: 'float', text: _this.$t('workspace.custom_filed.float')},
-    {value: 'multipleInput', text: _this.$t('workspace.custom_filed.multipleInput')}
+    {value: 'multipleInput', text: _this.$t('workspace.custom_filed.multipleInput')},
+    {value: 'cascadingSelect', text: _this.$t('workspace.custom_filed.cascadingSelect')}
   ];
 }
 
@@ -77,6 +81,8 @@ export const FIELD_TYPE_MAP = {
   multipleSelect: 'workspace.custom_filed.multipleSelect',
   radio: 'workspace.custom_filed.radio',
   checkbox: 'workspace.custom_filed.checkbox',
+  associatedSystem: 'workspace.custom_filed.associatedSystem',
+  multipleAssociatedSystem: 'workspace.custom_filed.multipleAssociatedSystem',
   member: 'workspace.custom_filed.member',
   multipleMember: 'workspace.custom_filed.multipleMember',
   date: 'workspace.custom_filed.date',
@@ -84,7 +90,8 @@ export const FIELD_TYPE_MAP = {
   richText: 'workspace.custom_filed.richText',
   int: 'workspace.custom_filed.int',
   float: 'workspace.custom_filed.float',
-  multipleInput: 'workspace.custom_filed.multipleInput'
+  multipleInput: 'workspace.custom_filed.multipleInput',
+  cascadingSelect: 'workspace.custom_filed.cascadingSelect'
 };
 
 export const SCENE_MAP = {
@@ -99,11 +106,35 @@ export const SYSTEM_FIELD_NAME_MAP = {
   用例状态: 'custom_field.case_status',
   责任人: 'custom_field.case_maintainer',
   用例等级: 'custom_field.case_priority',
+  备注: 'custom_field.case_remark',
+  用例结论: 'test_track.case.conclusion',
+  复测数据: 'custom_field.case_retest_data',
+  复测是否通过: 'custom_field.case_retest_pass',
+  执行方式: 'custom_field.case_execution_method',
+  执行时间: 'custom_field.case_execution_time',
+  执行结果: 'custom_field.case_execution_result',
+  是否通过: 'custom_field.case_pass',
+  测试数据: 'custom_field.case_test_data',
+  用例编写人: 'custom_field.case_creator',
+  用例执行人: 'custom_field.case_executor',
+  设计人: 'custom_field.case_designer',
+  输入数据: 'custom_field.case_input_data',
+  所属系统: 'custom_field.case_associated_system',
   //缺陷字段
   创建人: 'custom_field.issue_creator',
   处理人: 'custom_field.issue_processor',
   状态: 'custom_field.issue_status',
   严重程度: 'custom_field.issue_severity',
+  需求号: 'test_track.issue.requirement_number',
+  缺陷所属系统: 'custom_field.issue_associated_system',
+
+  优先级: 'test_track.issue.priority',
+  严重级别: 'test_track.issue.severity_level',
+  缺陷产生原因: 'test_track.issue.issue_cause',
+  解决时间: 'test_track.issue.resolved_time',
+  关闭时间: 'test_track.issue.closed_time',
+  复测次数: 'test_track.issue.retest_count',
+  模块: 'test_track.issue.module',
   // 测试计划
   测试阶段: 'test_track.plan.plan_stage'
 }

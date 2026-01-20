@@ -112,3 +112,7 @@ export function modifyUserByResourceId(resourceId) {
 export function isSuperUser(userId) {
   return get(`/user/is/super/${userId}`);
 }
+
+export function getSystemParameter(key) {
+  return get(`/system/get/info/${key}`);
+}

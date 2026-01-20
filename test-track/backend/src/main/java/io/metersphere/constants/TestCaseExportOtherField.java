@@ -7,7 +7,8 @@ public enum TestCaseExportOtherField {
     REVIEW_RESULT("reviewResult"),
     CREATOR("creator"),
     CREATE_TIME("createTime"),
-    UPDATE_TIME("updateTime");
+    UPDATE_TIME("updateTime"),
+    DEMAND("demand");
 
     private String value;
 

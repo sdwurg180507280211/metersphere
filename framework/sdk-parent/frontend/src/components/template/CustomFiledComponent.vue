@@ -136,6 +136,26 @@
       </el-option>
     </el-select>
 
+    <el-select
+      v-else-if="data.type === 'associatedSystem' || data.type === 'multipleAssociatedSystem'"
+      @click.native="clickPane"
+      :multiple="data.type === 'multipleAssociatedSystem'"
+      @change="handleChange"
+      clearable
+      :disabled="disabled"
+      filterable
+      v-model="data[prop]"
+      :placeholder="$t('commons.default')"
+    >
+      <el-option
+        v-for="item in associatedSystemOptions"
+        :key="item.id"
+        :label="(item.description ? item.description + ' / ' : '') + item.name"
+        :value="item.id"
+      >
+      </el-option>
+    </el-select>
+
     <ms-input-tag
       v-else-if="data.type === 'multipleInput'"
       @click.native="clickPane"
@@ -204,6 +224,7 @@ export default {
   data() {
     return {
       memberOptions: [],
+      associatedSystemOptions: [],
       originOptions: null,
       loading: false,
     };
@@ -236,23 +257,8 @@ export default {
       }
     }
     this.setFormData();
-    if (["member", "multipleMember"].indexOf(this.data.type) < 0) {
-      return;
-    }
-    getProjectMemberOption().then((r) => {
-      this.memberOptions = r.data;
-      if (
-        this.data.name === "责任人" &&
-        this.data.system &&
-        this.isTemplateEdit
-      ) {
-        this.memberOptions.unshift({
-          id: "CURRENT_USER",
-          name: "创建人",
-          email: "",
-        });
-      }
-    });
+    this.getMemberOptions();
+    this.getAssociatedSystemOptions();
   },
   watch: {
     form() {
@@ -345,12 +351,49 @@ export default {
         this.$set(this.form, this.data[this.formProp], this.data[this.prop]);
       }
     },
+    getMemberOptions() {
+      if (["member", "multipleMember"].indexOf(this.data.type) < 0) {
+        return;
+      }
+      getProjectMemberOption().then((r) => {
+        this.memberOptions = r.data;
+        if (
+          this.data.name === "责任人" &&
+          this.data.system &&
+          this.isTemplateEdit
+        ) {
+          this.memberOptions.unshift({
+            id: "CURRENT_USER",
+            name: "创建人",
+            email: "",
+          });
+        }
+      });
+    },
+    getAssociatedSystemOptions() {
+      if (["associatedSystem", "multipleAssociatedSystem"].indexOf(this.data.type) < 0) {
+        return;
+      }
+      // 调用API获取所属系统列表
+      this.$get('/associatedSystem/list/all')
+        .then((r) => {
+          this.associatedSystemOptions = r.data || [];
+        })
+        .catch((error) => {
+          console.error('获取所属系统列表失败:', error);
+          this.associatedSystemOptions = [];
+        });
+    }
   },
 };
 </script>
 
 <style scoped>
 .el-select {
+  width: 100%;
+}
+
+.el-cascader {
   width: 100%;
 }
 
@@ -364,6 +407,15 @@ export default {
 
 :deep(.el-input--suffix .el-input__inner) {
   height: 32px;
+}
+
+/* 级联下拉框选中后展示文本：加宽到 160px，避免换行 */
+:deep(.el-cascader .el-cascader__label) {
+  width: 160px;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .input-search-tip {

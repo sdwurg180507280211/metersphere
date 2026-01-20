@@ -1,0 +1,32 @@
+# MeterSphere 构建配置文件
+# 将此文件重命名为 .build.config 并放在项目根目录或脚本同级目录
+
+# 项目路径
+PROJECT_PATH=/Users/edy/ideaProjects/metersphere
+
+# 镜像版本
+IMAGE_VERSION=v2.10.23.02-lts
+
+# 镜像仓库地址
+REGISTRY=registry.fit2cloud.com/north
+
+# 打包输出路径（支持日期变量）
+PACKAGE_PATH=/Users/edy/Desktop/metersphere-$(date +%y%m%d).tar
+
+# 跳过 Maven 依赖安装（首次构建设为 false）
+SKIP_INIT=false
+
+# 并行构建（可提高构建速度，但需要更多内存）
+PARALLEL_BUILD=false
+
+# 并行任务数（建议不超过 CPU 核心数）
+MAX_JOBS=4
+
+# 只构建镜像不导出 tar（测试时可设为 true）
+BUILD_ONLY=false
+
+# Maven 选项（可添加自定义参数）
+MAVEN_OPTS="-Xmx4g -XX:MaxPermSize=512m"
+
+# Docker 构建选项
+DOCKER_BUILD_OPTS="--no-cache"

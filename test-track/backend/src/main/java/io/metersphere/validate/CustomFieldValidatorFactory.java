@@ -26,6 +26,9 @@ public class CustomFieldValidatorFactory {
             put(CustomFieldType.MEMBER.getValue(), new CustomFieldMemberValidator());
             put(CustomFieldType.MULTIPLE_MEMBER.getValue(), new CustomFieldMultipleMemberValidator());
 
+            put(CustomFieldType.ASSOCIATED_SYSTEM.getValue(), new CustomFieldAssociatedSystemValidator());
+            put(CustomFieldType.MULTIPLE_ASSOCIATED_SYSTEM.getValue(), new CustomFieldMultipleAssociatedSystemValidator());
+
             put(CustomFieldType.INT.getValue(), new CustomFieldIntegerValidator());
             put(CustomFieldType.FLOAT.getValue(), new CustomFieldFloatValidator());
         }};

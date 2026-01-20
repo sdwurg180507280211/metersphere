@@ -104,6 +104,7 @@ const TRACK_HEADER = {
   TRACK_TEST_CASE: [
     {id: 'num', key: '1', label: 'commons.id'},
     {id: 'name', key: '2', label: 'test_track.case.name'},
+    {id: 'demandName', key: 'b', label: 'test_track.case.demand_num'},
     {id: 'reviewStatus', key: '3', label: 'test_track.case.status'},
     {id: 'tags', key: '4', label: 'commons.tag'},
     {id: 'nodePath', key: '5', label: 'test_track.case.module'},

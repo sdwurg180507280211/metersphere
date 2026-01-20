@@ -19,7 +19,6 @@ import io.metersphere.service.BaseUserService;
 import io.metersphere.service.SSOLogoutService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.shiro.SecurityUtils;
@@ -84,9 +83,14 @@ public class LoginController {
         }
         SecurityUtils.getSubject().getSession().setAttribute("authenticate", UserSource.LOCAL.name());
         ResultHolder result = baseUserService.login(request);
-        // 登录是否提示修改密码
-        boolean changePassword = baseUserService.checkWhetherChangePasswordOrNot(request);
-        result.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
+        /*
+         * 历史逻辑（已停用，仅保留参考）：
+         * - 登录后通过 ResultHolder.message 返回 "true/false"，用于前端顶部“初始/弱密码提示条”
+         * - 现已不再驱动任何前端展示，所以注释掉，不删除以便后续需要时恢复/重构为审计或管理员告警能力
+         *
+         * boolean changePassword = baseUserService.checkWhetherChangePasswordOrNot(request);
+         * result.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
+         */
         return result;
     }
 

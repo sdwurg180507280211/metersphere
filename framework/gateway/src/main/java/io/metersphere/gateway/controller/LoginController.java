@@ -86,13 +86,19 @@ public class LoginController {
         return Mono.just(userLoginService.loginLocal(request, session, locale))
                 .subscribeOn(Schedulers.boundedElastic())
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not found user info or invalid password")))
-                .map(ResultHolder::success)
-                .map(rh -> {
-                    // 登录是否提示修改密码
-                    boolean changePassword = userLoginService.checkWhetherChangePasswordOrNot(request);
-                    rh.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
-                    return rh;
-                });
+                .map(ResultHolder::success);
+                /*
+                 * 历史逻辑（已停用，仅保留参考）：
+                 * - 登录后通过 ResultHolder.message 返回 "true/false"，用于前端顶部“初始/弱密码提示条”
+                 * - 现已不再驱动任何前端展示，所以注释掉，不删除以便后续需要时恢复/重构为审计或管理员告警能力
+                 *
+                 * .map(rh -> {
+                 *     // 登录是否提示修改密码（弱密码检查）
+                 *     boolean changePassword = userLoginService.checkWhetherChangePasswordOrNot(request);
+                 *     rh.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
+                 *     return rh;
+                 * });
+                 */
     }
 
     @GetMapping(value = "/currentUser")

@@ -54,6 +54,20 @@ function _handleComponentAttributes(component, componentType) {
 }
 
 function getComponentOptions(field) {
+  // 说明：
+  // - 普通下拉/单选/多选：后端通常直接下发 options 数组（[{text,value}, ...]）。
+  // - 某些特殊字段（如所属系统）：options 需要前端异步拉取，因此这里返回对象结构，
+  //   由 MsTableSearchSelect 在 created() 中根据 url 拉取后组装为 {label,value}。
+  if (field && (field.type === 'associatedSystem' || field.type === 'multipleAssociatedSystem')) {
+    return {
+      url: '/associatedSystem/list/all',
+      labelKey: 'name',
+      valueKey: 'id',
+      showLabel: option => {
+        return (option.description ? option.description + ' / ' : '') + option.label;
+      }
+    };
+  }
   return Array.isArray(field.options) ? (field.options.length > 0 ? field.options : []) : [];
 }
 
@@ -69,6 +83,8 @@ function getComponentName(type) {
     case 'checkbox':
     case 'member':
     case 'multipleMember':
+    case 'associatedSystem':
+    case 'multipleAssociatedSystem':
       return 'MsTableSearchSelect';
     case 'date':
       return 'MsTableSearchDatePicker';
@@ -134,10 +150,14 @@ export function _findIndexByKey(components, key) {
 }
 
 export function generateColumnKey(field) {
-  if (field.type === 'select' || field.type === 'radio' || field.type === 'member') {
-    // 修改标识
+  // 单选类型字段：生成 custom_single-{id} 格式的 key
+  // 目的是：让后端 ExtIssuesMapper.xml 中的 custom_single 分支能正确处理这些字段的高级搜索
+  if (field.type === 'select' || field.type === 'radio' || field.type === 'member'
+      || field.type === 'associatedSystem') {  // 新增：所属系统字段也是单选类型
     return 'custom_single-' + field.id;
-  } else if (field.type === 'multipleSelect' || field.type === 'checkbox' || field.type === 'multipleMember') {
+  } else if (field.type === 'multipleSelect' || field.type === 'checkbox' || field.type === 'multipleMember'
+      || field.type === 'multipleAssociatedSystem') {  // 新增：多选所属系统字段
+    // 多选类型字段：生成 custom_multiple-{id} 格式的 key
     return 'custom_multiple-' + field.id;
   } else {
     return 'custom-' + field.id;
