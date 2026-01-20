@@ -1,0 +1,528 @@
+// ============================================================================
+// MeterSphere 简化版 Jenkinsfile
+// 参考模块化打包脚本设计，清晰易懂，适合初学者
+// ============================================================================
+
+pipeline {
+    agent {
+        node {
+            label 'metersphere'
+        }
+    }
+
+    // ============================================================================
+    // 构建参数
+    // ============================================================================
+    parameters {
+        //版本号
+        string(
+            name: 'IMAGE_TAG',
+            defaultValue: 'v2.10.26.0-lts',
+            description: '版本号'
+        )
+
+        // 构建目标
+        choice(
+            name: 'BUILD_TARGET',
+            choices: [
+                'all',
+                'framework',
+                'api-test',
+                'performance-test',
+                'project-management',
+                'report-stat',
+                'system-setting',
+                'test-track',
+                'workstation'
+            ],
+            description: '选择要构建的模块'
+        )
+
+        // 是否构建前端
+        booleanParam(
+            name: 'BUILD_FRONTEND',
+            defaultValue: false,
+            description: '是否构建前端（关闭可加速构建）'
+        )
+
+        // 部署环境
+        choice(
+            name: 'DEPLOY_ENV',
+            choices: ['test', 'prod'],
+            description: '部署目标环境'
+        )
+
+        // 是否清理构建
+        booleanParam(
+            name: 'CLEAN_BUILD',
+            defaultValue: false,
+            description: '清理构建（遇到问题时使用）'
+        )
+
+        // 推送镜像到阿里云ACR
+        booleanParam(
+            name: 'PUSH_IMAGE',
+            defaultValue: true,
+            description: '推送镜像到仓库'
+        )
+    }
+
+    // ============================================================================
+    // 环境变量
+    // ============================================================================
+    environment {
+        // 镜像仓库配置
+        IMAGE_REGISTRY = 'crpi-tysjadjbz5afeai8-vpc.cn-beijing.personal.cr.aliyuncs.com'
+        IMAGE_NAMESPACE = 'metersphere-edy'
+        IMAGE_PREFIX = "${IMAGE_REGISTRY}/${IMAGE_NAMESPACE}"
+
+        // Java 和 Maven
+        JAVA_HOME = '/opt/jdk-17'
+        MAVEN_HOME = '/opt/apache-maven-3.8.3'
+        MAVEN_OPTS = '-Dmaven.repo.local=/var/lib/jenkins/.m2/repository -Xmx4g'
+
+        // Node.js（前端）
+        NODE_OPTIONS = '--max-old-space-size=4096'
+        npm_config_registry = 'https://registry.npmmirror.com'
+
+        // Docker
+        DOCKER_CONFIG_DIR = '/var/lib/jenkins/.docker'
+    }
+
+    // ============================================================================
+    // 构建阶段
+    // ============================================================================
+    stages {
+
+        // ========== 准备 ==========
+        stage('Prepare') {
+            steps {
+                script {
+                    // 清理（可选）
+                    if (params.CLEAN_BUILD) {
+                        echo "🧹 清理工作空间..."
+                        cleanWs()
+                        checkout scm
+                    }
+
+                    // 显示配置
+                    printConfig()
+                }
+            }
+        }
+
+        // ========== 编译 ==========
+        stage('Build') {
+            steps {
+                script {
+                    echo "🔨 开始编译..."
+
+                    configFileProvider([configFile(fileId: 'metersphere-maven', targetLocation: 'settings.xml')]) {
+                        // 构建 Maven 命令
+                        def mvnCmd = buildMavenCommand()
+
+                        sh """#!/bin/bash -e
+                            export JAVA_HOME=${JAVA_HOME}
+                            export PATH=\${JAVA_HOME}/bin:${MAVEN_HOME}/bin:\$PATH
+
+                            echo "📦 Maven 编译中..."
+                            ${mvnCmd}
+
+                            echo "✅ Maven 编译完成"
+                        """
+                    }
+
+                    // 解压 JAR
+                    unpackJars()
+                }
+            }
+        }
+
+        // ========== Docker 构建 ==========
+        stage('Docker Build') {
+            steps {
+                script {
+                    echo "🐳 开始构建 Docker 镜像..."
+
+                    // 登录镜像仓库
+                    loginDockerRegistry()
+
+                    // 获取要构建的模块
+                    def modules = getModulesToBuild()
+                    echo "📋 需要构建 ${modules.size()} 个模块"
+
+                    // 构建镜像
+                    modules.each { module ->
+                        buildDockerImage(module)
+                    }
+
+                    echo "✅ Docker 镜像构建完成"
+                }
+            }
+        }
+
+        // ========== 部署 ==========
+        stage('Deploy') {
+            steps {
+                script {
+                    echo "🚀 开始部署..."
+
+                    // 生产环境需要确认
+                    if (params.DEPLOY_ENV == 'prod') {
+                        input message: '⚠️ 确认部署到生产环境？', ok: '确认'
+                    }
+
+                    // 执行部署
+                    deployWithDockerCompose()
+
+                    echo "✅ 部署完成"
+                }
+            }
+        }
+    }
+
+    // ============================================================================
+    // 构建后处理
+    // ============================================================================
+    post {
+        success {
+            script {
+                echo """
+                        ╔════════════════════════════════════════╗
+                        ║          ✅ 构建成功                   ║
+                        ╚════════════════════════════════════════╝
+                        分支: ${env.GIT_BRANCH}
+                        版本: ${params.IMAGE_TAG}
+                        模块: ${params.BUILD_TARGET}
+                        环境: ${params.DEPLOY_ENV}
+                        耗时: ${currentBuild.durationString}
+                    """
+                sendNotification('success')
+            }
+        }
+
+        failure {
+            script {
+                echo """
+                        ╔════════════════════════════════════════╗
+                        ║          ❌ 构建失败                   ║
+                        ╚════════════════════════════════════════╝
+                        分支: ${env.GIT_BRANCH}
+                        阶段: ${env.STAGE_NAME}
+                        日志: ${env.BUILD_URL}console
+                    """
+                sendNotification('failure')
+            }
+        }
+
+        always {
+            sh 'docker image prune -f || true'
+        }
+    }
+}
+
+// ============================================================================
+// 辅助函数
+// ============================================================================
+/**
+ * 打印配置信息
+ */
+def printConfig() {
+    echo """
+            ═══════════════════════════════════════
+             构建配置
+            ═══════════════════════════════════════
+            分支:         ${env.GIT_BRANCH}
+            版本:         ${params.IMAGE_TAG}
+            提交:         ${env.GIT_COMMIT?.take(8)}
+            构建号:       #${env.BUILD_NUMBER}
+
+            构建目标:     ${params.BUILD_TARGET}
+            构建前端:     ${params.BUILD_FRONTEND}
+
+            部署环境:     ${params.DEPLOY_ENV}
+            ═══════════════════════════════════════
+        """
+}
+
+/**
+ * 构建 Maven 命令
+ */
+def buildMavenCommand() {
+    def cmd = "mvn clean package --settings ./settings.xml"
+    cmd += " -Drevision=${params.IMAGE_TAG}"
+
+    // 跳过测试
+    cmd += " -DskipTests"
+
+    // 模块选择
+    if (params.BUILD_TARGET != 'all') {
+        def modules = getModulesToBuild().collect { getModuleMavenPath(it) }.join(',')
+        cmd += " -pl ${modules} -am"
+    }
+
+    // 前端控制
+    if (!params.BUILD_FRONTEND) {
+        cmd += " -DskipAntRunForJenkins=true"
+        def backendModules = [
+            'framework/eureka',
+            'framework/gateway',
+            'api-test/backend',
+            'performance-test/backend',
+            'project-management/backend',
+            'system-setting/backend',
+            'test-track/backend',
+            'report-stat/backend',
+            'workstation/backend'
+        ]
+        cmd += " -pl ${backendModules.join(',')} -am"
+    }
+
+    return cmd
+}
+
+/**
+ * 获取要构建的模块列表
+ */
+def getModulesToBuild() {
+    def allModules = [
+        'framework/eureka',
+        'framework/gateway',
+        'api-test',
+        'performance-test',
+        'project-management',
+        'system-setting',
+        'test-track',
+        'report-stat',
+        'workstation'
+    ]
+
+    if (params.BUILD_TARGET == 'all') {
+        return allModules
+    } else if (params.BUILD_TARGET == 'framework') {
+        return ['framework/eureka', 'framework/gateway']
+    } else {
+        return [params.BUILD_TARGET]
+    }
+}
+
+/**
+ * 获取模块的 Maven 路径
+ */
+def getModuleMavenPath(module) {
+    if (module.startsWith('framework/')) {
+        return module
+    } else {
+        return "${module}/backend"
+    }
+}
+
+/**
+ * 解压 JAR 文件
+ */
+def unpackJars() {
+    echo "📦 解压 JAR 文件..."
+
+    def modules = getModulesToBuild()
+
+    sh """#!/bin/bash -e
+        # 获取 Maven 仓库路径
+        LOCAL_REPO=\$(mvn help:evaluate -Dexpression=settings.localRepository \
+            --settings ./settings.xml -q -DforceStdout)
+
+        # 解压框架模块
+        for module in framework/eureka framework/gateway; do
+            if [ -f "\${module}/target/"*.jar ]; then
+                echo "  → \${module}"
+                mkdir -p "\${module}/target/dependency"
+                (cd "\${module}/target/dependency" && jar -xf ../*.jar)
+            fi
+        done
+
+        # 解压业务模块
+        for module in api-test performance-test project-management system-setting test-track report-stat workstation; do
+            if [ -f "\${module}/backend/target/"*.jar ]; then
+                echo "  → \${module}"
+                mkdir -p "\${module}/backend/target/dependency"
+                (cd "\${module}/backend/target/dependency" && jar -xf ../*.jar)
+
+                # 注入 xpack
+                if [ -f "\${LOCAL_REPO}/io/metersphere/metersphere-xpack/${params.IMAGE_TAG}/metersphere-xpack-${params.IMAGE_TAG}.jar" ]; then
+                    cp "\${LOCAL_REPO}/io/metersphere/metersphere-xpack/${params.IMAGE_TAG}/metersphere-xpack-${params.IMAGE_TAG}.jar" \
+                       "\${module}/backend/target/dependency/BOOT-INF/lib/"
+                fi
+            fi
+        done
+    """
+}
+
+/**
+ * 登录 Docker 仓库
+ */
+def loginDockerRegistry() {
+    withCredentials([usernamePassword(
+        credentialsId: 'aliyun-acr-personal',
+        usernameVariable: 'DOCKER_USER',
+        passwordVariable: 'DOCKER_PASS'
+    )]) {
+        sh """
+            mkdir -p ${DOCKER_CONFIG_DIR}
+            echo "\${DOCKER_PASS}" | docker --config ${DOCKER_CONFIG_DIR} login \
+                --username "\${DOCKER_USER}" \
+                --password-stdin ${IMAGE_REGISTRY}
+        """
+    }
+}
+
+/**
+ * 构建 Docker 镜像
+ */
+def buildDockerImage(module) {
+    def imageName = module.replace('framework/', '')
+    def imageTag = "${env.IMAGE_PREFIX}/${imageName}:${params.IMAGE_TAG}"
+
+    echo "🔨 构建: ${imageName}"
+
+    sh """#!/bin/bash -e
+        # 创建占位目录（前端未构建时）
+        if [ "${params.BUILD_FRONTEND}" != "true" ]; then
+            if [ -d "${module}/backend" ]; then
+                mkdir -p ${module}/backend/src/main/resources/public
+                mkdir -p ${module}/backend/src/main/resources/static
+            fi
+        fi
+
+        # 构建镜像
+        if [[ "${module}" == framework/* ]]; then
+            docker --config ${DOCKER_CONFIG_DIR} build \
+                --build-arg MS_VERSION=${params.IMAGE_TAG}-${env.GIT_COMMIT?.take(8)} \
+                -t ${imageTag} \
+                ./${module}
+        else
+            docker --config ${DOCKER_CONFIG_DIR} build \
+                --build-arg MS_VERSION=${params.IMAGE_TAG}-${env.GIT_COMMIT?.take(8)} \
+                -t ${imageTag} \
+                -f ${module}/Dockerfile \
+                .
+        fi
+
+        # 推送镜像
+        if [ "${params.PUSH_IMAGE}" = "true" ]; then
+            docker --config ${DOCKER_CONFIG_DIR} push ${imageTag}
+            echo "✅ 推送完成: ${imageTag}"
+        fi
+    """
+}
+
+/**
+ * Docker Compose 部署 (优化版 - 支持单模块部署)
+ */
+def deployWithDockerCompose() {
+    def serverCredId = getServerCredential()
+    def imageTag = params.IMAGE_TAG
+    def modules = getModulesToBuild()
+    def imagePrefix = env.IMAGE_PREFIX
+    def imageRegistry = env.IMAGE_REGISTRY
+
+    // 构建服务名列表
+    def services = modules.collect { module ->
+        module.replace('framework/', '')
+    }
+    def serviceList = services.join(' ')
+
+    // 构建 sed 命令列表
+    def sedCommands = services.collect { svc ->
+        "sed -i 's|image:.*${svc}:.*|image: ${imagePrefix}/${svc}:${imageTag}|' docker-compose-${svc}.yml && echo '  ✓ docker-compose-${svc}.yml'"
+    }.join('\n')
+
+    // 同时获取服务器IP和Docker凭据
+    withCredentials([
+        string(credentialsId: serverCredId, variable: 'SERVER_IP'),
+        usernamePassword(
+            credentialsId: 'aliyun-acr-personal',  // Jenkins 凭证 ID
+            usernameVariable: 'DOCKER_USER',       // 将用户名赋值给 DOCKER_USER
+            passwordVariable: 'DOCKER_PASS'       // 将密码赋值给 DOCKER_PASS
+        )
+    ]) {
+        // 在这个代码块内，环境变量 DOCKER_USER 和 DOCKER_PASS 可用
+        sshagent(credentials: ['metersphere-deploy-key']) {
+            // 注意：不带引号的 heredoc，让本地 shell 展开变量
+            // 优点：1) --password-stdin 比 --password 更安全，密码不会出现在进程列表和命令历史中
+            //      2) 管道传递避免密码暴露，适合自动化场景
+            //      3) Jenkins 凭证管理确保密码不硬编码在代码中
+            sh """#!/bin/bash -e
+            ssh -o StrictHostKeyChecking=no deploy@\${SERVER_IP} << DEPLOY_EOF
+            cd /opt/metersphere
+
+            echo "🔐 登录镜像仓库..."
+            echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin ${imageRegistry}
+
+            echo "� 更新镜像配置..."
+            ${sedCommands}
+
+            echo "📥 拉取镜像: ${serviceList}"
+            ./msctl pull ${serviceList}
+
+            echo "🔄 重启服务: ${serviceList}"
+            ./msctl reload ${serviceList}
+
+            echo "⏳ 等待启动..."
+            sleep 20
+
+            echo "📊 服务状态:"
+            ./msctl health
+DEPLOY_EOF
+            """
+        }
+    }
+}
+
+/**
+ * 获取服务器凭证 ID
+ */
+def getServerCredential() {
+    def credMap = [
+        'test': 'test-server-ip',
+        'prod': 'prod-server-ip'
+    ]
+    return credMap[params.DEPLOY_ENV]
+}
+
+/**
+ * 发送通知
+ */
+def sendNotification(status) {
+    try {
+        withCredentials([string(credentialsId: 'wechat-bot-webhook', variable: 'WEBHOOK')]) {
+            def icon = status == 'success' ? '✅' : '❌'
+            def title = status == 'success' ? '构建成功' : '构建失败'
+
+            def message = """
+                            ${icon} **${title}**
+
+                            **项目**: ${env.JOB_NAME}
+                            **分支**: ${env.GIT_BRANCH}
+                            **模块**: ${params.BUILD_TARGET}
+                            **环境**: ${params.DEPLOY_ENV}
+                            **构建号**: #${env.BUILD_NUMBER}
+                        """
+
+            if (status == 'failure') {
+                message += "\n**失败阶段**: ${env.STAGE_NAME}"
+                message += "\n**日志**: ${env.BUILD_URL}console"
+            } else {
+                message += "\n**耗时**: ${currentBuild.durationString}"
+            }
+
+            def escapedMsg = message.replaceAll('"', '\\\\"').replaceAll('\n', '\\\\n')
+
+            sh """
+                curl -s -X POST "\${WEBHOOK}" \
+                    -H 'Content-Type: application/json' \
+                    -d '{"msgtype": "markdown", "markdown": {"content": "${escapedMsg}"}}'
+            """
+        }
+    } catch (Exception e) {
+        echo "通知发送失败: ${e.getMessage()}"
+    }
+}

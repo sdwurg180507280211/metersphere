@@ -8,6 +8,21 @@ function setDefaultValue(item, value) {
   item.hasParse = true; // 多次调用不执行这部分
 }
 
+function parseStoredCustomFieldValue(value) {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return value;
+  }
+  // 后端通常将值以 JSON 字符串保存（例如 "CRM" 或 ["CRM","ACRM"]）
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    return value;
+  }
+}
+
 /**
  * 设置默认值，添加自定义校验
  * @param data 原表单值
@@ -83,7 +98,7 @@ export function parseCustomField(data, template, rules, oldFields) {
             if (item.type === "textarea" || item.type === "richText") {
               setDefaultValue(item, customField.textValue);
             } else {
-              setDefaultValue(item, customField.value);
+              setDefaultValue(item, parseStoredCustomFieldValue(customField.value));
             }
             parseCustomFieldOptionLabel(customField, item);
             item.isEdit = true;
@@ -192,7 +207,7 @@ export function parseCustomFieldForId(data, template, rules, oldFields) {
             if (item.type === "textarea" || item.type === "richText") {
               setDefaultValue(item, customField.textValue);
             } else {
-              setDefaultValue(item, customField.value);
+              setDefaultValue(item, parseStoredCustomFieldValue(customField.value));
             }
             parseCustomFieldOptionLabel(customField, item);
             item.isEdit = true;

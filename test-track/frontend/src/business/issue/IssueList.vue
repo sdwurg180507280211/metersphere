@@ -40,6 +40,8 @@
           :condition="page.condition"
           :total="page.total"
           :page-size.sync="page.pageSize"
+          :reserve-option="true"
+          :page-refresh="pageRefresh"
           :operators="operators"
           :batch-operators="batchButtons"
           :screen-height="screenHeight"
@@ -50,7 +52,7 @@
           @headChange="handleHeadChange"
           @filter="search"
           @order="getIssues"
-          @handlePageChange="getIssues"
+          @handlePageChange="handlePageChange"
           ref="table">
 
           <ms-table-column
@@ -118,6 +120,47 @@
                      <ms-review-table-item
                        :data="scope.row.displayValueMap" :prop="item.id"/>
                 </span>
+                <!-- 状态字段：显示可流转的下拉菜单 -->
+                <span v-else-if="item.id === '状态' && !isThirdPart && hasPermission('PROJECT_TRACK_ISSUE:READ+EDIT')">
+                  <el-dropdown
+                    class="test-case-status"
+                    @command="statusChange"
+                    @visible-change="(visible) => onStatusDropdownVisibleChange(visible, scope.row)"
+                    placement="bottom"
+                    trigger="click"
+                  >
+                    <span class="el-dropdown-link" :class="{'cursor-pointer': true}">
+                      {{
+                        scope.row.displayValueMap[item.id]
+                          ? scope.row.displayValueMap[item.id]
+                          : issueStatusMap[scope.row.status]
+                      }}
+                      <i class="el-icon-arrow-down el-icon--right"></i>
+                    </span>
+                    <el-dropdown-menu slot="dropdown">
+                      <template v-if="availableTransitionsLoading[scope.row.id]">
+                        <el-dropdown-item disabled>
+                          加载中...
+                        </el-dropdown-item>
+                      </template>
+                      <template v-else>
+                        <el-dropdown-item
+                          v-for="(statusOption, index) in getAvailableTransitionsForIssue(scope.row)"
+                          :key="index"
+                          :command="{ id: scope.row.id, status: statusOption.value }"
+                        >
+                          {{ statusOption.system ? $t(statusOption.text) : statusOption.text }}
+                        </el-dropdown-item>
+                        <el-dropdown-item
+                          v-if="availableTransitionsCache[scope.row.id] && !getAvailableTransitionsForIssue(scope.row).length"
+                          disabled
+                        >
+                          {{ $t('test_track.issue.no_available_transitions') }}
+                        </el-dropdown-item>
+                      </template>
+                    </el-dropdown-menu>
+                  </el-dropdown>
+                </span>
                 <span v-else>
                   {{ scope.row.displayValueMap[item.id] }}
                 </span>
@@ -132,8 +175,13 @@
 
         </ms-table>
 
-        <ms-table-pagination :change="getIssues" :current-page.sync="page.currentPage" :page-size.sync="page.pageSize"
-                             :total="page.total"/>
+        <ms-table-pagination
+          :change-current="handlePageChange"
+          :change-size="handlePageSizeChange"
+          :current-page.sync="page.currentPage"
+          :page-size.sync="page.pageSize"
+          :total="page.total"
+        />
         <issue-edit @refresh="getIssues" ref="issueEdit"/>
         <issue-sync-select @syncConfirm="syncConfirm" ref="issueSyncSelect"/>
         <issue-import @refresh="getIssues" ref="issueImport"/>
@@ -144,6 +192,7 @@
 </template>
 
 <script>
+import Vue from "vue";
 import MsTable from "metersphere-frontend/src/components/table/MsTable";
 import MsTableColumn from "metersphere-frontend/src/components/table/MsTableColumn";
 import MsTableOperators from "metersphere-frontend/src/components/MsTableOperators";
@@ -170,9 +219,11 @@ import {
   getIssuesById,
   getPlatformOption,
   getPlatformStatus,
+  issueStatusChange,
   syncAllIssues,
   syncIssues
 } from "@/api/issue";
+import { getAvailableTransitions } from "@/api/issue";
 import {
   getCustomFieldFilter,
   getCustomFieldValue,
@@ -250,10 +301,17 @@ export default {
       isThirdPart: false,
       creatorFilters: [],
       loading: false,
+      // MsTable 的 pageRefresh：
+      // - true：表示这是“翻页触发的数据刷新”，让 MsTable 不要在 data 变化时清空跨页勾选
+      // - false：表示“搜索/筛选/排序”等刷新，此时应清空勾选（沿用 MsTable 默认 clear 行为）
+      pageRefresh: false,
+      availableTransitionsCache: {}, // 缓存每个缺陷的可流转状态
+      availableTransitionsLoading: {}, // 缓存每个缺陷的可流转状态请求中标记，防止重复请求
       dataSelectRange: "",
       platformOptions: [],
       platformStatus: [],
       platformStatusMap: new Map(),
+      associatedSystemMap: new Map(),
       hasLicense: false,
       syncDisable: false,
       columns: {
@@ -308,6 +366,18 @@ export default {
     this.$nextTick(() => {
       // 解决错位问题
       window.addEventListener('resize', this.tableDoLayout);
+
+      // 加载所属系统数据
+      this.$get('/associatedSystem/list/all').then((response) => {
+        if (response.data) {
+          response.data.forEach((item) => {
+            this.associatedSystemMap.set(item.id, item.name);
+          });
+        }
+      }).catch(() => {
+        // 忽略错误，系统可能没有所属系统数据
+      });
+
       getProjectMember()
         .then((response) => {
           this.members = response.data;
@@ -404,6 +474,20 @@ export default {
     },
     getCustomFieldValue(row, field, defaultVal) {
       let value = getCustomFieldValue(row, field, this.members);
+
+      // 处理缺陷所属系统字段，将ID转换为名称
+      if (field.name === '缺陷所属系统') {
+        if (value) {
+          if (Array.isArray(value)) {
+            // 多选所属系统
+            return value.map(id => this.associatedSystemMap.get(id) || id).join(', ');
+          } else {
+            // 单选所属系统
+            return this.associatedSystemMap.get(value) || value;
+          }
+        }
+      }
+
       return value ? value : defaultVal;
     },
     getCustomFieldFilter(field) {
@@ -458,6 +542,26 @@ export default {
     search() {
       // 添加搜索条件时，当前页设置成第一页
       this.page.currentPage = 1;
+      this.pageRefresh = false;
+      this.getIssues();
+    },
+    /**
+     * 我在做：处理分页翻页事件，并标记 pageRefresh。
+     * 目的是：让 MsTable 在翻页加载时不清空跨页勾选。
+     * 如果不这样做，就无法实现：翻页后仍保留之前页的选中状态。
+     */
+    handlePageChange() {
+      this.pageRefresh = true;
+      this.getIssues();
+    },
+    /**
+     * 我在做：处理分页大小变更。
+     * 目的是：页大小变化属于“重新刷新列表”，按统一体验应清空跨页勾选，并回到第一页。
+     * 如果不这样做，就无法实现：页大小变化后勾选状态不混乱且分页正确。
+     */
+    handlePageSizeChange() {
+      this.page.currentPage = 1;
+      this.pageRefresh = false;
       this.getIssues();
     },
     handleHeadChange() {
@@ -485,6 +589,12 @@ export default {
           this.page.data = response.data.listObject;
           parseCustomFilesForList(this.page.data);
           this.initCustomFieldValue();
+          if (this.pageRefresh) {
+            this.$nextTick(() => {
+              this.pageRefresh = false;
+            });
+          }
+          this.loading = false;
         });
     },
     initCustomFieldValue() {
@@ -569,7 +679,19 @@ export default {
         this.$warning(this.$t("test_track.issue.check_select"));
         return;
       }
-      batchDeleteIssue({"batchDeleteIds": selectIds, "batchDeleteAll": this.page.condition.selectAll})
+      // 我在做：批量删除时把“全选范围”一并传给后端（而不是只传 selectAll=true）。
+      // 目的是：MsTable 的 selectAll=true 代表“选择当前筛选结果的全集（跨页）”，后端必须用同样的筛选条件计算全集 Q(...)，再扣除 unSelectIds。
+      // 如果不这样做，就会出现：筛选后全选批量删除误删项目/工作空间全量数据（后端无法得知 Q(...) 的范围，只能按全量处理）。
+      batchDeleteIssue({
+        "batchDeleteIds": selectIds,
+        "batchDeleteAll": this.page.condition.selectAll,
+        "unSelectIds": this.page.condition.unSelectIds,
+        "moduleIds": this.page.condition.moduleIds,
+        "nodeIds": this.page.condition.nodeIds,
+        "filters": this.page.condition.filters,
+        "combine": this.page.condition.combine,
+        "name": this.page.condition.name,
+      })
         .then(() => {
           this.$success(this.$t('commons.delete_success'));
           this.getIssues();
@@ -649,6 +771,92 @@ export default {
     resetSyncParam() {
       this.loading = false;
       this.syncDisable = false;
+    },
+    /**
+     * 状态变更
+     */
+    statusChange(param) {
+      issueStatusChange(param).then(() => {
+        this.getIssues();
+        this.$success(this.$t("commons.modify_success"), false);
+        // 清除缓存
+        if (this.availableTransitionsCache[param.id]) {
+          delete this.availableTransitionsCache[param.id];
+        }
+      }).catch(() => {
+        // 清除缓存以便重新获取
+        if (this.availableTransitionsCache[param.id]) {
+          delete this.availableTransitionsCache[param.id];
+        }
+      });
+    },
+    /**
+     * 获取缺陷可流转的状态列表
+     */
+    getAvailableTransitionsForIssue(issue) {
+      if (!issue || !issue.id) {
+        return [];
+      }
+
+      // 懒加载：这里仅返回缓存，不在渲染期触发接口请求
+      return this.availableTransitionsCache[issue.id] || [];
+    },
+    /**
+     * 我在做：在用户真正展开“状态下拉”时，再去请求可流转状态。
+     * 目的是：把缺陷列表页的状态流转列表改为懒加载，避免列表渲染时触发大量接口请求。
+     * 如果不这样做，就无法实现：列表首屏不展开下拉也会请求每行缺陷的可流转状态。
+     */
+    onStatusDropdownVisibleChange(visible, issue) {
+      if (!visible) {
+        return;
+      }
+      this.loadAvailableTransitionsForIssue(issue);
+    },
+    /**
+     * 我在做：发起获取“可流转状态”的请求，并把结果写入 cache。
+     * 目的是：配合 onStatusDropdownVisibleChange，实现状态下拉的真正懒加载。
+     * 如果不这样做，就无法实现：下拉展开时无法动态拉取后端返回的可流转状态列表。
+     */
+    loadAvailableTransitionsForIssue(issue) {
+      if (!issue || !issue.id) {
+        return;
+      }
+
+      // 已加载过（即便是空数组）则不重复请求
+      if (this.availableTransitionsCache[issue.id]) {
+        return;
+      }
+
+      // 请求中不重复发起
+      if (this.availableTransitionsLoading[issue.id]) {
+        return;
+      }
+
+      // 从模板中获取状态字段的所有选项
+      let statusField = null;
+      if (this.issueTemplate && this.issueTemplate.customFields) {
+        statusField = this.issueTemplate.customFields.find(field => field.name === '状态');
+      }
+
+      if (!statusField || !statusField.options) {
+        // 没有状态字段时，直接缓存空数组，避免反复触发
+        this.$set(this.availableTransitionsCache, issue.id, []);
+        return;
+      }
+
+      this.$set(this.availableTransitionsLoading, issue.id, true);
+      getAvailableTransitions(issue.id).then((response) => {
+        const availableStatusValues = response.data || [];
+        const availableOptions = statusField.options.filter(option =>
+          availableStatusValues.includes(option.value)
+        );
+        this.$set(this.availableTransitionsCache, issue.id, availableOptions);
+        Vue.delete(this.availableTransitionsLoading, issue.id);
+      }).catch(() => {
+        // 获取失败时沿用原逻辑：降级为模板全部选项
+        this.$set(this.availableTransitionsCache, issue.id, statusField.options || []);
+        Vue.delete(this.availableTransitionsLoading, issue.id);
+      });
     },
     editParam() {
       let id = this.$route.query.id;

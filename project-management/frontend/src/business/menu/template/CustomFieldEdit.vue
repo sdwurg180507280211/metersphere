@@ -59,7 +59,11 @@
         :label="$t('custom_field.field_option')"
         prop="options" :label-width="labelWidth">
         <ms-single-handle-drag
+          v-if="form.type !== 'cascadingSelect'"
           :is-kv="form.scene === 'ISSUE'"
+          :data="form.options"/>
+        <ms-cascader-options-editor
+          v-else
           :data="form.options"/>
       </el-form-item>
 
@@ -71,6 +75,7 @@
 <script>
 import MsEditDialog from "../common/MsEditDialog";
 import MsSingleHandleDrag from "../common/MsSingleHandleDrag";
+import MsCascaderOptionsEditor from "../common/MsCascaderOptionsEditor";
 import {getCurrentProjectID} from "metersphere-frontend/src/utils/token";
 import {
   CUSTOM_FIELD_SCENE_OPTION,
@@ -82,7 +87,7 @@ import {modifyFieldTemplateByUrl} from "../../../api/template";
 
 export default {
   name: "CustomFieldEdit",
-  components: {MsSingleHandleDrag, MsEditDialog},
+  components: {MsSingleHandleDrag, MsCascaderOptionsEditor, MsEditDialog},
   props: {
     scene: String,
     labelWidth: {
@@ -116,6 +121,25 @@ export default {
       loading: false,
     };
   },
+  watch: {
+    'form.type'(newType, oldType) {
+      // 当字段类型改变时，如果切换到级联下拉框，确保 options 是数组格式
+      if (newType === 'cascadingSelect' && (!this.form.options || !Array.isArray(this.form.options))) {
+        this.form.options = [];
+      }
+      // 如果从级联下拉框切换到其他类型，且 options 是树形结构，需要转换
+      if (oldType === 'cascadingSelect' && newType !== 'cascadingSelect') {
+        // 将树形结构转换为扁平结构（如果需要）
+        if (Array.isArray(this.form.options) && this.form.options.length > 0) {
+          // 检查是否是树形结构
+          if (this.form.options[0].children !== undefined) {
+            // 保持原样，让用户重新配置
+            this.form.options = [];
+          }
+        }
+      }
+    }
+  },
   computed: {
     fieldTypeOptions() {
       return CUSTOM_FIELD_TYPE_OPTION;
@@ -124,7 +148,7 @@ export default {
       return CUSTOM_FIELD_SCENE_OPTION;
     },
     showOptions() {
-      return ['select', 'multipleSelect', 'radio', 'checkbox'].indexOf(this.form.type) > -1;
+      return ['select', 'multipleSelect', 'radio', 'checkbox', 'cascadingSelect'].indexOf(this.form.type) > -1;
     },
     isSystem() {
       return this.form.system;
@@ -188,6 +212,32 @@ export default {
               if (!item.text || !item.value) {
                 this.$warning(this.$t('custom_field.option_value_check'));
                 return;
+              }
+            }
+          }
+          if (param.type === 'cascadingSelect') {
+            if (!param.options || param.options.length < 1) {
+              this.$warning(this.$t('custom_field.option_check'));
+              return;
+            }
+            // 验证级联选项的树形结构
+            for (const parent of param.options) {
+              if (!parent.text || !parent.value) {
+                this.$warning(this.$t('custom_field.option_value_check'));
+                return;
+              }
+              // 验证子选项（children 是可选的）
+              if (parent.children && Array.isArray(parent.children) && parent.children.length > 0) {
+                for (const child of parent.children) {
+                  if (!child.text || !child.value) {
+                    this.$warning(this.$t('custom_field.option_value_check'));
+                    return;
+                  }
+                }
+              }
+              // 清理空的 children 数组，保持数据结构简洁
+              if (parent.children && Array.isArray(parent.children) && parent.children.length === 0) {
+                delete parent.children;
               }
             }
           }

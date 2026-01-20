@@ -84,10 +84,12 @@
               @filter="filter"
               row-key="id"
               v-loading="result.loading"
+              :reserve-option="true"
+              :page-refresh="pageRefresh"
               :total="total"
               :page-size.sync="pageSize"
               :screen-height="screenHeight"
-              @handlePageChange="getReviews"
+              @pageChange="getReviews(true)"
               @selectCountChange="setSelectCounts"
               :condition="condition"
               ref="table"
@@ -166,7 +168,7 @@
               <ms-create-time-column />
             </ms-table>
             <ms-table-pagination
-              :change="getReviews"
+              :change="handlePageChange"
               :current-page.sync="currentPage"
               :page-size.sync="pageSize"
               :total="total"
@@ -258,6 +260,10 @@ export default {
       testReviews: [],
       versionFilters: [],
       selectIds: new Set(),
+      // MsTable 的 pageRefresh：
+      // - true：表示这是“翻页触发的数据刷新”，让 MsTable 不要在 data 变化时清空跨页勾选
+      // - false：表示“搜索/切换项目/切换模块”等刷新，此时应清空勾选
+      pageRefresh: false,
       treeNodes: [],
       selectNodeIds: [],
       selectNodeNames: [],
@@ -321,6 +327,9 @@ export default {
     this.toggleSelection(this.testReviews);
   },
   methods: {
+    handlePageChange() {
+      this.getReviews(true);
+    },
     loadConditionComponents() {
       getTestTemplateForList(this.projectId).then((template) => {
         this.initPriorityFilters(template);
@@ -384,7 +393,11 @@ export default {
     buildPagePath(path) {
       return path + "/" + this.currentPage + "/" + this.pageSize;
     },
-    getReviews() {
+    getReviews(isPageChange) {
+      // 这里不要默认 true：
+      // - 只有翻页时才需要保留跨页勾选
+      // - 搜索/切换项目/切换模块等刷新需要清空勾选（沿用 MsTable 默认 clear 行为）
+      this.pageRefresh = !!isPageChange;
       if (this.reviewId) {
         this.condition.reviewId = this.reviewId;
       }
@@ -405,6 +418,12 @@ export default {
         this.total = data.itemCount;
         this.testReviews = data.listObject;
         this.result.loading = false;
+        if (this.pageRefresh) {
+          // 翻页加载完成后，下一次非翻页刷新恢复默认行为
+          this.$nextTick(() => {
+            this.pageRefresh = false;
+          });
+        }
       });
     },
     setSelectCounts(data) {

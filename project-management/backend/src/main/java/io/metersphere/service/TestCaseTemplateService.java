@@ -186,6 +186,26 @@ public class TestCaseTemplateService extends TemplateBaseService {
         }
     }
 
+    public List<TestCaseTemplate> getSystemTemplates(String projectId) {
+        TestCaseTemplateExample example = new TestCaseTemplateExample();
+        example.createCriteria().andProjectIdEqualTo(projectId)
+                .andSystemEqualTo(true);
+        example.or(example.createCriteria().andGlobalEqualTo(true));
+        List<TestCaseTemplate> testCaseTemplates = testCaseTemplateMapper.selectByExample(example);
+        Iterator<TestCaseTemplate> iterator = testCaseTemplates.iterator();
+        while (iterator.hasNext()) {
+            TestCaseTemplate next = iterator.next();
+            for (TestCaseTemplate item : testCaseTemplates) {
+                if (next.getGlobal() && !item.getGlobal() && StringUtils.equals(item.getName(), next.getName())) {
+                    // 如果有项目级的模板则过滤掉全局模板
+                    iterator.remove();
+                    break;
+                }
+            }
+        }
+        return testCaseTemplates;
+    }
+
     public List<TestCaseTemplate> getOption(String projectId) {
         List<TestCaseTemplate> testCaseTemplates;
         TestCaseTemplateExample example = new TestCaseTemplateExample();
@@ -198,7 +218,7 @@ public class TestCaseTemplateService extends TemplateBaseService {
                 .andProjectIdEqualTo(projectId)
                 .andSystemNotEqualTo(true);
         testCaseTemplates = testCaseTemplateMapper.selectByExample(example);
-        testCaseTemplates.add(getDefaultTemplate(projectId));
+        testCaseTemplates.addAll(getSystemTemplates(projectId));
         return testCaseTemplates;
     }
 

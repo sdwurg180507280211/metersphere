@@ -5,6 +5,14 @@
       <!-- 创建 or 编辑用例 -->
       <div class="edit-header-container">
         <div class="header-content-row" :style="!isPublicShow ? 'width: 80%' : 'max-width: 65%'">
+          <el-button
+            v-if="!editable"
+            plain
+            size="mini"
+            icon="el-icon-back"
+            @click="handleBack"
+          >{{ $t("test_track.return") }}
+          </el-button>
           <!-- 用例名称展示与编辑 -->
           <test-case-edit-name-view
             :is-add="isAdd"
@@ -671,6 +679,9 @@ export default {
     }
   },
   watch: {
+    '$route.query.mode': function () {
+      this.initEditableStateFromRoute();
+    },
     isAdd() {
       this.type = this.isAdd ? 'add' : 'edit';
     },
@@ -735,6 +746,72 @@ export default {
     this.setInitialVal();
   },
   methods: {
+    initEditableStateFromRoute() {
+      // 我在做：从路由 query.mode 初始化/同步 editableState
+      // 目的：让“只读(view) / 编辑(edit)”成为可追溯的显式状态，并且可通过 router.replace 无刷新切换
+      // 如果不这样做：editableState 只靠组件内状态，刷新/复制链接/多入口跳转后会出现状态不一致
+      if (this.isAdd) {
+        return;
+      }
+      if (this.isPublicShow || this.hasReadonlyPermission) {
+        this.editableState = false;
+        return;
+      }
+
+      const mode = this.$route?.query?.mode;
+      if (mode === 'edit' && !this.readOnly) {
+        this.editableState = true;
+      } else {
+        this.editableState = false;
+      }
+    },
+    replaceMode(mode) {
+      // 我在做：用 router.replace 仅替换当前路由的 query.mode
+      // 目的：避免“view->edit->view”产生多条历史记录，用户点浏览器返回时不会被模式切换干扰
+      // 如果不这样做：history 栈会被模式切换污染，返回来源页的体验会变差
+      if (!mode) {
+        return;
+      }
+      const currentMode = this.$route?.query?.mode;
+      if (currentMode === mode) {
+        return;
+      }
+      const query = Object.assign({}, this.$route.query || {}, { mode });
+      this.$router.replace({ path: this.$route.path, query });
+    },
+    getSafeRedirectPath() {
+      // 我在做：对 redirect 参数做“仅允许站内路径”的安全校验
+      // 目的：防止 open redirect（比如 redirect=https://evil.com）导致的安全风险
+      // 如果不这样做：攻击者可构造恶意链接诱导用户点击，产生跳转到外站的风险
+      const redirect = this.$route?.query?.redirect;
+      if (!redirect || typeof redirect !== 'string') {
+        return '';
+      }
+
+      // 站内路径必须以“单个 /”开头，避免 “//xx” 变成协议相对 URL
+      if (!redirect.startsWith('/') || redirect.startsWith('//')) {
+        return '';
+      }
+
+      // 明确禁止出现协议片段，进一步兜底
+      if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(redirect)) {
+        return '';
+      }
+      return redirect;
+    },
+    handleBack() {
+      // 我在做：实现“返回”逻辑（优先 redirect，fallback 到列表/浏览器返回）
+      // 目的：严格回到来源页，做到入口一致、返回精准
+      // 如果不这样做：用户只能靠浏览器返回或猜测性回列表，体验不稳定
+      const redirect = this.getSafeRedirectPath();
+      if (redirect) {
+        this.$router.push(redirect);
+        return;
+      }
+
+      // fallback：没有 redirect 时回到功能用例列表
+      this.$router.push({ path: '/track/case/all', query: { projectId: getCurrentProjectID() } });
+    },
     setInitialVal() {
       if (this.isAdd && hasLicense()) {
         getProjectVersions(getCurrentProjectID()).then(
@@ -779,6 +856,8 @@ export default {
       if (this.isPublicShow) {
         this.resetForm();
       }
+
+      this.initEditableStateFromRoute();
 
       let initFuc = this.initEdit;
       this.loading = true;
@@ -941,6 +1020,7 @@ export default {
       if (e === 3) {
         this.casePublic = true;
       } else if (e === 4) {
+        this.replaceMode('view');
         this.editableState = false;
         this.$refs.otherInfo.caseActiveName = 'detail';
         this.loadTestCase();
@@ -1259,6 +1339,7 @@ export default {
           .then((response) => {
             if (this.editableState) {
                // 如果是编辑态保存用例, 则直接reload页面
+               this.replaceMode('view');
                this.editableState = false;
                this.$refs.otherInfo.caseActiveName = 'detail';
             }
@@ -1311,7 +1392,11 @@ export default {
       }
     },
     routerToEdit(id) {
-      this.$router.push({path: '/track/case/edit/' + id});
+      // 我在做：跳转到编辑页时保留 redirect，并默认切换回 view 模式
+      // 目的：创建/保存后 URL 保持可分享且返回策略不丢失
+      // 如果不这样做：保存后会丢失 redirect，导致“返回来源页”不稳定
+      const query = Object.assign({}, this.$route.query || {}, { mode: 'view' });
+      this.$router.push({ path: '/track/case/edit/' + id, query });
     },
     buildParam() {
       let param = {};
@@ -1524,6 +1609,10 @@ export default {
       }
     },
     toEdit() {
+      if (this.readOnly || this.isPublicShow || this.hasReadonlyPermission) {
+        return;
+      }
+      this.replaceMode('edit');
       this.editableState = true;
     },
     setSpecialPropForCompare: function (that) {

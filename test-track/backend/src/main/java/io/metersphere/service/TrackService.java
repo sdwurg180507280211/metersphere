@@ -194,14 +194,14 @@ public class TrackService {
     private Map<String, Integer> getPlanBugStatusSize(String projectId) {
         Map<String, Integer> bugStatusMap = new HashMap<>(2);
         if (StringUtils.isEmpty(projectId)) {
-            bugStatusMap.put(Translator.get("new"), 0);
+            bugStatusMap.put(Translator.get("status_new"), 0);
             return bugStatusMap;
         }
 
         List<String> issueIds = extIssuesMapper.getTestPlanIssue(projectId);
         if (CollectionUtils.isEmpty(issueIds)) {
             // 没有测试计划关联缺陷
-            bugStatusMap.put(Translator.get("new"), 0);
+            bugStatusMap.put(Translator.get("status_new"), 0);
             return bugStatusMap;
         }
 

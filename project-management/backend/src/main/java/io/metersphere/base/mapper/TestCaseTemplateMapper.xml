@@ -14,6 +14,7 @@
     <result column="step_model" jdbcType="VARCHAR" property="stepModel" />
     <result column="create_user" jdbcType="VARCHAR" property="createUser" />
     <result column="project_id" jdbcType="VARCHAR" property="projectId" />
+    <result column="excel_template_file" jdbcType="VARCHAR" property="excelTemplateFile" />
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="io.metersphere.base.domain.TestCaseTemplateWithBLOBs">
     <result column="prerequisite" jdbcType="LONGVARCHAR" property="prerequisite" />
@@ -82,7 +83,7 @@
   </sql>
   <sql id="Base_Column_List">
     id, `name`, `type`, description, case_name, `system`, `global`, create_time, update_time, 
-    step_model, create_user, project_id
+    step_model, create_user, project_id, excel_template_file
   </sql>
   <sql id="Blob_Column_List">
     prerequisite, step_description, expected_result, actual_result, steps
@@ -139,7 +140,7 @@
     insert into test_case_template (id, `name`, `type`, 
       description, case_name, `system`, 
       `global`, create_time, update_time, 
-      step_model, create_user, project_id, 
+      step_model, create_user, project_id, excel_template_file,
       prerequisite, step_description, 
       expected_result, actual_result, steps
       )
@@ -147,6 +148,7 @@
       #{description,jdbcType=VARCHAR}, #{caseName,jdbcType=VARCHAR}, #{system,jdbcType=BIT}, 
       #{global,jdbcType=BIT}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT}, 
       #{stepModel,jdbcType=VARCHAR}, #{createUser,jdbcType=VARCHAR}, #{projectId,jdbcType=VARCHAR}, 
+      #{excelTemplateFile,jdbcType=VARCHAR},
       #{prerequisite,jdbcType=LONGVARCHAR}, #{stepDescription,jdbcType=LONGVARCHAR}, 
       #{expectedResult,jdbcType=LONGVARCHAR}, #{actualResult,jdbcType=LONGVARCHAR}, #{steps,jdbcType=LONGVARCHAR}
       )
@@ -189,6 +191,9 @@
       </if>
       <if test="projectId != null">
         project_id,
+      </if>
+      <if test="excelTemplateFile != null">
+        excel_template_file,
       </if>
       <if test="prerequisite != null">
         prerequisite,
@@ -242,6 +247,9 @@
       </if>
       <if test="projectId != null">
         #{projectId,jdbcType=VARCHAR},
+      </if>
+      <if test="excelTemplateFile != null">
+        #{excelTemplateFile,jdbcType=VARCHAR},
       </if>
       <if test="prerequisite != null">
         #{prerequisite,jdbcType=LONGVARCHAR},
@@ -304,6 +312,9 @@
       </if>
       <if test="record.projectId != null">
         project_id = #{record.projectId,jdbcType=VARCHAR},
+      </if>
+      <if test="record.excelTemplateFile != null">
+        excel_template_file = #{record.excelTemplateFile,jdbcType=VARCHAR},
       </if>
       <if test="record.prerequisite != null">
         prerequisite = #{record.prerequisite,jdbcType=LONGVARCHAR},
@@ -402,6 +413,9 @@
       <if test="projectId != null">
         project_id = #{projectId,jdbcType=VARCHAR},
       </if>
+      <if test="excelTemplateFile != null">
+        excel_template_file = #{excelTemplateFile,jdbcType=VARCHAR},
+      </if>
       <if test="prerequisite != null">
         prerequisite = #{prerequisite,jdbcType=LONGVARCHAR},
       </if>
@@ -433,6 +447,7 @@
       step_model = #{stepModel,jdbcType=VARCHAR},
       create_user = #{createUser,jdbcType=VARCHAR},
       project_id = #{projectId,jdbcType=VARCHAR},
+      excel_template_file = #{excelTemplateFile,jdbcType=VARCHAR},
       prerequisite = #{prerequisite,jdbcType=LONGVARCHAR},
       step_description = #{stepDescription,jdbcType=LONGVARCHAR},
       expected_result = #{expectedResult,jdbcType=LONGVARCHAR},
@@ -452,7 +467,8 @@
       update_time = #{updateTime,jdbcType=BIGINT},
       step_model = #{stepModel,jdbcType=VARCHAR},
       create_user = #{createUser,jdbcType=VARCHAR},
-      project_id = #{projectId,jdbcType=VARCHAR}
+      project_id = #{projectId,jdbcType=VARCHAR},
+      excel_template_file = #{excelTemplateFile,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 </mapper>

@@ -4,6 +4,7 @@
                direction="left"
                :class="moveBarClass"
                :visible="true"
+               :mask="false"
                :size="10"
                :show-full-screen="false"
                :is-show-close="false">
@@ -204,10 +205,16 @@ export default {
 }
 
 
-.ms-drawer {
-  padding: 15px;
+/*
+ * 说明：MsDrawer 组件升级后新增了 wrapper，父组件的 scoped 样式不再直接命中内部 .ms-drawer。
+ * 所以这里必须使用 :deep(...)，把样式作用到 MsDrawer 内部真实 DOM。
+ */
+
+/* 默认收起态：宽度为 0，但保留 overflow: visible 让右侧竖排按钮可见 */
+.drawer-content :deep(.ms-drawer) {
+  padding: 0px !important;
   height: 300px !important;
-  width: 230px !important;
+  width: 0px !important;
   top: calc((100vh - 200px)/3) !important;
   border: 1px solid #E6E6E6;
   border-radius: 10px;
@@ -224,6 +231,7 @@ export default {
   margin-left: 159px;
 }
 
+/* wrapper 自身不需要占空间（保持原设定即可，不依赖它实现收起/展开） */
 .drawer-content {
   width: 0px !important;
   padding: 0px !important;
@@ -233,7 +241,7 @@ export default {
     width: 140px !important;
 }
 
-.drawer-content:hover{
+.drawer-content :deep(.ms-drawer:hover) {
   padding: 15px !important;
   height: 300px !important;
   width: 230px !important;

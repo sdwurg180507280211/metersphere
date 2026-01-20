@@ -15,12 +15,17 @@ import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.dto.CustomFieldDao;
 import io.metersphere.dto.CustomFieldResourceDTO;
 import io.metersphere.dto.TestCaseNodeDTO;
+import io.metersphere.dto.TestCaseTemplateDao;
 import io.metersphere.excel.annotation.NotRequired;
 import io.metersphere.excel.constants.TestCaseImportFiled;
 import io.metersphere.excel.domain.ExcelErrData;
 import io.metersphere.excel.domain.ExcelMergeInfo;
 import io.metersphere.excel.domain.TestCaseExcelData;
 import io.metersphere.excel.domain.TestCaseExcelDataFactory;
+import io.metersphere.excel.template.AbstractTestCaseTemplateHandler;
+import io.metersphere.excel.template.TemplateHandlerContext;
+import io.metersphere.excel.template.TestCaseTemplateHandler;
+import io.metersphere.excel.template.TestCaseTemplateHandlerFactory;
 import io.metersphere.excel.utils.ExcelImportType;
 import io.metersphere.excel.utils.ExcelValidateHelper;
 import io.metersphere.exception.CustomFieldValidateException;
@@ -28,6 +33,7 @@ import io.metersphere.i18n.Translator;
 import io.metersphere.request.testcase.TestCaseImportRequest;
 import io.metersphere.service.TestCaseNodeService;
 import io.metersphere.service.TestCaseService;
+import io.metersphere.service.remote.project.TrackTestCaseTemplateService;
 import io.metersphere.validate.AbstractCustomFieldValidator;
 import io.metersphere.validate.CustomFieldValidatorFactory;
 import org.apache.commons.collections.CollectionUtils;
@@ -57,6 +63,22 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
 
     private Map<Integer, String> headMap;
     private Map<String, String> excelHeadToFieldNameDic = new HashMap<>();
+
+    /**
+     * Excel列名映射配置（根据模板文件动态加载）
+     */
+    private Map<String, String> customHeadMapping = new HashMap<>();
+
+    /**
+     * 当前使用的模板对象（用于获取模板配置信息，如默认编辑模式）
+     */
+    private TestCaseTemplateDao currentTemplate;
+
+    /**
+     * 当前使用的模板处理器（模板驱动设计）
+     */
+    private TestCaseTemplateHandler templateHandler;
+
 
     /**
      * 每隔2000条存储数据库，然后清理list ，方便内存回收
@@ -133,7 +155,67 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         }
 
         nodeTrees = testCaseNodeService.getNodeTreeByProjectId(request.getProjectId());
+
+        // 根据项目模板加载列名映射配置
+        loadCustomHeadMapping(request.getProjectId());
     }
+
+    /**
+     * 根据项目绑定的用例模板加载列名映射配置
+     * 使用模板驱动设计，通过模板处理器来获取模板特定的规则
+     */
+    private void loadCustomHeadMapping(String projectId) {
+        try {
+            TrackTestCaseTemplateService trackTestCaseTemplateService = CommonBeanFactory.getBean(TrackTestCaseTemplateService.class);
+            TestCaseTemplateDao template = trackTestCaseTemplateService.getTemplate(projectId);
+            // 保存模板对象，用于获取模板配置信息（如默认编辑模式、列名映射等）
+            currentTemplate = template;
+
+            String templateFileName = null;
+            if (template != null && StringUtils.isNotBlank(template.getExcelTemplateFile())) {
+                templateFileName = template.getExcelTemplateFile();
+            }
+
+            // 使用模板处理器工厂获取对应的模板处理器（模板驱动）
+            templateHandler = TestCaseTemplateHandlerFactory.getHandler(templateFileName);
+            LogUtil.info("使用模板处理器: " + templateHandler.getDescription() + ", 模板文件: " + templateFileName);
+
+            // 从模板处理器获取列名映射配置
+            customHeadMapping = templateHandler.getHeadMapping();
+
+            // 设置模板处理器上下文（用于传递Excel文件名等信息）
+            TemplateHandlerContext handlerContext = new TemplateHandlerContext();
+            handlerContext.setProjectId(request.getProjectId());
+            templateHandler.setContext(handlerContext);
+        } catch (Exception e) {
+            LogUtil.error("加载列名映射配置失败", e);
+            // 即使加载失败，也使用默认处理器
+            currentTemplate = null;
+            templateHandler = TestCaseTemplateHandlerFactory.getHandler(null);
+            customHeadMapping = templateHandler.getHeadMapping();
+
+            // 设置默认上下文
+            TemplateHandlerContext handlerContext = new TemplateHandlerContext();
+            handlerContext.setProjectId(request.getProjectId());
+            templateHandler.setContext(handlerContext);
+        }
+    }
+
+    /**
+     * 设置Excel文件名到模板处理器上下文
+     * 用于模板特定的处理逻辑（如模板2需要在所属模块前加上文件名）
+     *
+     * @param excelFileName Excel文件名
+     */
+    public void setExcelFileName(String excelFileName) {
+        if (templateHandler != null && templateHandler instanceof AbstractTestCaseTemplateHandler) {
+            TemplateHandlerContext context = ((AbstractTestCaseTemplateHandler) templateHandler).context;
+            if (context != null) {
+                context.setExcelFileName(excelFileName);
+            }
+        }
+    }
+
 
     @Override
     public void invokeHeadMap(Map<Integer, String> headMap, AnalysisContext context) {
@@ -312,6 +394,14 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         validateIdExist(data, errMsg);
 
         validateDbExist(data, errMsg);
+
+        // 使用模板处理器进行模板特定的验证（模板驱动）
+        if (templateHandler != null) {
+            String templateValidationError = templateHandler.validateData(data);
+            if (StringUtils.isNotBlank(templateValidationError)) {
+                errMsg.append(templateValidationError);
+            }
+        }
     }
 
     private void validateDbExist(TestCaseExcelData data, StringBuilder stringBuilder) {
@@ -320,44 +410,34 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         if (isUpdateModel()) {
             return;
         }
-        if (request.getTestCaseNames().contains(data.getName())) {
-            TestCaseWithBLOBs testCase = new TestCaseWithBLOBs();
-            BeanUtils.copyBean(testCase, data);
-            testCase.setProjectId(request.getProjectId());
-            String steps = getSteps(data);
-            testCase.setSteps(steps);
+        // 去掉用例名称唯一性检查，直接检查用例是否真正重复（通过多个字段组合判断）
+        TestCaseWithBLOBs testCase = new TestCaseWithBLOBs();
+        BeanUtils.copyBean(testCase, data);
+        testCase.setProjectId(request.getProjectId());
+        String steps = getSteps(data);
+        testCase.setSteps(steps);
 
-            testCase.setNodeId(pathMap.get(testCase.getNodePath()));
-            boolean dbExist = testCaseService.exist(testCase);
-            boolean excelExist = false;
+        testCase.setNodeId(pathMap.get(testCase.getNodePath()));
+        boolean dbExist = testCaseService.exist(testCase);
+        // @Data 重写了 equals 和 hashCode 方法
+        boolean excelExist = excelDataList.contains(data);
 
-            if (dbExist) {
-                // db exist
-                stringBuilder.append(
-                        Translator.get("test_case_already_exists")
-                                .concat("：")
-                                .concat(data.getName())
-                                .concat(ERROR_MSG_SEPARATOR));
-            } else {
-                // @Data 重写了 equals 和 hashCode 方法
-                excelExist = excelDataList.contains(data);
-            }
-
-            if (excelExist) {
-                // excel exist
-                stringBuilder.append(
-                        Translator.get("test_case_already_exists_excel")
-                                .concat("：")
-                                .concat(data.getName())
-                                .concat(ERROR_MSG_SEPARATOR));
-            } else {
-                if (!dbExist) {
-                    excelDataList.add(data);
-                }
-            }
-
+        if (dbExist) {
+            // db exist
+            stringBuilder.append(
+                    Translator.get("test_case_already_exists")
+                            .concat("：")
+                            .concat(data.getName())
+                            .concat(ERROR_MSG_SEPARATOR));
+        } else if (excelExist) {
+            // excel exist
+            stringBuilder.append(
+                    Translator.get("test_case_already_exists_excel")
+                            .concat("：")
+                            .concat(data.getName())
+                            .concat(ERROR_MSG_SEPARATOR));
         } else {
-            request.getTestCaseNames().add(data.getName());
+            // 用例名称不唯一，只要其他字段不同就可以导入
             excelDataList.add(data);
         }
     }
@@ -446,6 +526,10 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
                 continue;
             }
             AbstractCustomFieldValidator customFieldValidator = customFieldValidatorMap.get(customField.getType());
+            if (customFieldValidator == null) {
+                // 如果没有对应的验证器,跳过验证
+                continue;
+            }
             try {
                 customFieldValidator.validate(customField, value.toString());
                 if (customFieldValidator.isKVOption) {
@@ -539,15 +623,27 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         this.ids = ids;
     }
 
-    public void saveData() {
+    /**
+     * 保存数据
+     * @return true表示成功保存了数据，false表示没有保存数据（可能因为错误或数据为空）
+     */
+    public boolean saveData() {
 
         //excel中用例都有错误时就返回，只要有用例可用于更新或者插入就不返回
+        // 如果ignore=true，即使有错误也要保存验证通过的数据
         if (!errList.isEmpty() && !request.isIgnore()) {
-            return;
+            return false;
         }
+        // 如果ignore=true，即使有错误，只要list不为空就继续保存
         if ((isCreateModel() && CollectionUtils.isEmpty(list)) || (isUpdateModel() && CollectionUtils.isEmpty(updateList))) {
+            // 如果ignore=true且有错误，说明所有数据都有错误，这是正常的，不需要抛异常
+            if (request.isIgnore() && !errList.isEmpty()) {
+                return false;
+            }
             MSException.throwException(Translator.get("no_legitimate_case_tip"));
         }
+
+        boolean hasSaved = false;
 
         if (CollectionUtils.isNotEmpty(list)) {
             List<TestCaseWithBLOBs> result = list.stream()
@@ -557,6 +653,8 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
             names = result.stream().map(TestCase::getName).collect(Collectors.toList());
             ids = result.stream().map(TestCase::getId).collect(Collectors.toList());
             isUpdated = true;
+            list.clear();
+            hasSaved = true;
         }
 
         if (CollectionUtils.isNotEmpty(updateList)) {
@@ -568,7 +666,10 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
             names = result2.stream().map(TestCase::getName).collect(Collectors.toList());
             ids = result2.stream().map(TestCase::getId).collect(Collectors.toList());
             updateList.clear();
+            hasSaved = true;
         }
+
+        return hasSaved;
     }
 
     private TestCaseWithBLOBs convert2TestCase(TestCaseExcelData data) {
@@ -637,6 +738,12 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         String modifiedTags = modifyTagPattern(data);
         testCase.setTags(modifiedTags);
         data.setStatus(data.getStatus());
+
+        // 处理需求号字段
+        if (StringUtils.isNotBlank(data.getDemand())) {
+            testCase.setDemandName(data.getDemand());
+            testCase.setDemandId(StringUtils.EMPTY);
+        }
 
         // todo 这里要获取模板的自定义字段再新建关联关系
         if (StringUtils.isNotBlank(data.getMaintainer())) {
@@ -804,6 +911,8 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
                 data.setPrerequisite(value);
             } else if (StringUtils.equals(field, "remark")) {
                 data.setRemark(value);
+            } else if (StringUtils.equals(field, "demand")) {
+                data.setDemand(value);
             } else if (StringUtils.equals(field, "stepDesc")) {
                 data.setStepDesc(value);
             } else if (StringUtils.equals(field, "stepResult")) {
@@ -814,7 +923,46 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
                 data.getCustomData().put(field, value);
             }
         }
+
+        // 如果编辑模式为空，根据模板设置默认值
+        if (StringUtils.isBlank(data.getStepModel())) {
+//            String defaultStepModel = getDefaultStepModelByTemplate();
+//           if (StringUtils.isNotBlank(defaultStepModel)) {
+////                data.setStepModel(defaultStepModel);
+//            }
+
+
+                //如果编辑模式为空，设置成文本描述
+                data.setStepModel(TestCaseConstants.StepModel.TEXT.name());
+
+        }
+
+        // 使用模板处理器进行模板特定的数据处理（模板驱动）
+        if (templateHandler != null) {
+            templateHandler.processData(data);
+        }
+
         return data;
+    }
+
+    /**
+     * 根据模板对象获取默认的编辑模式
+     * 优先使用模板对象中配置的 stepModel，如果没有则使用模板处理器的默认值
+     * 使用模板驱动设计，通过模板处理器来获取模板特定的默认值
+     */
+    private String getDefaultStepModelByTemplate() {
+        // 优先使用模板对象中配置的编辑模式
+        if (currentTemplate != null && StringUtils.isNotBlank(currentTemplate.getStepModel())) {
+            return currentTemplate.getStepModel();
+        }
+
+        // 使用模板处理器的默认编辑模式（模板驱动）
+        if (templateHandler != null) {
+            return templateHandler.getDefaultStepModel();
+        }
+
+        // 兜底：默认使用步骤编辑模式
+        return TestCaseConstants.StepModel.STEP.name();
     }
 
     public List<ExcelErrData<TestCaseExcelData>> getErrList() {
@@ -828,13 +976,19 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
             buildUpdateOrErrorList(firstMergeRowIndex, currentMergeData);
         }
         saveData();
-        list.clear();
+        // list已经在saveData()中清空了，这里不需要再次清空
         customFieldsMap.clear();
     }
 
     private void formatHeadMap() {
         for (Integer key : headMap.keySet()) {
             String name = headMap.get(key);
+            // 先检查自定义映射（根据模板文件动态加载的映射）
+            if (customHeadMapping.containsKey(name)) {
+                name = customHeadMapping.get(name);
+                headMap.put(key, name);
+            }
+            // 再检查标准映射（从注解中读取的映射）
             if (excelHeadToFieldNameDic.containsKey(name)) {
                 headMap.put(key, excelHeadToFieldNameDic.get(name));
             }
