@@ -21,7 +21,7 @@ public class BaseAssociatedSystemService {
     private BaseAssociatedSystemMapper baseAssociatedSystemMapper;
 
     public List<AssociatedSystem> getAllAssociatedSystems(String workspaceId) {
-
+        // 不再按工作空间过滤，返回所有所属系统
         return baseAssociatedSystemMapper.getAssociatedSystemWithWorkspaceId(workspaceId);
     }
 
