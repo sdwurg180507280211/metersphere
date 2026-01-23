@@ -106,77 +106,7 @@ export default {
       isInit: false,
     };
   },
-  mounted() {
-    // 注册当前组件为活跃的高级搜索组件
-    this.registerAdvSearchComponent();
-    // 监听全局Tab键，切换高级搜索显示状态
-    document.addEventListener('keydown', this.handleTabKey);
-  },
-  beforeDestroy() {
-    // 注销当前组件
-    this.unregisterAdvSearchComponent();
-    // 组件销毁时移除监听
-    document.removeEventListener('keydown', this.handleTabKey);
-  },
   methods: {
-    registerAdvSearchComponent() {
-      // 在window上注册当前活跃的高级搜索组件
-      if (!window._activeAdvSearchComponents) {
-        window._activeAdvSearchComponents = [];
-      }
-      window._activeAdvSearchComponents.push(this);
-    },
-    unregisterAdvSearchComponent() {
-      // 从全局列表中移除当前组件
-      if (window._activeAdvSearchComponents) {
-        const index = window._activeAdvSearchComponents.indexOf(this);
-        if (index > -1) {
-          window._activeAdvSearchComponents.splice(index, 1);
-        }
-      }
-    },
-    handleTabKey(event) {
-      // 按下Tab键时切换高级搜索显示状态
-      if (event.key === 'Tab' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        // 检查当前焦点是否在输入框、文本域等元素上
-        const activeElement = document.activeElement;
-        const isInputFocused = activeElement && (
-          activeElement.tagName === 'INPUT' ||
-          activeElement.tagName === 'TEXTAREA' ||
-          activeElement.isContentEditable
-        );
-        
-        // 如果焦点在输入框上，不拦截Tab键（保持原有Tab切换焦点功能）
-        if (isInputFocused) {
-          return;
-        }
-        
-        // 检查当前组件是否在DOM中可见
-        if (!this.$el || !this.$el.offsetParent) {
-          return;
-        }
-        
-        // 只有第一个可见的组件响应Tab键（避免多个组件同时响应）
-        if (window._activeAdvSearchComponents && window._activeAdvSearchComponents.length > 0) {
-          const firstVisibleComponent = window._activeAdvSearchComponents.find(comp => 
-            comp.$el && comp.$el.offsetParent
-          );
-          if (firstVisibleComponent !== this) {
-            return;
-          }
-        }
-        
-        // 阻止默认Tab行为
-        event.preventDefault();
-        
-        // 切换高级搜索显示状态
-        if (this.visible) {
-          this.visible = false;
-        } else {
-          this.open();
-        }
-      }
-    },
     doInit(handleCustom) {
       let config = cloneDeep(this.condition);
       config.components.forEach((component) => {
