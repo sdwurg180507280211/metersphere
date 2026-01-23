@@ -38,7 +38,7 @@
 
     <select id="getAssociatedSystemWithWorkspaceId" resultMap="BaseResultMap">
             SELECT DISTINCT *
-            from associated_system where workspace_id=#{workspaceId} order by create_time desc
+            from associated_system order by create_time desc
         </select>
 
 </mapper>
