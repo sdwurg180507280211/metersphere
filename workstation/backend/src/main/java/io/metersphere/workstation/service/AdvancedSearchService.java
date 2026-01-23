@@ -34,11 +34,12 @@ public class AdvancedSearchService {
     @Resource
     private ExtAdvancedSearchMapper extAdvancedSearchMapper;
     
-    @Resource
-    private JQLParser jqlParser;
-    
-    @Resource
-    private JQLToSQLConverter jqlToSQLConverter;
+    // TODO: JQL 功能暂未实现，待后续版本支持
+    // @Resource
+    // private JQLParser jqlParser;
+    // 
+    // @Resource
+    // private JQLToSQLConverter jqlToSQLConverter;
     
     /**
      * 执行高级检索查询
@@ -59,34 +60,80 @@ public class AdvancedSearchService {
         // 2. 权限校验：确保用户有权限访问所选的工作空间和项目
         checkPermission(request);
         
-        // 3. 处理 JQL 查询模式
-        String jqlWhereClause = null;
-        if (Boolean.TRUE.equals(request.getUseJQL()) && StringUtils.isNotBlank(request.getJql())) {
-            // 解析 JQL 为 SQL WHERE 子句
-            jqlWhereClause = parseJQLToSQL(request.getJql(), request.getModule());
+        // 3. 处理空的工作空间和项目列表
+        // 如果用户没有指定工作空间/项目，则查询用户有权限的所有数据
+        // 这里暂时允许空列表，后续可以根据用户权限自动填充
+        if (request.getWorkspaceIds() == null) {
+            request.setWorkspaceIds(new java.util.ArrayList<>());
+        }
+        if (request.getProjectIds() == null) {
+            request.setProjectIds(new java.util.ArrayList<>());
         }
         
-        // 4. 设置分页参数
+        // 4. 处理 JQL 查询模式（当前版本暂不支持，直接使用 combine 模式）
+        if (Boolean.TRUE.equals(request.getUseJQL()) && StringUtils.isNotBlank(request.getJql())) {
+            // TODO: 实现 JQL 解析功能
+            // 当前版本暂不支持 JQL，提示用户使用可视化模式
+            MSException.throwException("JQL 查询模式暂未实现，请使用可视化条件构建");
+        }
+        
+        // 5. 设置分页参数
         Page<Object> page = PageHelper.startPage(goPage, pageSize, true);
         
-        // 5. 根据业务模块执行对应的查询
-        List<Map<String, Object>> results = executeQuery(request, jqlWhereClause);
+        // 6. 根据业务模块执行对应的查询
+        List<Map<String, Object>> results = executeQuery(request);
         
-        // 6. 返回分页结果
+        // 7. 返回分页结果
         return PageUtils.setPageInfo(page, results);
     }
     
     /**
      * 获取详情
      * 
+     * 我在做：根据业务模块和ID查询详细信息
+     * 目的是：在详情面板中展示完整的数据信息
+     * 如果不这样做：用户无法查看数据的详细内容
+     * 
      * @param module 业务模块
      * @param id 数据ID
      * @return 详情数据
      */
     public Map<String, Object> getDetail(String module, String id) {
-        // TODO: 实现详情查询逻辑
-        // 根据不同的业务模块调用对应的详情查询方法
-        return null;
+        // 参数校验
+        if (StringUtils.isBlank(module) || StringUtils.isBlank(id)) {
+            MSException.throwException("模块和ID不能为空");
+        }
+        
+        // 权限校验
+        String userId = SessionUtils.getUserId();
+        if (StringUtils.isBlank(userId)) {
+            MSException.throwException("用户未登录");
+        }
+        
+        // 根据业务模块查询详情
+        Map<String, Object> detail = null;
+        switch (module) {
+            case "TEST_CASE":
+                detail = extAdvancedSearchMapper.getTestCaseDetail(id);
+                break;
+            case "ISSUE":
+                detail = extAdvancedSearchMapper.getIssueDetail(id);
+                break;
+            case "TEST_PLAN":
+                detail = extAdvancedSearchMapper.getTestPlanDetail(id);
+                break;
+            case "TEST_CASE_REVIEW":
+                detail = extAdvancedSearchMapper.getTestCaseReviewDetail(id);
+                break;
+            default:
+                MSException.throwException("不支持的业务模块: " + module);
+        }
+        
+        if (detail == null) {
+            MSException.throwException("数据不存在或已被删除");
+        }
+        
+        return detail;
     }
     
     /**
@@ -98,22 +145,22 @@ public class AdvancedSearchService {
      */
     private void validateRequest(AdvancedSearchRequest request) {
         if (request == null) {
-            throw new MSException("请求参数不能为空");
+            MSException.throwException("请求参数不能为空");
         }
         
         if (StringUtils.isBlank(request.getModule())) {
-            throw new MSException("业务模块不能为空");
+            MSException.throwException("业务模块不能为空");
         }
         
         // 验证业务模块是否合法
         String module = request.getModule();
         if (!isValidModule(module)) {
-            throw new MSException("不支持的业务模块: " + module);
+            MSException.throwException("不支持的业务模块: " + module);
         }
         
         // JQL 模式下必须提供 JQL 查询语句
         if (Boolean.TRUE.equals(request.getUseJQL()) && StringUtils.isBlank(request.getJql())) {
-            throw new MSException("JQL 查询语句不能为空");
+            MSException.throwException("JQL 查询语句不能为空");
         }
     }
     
@@ -127,7 +174,7 @@ public class AdvancedSearchService {
     private void checkPermission(AdvancedSearchRequest request) {
         String userId = SessionUtils.getUserId();
         if (StringUtils.isBlank(userId)) {
-            throw new MSException("用户未登录");
+            MSException.throwException("用户未登录");
         }
         
         // TODO: 实现详细的权限校验逻辑
@@ -151,7 +198,8 @@ public class AdvancedSearchService {
             // 2. 转换为 SQL WHERE 子句
             return jqlToSQLConverter.convertToSQL(ast, module);
         } catch (Exception e) {
-            throw new MSException("JQL 解析失败: " + e.getMessage());
+            MSException.throwException("JQL 解析失败: " + e.getMessage());
+            return null;
         }
     }
     
@@ -162,7 +210,7 @@ public class AdvancedSearchService {
      * 目的是：获取符合条件的数据列表
      * 如果不这样做：无法返回查询结果
      */
-    private List<Map<String, Object>> executeQuery(AdvancedSearchRequest request, String jqlWhereClause) {
+    private List<Map<String, Object>> executeQuery(AdvancedSearchRequest request) {
         String module = request.getModule();
         
         switch (module) {
@@ -175,7 +223,8 @@ public class AdvancedSearchService {
             case "TEST_CASE_REVIEW":
                 return extAdvancedSearchMapper.queryTestCaseReviews(request);
             default:
-                throw new MSException("不支持的业务模块: " + module);
+                MSException.throwException("不支持的业务模块: " + module);
+                return null;
         }
     }
     

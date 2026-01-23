@@ -31,7 +31,7 @@ public class JQLParser {
      */
     public Object parseJQL(String jql) {
         if (StringUtils.isBlank(jql)) {
-            throw new MSException("JQL 查询语句不能为空");
+            MSException.throwException("JQL 查询语句不能为空");
         }
         
         // TODO: 实现完整的 JQL 解析逻辑
