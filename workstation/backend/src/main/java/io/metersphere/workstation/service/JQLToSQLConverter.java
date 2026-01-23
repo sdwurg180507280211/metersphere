@@ -89,11 +89,13 @@ public class JQLToSQLConverter {
      */
     public String convertToSQL(Object ast, String module) {
         if (ast == null) {
-            throw new MSException("AST 不能为空");
+            MSException.throwException("AST 不能为空");
+            return null;
         }
         
         if (StringUtils.isBlank(module)) {
-            throw new MSException("业务模块不能为空");
+            MSException.throwException("业务模块不能为空");
+            return null;
         }
         
         // TODO: 实现完整的 AST 到 SQL 转换逻辑
@@ -120,12 +122,14 @@ public class JQLToSQLConverter {
     public String mapFieldToColumn(String fieldName, String module) {
         Map<String, String> moduleFields = FIELD_MAPPING.get(module);
         if (moduleFields == null) {
-            throw new MSException("不支持的业务模块: " + module);
+            MSException.throwException("不支持的业务模块: " + module);
+            return null;
         }
         
         String columnName = moduleFields.get(fieldName);
         if (columnName == null) {
-            throw new MSException("未知的字段名: " + fieldName);
+            MSException.throwException("未知的字段名: " + fieldName);
+            return null;
         }
         
         return columnName;
