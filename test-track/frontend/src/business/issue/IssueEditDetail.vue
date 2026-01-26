@@ -394,7 +394,7 @@ import TestCaseAttachment from "@/business/case/components/TestCaseAttachment";
 import axios from "axios";
 import MsFileMetadataList from "metersphere-frontend/src/components/environment/commons/variable/QuoteFileList";
 import MsFileBatchMove from "metersphere-frontend/src/components/environment/commons/variable/FileBatchMove";
-import {parseMdImage, saveMarkDownImg, filterFieldsForForm} from "@/business/utils/sdk-utils";
+import {parseMdImage, saveMarkDownImg} from "@/business/utils/sdk-utils";
 import {getUploadSizeLimit} from "metersphere-frontend/src/utils/index";
 
 export default {
@@ -591,10 +591,6 @@ export default {
       // 恢复模板字段(包含 customFields[*].defaultValue)
       if (this.issueTemplateOrigin) {
         this.issueTemplate = this.cloneIssueTemplate(this.issueTemplateOrigin);
-        // 再次确保过滤掉不在创建和编辑页面显示的字段
-        if (this.issueTemplate.customFields) {
-          this.issueTemplate.customFields = filterFieldsForForm(this.issueTemplate.customFields, 'issue');
-        }
       }
 
       this.form = {
@@ -707,6 +703,10 @@ export default {
       if (field && field.name === "状态" && this.type !== "edit") {
         return true;
       }
+      // 如果是复测次数字段，始终禁用（该字段由系统自动管理）
+      if (field && field.name === "复测次数") {
+        return true;
+      }
       // 其他字段使用readOnly控制
       return this.readOnly;
     },
@@ -715,16 +715,6 @@ export default {
       // 这里需要保留一份初始快照用于"保存后继续"场景的重置
       this.issueTemplateOrigin = this.cloneIssueTemplate(template);
       this.issueTemplate = this.cloneIssueTemplate(template);
-
-      // 过滤掉不在创建和编辑页面显示的字段（如"复测次数"）
-      if (this.issueTemplate.customFields) {
-        this.issueTemplate.customFields = filterFieldsForForm(this.issueTemplate.customFields, 'issue');
-      }
-
-      // 同时过滤掉模板快照中的字段
-      if (this.issueTemplateOrigin.customFields) {
-        this.issueTemplateOrigin.customFields = filterFieldsForForm(this.issueTemplateOrigin.customFields, 'issue');
-      }
 
       this.initEdit(data);
       this.initStatusFieldTransitionOptions();
