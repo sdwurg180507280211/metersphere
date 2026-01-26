@@ -743,6 +743,7 @@ public class IssuesService {
         return issues;
     }
 
+
     /**
      * 添加用户组权限过滤
      * 开发人员组和测试人员组只能看到创建人或处理人是自己的缺陷
@@ -2093,6 +2094,10 @@ public class IssuesService {
             }
         });
         ServiceUtils.setBaseQueryRequestCustomMultipleFields(request);
+
+        // 添加用户组权限过滤（导出时也需要应用权限过滤）
+        addUserGroupFilter(request);
+
         List<IssuesDao> issues = extIssuesMapper.getIssues(request);
 
         Map<String, Set<String>> caseSetMap = getCaseSetMap(issues);
