@@ -378,6 +378,10 @@ export default {
         // 忽略错误，系统可能没有所属系统数据
       });
 
+      // 我在做：先加载成员列表和自定义字段模板，模板加载完成后再加载缺陷数据。
+      // 目的是：确保表头字段和数据同时准备好后再渲染表格，避免分阶段加载导致页面闪烁。
+      // 如果不这样做，就无法实现：getIssues() 和 getIssuePartTemplateWithProject() 并行执行时，
+      // 数据先返回会导致表格先渲染（但字段还没准备好），等模板返回后表格重新渲染，用户体验差。
       getProjectMember()
         .then((response) => {
           this.members = response.data;
@@ -386,11 +390,12 @@ export default {
           });
           getIssuePartTemplateWithProject((template) => {
             this.initFields(template);
+            // 模板加载完成后再加载数据，确保表头和数据同时准备好
+            this.getIssues();
           }, () => {
             this.loading = false;
           });
         });
-      this.getIssues();
     });
 
     getPlatformOption()

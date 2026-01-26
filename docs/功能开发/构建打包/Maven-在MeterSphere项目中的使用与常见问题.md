@@ -567,3 +567,122 @@ mvn clean package -pl test-track -am -DskipTests
 - `test-track/frontend/pom.xml`
 - `test-track/backend/pom.xml`
 
+
+
+---
+
+## 4. IDEA 本地调试：只修改前端的快速构建命令
+
+我在做：提供只修改前端时的最快构建和部署流程。
+目的是：避免每次改前端都要重新构建后端，大幅提升开发效率。
+如果不这样做，就需要等待完整的 Maven 构建流程（包括后端编译），浪费时间。
+
+### 4.1 前端构建 + 拷贝命令（以 test-track 为例）
+
+```bash
+# 进入前端目录
+cd test-track/frontend
+
+# 方式一：使用 npm 构建（推荐，最快）
+npm run build
+
+# 方式二：使用 Maven 构建（如果需要保持与 CI/CD 一致）
+mvn clean package -DskipAntRunForJenkins
+
+# 拷贝构建产物到后端资源目录
+cp -r dist/* ../backend/src/main/resources/static/
+
+# 如果后端服务已启动，刷新浏览器即可看到效果
+# 如果使用 Spring Boot DevTools，会自动热重载
+```
+
+### 4.2 一键命令（推荐）
+
+```bash
+# 在 test-track/frontend 目录下执行
+npm run build && cp -r dist/* ../backend/src/main/resources/static/
+```
+
+### 4.3 其他模块的快速构建
+
+```bash
+# api-test 模块
+cd api-test/frontend
+npm run build && cp -r dist/* ../backend/src/main/resources/static/
+
+# performance-test 模块
+cd performance-test/frontend
+npm run build && cp -r dist/* ../backend/src/main/resources/static/
+
+# system-setting 模块
+cd system-setting/frontend
+npm run build && cp -r dist/* ../backend/src/main/resources/static/
+
+# project-management 模块
+cd project-management/frontend
+npm run build && cp -r dist/* ../backend/src/main/resources/static/
+
+# report-stat 模块
+cd report-stat/frontend
+npm run build && cp -r dist/* ../backend/src/main/resources/static/
+
+# workstation 模块
+cd workstation/frontend
+npm run build && cp -r dist/* ../backend/src/main/resources/static/
+```
+
+### 4.4 注意事项
+
+1. **前提条件**：
+   - 后端服务已经在 IDEA 中启动
+   - 前端依赖已经安装（`npm install`）
+   - 后端资源目录存在（`backend/src/main/resources/static/`）
+
+2. **热重载**：
+   - 如果后端配置了 Spring Boot DevTools，拷贝后会自动重启
+   - 如果没有 DevTools，需要手动重启后端服务
+
+3. **清理旧文件**：
+   - 如果前端文件结构有变化（删除/重命名），建议先清空 `static/` 目录
+   - `rm -rf ../backend/src/main/resources/static/*`
+
+4. **开发模式**：
+   - 如果需要频繁修改前端，建议使用 `npm run serve` 启动开发服务器
+   - 开发服务器支持热更新，无需每次都构建
+   - 配置代理到后端服务（在 `vue.config.js` 中配置）
+
+### 4.5 完整的开发流程对比
+
+| 场景 | 传统方式 | 快速方式 |
+|------|---------|---------|
+| 只改前端 | `mvn clean package`（3-5分钟） | `npm run build && cp`（10-30秒） |
+| 只改后端 | IDEA 热重载（秒级） | IDEA 热重载（秒级） |
+| 前后端都改 | `mvn clean package`（3-5分钟） | 前端：`npm run build && cp`<br>后端：IDEA 热重载 |
+
+### 4.6 为什么这样做有效？
+
+- **前端构建**：`npm run build` 生成 `dist/` 目录
+- **资源拷贝**：`cp -r dist/* ../backend/src/main/resources/static/` 将前端产物拷贝到后端资源目录
+- **Spring Boot 提供静态资源**：后端服务从 `classpath:static/` 提供前端页面
+- **跳过后端编译**：因为只改了前端，后端 Java 代码没变，无需重新编译
+
+### 4.7 实战案例：修改缺陷管理页面加载逻辑
+
+```bash
+# 1. 修改前端代码
+vim test-track/frontend/src/business/issue/IssueList.vue
+
+# 2. 构建并拷贝
+cd test-track/frontend
+npm run build && cp -r dist/* ../backend/src/main/resources/static/
+
+# 3. 刷新浏览器查看效果
+# 如果配置了 DevTools，后端会自动重启
+# 如果没有 DevTools，手动重启 IDEA 中的 TestTrackApplication
+```
+
+**时间对比**：
+- 传统方式：`mvn clean package -pl test-track`（3-5分钟）
+- 快速方式：`npm run build && cp`（10-30秒）
+- **效率提升**：10-30倍
+
