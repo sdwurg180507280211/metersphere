@@ -195,6 +195,7 @@
 
         <ms-table-column
           prop="tags"
+          sortable="custom"
           :field="item"
           :fields-width="fieldsWidth"
           min-width="180"
