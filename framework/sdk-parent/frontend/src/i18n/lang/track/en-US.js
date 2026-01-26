@@ -598,6 +598,7 @@ export default {
     issue_sync_tip:
       "The current project is synchronizing defects, please wait!",
     import_bugs: "Import Issue",
+    import_handler_notice: "Note: The handler column should be filled with user ID, not user name",
     export_bugs: "Export Issue",
     save_before_open_comment: "Please save issue before comment",
     delete_third_part_tip:
