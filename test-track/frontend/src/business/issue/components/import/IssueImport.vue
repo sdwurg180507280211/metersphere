@@ -23,6 +23,18 @@
         </el-tooltip>
       </el-row>
 
+      <!-- 我在做：添加处理人字段填写提醒，提示用户填写用户ID而不是用户姓名。 -->
+      <!-- 目的是：避免用户在导入时填写错误的处理人信息，导致导入失败或数据错误。 -->
+      <!-- 如果不这样做，就无法实现：用户会习惯性填写姓名，导致处理人字段无法正确匹配。 -->
+      <el-row class="import-notice">
+        <el-alert
+          :title="$t('test_track.issue.import_handler_notice')"
+          type="warning"
+          :closable="false"
+          show-icon>
+        </el-alert>
+      </el-row>
+
       <el-row>
         <el-upload
           class="issue-upload" drag action="alert"
@@ -171,9 +183,22 @@ export default {
   margin-left: 6px;
 }
 
+.import-notice {
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+.import-notice :deep(.el-alert) {
+  padding: 8px 12px;
+}
+
+.import-notice :deep(.el-alert__title) {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .issue-upload {
   margin-left: 75px;
-  margin-top: 20px;
 }
 
 .download-template {

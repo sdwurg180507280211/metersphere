@@ -552,6 +552,7 @@ export default {
     sync_complete: "同步完成",
     issue_sync_tip: "當前項目正在同步缺陷, 請稍等!",
     import_bugs: "導入缺陷",
+    import_handler_notice: "注意：處理人列需填寫用戶ID，而不是用戶姓名",
     export_bugs: "導出缺陷",
     save_before_open_comment: "請先保存缺陷再添加評論",
     delete_third_part_tip: "該操作將同步刪除第三方平台缺陷",
