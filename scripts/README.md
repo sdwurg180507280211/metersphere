@@ -107,7 +107,7 @@ make parallel JOBS=8
 ./metersphere-build.sh -a -b
 
 # 使用环境变量
-IMAGE_VERSION=v2.10.26.03-lts \
+IMAGE_VERSION=v2.10.26.05-lts \
 PARALLEL_BUILD=true \
 MAX_JOBS=4 \
 ./metersphere-build.sh -a

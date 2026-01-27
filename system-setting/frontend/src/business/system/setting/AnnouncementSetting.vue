@@ -20,7 +20,7 @@
           v-model="form.content"
           :rows="4"
           :placeholder="$t('announcement.content_placeholder')"
-          maxlength="500"
+          maxlength="2000"
           show-word-limit
         />
       </el-form-item>
