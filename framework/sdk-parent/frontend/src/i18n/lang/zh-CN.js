@@ -3593,6 +3593,12 @@ const message = {
     text_color: '文字颜色',
     scroll: '滚动效果',
     scroll_hint: '开启后公告内容将从右向左滚动显示',
+    scroll_speed: '滚动速度',
+    scroll_speed_hint: '调节滚动速度（5-30秒）',
+    speed_fast: '快',
+    speed_normal: '正常',
+    speed_slow: '慢',
+    speed_unit: '秒',
   },
 };
 

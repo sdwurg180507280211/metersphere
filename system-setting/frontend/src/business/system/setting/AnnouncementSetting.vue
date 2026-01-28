@@ -52,6 +52,21 @@
         <span class="scroll-hint">{{ $t('announcement.scroll_hint') }}</span>
       </el-form-item>
 
+      <!-- 滚动速度调节（仅滚动开启时显示） -->
+      <el-form-item v-if="form.scroll" :label="$t('announcement.scroll_speed')">
+        <el-slider
+          v-model="form.scrollSpeed"
+          :min="40"
+          :max="80"
+          :step="1"
+          :marks="scrollSpeedMarks"
+          show-input
+          :format-tooltip="formatSpeedTooltip"
+          style="width: 400px;"
+        />
+        <span class="scroll-hint">{{ $t('announcement.scroll_speed_hint') }}</span>
+      </el-form-item>
+
       <!-- 实时预览区域 -->
       <el-form-item :label="$t('announcement.preview')">
         <!-- 启用且有内容时显示预览 -->
@@ -60,7 +75,7 @@
           :class="{ 'announcement-scroll': form.scroll }"
           v-if="form.content && form.enabled"
           :style="previewStyle">
-          <span class="announcement-text">{{ form.content }}</span>
+          <span class="announcement-text" :style="scrollAnimationStyle">{{ form.content }}</span>
         </div>
         <!-- 禁用时显示提示 -->
         <div class="announcement-preview-empty" v-else-if="!form.enabled">
@@ -128,7 +143,9 @@ import {
   getAnnouncementStyle,
   saveAnnouncementStyle,
   getAnnouncementScroll,
-  saveAnnouncementScroll
+  saveAnnouncementScroll,
+  getAnnouncementScrollSpeed,
+  saveAnnouncementScrollSpeed
 } from "../../../api/system";
 
 // 预设样式配置
@@ -171,14 +188,21 @@ export default {
         styleType: 'warning',  // 样式类型: info/warning/danger/success/custom
         backgroundColor: '#E6A23C',  // 背景色（自定义模式）
         textColor: '#FFFFFF',  // 文字颜色（自定义模式）
-        scroll: false          // 是否启用滚动效果
+        scroll: false,         // 是否启用滚动效果
+        scrollSpeed: 15        // 滚动速度（秒），范围 5-30，默认 15
       },
       // 加载状态
       loading: false,
       // 是否处于编辑模式
       isEditing: false,
       // 原始表单数据（用于取消时恢复）
-      originalForm: null
+      originalForm: null,
+      // 滚动速度刻度标记
+      scrollSpeedMarks: {
+        40: this.$t('announcement.speed_fast'),
+        60: this.$t('announcement.speed_normal'),
+        80: this.$t('announcement.speed_slow')
+      }
     };
   },
   computed: {
@@ -219,26 +243,53 @@ export default {
         backgroundColor: style.backgroundColor,
         color: style.textColor
       };
+    },
+    /**
+     * 滚动动画样式
+     * 根据滚动速度动态设置动画时长
+     */
+    scrollAnimationStyle() {
+      if (this.form.scroll) {
+        return {
+          animationDuration: `${this.form.scrollSpeed}s`
+        };
+      }
+      return {};
     }
   },
   created() {
     // 组件创建时加载公告配置
     this.loadAnnouncement();
+    // 初始化滚动速度刻度标记（需要在 created 中初始化以使用 $t）
+    this.scrollSpeedMarks = {
+      40: this.$t('announcement.speed_fast') || '快',
+      60: this.$t('announcement.speed_normal') || '正常',
+      80: this.$t('announcement.speed_slow') || '慢'
+    };
   },
   methods: {
     /**
-     * 从后端加载公告配置（内容、启用状态、样式）
+     * 格式化速度提示文本
+     * @param {number} value - 速度值（秒）
+     * @returns {string} 格式化后的提示文本
+     */
+    formatSpeedTooltip(value) {
+      return `${value}${this.$t('announcement.speed_unit') || '秒'}`;
+    },
+    /**
+     * 从后端加载公告配置（内容、启用状态、样式、滚动速度）
      */
     loadAnnouncement() {
       this.loading = true;
 
-      // 并行加载四个配置
+      // 并行加载五个配置
       Promise.all([
         getAnnouncementContent().catch(() => ({ data: null })),
         getAnnouncementEnabled().catch(() => ({ data: null })),
         getAnnouncementStyle().catch(() => ({ data: null })),
-        getAnnouncementScroll().catch(() => ({ data: null }))
-      ]).then(([contentRes, enabledRes, styleRes, scrollRes]) => {
+        getAnnouncementScroll().catch(() => ({ data: null })),
+        getAnnouncementScrollSpeed().catch(() => ({ data: null }))
+      ]).then(([contentRes, enabledRes, styleRes, scrollRes, scrollSpeedRes]) => {
         // 加载内容
         if (contentRes.data && contentRes.data.paramValue) {
           this.form.content = contentRes.data.paramValue;
@@ -273,6 +324,13 @@ export default {
           this.form.scroll = scrollRes.data.paramValue === 'true';
         } else {
           this.form.scroll = false;  // 默认不滚动
+        }
+
+        // 加载滚动速度配置
+        if (scrollSpeedRes.data && scrollSpeedRes.data.paramValue) {
+          this.form.scrollSpeed = parseInt(scrollSpeedRes.data.paramValue) || 15;
+        } else {
+          this.form.scrollSpeed = 15;  // 默认速度 15 秒
         }
 
         // 保存原始表单数据
@@ -323,15 +381,16 @@ export default {
           : PRESET_STYLES[this.form.styleType].textColor
       };
 
-      // 并行保存四个配置
+      // 并行保存五个配置
       Promise.all([
         saveAnnouncementContent(this.form.content),
         saveAnnouncementEnabled(this.form.enabled),
         saveAnnouncementStyle(styleConfig),
-        saveAnnouncementScroll(this.form.scroll)
-      ]).then(([contentRes, enabledRes, styleRes, scrollRes]) => {
+        saveAnnouncementScroll(this.form.scroll),
+        saveAnnouncementScrollSpeed(this.form.scrollSpeed)
+      ]).then(([contentRes, enabledRes, styleRes, scrollRes, scrollSpeedRes]) => {
         // 检查所有保存是否成功
-        if (contentRes.success && enabledRes.success && styleRes.success && scrollRes.success) {
+        if (contentRes.success && enabledRes.success && styleRes.success && scrollRes.success && scrollSpeedRes.success) {
           // 保存成功提示
           this.$success(this.$t('commons.save_success'));
           // 更新原始表单数据
@@ -438,7 +497,10 @@ export default {
 .announcement-scroll .announcement-text {
   display: inline-block;
   padding-left: 100%;
-  animation: scroll-left 15s linear infinite;
+  animation-name: scroll-left;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  /* 动画时长通过内联样式动态设置 */
 }
 
 @keyframes scroll-left {
