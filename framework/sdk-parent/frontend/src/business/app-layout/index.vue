@@ -9,7 +9,7 @@
       <el-row v-if="announcementContent && announcementEnabled">
         <el-col>
           <div class="announcement-tip" :class="{ 'announcement-scroll': announcementScroll }" :style="announcementStyle">
-            <span class="announcement-text">{{ announcementContent }}</span>
+            <span class="announcement-text" :style="scrollTextStyle">{{ announcementContent }}</span>
           </div>
         </el-col>
       </el-row>
@@ -82,6 +82,7 @@ export default {
         textColor: '#FFFFFF'
       },
       announcementScroll: false,
+      announcementScrollSpeed: 15,  // 滚动速度（秒），默认15秒
     };
   },
   created() {
@@ -141,6 +142,18 @@ export default {
         backgroundColor: this.announcementStyleConfig.backgroundColor,
         color: this.announcementStyleConfig.textColor
       };
+    },
+    /**
+     * 滚动文本动态样式
+     * 根据滚动速度设置动画时长
+     */
+    scrollTextStyle() {
+      if (this.announcementScroll) {
+        return {
+          animationDuration: `${this.announcementScrollSpeed}s`
+        };
+      }
+      return {};
     }
   },
   methods: {
@@ -196,6 +209,17 @@ export default {
         }
       }).catch(() => {
         this.announcementScroll = false;
+      });
+
+      // 获取公告滚动速度配置
+      getSystemParameter('announcement.scroll.speed').then(response => {
+        if (response.data && response.data.paramValue) {
+          this.announcementScrollSpeed = parseInt(response.data.paramValue) || 15;
+        } else {
+          this.announcementScrollSpeed = 15;
+        }
+      }).catch(() => {
+        this.announcementScrollSpeed = 15;
       });
     },
     updateHeaderHeight() {
@@ -348,7 +372,10 @@ export default {
 .announcement-scroll .announcement-text {
   display: inline-block;
   padding-left: 100%;
-  animation: scroll-left 15s linear infinite;
+  animation-name: scroll-left;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  /* 动画时长通过内联样式动态设置 */
 }
 
 @keyframes scroll-left {
