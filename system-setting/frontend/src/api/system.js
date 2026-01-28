@@ -100,3 +100,17 @@ export function saveAnnouncementScroll(scroll) {
     type: 'text'
   });
 }
+
+// 获取公告滚动速度
+export function getAnnouncementScrollSpeed() {
+  return get('/system/get/info/announcement.scroll.speed');
+}
+
+// 保存公告滚动速度
+export function saveAnnouncementScrollSpeed(speed) {
+  return post('/system/edit/info', {
+    paramKey: 'announcement.scroll.speed',
+    paramValue: String(speed),
+    type: 'text'
+  });
+}

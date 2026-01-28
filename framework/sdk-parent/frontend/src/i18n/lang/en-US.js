@@ -3640,6 +3640,12 @@ const message = {
     text_color: 'Text Color',
     scroll: 'Scroll Effect',
     scroll_hint: 'When enabled, announcement will scroll from right to left',
+    scroll_speed: 'Scroll Speed',
+    scroll_speed_hint: 'Adjust the scrolling speed (5-30 seconds)',
+    speed_fast: 'Fast',
+    speed_normal: 'Normal',
+    speed_slow: 'Slow',
+    speed_unit: 's',
   },
 };
 
