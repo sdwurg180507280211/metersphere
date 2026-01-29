@@ -743,41 +743,6 @@ public class IssuesService {
         return issues;
     }
 
-
-    /**
-     * 添加用户组权限过滤
-     * 
-     * 我在做：查询用户所属的用户组，并根据用户组添加权限过滤条件
-     * 目的是：限制开发人员组和测试人员组只能看到与自己相关的缺陷
-     * 如果不这样做：这两个用户组的成员可以看到所有缺陷，不符合权限要求
-     * 
-     * 权限规则：
-     * - 开发人员组（developer）：只能看到处理人是自己的缺陷
-     * - 测试人员组（tester）：只能看到创建人是自己的缺陷
-     * - 其他用户组：没有限制，可以看到所有缺陷
-     * 
-     * 注意：此方法必须在 PageHelper.startPage() 之前调用
-     * 原因：PageHelper 会拦截方法中的第一条 SQL 并应用分页
-     * 如果在 list() 方法中调用，会导致用户组查询被分页，而真正的缺陷查询没有分页
-     */
-    public void addUserGroupFilter(IssuesRequest request) {
-        String userId = SessionUtils.getUserId();
-        String projectId = request.getProjectId();
-
-        if (StringUtils.isBlank(userId) || StringUtils.isBlank(projectId)) {
-            return;
-        }
-
-        // 查询用户在当前项目中的用户组
-        String userGroupId = extIssuesMapper.getUserGroupInProject(userId, projectId);
-
-        // 如果用户属于开发人员组或测试人员组，则添加过滤条件
-        if ("developer".equals(userGroupId) || "tester".equals(userGroupId)) {
-            request.setCurrentUserId(userId);
-            request.setUserGroupId(userGroupId);
-        }
-    }
-
     private void setCustomFieldsOrder(IssuesRequest request) {
         request.getOrders().forEach(order -> {
             if (StringUtils.isNotEmpty(order.getName()) && order.getName().startsWith("custom")) {
@@ -2099,9 +2064,6 @@ public class IssuesService {
         });
         ServiceUtils.setBaseQueryRequestCustomMultipleFields(request);
 
-        // 添加用户组权限过滤（导出时也需要应用权限过滤）
-        addUserGroupFilter(request);
-
         List<IssuesDao> issues = extIssuesMapper.getIssues(request);
 
         Map<String, Set<String>> caseSetMap = getCaseSetMap(issues);
@@ -2572,4 +2534,18 @@ public class IssuesService {
         list.add(val);
         return list;
     }
+
+    /**
+     * 我在做：查询用户在项目中的用户组ID
+     * 目的是：供前端判断用户属于哪个用户组，从而施加相应的权限过滤
+     * 如果不这样做：前端无法知道用户的用户组，无法实现用户组权限过滤
+     * 
+     * @param projectId 项目ID
+     * @param userId 用户ID
+     * @return 用户组ID（如 'developer', 'tester'），如果不属于任何用户组则返回null
+     */
+    public String getUserGroupInProject(String projectId, String userId) {
+        return extIssuesMapper.getUserGroupInProject(userId, projectId);
+    }
 }
+
