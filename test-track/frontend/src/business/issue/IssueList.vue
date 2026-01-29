@@ -239,6 +239,7 @@ import MsMainContainer from "metersphere-frontend/src/components/MsMainContainer
 import {getCurrentProjectID, getCurrentUserId, getCurrentWorkspaceId} from "metersphere-frontend/src/utils/token";
 import {hasLicense, hasPermission} from "metersphere-frontend/src/utils/permission";
 import {getProjectMember, getProjectMemberUserFilter} from "@/api/user";
+import {getUserGroupProject} from "@/api/user-group";
 import {LOCAL} from "metersphere-frontend/src/utils/constants";
 import {TEST_TRACK_ISSUE_LIST} from "metersphere-frontend/src/components/search/search-components";
 import {generateColumnKey, getAdvSearchCustomField} from "metersphere-frontend/src/components/search/custom-component";
@@ -316,6 +317,9 @@ export default {
       associatedSystemMap: new Map(),
       hasLicense: false,
       syncDisable: false,
+      // 用户组权限过滤相关
+      currentUserGroupId: null, // 当前用户在项目中的用户组ID
+      userGroupFilterKeys: [], // 记录施加的过滤条件key，用于搜索时清除
       columns: {
         num: {
           sortable: true,
@@ -365,6 +369,13 @@ export default {
       this.dataSelectRange = "";
     }
     this.loading = true;
+
+    // 我在做：重置用户组过滤相关状态
+    // 目的是：每次进入页面都重新获取用户组并施加权限过滤
+    // 如果不这样做：从其他页面返回时不会重新施加权限过滤
+    this.currentUserGroupId = null;
+    this.userGroupFilterKeys = [];
+
     this.$nextTick(() => {
       // 解决错位问题
       window.addEventListener('resize', this.tableDoLayout);
@@ -380,23 +391,50 @@ export default {
         // 忽略错误，系统可能没有所属系统数据
       });
 
-      // 我在做：先加载成员列表和自定义字段模板，模板加载完成后再加载缺陷数据。
-      // 目的是：确保表头字段和数据同时准备好后再渲染表格，避免分阶段加载导致页面闪烁。
-      // 如果不这样做，就无法实现：getIssues() 和 getIssuePartTemplateWithProject() 并行执行时，
-      // 数据先返回会导致表格先渲染（但字段还没准备好），等模板返回后表格重新渲染，用户体验差。
-      getProjectMember()
+      // 我在做：按顺序执行4个步骤来初始化页面数据
+      // 目的是：确保数据加载的正确顺序，避免依赖关系错误
+      // 如果不这样做：可能会出现数据未加载完成就使用的情况
+      
+      // 步骤1：获取用户组（1次HTTP请求，~50-200ms）
+      // 目的：判断当前用户属于哪个用户组（developer/tester），用于后续的权限过滤
+      getUserGroupProject(getCurrentProjectID(), getCurrentUserId())
         .then((response) => {
-          this.members = response.data;
-          this.userFilter = response.data.map(u => {
-            return {text: u.name, value: u.id};
-          });
-          getIssuePartTemplateWithProject((template) => {
-            this.initFields(template);
-            // 模板加载完成后再加载数据，确保表头和数据同时准备好
-            this.getIssues();
-          }, () => {
-            this.loading = false;
-          });
+          // 后端返回的是字符串，直接就是用户组ID（如 'developer', 'tester'）
+          this.currentUserGroupId = response.data;
+        })
+        .catch(() => {
+          // 获取失败时不施加权限过滤
+          this.currentUserGroupId = null;
+        })
+        .finally(() => {
+          // 步骤2：加载成员列表（1次HTTP请求，~50-200ms）
+          // 目的：获取项目成员信息，用于成员字段的显示和过滤
+          getProjectMember()
+            .then((response) => {
+              this.members = response.data;
+              this.userFilter = response.data.map(u => {
+                return {text: u.name, value: u.id};
+              });
+              
+              // 步骤3：加载缺陷模板（1次HTTP请求，~50-200ms）
+              // 目的：获取当前项目的缺陷模板，包含所有自定义字段定义
+              getIssuePartTemplateWithProject((template) => {
+                this.initFields(template);
+                
+                // 步骤4：施加用户组过滤（纯内存操作，< 1ms）
+                // 目的：根据用户组在 page.condition.filters 中设置过滤条件
+                // developer: 设置"处理人"过滤条件
+                // tester: 设置"创建人"过滤条件
+                this.applyUserGroupFilter();
+                
+                // 步骤5：加载缺陷数据（1次HTTP请求，~100-500ms）
+                // 目的：根据过滤条件从后端获取缺陷列表数据
+                // 此时 page.condition.filters 中已经包含了用户组权限过滤条件
+                this.getIssues();
+              }, () => {
+                this.loading = false;
+              });
+            });
         });
     });
 
@@ -547,6 +585,11 @@ export default {
       if (this.$refs.table) this.$refs.table.reloadTable();
     },
     search() {
+      // 我在做：清除用户组权限过滤条件
+      // 目的是：用户进行搜索/筛选/重置时，应该能看到所有符合条件的缺陷
+      // 如果不这样做：搜索/筛选仍会施加权限过滤，用户无法搜索到其他人的缺陷
+      this.clearUserGroupFilter();
+
       // 添加搜索条件时，当前页设置成第一页
       this.page.currentPage = 1;
       this.pageRefresh = false;
@@ -574,8 +617,14 @@ export default {
     handleHeadChange() {
       this.initFields(this.issueTemplate);
     },
+    /**
+     * 我在做：加载缺陷列表数据
+     * 目的是：使用 page.condition.filters 中的过滤条件（包括用户组权限过滤）
+     * 如果不这样做：无法实现用户组权限过滤
+     */
     getIssues() {
       this.loading = true;
+
       if (this.dataSelectRange === 'thisWeekUnClosedIssue') {
         this.page.condition.thisWeekUnClosedTestPlanIssue = true;
       } else if (this.dataSelectRange === 'unClosedRelatedTestPlan') {
@@ -882,6 +931,68 @@ export default {
           });
         }
       }
+    },
+    /**
+     * 我在做：根据用户组在 page.condition.filters 中设置过滤条件
+     * 目的是：
+     *   1. 开发人员组（developer）：设置处理人过滤条件（自定义字段）
+     *   2. 测试人员组（tester）：设置创建人过滤条件
+     *   3. 利用现有的高级搜索过滤机制，不需要修改后端SQL
+     * 如果不这样做：无法实现用户组权限过滤
+     */
+    applyUserGroupFilter() {
+      // 如果用户组不是 developer 或 tester，不施加过滤
+      if (!this.currentUserGroupId || (this.currentUserGroupId !== 'developer' && this.currentUserGroupId !== 'tester')) {
+        return;
+      }
+
+      // 确保 filters 对象存在
+      if (!this.page.condition.filters) {
+        this.page.condition.filters = {};
+      }
+
+      const currentUserId = getCurrentUserId();
+
+      if (this.currentUserGroupId === 'developer') {
+        // 我在做：为开发人员组设置"处理人"过滤条件
+        // 目的是：开发人员只能看到处理人是自己的缺陷
+        // 如果不这样做：开发人员会看到所有缺陷
+
+        // 从模板中查找"处理人"字段
+        const handlerField = this.issueTemplate.customFields.find(f => f.name === '处理人');
+        if (handlerField) {
+          // 我在做：使用 generateColumnKey 函数生成过滤条件的key
+          // 目的是：确保key格式与后端SQL中的格式一致（custom_single-{fieldId}）
+          // 如果不这样做：手动拼接可能出错，且不符合系统的统一规范
+          const filterKey = generateColumnKey(handlerField);
+          this.page.condition.filters[filterKey] = [currentUserId];
+          this.userGroupFilterKeys.push(filterKey);
+        }
+      } else if (this.currentUserGroupId === 'tester') {
+        // 我在做：为测试人员组设置"创建人"过滤条件
+        // 目的是：测试人员只能看到创建人是自己的缺陷
+        // 如果不这样做：测试人员会看到所有缺陷
+
+        const filterKey = 'creator';
+        this.page.condition.filters[filterKey] = [currentUserId];
+        this.userGroupFilterKeys.push(filterKey);
+      }
+    },
+    /**
+     * 我在做：清除用户组权限过滤条件
+     * 目的是：用户进行搜索/筛选/重置时，应该能看到所有符合条件的缺陷
+     * 如果不这样做：搜索/筛选仍会施加权限过滤，用户无法搜索到其他人的缺陷
+     */
+    clearUserGroupFilter() {
+      if (!this.page.condition.filters) {
+        return;
+      }
+
+      // 清除之前记录的过滤条件
+      this.userGroupFilterKeys.forEach(key => {
+        delete this.page.condition.filters[key];
+      });
+      this.userGroupFilterKeys = [];
     }
   }
 };
