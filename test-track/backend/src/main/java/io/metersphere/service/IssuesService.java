@@ -711,6 +711,7 @@ public class IssuesService {
     }
 
     public List<IssuesDao> list(IssuesRequest request) {
+
         request.setOrders(ServiceUtils.getDefaultOrderByField(request.getOrders(), "create_time"));
         setCustomFieldsOrder(request);
         ServiceUtils.setBaseQueryRequestCustomMultipleFields(request);
@@ -741,6 +742,7 @@ public class IssuesService {
         buildCustomField(issues);
         return issues;
     }
+
 
     /**
      * 添加用户组权限过滤
@@ -2092,6 +2094,10 @@ public class IssuesService {
             }
         });
         ServiceUtils.setBaseQueryRequestCustomMultipleFields(request);
+
+        // 添加用户组权限过滤（导出时也需要应用权限过滤）
+        addUserGroupFilter(request);
+
         List<IssuesDao> issues = extIssuesMapper.getIssues(request);
 
         Map<String, Set<String>> caseSetMap = getCaseSetMap(issues);
