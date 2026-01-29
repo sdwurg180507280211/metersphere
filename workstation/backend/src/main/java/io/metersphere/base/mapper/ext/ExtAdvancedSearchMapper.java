@@ -47,4 +47,36 @@ public interface ExtAdvancedSearchMapper {
      * @return 用例评审列表
      */
     List<Map<String, Object>> queryTestCaseReviews(@Param("request") AdvancedSearchRequest request);
+    
+    /**
+     * 获取测试用例详情
+     * 
+     * @param id 测试用例ID
+     * @return 测试用例详情
+     */
+    Map<String, Object> getTestCaseDetail(@Param("id") String id);
+    
+    /**
+     * 获取缺陷详情
+     * 
+     * @param id 缺陷ID
+     * @return 缺陷详情
+     */
+    Map<String, Object> getIssueDetail(@Param("id") String id);
+    
+    /**
+     * 获取测试计划详情
+     * 
+     * @param id 测试计划ID
+     * @return 测试计划详情
+     */
+    Map<String, Object> getTestPlanDetail(@Param("id") String id);
+    
+    /**
+     * 获取用例评审详情
+     * 
+     * @param id 用例评审ID
+     * @return 用例评审详情
+     */
+    Map<String, Object> getTestCaseReviewDetail(@Param("id") String id);
 }
