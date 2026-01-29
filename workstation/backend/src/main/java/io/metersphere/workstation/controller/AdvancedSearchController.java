@@ -11,6 +11,7 @@ import io.metersphere.workstation.dto.WorkspaceSimpleDTO;
 import io.metersphere.workstation.service.AdvancedSearchService;
 import io.metersphere.workstation.service.FieldMetadataService;
 import io.metersphere.workstation.service.JQLParser;
+import io.metersphere.workstation.service.JQLSuggestionService;
 import io.metersphere.workstation.service.ProjectQueryService;
 import io.metersphere.workstation.service.UserQueryService;
 import io.metersphere.workstation.service.WorkspaceQueryService;
@@ -50,6 +51,9 @@ public class AdvancedSearchController {
     
     @Resource
     private ProjectQueryService projectQueryService;
+    
+    @Resource
+    private JQLSuggestionService jqlSuggestionService;
     
     /**
      * 执行高级检索查询
@@ -196,11 +200,7 @@ public class AdvancedSearchController {
         String module = (String) request.get("module");
         Integer cursorPosition = (Integer) request.get("cursorPosition");
         
-        // TODO: 实现 JQL 智能提示逻辑
-        // 1. 分析当前输入上下文
-        // 2. 判断应该提示什么类型（字段名、操作符、值）
-        // 3. 返回相应的提示列表
-        return List.of();
+        return jqlSuggestionService.getSuggestions(context, module, cursorPosition);
     }
     
     /**

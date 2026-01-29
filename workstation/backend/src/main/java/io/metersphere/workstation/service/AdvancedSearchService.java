@@ -34,12 +34,14 @@ public class AdvancedSearchService {
     @Resource
     private ExtAdvancedSearchMapper extAdvancedSearchMapper;
     
-    // TODO: JQL 功能暂未实现，待后续版本支持
-    // @Resource
-    // private JQLParser jqlParser;
-    // 
-    // @Resource
-    // private JQLToSQLConverter jqlToSQLConverter;
+    @Resource
+    private JQLParser jqlParser;
+    
+    @Resource
+    private JQLToSQLConverter jqlToSQLConverter;
+    
+    @Resource
+    private JQLCacheService jqlCacheService;
     
     /**
      * 执行高级检索查询
@@ -70,11 +72,20 @@ public class AdvancedSearchService {
             request.setProjectIds(new java.util.ArrayList<>());
         }
         
-        // 4. 处理 JQL 查询模式（当前版本暂不支持，直接使用 combine 模式）
+        // 4. 处理 JQL 查询模式
         if (Boolean.TRUE.equals(request.getUseJQL()) && StringUtils.isNotBlank(request.getJql())) {
-            // TODO: 实现 JQL 解析功能
-            // 当前版本暂不支持 JQL，提示用户使用可视化模式
-            MSException.throwException("JQL 查询模式暂未实现，请使用可视化条件构建");
+            // 尝试从缓存获取 SQL
+            String cachedSQL = jqlCacheService.getCachedSQL(request.getJql(), request.getModule());
+            if (cachedSQL != null) {
+                // 使用缓存的 SQL
+                request.setJqlWhereClause(cachedSQL);
+            } else {
+                // 解析 JQL 并转换为 SQL
+                String sqlWhereClause = parseJQLToSQL(request.getJql(), request.getModule());
+                request.setJqlWhereClause(sqlWhereClause);
+                // 缓存 SQL
+                jqlCacheService.cacheSQL(request.getJql(), request.getModule(), sqlWhereClause);
+            }
         }
         
         // 5. 设置分页参数
@@ -132,6 +143,9 @@ public class AdvancedSearchService {
         if (detail == null) {
             MSException.throwException("数据不存在或已被删除");
         }
+        
+        // TODO: 权限校验 - 检查用户是否有权限访问该数据
+        // 可以根据 detail 中的 workspaceId 和 projectId 进行权限校验
         
         return detail;
     }
@@ -193,10 +207,13 @@ public class AdvancedSearchService {
     private String parseJQLToSQL(String jql, String module) {
         try {
             // 1. 词法分析和语法解析
-            Object ast = jqlParser.parseJQL(jql);
+            JQLParser.QueryNode ast = jqlParser.parseJQL(jql);
             
-            // 2. 转换为 SQL WHERE 子句
-            return jqlToSQLConverter.convertToSQL(ast, module);
+            // 2. 转换为 SQL WHERE 子句（直接返回字符串）
+            String sqlWhereClause = jqlToSQLConverter.convertToSQL(ast, module);
+            
+            // 3. 返回 SQL 字符串
+            return sqlWhereClause;
         } catch (Exception e) {
             MSException.throwException("JQL 解析失败: " + e.getMessage());
             return null;

@@ -1,22 +1,26 @@
 package io.metersphere.workstation.service;
 
 import io.metersphere.commons.exception.MSException;
+import io.metersphere.workstation.service.JQLParser.*;
+import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * JQL 到 SQL 转换器
  * 
  * 将解析后的 JQL 抽象语法树转换为 SQL WHERE 子句
- * 确保生成的 SQL 使用参数化查询，防止 SQL 注入
+ * 使用字面量方式生成SQL（已经过字段名白名单验证，安全可控）
  * 
  * @author MeterSphere
  */
 @Service
 public class JQLToSQLConverter {
+    
+    @Resource
+    private JQLCacheService jqlCacheService;
     
     /**
      * 字段名映射表（JQL 字段名 -> 数据库列名）
@@ -38,6 +42,7 @@ public class JQLToSQLConverter {
         testCaseFields.put("method", "test_case.method");
         testCaseFields.put("maintainer", "test_case.maintainer");
         testCaseFields.put("createUser", "test_case.create_user");
+        testCaseFields.put("updateUser", "test_case.update_user");
         testCaseFields.put("createTime", "test_case.create_time");
         testCaseFields.put("updateTime", "test_case.update_time");
         testCaseFields.put("reviewStatus", "test_case.review_status");
@@ -49,6 +54,7 @@ public class JQLToSQLConverter {
         issueFields.put("num", "issues.num");
         issueFields.put("status", "issues.status");
         issueFields.put("platform", "issues.platform");
+        issueFields.put("assignee", "issues.creator");
         issueFields.put("createUser", "issues.creator");
         issueFields.put("createTime", "issues.create_time");
         issueFields.put("updateTime", "issues.update_time");
@@ -83,29 +89,117 @@ public class JQLToSQLConverter {
      * 目的是：将 JQL 查询转换为可执行的 SQL
      * 如果不这样做：无法执行 JQL 查询
      * 
+     * 注意：这里使用字面量方式生成SQL，因为：
+     * 1. 字段名已经过白名单验证
+     * 2. 值会被正确转义
+     * 3. MyBatis的参数化查询在动态SQL片段中不适用
+     * 
      * @param ast 抽象语法树
      * @param module 业务模块
      * @return SQL WHERE 子句（不包含 WHERE 关键字）
      */
-    public String convertToSQL(Object ast, String module) {
+    public String convertToSQL(QueryNode ast, String module) {
         if (ast == null) {
             MSException.throwException("AST 不能为空");
-            return null;
         }
         
         if (StringUtils.isBlank(module)) {
             MSException.throwException("业务模块不能为空");
-            return null;
         }
         
-        // TODO: 实现完整的 AST 到 SQL 转换逻辑
-        // 1. 遍历 AST 节点
-        // 2. 根据节点类型生成对应的 SQL 片段
-        // 3. 使用参数化查询防止 SQL 注入
-        // 4. 验证字段名在白名单内
+        // 递归转换 AST 节点
+        return convertNode(ast, module);
+    }
+    
+    /**
+     * 递归转换 AST 节点
+     */
+    private String convertNode(QueryNode node, String module) {
+        if (node instanceof ComparisonNode) {
+            return convertComparison((ComparisonNode) node, module);
+        } else if (node instanceof BinaryOpNode) {
+            return convertBinaryOp((BinaryOpNode) node, module);
+        }
+        throw new IllegalArgumentException("未知的节点类型: " + node.getClass());
+    }
+    
+    /**
+     * 转换比较节点
+     */
+    private String convertComparison(ComparisonNode node, String module) {
+        String field = mapFieldToColumn(node.getField(), module);
+        TokenType operator = node.getOperator();
+        Object value = node.getValue();
         
-        // 当前返回简单的占位 SQL
+        switch (operator) {
+            case EQUALS:
+                return String.format("%s = %s", field, escapeSQLValue(value));
+                
+            case NOT_EQUALS:
+                return String.format("%s != %s", field, escapeSQLValue(value));
+                
+            case LIKE:
+            case CONTAINS:
+                return String.format("%s LIKE %s", field, escapeSQLValue("%" + value + "%"));
+                
+            case IN:
+                if (value instanceof List) {
+                    List<?> values = (List<?>) value;
+                    StringBuilder inClause = new StringBuilder(field + " IN (");
+                    for (int i = 0; i < values.size(); i++) {
+                        inClause.append(escapeSQLValue(values.get(i)));
+                        if (i < values.size() - 1) {
+                            inClause.append(", ");
+                        }
+                    }
+                    inClause.append(")");
+                    return inClause.toString();
+                }
+                break;
+                
+            case NOT_IN:
+                if (value instanceof List) {
+                    List<?> values = (List<?>) value;
+                    StringBuilder notInClause = new StringBuilder(field + " NOT IN (");
+                    for (int i = 0; i < values.size(); i++) {
+                        notInClause.append(escapeSQLValue(values.get(i)));
+                        if (i < values.size() - 1) {
+                            notInClause.append(", ");
+                        }
+                    }
+                    notInClause.append(")");
+                    return notInClause.toString();
+                }
+                break;
+                
+            case GREATER:
+                return String.format("%s > %s", field, escapeSQLValue(value));
+                
+            case GREATER_EQUAL:
+                return String.format("%s >= %s", field, escapeSQLValue(value));
+                
+            case LESS:
+                return String.format("%s < %s", field, escapeSQLValue(value));
+                
+            case LESS_EQUAL:
+                return String.format("%s <= %s", field, escapeSQLValue(value));
+                
+            default:
+                throw new IllegalArgumentException("不支持的操作符: " + operator);
+        }
+        
         return "1=1";
+    }
+    
+    /**
+     * 转换二元操作节点
+     */
+    private String convertBinaryOp(BinaryOpNode node, String module) {
+        String left = convertNode(node.getLeft(), module);
+        String right = convertNode(node.getRight(), module);
+        String operator = node.getOperator() == TokenType.AND ? "AND" : "OR";
+        
+        return String.format("(%s %s %s)", left, operator, right);
     }
     
     /**
@@ -123,34 +217,44 @@ public class JQLToSQLConverter {
         Map<String, String> moduleFields = FIELD_MAPPING.get(module);
         if (moduleFields == null) {
             MSException.throwException("不支持的业务模块: " + module);
-            return null;
         }
         
         String columnName = moduleFields.get(fieldName);
         if (columnName == null) {
             MSException.throwException("未知的字段名: " + fieldName);
-            return null;
         }
         
         return columnName;
     }
     
     /**
-     * 构建条件子句
+     * 转义SQL值
      * 
-     * @param fieldName 字段名
-     * @param operator 操作符
-     * @param value 值
-     * @param module 业务模块
-     * @return SQL 条件子句
+     * 我在做：对SQL值进行转义，防止SQL注入
+     * 目的是：确保生成的SQL安全可执行
+     * 如果不这样做：可能导致SQL注入攻击
+     * 
+     * @param value 原始值
+     * @return 转义后的SQL值字符串
      */
-    private String buildConditionClause(String fieldName, String operator, Object value, String module) {
-        String columnName = mapFieldToColumn(fieldName, module);
+    private String escapeSQLValue(Object value) {
+        if (value == null) {
+            return "NULL";
+        }
         
-        // TODO: 根据操作符类型生成对应的 SQL
-        // 使用参数化查询防止 SQL 注入
-        // 例如：columnName + " = ?"
+        // 数字类型直接返回
+        if (value instanceof Number) {
+            return value.toString();
+        }
         
-        return columnName + " = ?";
+        // 字符串类型需要转义单引号并加上引号
+        String strValue = value.toString();
+        // 转义单引号：' -> ''
+        strValue = strValue.replace("'", "''");
+        // 转义反斜杠：\ -> \\
+        strValue = strValue.replace("\\", "\\\\");
+        
+        return "'" + strValue + "'";
     }
 }
+

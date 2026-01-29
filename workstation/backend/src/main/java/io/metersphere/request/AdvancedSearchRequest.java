@@ -55,6 +55,13 @@ public class AdvancedSearchRequest extends BaseQueryRequest {
     private String jql;
     
     /**
+     * JQL 转换后的 SQL WHERE 子句
+     * 由 Service 层设置，Mapper 层使用
+     * 内部字段，不对外暴露
+     */
+    private String jqlWhereClause;
+    
+    /**
      * 排序字段名称
      * 例如：update_time, create_time, priority
      */
