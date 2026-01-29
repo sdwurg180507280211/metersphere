@@ -85,7 +85,7 @@
                 </span>
               </span>
 
-              <ms-review-table-item
+              <ms-review-table-item-lazy
                 v-else-if="item.id === 'description'"
                 :data="scope.row"
                 prop="description"/>
@@ -117,7 +117,7 @@
               <!-- 自定义字段 -->
               <span v-else-if="item.isCustom">
                 <span v-if="item.type === 'richText' && scope.row.displayValueMap[item.id]">
-                     <ms-review-table-item
+                     <ms-review-table-item-lazy
                        :data="scope.row.displayValueMap" :prop="item.id"/>
                 </span>
                 <!-- 状态字段：显示可流转的下拉菜单 -->
@@ -244,12 +244,14 @@ import {TEST_TRACK_ISSUE_LIST} from "metersphere-frontend/src/components/search/
 import {generateColumnKey, getAdvSearchCustomField} from "metersphere-frontend/src/components/search/custom-component";
 import MsMarkDownText from "metersphere-frontend/src/components/MsMarkDownText";
 import MsReviewTableItem from "@/business/issue/MsReviewTableItem";
+import MsReviewTableItemLazy from "@/business/issue/MsReviewTableItemLazy";
 import {setIssuePlatformComponent} from "@/business/issue/issue";
 
 export default {
   name: "IssueList",
   components: {
     MsReviewTableItem,
+    MsReviewTableItemLazy,
     MsMarkDownText,
     MsMainContainer,
     MsContainer,

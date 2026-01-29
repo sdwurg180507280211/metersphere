@@ -152,6 +152,14 @@ public class IssueStatusTransitionService {
             customFieldIssuesService.editFields(issue.getId(), Collections.singletonList(resource));
         }
 
+        // 我在做：更新issues表的update_time字段
+        // 目的是：确保状态流转时，缺陷的更新时间能正确反映最新修改时间
+        // 如果不这样做，就无法实现：列表页面的更新时间字段在状态流转后保持不变，用户无法看到最新修改时间
+        IssuesWithBLOBs updateIssue = new IssuesWithBLOBs();
+        updateIssue.setId(issueId);
+        updateIssue.setUpdateTime(System.currentTimeMillis());
+        issuesMapper.updateByPrimaryKeySelective(updateIssue);
+
         // closed -> reopened 时，自动增加“复测次数”（系统字段），并与状态变更一起写入审计日志
         List<IssueChangeLogDetailDTO> extraLogDetails = new ArrayList<>();
         if (StringUtils.equals(currentStatus, "closed") && StringUtils.equals(toStatus, "reopened")) {
