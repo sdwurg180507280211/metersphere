@@ -50,13 +50,4 @@ public interface ExtIssuesMapper {
     List<String> getTestPlanThisWeekIssue(@Param("projectId") String projectId, @Param("firstDayTimestamp") long firstDayTimestamp, @Param("lastDayTimestamp") long lastDayTimestamp);
 
     List<String> getTestPlanIssue(String projectId);
-    
-    /**
-     * 查询用户在项目中的用户组ID
-     * 
-     * @param userId 用户ID
-     * @param projectId 项目ID
-     * @return 用户组ID（如 'tester', 'developer' 等）
-     */
-    String getUserGroupInProject(@Param("userId") String userId, @Param("projectId") String projectId);
 }
