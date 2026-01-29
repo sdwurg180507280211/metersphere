@@ -87,4 +87,11 @@ public class IssuesRequest extends BaseQueryRequest {
      * 用户组ID（用于用户组权限过滤，如 'developer', 'tester'）
      */
     private String userGroupId;
+    
+    /**
+     * 是否为初始化加载（非高级搜索）
+     * true: 初始化加载，需要施加用户组权限过滤
+     * false: 高级搜索，不施加用户组权限过滤
+     */
+    private Boolean isInitialLoad = false;
 }

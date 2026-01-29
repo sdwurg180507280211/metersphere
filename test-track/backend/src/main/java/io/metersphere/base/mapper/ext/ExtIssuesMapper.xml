@@ -211,12 +211,24 @@
 
     <sql id="queryWhereCondition">
         <where>
-            <!-- 用户组权限过滤：开发人员组和测试人员组只能看到创建人或处理人是自己的缺陷 -->
-            <if test="request.userGroupId != null and request.currentUserId != null">
-                <if test="request.userGroupId == 'developer' or request.userGroupId == 'tester'">
-                    and (
-                        issues.creator = #{request.currentUserId}
-                        or exists (
+            <!-- 
+                用户组权限过滤（仅在初始化加载时生效，高级搜索不限制）
+                
+                我在做：根据用户组和加载类型施加不同的权限过滤
+                目的是：
+                  1. 开发人员组（developer）：只能看到处理人是自己的缺陷
+                  2. 测试人员组（tester）：只能看到创建人是自己的缺陷
+                  3. 高级搜索时不施加任何权限限制
+                如果不这样做：
+                  1. 开发人员会看到所有缺陷，无法聚焦自己需要处理的
+                  2. 测试人员会看到所有缺陷，无法聚焦自己创建的
+                  3. 高级搜索会被权限限制，用户无法搜索其他人的缺陷
+            -->
+            <if test="request.isInitialLoad != null and request.isInitialLoad == true">
+                <if test="request.userGroupId != null and request.currentUserId != null">
+                    <!-- 开发人员组：只能看到处理人是自己的缺陷 -->
+                    <if test="request.userGroupId == 'developer'">
+                        and exists (
                             select 1 from custom_field_issues cfi
                             inner join custom_field cf on cfi.field_id = cf.id
                             where cfi.resource_id = issues.id
@@ -224,10 +236,15 @@
                               and cf.scene = 'ISSUE'
                               and cf.system = 1
                               and (cf.project_id = issues.project_id or cf.global = 1)
-                              <!-- 注意：自定义字段值使用 JSON 格式存储，字符串类型会带双引号，这是 MeterSphere 的统一设计，所有自定义字段都是如此-->
+                              <!-- 注意：自定义字段值使用 JSON 格式存储，字符串类型会带双引号，这是 MeterSphere 的统一设计 -->
                               and trim(both '"' from cfi.value) = #{request.currentUserId}
                         )
-                    )
+                    </if>
+                    
+                    <!-- 测试人员组：只能看到创建人是自己的缺陷 -->
+                    <if test="request.userGroupId == 'tester'">
+                        and issues.creator = #{request.currentUserId}
+                    </if>
                 </if>
             </if>
 

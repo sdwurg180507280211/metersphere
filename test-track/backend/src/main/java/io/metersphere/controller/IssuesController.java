@@ -65,8 +65,14 @@ public class IssuesController {
     public Pager<List<IssuesDao>> list(@PathVariable int goPage, @PathVariable int pageSize, @RequestBody IssuesRequest request) {
         issuesService.setFilterParam(request);
         
-        // 在分页之前添加用户组权限过滤（避免 PageHelper 拦截用户组查询 SQL）
-        issuesService.addUserGroupFilter(request);
+        // 判断是否为初始化加载（非高级搜索）
+        boolean isInitialLoad = isInitialLoadRequest(request);
+        request.setIsInitialLoad(isInitialLoad);
+        
+        // 仅在初始化加载时添加用户组权限过滤（避免 PageHelper 拦截用户组查询 SQL）
+        if (isInitialLoad) {
+            issuesService.addUserGroupFilter(request);
+        }
         
         if (request.getThisWeekUnClosedTestPlanIssue() || request.getUnClosedTestPlanIssue() || request.getAllTestPlanIssue()) {
             if (CollectionUtils.isEmpty(request.getFilterIds())) {
@@ -76,6 +82,36 @@ public class IssuesController {
         }
         Page<List<Issues>> page = PageHelper.startPage(goPage, pageSize, true);
         return PageUtils.setPageInfo(page, issuesService.list(request));
+    }
+    
+    /**
+     * 判断是否为初始化加载请求（非高级搜索）
+     * 
+     * 我在做：判断请求是否为初始化加载（没有任何搜索条件）
+     * 目的是：区分初始化加载和高级搜索，只在初始化加载时施加用户组权限过滤
+     * 如果不这样做：高级搜索也会被用户组权限限制，用户无法搜索到其他人的缺陷
+     * 
+     * @param request 缺陷查询请求
+     * @return true=初始化加载，false=高级搜索
+     */
+    private boolean isInitialLoadRequest(IssuesRequest request) {
+        // 如果有combine（高级搜索条件），则不是初始化加载
+        if (request.getCombine() != null && !request.getCombine().isEmpty()) {
+            return false;
+        }
+        
+        // 如果有name（搜索框输入），则不是初始化加载
+        if (org.apache.commons.lang3.StringUtils.isNotBlank(request.getName())) {
+            return false;
+        }
+        
+        // 如果有filters（快捷筛选），则不是初始化加载
+        if (request.getFilters() != null && !request.getFilters().isEmpty()) {
+            return false;
+        }
+        
+        // 其他情况认为是初始化加载
+        return true;
     }
 
     @PostMapping("/dashboard/list/{goPage}/{pageSize}")
