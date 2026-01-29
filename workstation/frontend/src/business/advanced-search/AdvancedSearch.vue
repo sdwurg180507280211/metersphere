@@ -1,181 +1,337 @@
 <template>
-  <div class="advanced-search-container">
-    <!-- 侧边栏 -->
-    <sidebar class="sidebar" />
+  <div class="advanced-search-page">
+    <!-- 顶部筛选栏 -->
+    <div class="top-filter-bar">
+      <!-- 业务模块选择 -->
+      <el-select
+        v-model="store.currentModule"
+        :placeholder="$t('advanced_search.select_module')"
+        @change="onModuleChange"
+      >
+        <el-option
+          value="TEST_CASE"
+          :label="$t('advanced_search.module_test_case')"
+        />
+        <el-option
+          value="ISSUE"
+          :label="$t('advanced_search.module_issue')"
+        />
+        <el-option
+          value="TEST_PLAN"
+          :label="$t('advanced_search.module_test_plan')"
+        />
+        <el-option
+          value="TEST_CASE_REVIEW"
+          :label="$t('advanced_search.module_review')"
+        />
+      </el-select>
+      
+      <!-- 工作空间选择 -->
+      <el-select
+        v-model="store.selectedWorkspaces"
+        multiple
+        collapse-tags
+        :placeholder="$t('advanced_search.select_workspace')"
+        @change="onWorkspaceChange"
+      >
+        <el-option
+          v-for="ws in store.workspaces"
+          :key="ws.id"
+          :value="ws.id"
+          :label="ws.name"
+        />
+      </el-select>
+      
+      <!-- 项目选择 -->
+      <el-select
+        v-model="store.selectedProjects"
+        multiple
+        collapse-tags
+        :placeholder="$t('advanced_search.select_project')"
+        @change="onProjectChange"
+      >
+        <el-option
+          v-for="proj in store.projects"
+          :key="proj.id"
+          :value="proj.id"
+          :label="proj.name"
+        />
+      </el-select>
+      
+      <!-- 查询模式切换 -->
+      <el-radio-group
+        v-model="store.queryMode"
+        size="small"
+        @change="onQueryModeChange"
+      >
+        <el-radio-button value="visual">
+          {{ $t('advanced_search.mode_visual') }}
+        </el-radio-button>
+        <el-radio-button value="jql">
+          {{ $t('advanced_search.mode_jql') }}
+        </el-radio-button>
+      </el-radio-group>
+      
+      <!-- 查询按钮 -->
+      <el-button
+        type="primary"
+        icon="el-icon-search"
+        :loading="store.loading"
+        @click="handleSearch"
+      >
+        {{ $t('commons.search') }}
+      </el-button>
+      
+      <!-- 导出按钮 -->
+      <el-button
+        icon="el-icon-download"
+        @click="handleExport"
+      >
+        {{ $t('commons.export') }}
+      </el-button>
+    </div>
     
-    <!-- 主内容区 -->
-    <div class="main-content">
-      <!-- 顶部筛选栏 -->
-      <top-filter-bar 
-        @search="handleSearch"
-        @module-change="handleModuleChange"
+    <!-- 查询条件区域 -->
+    <div class="query-condition-area">
+      <!-- JQL 模式 -->
+      <jql-editor
+        v-if="store.queryMode === 'jql'"
+        v-model="store.jqlQuery"
       />
       
-      <!-- 已选条件标签栏 -->
-      <active-tags-bar 
-        v-if="queryMode === 'visual' && hasConditions"
-        @remove-condition="handleRemoveCondition"
-        @clear-all="handleClearAll"
-      />
+      <!-- 可视化模式 -->
+      <div v-else class="visual-query">
+        <el-alert
+          v-if="!store.isSingleProjectMode && store.selectedProjects.length > 1"
+          type="info"
+          :closable="false"
+          show-icon
+        >
+          {{ $t('advanced_search.cross_project_tip') }}
+        </el-alert>
+        
+        <!-- 这里可以添加可视化查询条件组件 -->
+        <div class="visual-filters">
+          <p>{{ $t('advanced_search.visual_mode_placeholder') }}</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 结果展示区域 -->
+    <div class="result-area">
+      <!-- 工具栏 -->
+      <div class="result-toolbar">
+        <span class="result-count">
+          {{ $t('advanced_search.result_count', { count: store.pagination.total }) }}
+        </span>
+        
+        <div class="toolbar-actions">
+          <!-- 视图切换 -->
+          <el-radio-group
+            v-model="store.viewMode"
+            size="small"
+            @change="onViewModeChange"
+          >
+            <el-radio-button value="list">
+              <i class="el-icon-s-grid"></i>
+              {{ $t('advanced_search.view_list') }}
+            </el-radio-button>
+            <el-radio-button value="split">
+              <i class="el-icon-s-unfold"></i>
+              {{ $t('advanced_search.view_split') }}
+            </el-radio-button>
+          </el-radio-group>
+        </div>
+      </div>
       
-      <!-- JQL 查询编辑器 -->
-      <jql-editor 
-        v-if="queryMode === 'jql'"
-        @execute-query="handleSearch"
-      />
+      <!-- 列表视图 -->
+      <div v-if="store.viewMode === 'list'" class="list-view">
+        <el-table
+          v-loading="store.loading"
+          :data="store.results"
+          border
+          stripe
+          @row-click="handleRowClick"
+        >
+          <el-table-column
+            prop="num"
+            :label="$t('commons.id')"
+            width="100"
+          />
+          <el-table-column
+            prop="name"
+            :label="$t('commons.name')"
+            min-width="200"
+            show-overflow-tooltip
+          />
+          <el-table-column
+            prop="status"
+            :label="$t('commons.status')"
+            width="120"
+          />
+          <el-table-column
+            prop="projectName"
+            :label="$t('commons.project')"
+            width="150"
+            show-overflow-tooltip
+          />
+          <el-table-column
+            prop="createUserName"
+            :label="$t('commons.create_user')"
+            width="120"
+          />
+          <el-table-column
+            prop="createTime"
+            :label="$t('commons.create_time')"
+            width="180"
+          >
+            <template #default="{ row }">
+              {{ formatTime(row.createTime) }}
+            </template>
+          </el-table-column>
+        </el-table>
+        
+        <!-- 分页 -->
+        <el-pagination
+          :current-page="store.pagination.current"
+          :page-size="store.pagination.pageSize"
+          :total="store.pagination.total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
       
-      <!-- 结果工具栏 -->
-      <result-toolbar 
-        v-if="results.total > 0"
-        @view-mode-change="handleViewModeChange"
-        @export="handleExport"
-      />
-      
-      <!-- 结果展示区 -->
-      <result-view 
-        :data="results.list"
-        :total="results.total"
-        :loading="loading"
-        @page-change="handlePageChange"
-        @item-select="handleItemSelect"
-      />
+      <!-- 分屏视图 -->
+      <div v-else class="split-view">
+        <div class="split-list">
+          <el-table
+            v-loading="store.loading"
+            :data="store.results"
+            border
+            stripe
+            highlight-current-row
+            @row-click="handleRowClick"
+          >
+            <el-table-column
+              prop="num"
+              :label="$t('commons.id')"
+              width="100"
+            />
+            <el-table-column
+              prop="name"
+              :label="$t('commons.name')"
+              show-overflow-tooltip
+            />
+          </el-table>
+        </div>
+        
+        <div class="split-detail">
+          <div v-if="store.detailData" class="detail-content">
+            <h3>{{ store.detailData.name }}</h3>
+            <el-descriptions :column="2" border>
+              <el-descriptions-item :label="$t('commons.id')">
+                {{ store.detailData.num }}
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('commons.status')">
+                {{ store.detailData.status }}
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('commons.project')">
+                {{ store.detailData.projectName }}
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('commons.workspace')">
+                {{ store.detailData.workspaceName }}
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('commons.create_user')">
+                {{ store.detailData.createUserName }}
+              </el-descriptions-item>
+              <el-descriptions-item :label="$t('commons.create_time')">
+                {{ formatTime(store.detailData.createTime) }}
+              </el-descriptions-item>
+            </el-descriptions>
+          </div>
+          <div v-else class="detail-placeholder">
+            <i class="el-icon-info"></i>
+            <p>{{ $t('advanced_search.select_row_to_view_detail') }}</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import { useAdvancedSearchStore } from '@/store';
-import { queryData, exportExcel } from '@/api/advanced-search';
-import Sidebar from './components/Sidebar.vue';
-import TopFilterBar from './components/TopFilterBar.vue';
-import ActiveTagsBar from './components/ActiveTagsBar.vue';
-import JQLEditor from './components/JQLEditor.vue';
-import ResultToolbar from './components/ResultToolbar.vue';
-import ResultView from './components/ResultView.vue';
+import { useAdvancedSearchStore } from '@/store/advancedSearch';
+import JQLEditor from './JQLEditor.vue';
+import { formatTime } from '@/utils/format';
 
 export default {
   name: 'AdvancedSearch',
+  
   components: {
-    Sidebar,
-    TopFilterBar,
-    ActiveTagsBar,
-    JQLEditor,
-    ResultToolbar,
-    ResultView
+    JQLEditor
   },
-  setup() {
-    const store = useAdvancedSearchStore();
-    return { store };
-  },
+  
   data() {
     return {
-      loading: false
+      store: useAdvancedSearchStore()
     };
   },
-  computed: {
-    queryMode() {
-      return this.store.queryMode;
-    },
-    hasConditions() {
-      return this.store.hasConditions;
-    },
-    results() {
-      return this.store.results;
-    }
+  
+  async mounted() {
+    // 加载初始数据
+    await this.store.loadWorkspaces();
+    await this.store.loadFieldMetadata();
   },
+  
   methods: {
+    /**
+     * 模块变更处理
+     */
+    async onModuleChange() {
+      await this.store.switchModule(this.store.currentModule);
+    },
+    
+    /**
+     * 工作空间变更处理
+     */
+    async onWorkspaceChange() {
+      await this.store.loadProjects();
+      this.store.selectedProjects = [];
+    },
+    
+    /**
+     * 项目变更处理
+     */
+    async onProjectChange() {
+      await this.store.onProjectChange();
+    },
+    
+    /**
+     * 查询模式变更处理
+     */
+    onQueryModeChange() {
+      this.store.switchQueryMode(this.store.queryMode);
+    },
+    
+    /**
+     * 视图模式变更处理
+     */
+    onViewModeChange() {
+      this.store.switchViewMode(this.store.viewMode);
+    },
+    
     /**
      * 执行查询
      */
-    async handleSearch(pageNum = 1, pageSize = 20) {
-      this.loading = true;
-      this.store.setError(null);
-      
+    async handleSearch() {
       try {
-        // 构建查询请求
-        const request = {
-          module: this.store.currentModule,
-          workspaceIds: this.store.selectedWorkspaces,
-          projectIds: this.store.selectedProjects,
-          useJQL: this.store.queryMode === 'jql',
-          orders: this.store.orders
-        };
-        
-        // 根据查询模式添加条件
-        if (this.store.queryMode === 'jql') {
-          request.jql = this.store.jqlQuery;
-        } else {
-          request.combine = this.store.combine;
-          request.filters = this.store.filters;
-        }
-        
-        // 调用 API
-        const response = await queryData(request, pageNum, pageSize);
-        
-        // 更新结果
-        this.store.updateResults({
-          total: response.data.itemCount,
-          list: response.data.listObject,
-          pageNum,
-          pageSize
-        });
-        
-        // 如果是详情模式且有结果，自动选中第一条
-        if (this.store.viewMode === 'split' && response.data.listObject.length > 0) {
-          this.store.selectItem(response.data.listObject[0]);
-        }
+        await this.store.executeQuery();
+        this.$message.success(this.$t('commons.search_success'));
       } catch (error) {
-        this.$error(this.$t('advanced_search.query_failed') + ': ' + error.message);
-        this.store.setError(error.message);
-      } finally {
-        this.loading = false;
+        this.$message.error(this.$t('commons.search_failed'));
       }
-    },
-    
-    /**
-     * 模块切换
-     */
-    handleModuleChange(module) {
-      this.store.switchModule(module);
-      // 清空结果
-      this.store.updateResults({ total: 0, list: [], pageNum: 1, pageSize: 20 });
-    },
-    
-    /**
-     * 移除筛选条件
-     */
-    handleRemoveCondition(field) {
-      this.store.removeCondition(field);
-    },
-    
-    /**
-     * 清空所有条件
-     */
-    handleClearAll() {
-      this.store.clearConditions();
-      // 清空结果
-      this.store.updateResults({ total: 0, list: [], pageNum: 1, pageSize: 20 });
-    },
-    
-    /**
-     * 视图模式切换
-     */
-    handleViewModeChange(mode) {
-      this.store.setViewMode(mode);
-    },
-    
-    /**
-     * 分页变更
-     */
-    handlePageChange(pageNum, pageSize) {
-      this.handleSearch(pageNum, pageSize);
-    },
-    
-    /**
-     * 选中详情项
-     */
-    handleItemSelect(item) {
-      this.store.selectItem(item);
     },
     
     /**
@@ -183,64 +339,157 @@ export default {
      */
     async handleExport() {
       try {
-        // 构建查询请求（同查询逻辑）
-        const request = {
-          module: this.store.currentModule,
-          workspaceIds: this.store.selectedWorkspaces,
-          projectIds: this.store.selectedProjects,
-          useJQL: this.store.queryMode === 'jql',
-          orders: this.store.orders
-        };
-        
-        if (this.store.queryMode === 'jql') {
-          request.jql = this.store.jqlQuery;
-        } else {
-          request.combine = this.store.combine;
-          request.filters = this.store.filters;
-        }
-        
-        // 调用导出 API
-        const response = await exportExcel(request);
-        
-        // 下载文件
-        const blob = new Blob([response.data], { 
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-        });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${this.store.currentModule}_${Date.now()}.xlsx`;
-        link.click();
-        window.URL.revokeObjectURL(url);
-        
-        this.$success(this.$t('advanced_search.export_success'));
+        await this.store.exportExcel();
+        this.$message.success(this.$t('commons.export_success'));
       } catch (error) {
-        this.$error(this.$t('advanced_search.export_failed') + ': ' + error.message);
+        this.$message.error(this.$t('commons.export_failed'));
       }
+    },
+    
+    /**
+     * 行点击处理
+     */
+    async handleRowClick(row) {
+      if (this.store.viewMode === 'split') {
+        try {
+          await this.store.loadDetail(row.id);
+        } catch (error) {
+          this.$message.error(this.$t('commons.load_failed'));
+        }
+      }
+    },
+    
+    /**
+     * 分页大小变更
+     */
+    handleSizeChange(size) {
+      this.store.pagination.pageSize = size;
+      this.handleSearch();
+    },
+    
+    /**
+     * 当前页变更
+     */
+    handleCurrentChange(page) {
+      this.store.pagination.current = page;
+      this.handleSearch();
+    },
+    
+    /**
+     * 格式化时间
+     */
+    formatTime(timestamp) {
+      return formatTime(timestamp);
     }
   }
 };
 </script>
 
-<style scoped>
-.advanced-search-container {
-  display: flex;
-  height: calc(100vh - 60px);
+<style scoped lang="scss">
+.advanced-search-page {
+  padding: 20px;
   background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
-.sidebar {
-  width: 240px;
-  background-color: #fff;
-  border-right: 1px solid #e4e7ed;
-  flex-shrink: 0;
-}
-
-.main-content {
-  flex: 1;
+.top-filter-bar {
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  gap: 12px;
+  margin-bottom: 20px;
   padding: 16px;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  
+  .el-select {
+    width: 200px;
+  }
+}
+
+.query-condition-area {
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.visual-query {
+  .visual-filters {
+    padding: 20px;
+    text-align: center;
+    color: #909399;
+  }
+}
+
+.result-area {
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 16px;
+}
+
+.result-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  
+  .result-count {
+    font-size: 14px;
+    color: #606266;
+  }
+}
+
+.list-view {
+  .el-pagination {
+    margin-top: 16px;
+    text-align: right;
+  }
+}
+
+.split-view {
+  display: flex;
+  gap: 16px;
+  height: 600px;
+  
+  .split-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+  
+  .split-detail {
+    flex: 1;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 16px;
+    overflow-y: auto;
+    
+    .detail-content {
+      h3 {
+        margin: 0 0 16px;
+        font-size: 18px;
+        color: #303133;
+      }
+    }
+    
+    .detail-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #909399;
+      
+      i {
+        font-size: 48px;
+        margin-bottom: 16px;
+      }
+      
+      p {
+        font-size: 14px;
+      }
+    }
+  }
 }
 </style>
