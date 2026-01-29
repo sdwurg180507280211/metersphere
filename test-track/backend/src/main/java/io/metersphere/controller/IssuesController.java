@@ -64,10 +64,6 @@ public class IssuesController {
     @RequiresPermissions(PermissionConstants.PROJECT_TRACK_ISSUE_READ)
     public Pager<List<IssuesDao>> list(@PathVariable int goPage, @PathVariable int pageSize, @RequestBody IssuesRequest request) {
         issuesService.setFilterParam(request);
-        
-        // 在分页之前添加用户组权限过滤（避免 PageHelper 拦截用户组查询 SQL）
-        issuesService.addUserGroupFilter(request);
-        
         if (request.getThisWeekUnClosedTestPlanIssue() || request.getUnClosedTestPlanIssue() || request.getAllTestPlanIssue()) {
             if (CollectionUtils.isEmpty(request.getFilterIds())) {
                 Page<List<Issues>> page = PageHelper.startPage(goPage, pageSize, true);
