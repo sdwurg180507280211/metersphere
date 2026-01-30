@@ -12,108 +12,108 @@
 -- SQL 1: 统计每个顶级模块的功能用例数量(排除回收站)
 WITH RECURSIVE module_tree AS (
     -- 锚点：顶级模块（level = 1）
-    SELECT 
-        id, 
-        project_id, 
-        name, 
-        parent_id, 
-        level, 
+    SELECT
+        id,
+        project_id,
+        name,
+        parent_id,
+        level,
         id as top_module_id,
         name as top_module_name
     FROM test_case_node
     WHERE level = 1
-    
+
     UNION ALL
-    
+
     -- 递归：查找所有子模块
-    SELECT 
-        tcn.id, 
-        tcn.project_id, 
-        tcn.name, 
-        tcn.parent_id, 
-        tcn.level, 
+    SELECT
+        tcn.id,
+        tcn.project_id,
+        tcn.name,
+        tcn.parent_id,
+        tcn.level,
         mt.top_module_id,
         mt.top_module_name
     FROM test_case_node tcn
     INNER JOIN module_tree mt ON tcn.parent_id = mt.id
 )
-SELECT 
+SELECT
     w.name AS '工作空间名称',
     p.name AS '项目名称',
     mt.top_module_name AS '顶级模块名称',
     COUNT(DISTINCT tc.id) AS '功能用例数量（含所有子模块）'
-FROM 
+FROM
     workspace w
     INNER JOIN project p ON w.id = p.workspace_id
     LEFT JOIN module_tree mt ON mt.project_id = p.id
     LEFT JOIN test_case tc ON mt.id = tc.node_id AND tc.project_id = p.id AND tc.delete_time IS NULL  -- 排除回收站数据
-WHERE 
-    w.name = '默认工作空间'  -- 替换为实际工作空间名称
-GROUP BY 
+WHERE
+    w.name = '功能测试工作空间'  -- 替换为实际工作空间名称
+GROUP BY
     w.name, p.name, mt.top_module_name
-ORDER BY 
+ORDER BY
     p.name, mt.top_module_name;
 
 -- SQL 2: 统计每个顶级模块的测试计划数量
 WITH RECURSIVE plan_module_tree AS (
     -- 锚点：顶级模块（level = 1）
-    SELECT 
-        id, 
-        project_id, 
-        name, 
-        parent_id, 
-        level, 
+    SELECT
+        id,
+        project_id,
+        name,
+        parent_id,
+        level,
         id as top_module_id,
         name as top_module_name
     FROM test_plan_node
     WHERE level = 1
-    
+
     UNION ALL
-    
+
     -- 递归：查找所有子模块
-    SELECT 
-        tpn.id, 
-        tpn.project_id, 
-        tpn.name, 
-        tpn.parent_id, 
-        tpn.level, 
+    SELECT
+        tpn.id,
+        tpn.project_id,
+        tpn.name,
+        tpn.parent_id,
+        tpn.level,
         pmt.top_module_id,
         pmt.top_module_name
     FROM test_plan_node tpn
     INNER JOIN plan_module_tree pmt ON tpn.parent_id = pmt.id
 )
-SELECT 
+SELECT
     w.name AS '工作空间名称',
     p.name AS '项目名称',
     pmt.top_module_name AS '顶级模块名称',
     COUNT(DISTINCT tp.id) AS '测试计划数量（含所有子模块）'
-FROM 
+FROM
     workspace w
     INNER JOIN project p ON w.id = p.workspace_id
     LEFT JOIN plan_module_tree pmt ON pmt.project_id = p.id
     LEFT JOIN test_plan tp ON pmt.id = tp.node_id AND tp.project_id = p.id
-WHERE 
-    w.name = '默认工作空间'  -- 替换为实际工作空间名称
-GROUP BY 
+WHERE
+    w.name = '功能测试工作空间'  -- 替换为实际工作空间名称
+GROUP BY
     w.name, p.name, pmt.top_module_name
-ORDER BY 
+ORDER BY
     p.name, pmt.top_module_name;
 
 
 -- SQL 3: 统计每个项目的功能用例数量、测试计划数量、缺陷数量(汇总统计-优化版)
 -- 说明: 使用子查询分别统计,避免大表JOIN导致的性能问题
-SELECT 
+SELECT
     w.name AS '工作空间名称',
     p.name AS '项目名称',
     COALESCE(tc_count.case_count, 0) AS '功能用例总数(排除回收站)',
     COALESCE(tp_count.plan_count, 0) AS '测试计划总数',
     COALESCE(i_count.issue_count, 0) AS '缺陷总数'
-FROM 
+FROM
     workspace w
     INNER JOIN project p ON w.id = p.workspace_id
     -- 子查询1: 统计功能用例数量(排除回收站)
     LEFT JOIN (
-        SELECT 
+        SELECT
             project_id,
             COUNT(id) AS case_count
         FROM test_case
@@ -122,7 +122,7 @@ FROM
     ) tc_count ON p.id = tc_count.project_id
     -- 子查询2: 统计测试计划数量
     LEFT JOIN (
-        SELECT 
+        SELECT
             project_id,
             COUNT(id) AS plan_count
         FROM test_plan
@@ -130,21 +130,21 @@ FROM
     ) tp_count ON p.id = tp_count.project_id
     -- 子查询3: 统计缺陷数量
     LEFT JOIN (
-        SELECT 
+        SELECT
             project_id,
             COUNT(id) AS issue_count
         FROM issues
         GROUP BY project_id
     ) i_count ON p.id = i_count.project_id
-WHERE 
-    w.name = '默认工作空间'  -- 替换为实际工作空间名称
-ORDER BY 
+WHERE
+    w.name = '功能测试工作空间'  -- 替换为实际工作空间名称
+ORDER BY
     p.name;
 
 
 -- SQL 4: 统计每个项目下各状态的测试计划数量(不考虑模块)
 -- 说明: 测试计划状态包括 Prepare(未开始)、Underway(进行中)、Completed(已完成)、Finished(已结束)、Archived(已归档)
-SELECT 
+SELECT
     w.name AS '工作空间名称',
     p.name AS '项目名称',
     COUNT(DISTINCT tp.id) AS '测试计划总数',
@@ -153,15 +153,15 @@ SELECT
     COUNT(DISTINCT CASE WHEN tp.status = 'Completed' THEN tp.id END) AS '已完成',
     COUNT(DISTINCT CASE WHEN tp.status = 'Finished' THEN tp.id END) AS '已结束',
     COUNT(DISTINCT CASE WHEN tp.status = 'Archived' THEN tp.id END) AS '已归档'
-FROM 
+FROM
     workspace w
     INNER JOIN project p ON w.id = p.workspace_id
     LEFT JOIN test_plan tp ON p.id = tp.project_id
-WHERE 
-    w.name = '默认工作空间'  -- 替换为实际工作空间名称
-GROUP BY 
+WHERE
+    w.name = '功能测试工作空间'  -- 替换为实际工作空间名称
+GROUP BY
     w.name, p.name
-ORDER BY 
+ORDER BY
     p.name;
 
 
