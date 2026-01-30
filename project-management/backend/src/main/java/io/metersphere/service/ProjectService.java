@@ -29,6 +29,7 @@ import io.metersphere.request.AddProjectRequest;
 import io.metersphere.request.ProjectRequest;
 import io.metersphere.request.ScheduleRequest;
 import io.metersphere.request.member.AddMemberRequest;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -429,6 +430,24 @@ public class ProjectService {
 
     public void addProjectMember(AddMemberRequest request) {
         microService.postForData(MicroServiceName.SYSTEM_SETTING, "/user/project/member/add", request);
+    }
+
+    /**
+     * 获取关联项目列表（支持按工作空间过滤）
+     * 用于高级搜索的项目下拉列表，支持级联筛选
+     * 
+     * @param request 项目查询请求，可包含 workspaceIds 进行过滤
+     * @return 项目列表（包含工作空间信息）
+     */
+    public List<ProjectDTO> getRelatedProjects(ProjectRequest request) {
+        // 如果指定了工作空间ID列表，则按工作空间过滤
+        if (CollectionUtils.isNotEmpty(request.getWorkspaceIds())) {
+            // 使用 ExtProjectMapper 查询，支持工作空间过滤
+            return extProjectMapper.getProjectWithWorkspace(request);
+        }
+        
+        // 如果没有指定工作空间，返回所有项目
+        return extProjectMapper.getProjectWithWorkspace(request);
     }
 
 }

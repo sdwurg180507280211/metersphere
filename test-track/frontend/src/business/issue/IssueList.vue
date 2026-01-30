@@ -241,7 +241,7 @@ import {hasLicense, hasPermission} from "metersphere-frontend/src/utils/permissi
 import {getProjectMember, getProjectMemberUserFilter} from "@/api/user";
 import {getUserGroupProject} from "@/api/user-group";
 import {LOCAL} from "metersphere-frontend/src/utils/constants";
-import {TEST_TRACK_ISSUE_LIST} from "metersphere-frontend/src/components/search/search-components";
+import {TEST_TRACK_ISSUE_LIST, WORKSPACE, PROJECT} from "metersphere-frontend/src/components/search/search-components";
 import {generateColumnKey, getAdvSearchCustomField} from "metersphere-frontend/src/components/search/custom-component";
 import MsMarkDownText from "metersphere-frontend/src/components/MsMarkDownText";
 import MsReviewTableItem from "@/business/issue/MsReviewTableItem";
@@ -267,7 +267,7 @@ export default {
   data() {
     return {
       page: getPageInfo({
-        components: TEST_TRACK_ISSUE_LIST,
+        components: [...TEST_TRACK_ISSUE_LIST, WORKSPACE, PROJECT],  // 添加工作空间和项目筛选
         custom: false,
       }),
       fields: [],
