@@ -144,4 +144,21 @@ public class ProjectController {
     public void addProjectMember(@RequestBody AddMemberRequest request) {
         projectService.addProjectMember(request);
     }
+
+    /**
+     * 获取项目列表（支持按工作空间过滤，用于高级搜索下拉选项）
+     * @param request 查询条件（可选：workspaceIds）
+     * @return 项目列表
+     */
+    @PostMapping("/list/related")
+    public List<ProjectDTO> listRelatedProjects(@RequestBody ProjectRequest request) {
+        // 如果未指定工作空间，则使用当前工作空间
+        if (request.getWorkspaceIds() == null || request.getWorkspaceIds().isEmpty()) {
+            String currentWorkspaceId = SessionUtils.getCurrentWorkspaceId();
+            if (StringUtils.isNotBlank(currentWorkspaceId)) {
+                request.setWorkspaceId(currentWorkspaceId);
+            }
+        }
+        return projectService.getRelatedProjects(request);
+    }
 }

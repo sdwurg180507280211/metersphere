@@ -1050,6 +1050,72 @@ export const TEST_TRACK_ISSUE_LIST = [NAME, PLATFORM, CREATE_TIME, UPDATE_TIME, 
 export const TEST_CASE_RELEVANCE_ISSUE_LIST = [NAME, PLATFORM, CREATE_TIME, CREATOR];
 
 // =========================
+// 所属工作空间（多选）
+// =========================
+export const WORKSPACE = {
+  key: "workspaceIds",  // 使用复数形式，表示支持多选
+  name: 'MsTableSearchSelect',
+  label: "所属工作空间",
+  operator: {
+    value: OPERATORS.IN.value,
+    options: [OPERATORS.IN, OPERATORS.NOT_IN]
+  },
+  options: {
+    url: "/workspace/list/all",  // 获取所有工作空间
+    labelKey: "name",
+    valueKey: "id",
+    showLabel: option => {
+      return option.label;
+    }
+  },
+  props: {
+    multiple: true,
+    'collapse-tags': true  // 多选时折叠标签
+  }
+};
+
+// =========================
+// 所属项目（多选，支持级联）
+// =========================
+export const PROJECT = {
+  key: "projectIds",  // 使用复数形式，表示支持多选
+  name: 'MsTableSearchSelect',
+  label: "所属项目",
+  operator: {
+    value: OPERATORS.IN.value,
+    options: [OPERATORS.IN, OPERATORS.NOT_IN]
+  },
+  options: {
+    url: "/project/list/related",  // 获取项目列表（支持按工作空间过滤）
+    labelKey: "name",
+    valueKey: "id",
+    showLabel: option => {
+      return option.label;
+    }
+  },
+  props: {
+    multiple: true,
+    'collapse-tags': true
+  },
+  // 级联逻辑：监听工作空间变化
+  cascadeKey: "workspaceIds",  // 依赖的字段key
+  cascadeUpdate: function(component, workspaceIds) {
+    // 当工作空间变化时，重新加载项目列表
+    if (workspaceIds && workspaceIds.length > 0) {
+      // 更新请求参数，只获取选中工作空间下的项目
+      component.options.params = { workspaceIds: workspaceIds };
+    } else {
+      // 未选择工作空间时，显示所有项目
+      component.options.params = {};
+    }
+    // 触发重新加载
+    if (component.init && typeof component.init === 'function') {
+      component.init();
+    }
+  }
+};
+
+// =========================
 // 高级搜索：内置字段 key 白名单（统一维护入口）
 // =========================
 // 说明：
@@ -1096,5 +1162,7 @@ export const BUILTIN_ADV_SEARCH_KEYS = [
   'platform',
   'platformStatus',
   'moduleIds',
+  'workspaceIds',  // 新增：所属工作空间
+  'projectIds',    // 新增：所属项目
 ];
 

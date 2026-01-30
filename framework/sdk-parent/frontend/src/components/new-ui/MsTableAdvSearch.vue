@@ -248,6 +248,9 @@ export default {
         }
       });
 
+      // 处理级联逻辑（新增）
+      this.handleCascadeLogic();
+
       if (this.conditionNum > 0) {
         this.$refs["filter-btn"].$el.focus();
         this.$refs["filter-btn"].$el.style.width = "auto";
@@ -454,6 +457,22 @@ export default {
           break;
         }
       }
+    },
+    // 新增方法：处理级联逻辑（工作空间-项目级联）
+    handleCascadeLogic() {
+      this.optional.components.forEach((component) => {
+        // 检查是否有级联配置
+        if (component.cascadeKey && component.cascadeUpdate) {
+          // 查找依赖的组件（如工作空间）
+          const cascadeComponent = this.optional.components.find(
+            c => c.key === component.cascadeKey
+          );
+          if (cascadeComponent && cascadeComponent.value) {
+            // 触发级联更新
+            component.cascadeUpdate(component, cascadeComponent.value);
+          }
+        }
+      });
     },
     setScrollToBottom() {
       if (this.$refs["scrollbar"]) {
