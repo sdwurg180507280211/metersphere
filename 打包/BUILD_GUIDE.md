@@ -77,10 +77,10 @@ chmod +x metersphere-build.sh
 
 ```bash
 # 方式 1: 临时设置
-IMAGE_VERSION=v2.10.26.05-lts \
+IMAGE_VERSION=v2.10.26.06-lts \
 PARALLEL_BUILD=true \
 MAX_JOBS=4 \
-./metersphere-build.sh gateway test-track project-management
+./metersphere-build.sh test-track project-management
 
 # 方式 2: 导出环境变量
 export IMAGE_VERSION=v2.10.26.05-lts
