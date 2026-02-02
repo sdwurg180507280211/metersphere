@@ -4,6 +4,7 @@ import io.metersphere.autoconfigure.MinIOConfig;
 import io.metersphere.autoconfigure.OpenApiConfig;
 import io.metersphere.autoconfigure.PermissionConfig;
 import io.metersphere.autoconfigure.RsaConfig;
+import io.metersphere.autoconfigure.ShiroConfig;
 import io.metersphere.config.KafkaProperties;
 import io.metersphere.config.MinioProperties;
 import org.springframework.boot.SpringApplication;
@@ -19,6 +20,7 @@ import org.springframework.context.annotation.PropertySource;
         QuartzAutoConfiguration.class,
         LdapAutoConfiguration.class,
         Neo4jAutoConfiguration.class,
+        ShiroConfig.class,
         RsaConfig.class,
         PermissionConfig.class,
         OpenApiConfig.class

@@ -108,6 +108,7 @@
         <module>test-track</module>
         <module>workstation</module>
         <module>workflow-service</module>
+        <module>analytics-stat</module>
     </modules>
 
     <dependencies>
