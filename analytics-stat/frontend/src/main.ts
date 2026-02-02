@@ -5,7 +5,6 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-import { renderWithQiankun, qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
 import App from './App.vue'
 import router from './router'
@@ -32,37 +31,32 @@ function render(props: any = {}) {
   })
 
   // 挂载应用
-  const containerElement = container ? container.querySelector('#app') : '#app'
-  app.mount(containerElement)
+  // 在qiankun环境中，直接挂载到qiankun提供的容器
+  // 在独立运行时，挂载到#app元素
+  app.mount(container ? container : '#app')
 }
 
-// 使用vite-plugin-qiankun提供的渲染函数
-renderWithQiankun({
-  // bootstrap 只会在微应用初始化的时候调用一次
-  bootstrap() {
-    console.log('[analytics-stat] app bootstraped')
-  },
-  // 应用每次进入都会调用 mount 方法
-  mount(props: any) {
-    console.log('[analytics-stat] props from main framework', props)
-    render(props)
-  },
-  // 应用每次切出/卸载会调用的unmount方法
-  unmount() {
-    console.log('[analytics-stat] app unmount')
-    if (app) {
-      app.unmount()
-      app = null
-    }
-  },
-  // 可选，仅使用 loadMicroApp 方式加载微应用时生效
-  update(props: any) {
-    console.log('[analytics-stat] app update', props)
+// 导出qiankun生命周期函数
+export async function bootstrap() {
+  console.log('[analytics-stat] app bootstraped')
+}
+
+export async function mount(props: any) {
+  console.log('[analytics-stat] props from main framework', props)
+  render(props)
+}
+
+export async function unmount() {
+  console.log('[analytics-stat] app unmount')
+  if (app) {
+    app.unmount()
+    app = null
   }
-})
+}
 
 // 独立运行时
-if (!qiankunWindow.__POWERED_BY_QIANKUN__) {
+if (!(window as any).__POWERED_BY_QIANKUN__) {
+  console.log('[analytics-stat] Running in standalone mode')
   render()
 }
 
