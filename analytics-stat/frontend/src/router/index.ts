@@ -1,10 +1,15 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
 // 定义路由配置
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
+    redirect: '/dashboard'
+  },
+  // 兼容主应用的路由路径 /#/analytics-stat
+  {
+    path: '/analytics-stat',
     redirect: '/dashboard'
   },
   {
@@ -33,12 +38,10 @@ const routes: RouteRecordRaw[] = [
   }
 ]
 
-// 在 qiankun 环境下，不使用 BASE_URL，让 qiankun 自动处理路径
-// 独立运行时，使用 BASE_URL
-const base = (window as any).__POWERED_BY_QIANKUN__ ? '/' : import.meta.env.BASE_URL
-
+// 子应用使用Hash模式，与主应用的Hash路由兼容
+// 在qiankun环境下，子应用的路由会嵌套在主应用的hash路由中
 const router = createRouter({
-  history: createWebHistory(base),
+  history: createWebHashHistory(),
   routes
 })
 

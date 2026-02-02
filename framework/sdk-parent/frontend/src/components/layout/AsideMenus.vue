@@ -54,7 +54,7 @@
       </div>
     </el-menu-item>
 
-    <el-menu-item index="/analytics-stat" v-if="check('analytics-stat')" onselectstart="return false">
+    <el-menu-item index="/analytics-stat" @click="activeAnalyticsStat()" v-if="check('analytics-stat')" onselectstart="return false">
       <div>
         <svg-icon iconClass="analytics-stat" class-name="ms-menu-img"/>
         <span slot="title" class="ms-menu-item-title">分析统计</span>
@@ -147,6 +147,9 @@ export default {
       if (this.activeIndex === '/api') {
         window.location.href = "/#/api/home";
       }
+    },
+    activeAnalyticsStat() {
+      window.location.href = "/#/analytics-stat";
     },
     check(key) {
       if (key === 'ui' && !hasLicense()) {
