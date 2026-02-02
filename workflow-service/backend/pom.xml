@@ -24,6 +24,17 @@
             <groupId>io.metersphere</groupId>
             <artifactId>sdk</artifactId>
             <version>${revision}</version>
+            <exclusions>
+                <!-- 排除Shiro依赖：工作流微服务不需要独立的认证体系，认证由Gateway统一处理 -->
+                <exclusion>
+                    <groupId>org.apache.shiro</groupId>
+                    <artifactId>shiro-spring-boot-web-starter</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.shiro</groupId>
+                    <artifactId>shiro-spring-boot-starter</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

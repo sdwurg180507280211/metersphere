@@ -54,6 +54,13 @@
       </div>
     </el-menu-item>
 
+    <el-menu-item index="/analytics-stat" v-if="check('analytics-stat')" onselectstart="return false">
+      <div>
+        <svg-icon iconClass="analytics-stat" class-name="ms-menu-img"/>
+        <span slot="title" class="ms-menu-item-title">分析统计</span>
+      </div>
+    </el-menu-item>
+
     <el-menu-item index="/project" onselectstart="return false"
                   v-if="check('project')"
                   v-permission="['PROJECT_USER:READ', 'PROJECT_MANAGER:READ',
