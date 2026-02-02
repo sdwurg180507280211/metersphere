@@ -11,7 +11,7 @@ export default defineConfig({
   plugins: [
     vue(),
     qiankun('analytics-stat', {
-      useDevMode: true
+      useDevMode: false  // 生产环境不使用devMode
     })
   ],
   resolve: {
