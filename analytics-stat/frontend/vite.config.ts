@@ -1,18 +1,13 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
-import qiankun from 'vite-plugin-qiankun'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  // 使用相对路径，让qiankun自动处理资源路径
-  // 开发环境使用根路径，生产环境使用相对路径
-  base: process.env.NODE_ENV === 'production' ? '/analytics-stat/' : '/',
+  // 生产环境使用相对路径
+  base: '/analytics-stat/',
   plugins: [
-    vue(),
-    qiankun('analytics-stat', {
-      useDevMode: false  // 生产环境不使用devMode
-    })
+    vue()
   ],
   resolve: {
     alias: {
@@ -22,14 +17,13 @@ export default defineConfig({
   server: {
     port: 4009,
     host: '0.0.0.0',
-    cors: true, // 允许跨域，qiankun需要
-    origin: 'http://localhost:4009', // 开发环境的origin
+    cors: true,
     headers: {
-      'Access-Control-Allow-Origin': '*' // qiankun需要
+      'Access-Control-Allow-Origin': '*'
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8009', // 代理到analytics-stat后端服务
+        target: 'http://localhost:8009',
         changeOrigin: true
       }
     }
@@ -38,13 +32,21 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     target: 'es2015',
+    // 关键配置：生成library模式，暴露生命周期函数
+    lib: {
+      entry: resolve(__dirname, 'src/main.ts'),
+      name: 'analyticsStat',
+      formats: ['umd'],
+      fileName: () => 'analytics-stat.js'
+    },
     rollupOptions: {
+      // 不要external任何依赖，全部打包
+      external: [],
       output: {
-        // 保持原有的代码分割配置
-        manualChunks: {
-          'element-plus': ['element-plus'],
-          'echarts': ['echarts', 'vue-echarts']
-        }
+        // UMD模式下的全局变量名
+        name: 'analyticsStat',
+        // 确保生命周期函数被正确导出
+        exports: 'named'
       }
     }
   }
