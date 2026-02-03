@@ -32,15 +32,16 @@
         :show-select-all="false"
         @handlePageChange="initTableData"
         @refresh="initTableData"
+        @order="initTableData"
         ref="table"
       >
-        <ms-table-column :label="$t('commons.id')" prop="num">
+        <ms-table-column :label="$t('commons.id')" prop="num" sortable>
         </ms-table-column>
 
         <ms-table-column :label="$t('commons.name')" prop="name">
         </ms-table-column>
 
-        <ms-table-column :label="$t('test_track.case.priority')" prop="name">
+        <ms-table-column :label="$t('test_track.case.priority')" prop="priority" sortable>
           <template v-slot:default="scope">
             <priority-table-item :value="scope.row.priority" ref="priority" />
           </template>
@@ -49,6 +50,31 @@
         <ms-table-column :label="$t('test_track.case.type')" prop="type">
           <template v-slot:default="scope">
             <type-table-item :value="scope.row.type" />
+          </template>
+        </ms-table-column>
+
+        <ms-table-column
+          :label="$t('commons.tag')"
+          prop="tags"
+          sortable="custom"
+          min-width="120"
+          :show-overflow-tooltip="false"
+        >
+          <template v-slot:default="scope">
+            <el-tooltip class="item" effect="dark" placement="top">
+              <div v-html="getTagToolTips(scope.row.tags)" slot="content"></div>
+              <div class="oneLine">
+                <ms-tag
+                  v-for="(itemName, index) in scope.row.tags"
+                  :key="index"
+                  type="success"
+                  effect="plain"
+                  :show-tooltip="scope.row.tags && scope.row.tags.length === 1 && itemName.length * 12 <= 100"
+                  :content="itemName"
+                  style="margin-left: 0px; margin-right: 2px"
+                />
+              </div>
+            </el-tooltip>
           </template>
         </ms-table-column>
 
@@ -84,6 +110,7 @@ import TestCaseRelevanceBase from "@/business/plan/view/comonents/base/TestCaseR
 import MsNodeTree from "metersphere-frontend/src/components/module/MsNodeTree";
 import PriorityTableItem from "@/business/common/tableItems/planview/PriorityTableItem";
 import TypeTableItem from "@/business/common/tableItems/planview/TypeTableItem";
+import MsTag from "metersphere-frontend/src/components/MsTag";
 import { getTestCaseRelateIssue } from "@/api/testCase";
 import { testCaseNodeListProject } from "@/api/test-case-node";
 
@@ -100,6 +127,7 @@ export default {
     MsTableButton,
     MsTableColumn,
     MsTable,
+    MsTag,
   },
   data() {
     return {
@@ -159,6 +187,16 @@ export default {
           let data = response.data;
           this.total = data.itemCount;
           this.tableData = data.listObject;
+          // 解析 tags JSON 字符串为数组
+          this.tableData.forEach((item) => {
+            if (item.tags && typeof item.tags === 'string') {
+              try {
+                item.tags = JSON.parse(item.tags);
+              } catch (e) {
+                item.tags = [];
+              }
+            }
+          });
         });
       }
     },
@@ -188,6 +226,20 @@ export default {
     setProject(projectId) {
       this.projectId = projectId;
     },
+    getTagToolTips(tags) {
+      try {
+        let showTips = '';
+        if (tags) {
+          tags.forEach((item) => {
+            showTips += item + ',';
+          });
+          return showTips.substr(0, showTips.length - 1);
+        }
+        return '';
+      } catch (e) {
+        return '';
+      }
+    },
   },
 };
 </script>
@@ -197,5 +249,11 @@ export default {
   height: calc(100% - 50px);
   position: relative;
   overflow: hidden;
+}
+
+.oneLine {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 </style>

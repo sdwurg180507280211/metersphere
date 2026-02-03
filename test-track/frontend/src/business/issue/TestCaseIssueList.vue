@@ -11,6 +11,7 @@
       :data="tableData"
       :screen-height="null"
       @refresh="initTableData"
+      @order="initTableData"
       ref="table"
     >
       <ms-table-column :label="$t('commons.id')" prop="num">
@@ -40,27 +41,24 @@
         :label="$t('commons.tag')"
         prop="tags"
         sortable="custom"
-        min-width="180"
+        min-width="120"
         :show-overflow-tooltip="false"
       >
         <template v-slot:default="scope">
-          <el-tooltip class="item" effect="dark" placement="top" v-if="scope.row.tags && scope.row.tags.length > 0">
+          <el-tooltip class="item" effect="dark" placement="top">
             <div v-html="getTagToolTips(scope.row.tags)" slot="content"></div>
             <div class="oneLine">
-              <ms-single-tag
-                v-for="(itemName, index) in parseColumnTag(scope.row.tags)"
+              <ms-tag
+                v-for="(itemName, index) in scope.row.tags"
                 :key="index"
                 type="success"
                 effect="plain"
-                :show-tooltip="
-                  scope.row.tags.length === 1 && itemName.length * 12 <= 100
-                "
+                :show-tooltip="scope.row.tags && scope.row.tags.length === 1 && itemName.length * 12 <= 100"
                 :content="itemName"
                 style="margin-left: 0px; margin-right: 2px"
               />
             </div>
           </el-tooltip>
-          <span v-else>-</span>
         </template>
       </ms-table-column>
 
@@ -92,8 +90,7 @@ import TestCaseRelateList from "@/business/issue/TestCaseRelateList";
 import {getTestCaseIssueList} from "@/api/testCase";
 import {getUUID} from "metersphere-frontend/src/utils";
 import { getCurrentProjectID } from "metersphere-frontend/src/utils/token";
-import MsSingleTag from "metersphere-frontend/src/components/new-ui/MsSingleTag";
-import { getTagToolTips, parseColumnTag } from "@/business/case/test-case";
+import MsTag from "metersphere-frontend/src/components/MsTag";
 
 export default {
   name: "TestCaseIssueList",
@@ -103,7 +100,7 @@ export default {
     PriorityTableItem,
     MsTableColumn,
     MsTable,
-    MsSingleTag,
+    MsTag,
   },
   data() {
     return {
@@ -172,6 +169,14 @@ export default {
           this.tableData = response.data;
           this.tableData.forEach((item) => {
             this.testCaseContainIds.add(item.id);
+            // 解析 tags JSON 字符串为数组
+            if (item.tags && typeof item.tags === 'string') {
+              try {
+                item.tags = JSON.parse(item.tags);
+              } catch (e) {
+                item.tags = [];
+              }
+            }
           });
 
           // 合并未保存的关联用例（cacheAddRows）到 tableData 中
@@ -224,6 +229,15 @@ export default {
         }
         this.deleteIds.delete(i.id);
         this.addIds.add(i.id);
+        // 解析 tags JSON 字符串为数组（从弹窗选择的数据已在 TestCaseRelateList 中解析）
+        // 这里做兜底处理
+        if (i.tags && typeof i.tags === 'string') {
+          try {
+            i.tags = JSON.parse(i.tags);
+          } catch (e) {
+            i.tags = [];
+          }
+        }
       });
       this.tableData.push(...selectData);
       this.cacheAddRows.push(...selectData);
@@ -240,10 +254,18 @@ export default {
       window.open(routeUrl.href, '_blank');
     },
     getTagToolTips(tags) {
-      return getTagToolTips(tags);
-    },
-    parseColumnTag(tags) {
-      return parseColumnTag(tags);
+      try {
+        let showTips = '';
+        if (tags) {
+          tags.forEach((item) => {
+            showTips += item + ',';
+          });
+          return showTips.substr(0, showTips.length - 1);
+        }
+        return '';
+      } catch (e) {
+        return '';
+      }
     },
   },
 };
