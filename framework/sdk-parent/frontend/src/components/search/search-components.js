@@ -1086,7 +1086,7 @@ export const PROJECT = {
     options: [OPERATORS.IN, OPERATORS.NOT_IN]
   },
   options: {
-    url: "/project/list/related",  // 获取项目列表（支持按工作空间过滤）
+    url: "/project/list/related/by-workspace",  // 获取项目列表（支持按工作空间过滤）
     labelKey: "name",
     valueKey: "id",
     showLabel: option => {
