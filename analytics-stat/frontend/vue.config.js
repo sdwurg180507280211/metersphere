@@ -20,9 +20,9 @@ module.exports = defineConfig({
     allowedHosts: 'all',
     webSocketServer: 'sockjs',
     proxy: {
-      '/api': {
+      // 排除登录和文档路径，其他请求代理到后端
+      ['^((?!/login)(?!/document))']: {
         target: 'http://localhost:8009',
-        changeOrigin: true,
         ws: false,
       },
     },
@@ -36,6 +36,8 @@ module.exports = defineConfig({
     resolve: {
       alias: {
         '@': resolve('src'),
+        // 确保 vue-i18n 使用本地版本，避免与 metersphere-frontend 冲突
+        'vue-i18n': resolve('node_modules/vue-i18n'),
       },
     },
     output: {
@@ -55,5 +57,37 @@ module.exports = defineConfig({
       filename: `css/${name}-[name].[contenthash:8].css`,
       chunkFilename: `css/${name}-[name].[contenthash:8].css`,
     },
+  },
+  /**
+   * chainWebpack 配置
+   * 
+   * SVG 图标处理说明：
+   * 1. 默认的 svg 规则会将 svg 文件作为普通图片处理
+   * 2. 我们需要将 metersphere-frontend 的图标目录排除
+   * 3. 然后用 svg-sprite-loader 处理这些图标，生成 SVG Sprite
+   * 4. 这样可以通过 <svg-icon icon-class="xxx" /> 使用图标
+   */
+  chainWebpack: (config) => {
+    // 排除 metersphere-frontend 的图标目录，不使用默认的 svg 规则
+    config.module
+      .rule('svg')
+      .exclude.add(
+        resolve('../../framework/sdk-parent/frontend/src/assets/module')
+      )
+      .end();
+    
+    // 使用 svg-sprite-loader 处理 metersphere-frontend 的图标
+    config.module
+      .rule('icons')
+      .test(/\.svg$/)
+      .include.add(
+        resolve('../../framework/sdk-parent/frontend/src/assets/module')
+      )
+      .end()
+      .use('svg-sprite-loader')
+      .loader('svg-sprite-loader')
+      .options({
+        symbolId: 'icon-[name]',
+      });
   },
 });
