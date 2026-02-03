@@ -150,7 +150,7 @@ public class ProjectController {
      * @param request 查询条件（可选：workspaceIds）
      * @return 项目列表
      */
-    @PostMapping("/list/related")
+    @PostMapping("/list/related/by-workspace")
     public List<ProjectDTO> listRelatedProjects(@RequestBody ProjectRequest request) {
         // 如果未指定工作空间，则使用当前工作空间
         if (request.getWorkspaceIds() == null || request.getWorkspaceIds().isEmpty()) {
