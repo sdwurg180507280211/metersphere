@@ -1,5 +1,5 @@
 <template>
-  <el-dialog :visible.sync="dialogTableVisible">
+  <el-dialog :visible.sync="dialogTableVisible" :append-to-body="true" :modal-append-to-body="true">
 
     <div v-loading="result.loading">
       <div class="editors_div_style">

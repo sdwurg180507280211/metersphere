@@ -14,7 +14,7 @@
         >
           <custom-filed-component
             v-if="!loading"
-            :disabled="true"
+            :disabled="disabled"
             :data="item"
             :form="{}"
             prop="defaultValue"
@@ -42,7 +42,12 @@ export default {
     },
     formLabelWidth: [String, Number],
     systemNameMap: Object,
-    loading: Boolean
+    loading: Boolean,
+    // 控制自定义字段是否禁用，默认为 true（只读）
+    disabled: {
+      type: Boolean,
+      default: true
+    }
   },
   computed: {
     customFieldsRows() {
