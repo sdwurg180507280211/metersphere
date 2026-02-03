@@ -36,6 +36,34 @@
         </template>
       </ms-table-column>
 
+      <ms-table-column
+        :label="$t('commons.tag')"
+        prop="tags"
+        sortable="custom"
+        min-width="180"
+        :show-overflow-tooltip="false"
+      >
+        <template v-slot:default="scope">
+          <el-tooltip class="item" effect="dark" placement="top" v-if="scope.row.tags && scope.row.tags.length > 0">
+            <div v-html="getTagToolTips(scope.row.tags)" slot="content"></div>
+            <div class="oneLine">
+              <ms-single-tag
+                v-for="(itemName, index) in parseColumnTag(scope.row.tags)"
+                :key="index"
+                type="success"
+                effect="plain"
+                :show-tooltip="
+                  scope.row.tags.length === 1 && itemName.length * 12 <= 100
+                "
+                :content="itemName"
+                style="margin-left: 0px; margin-right: 2px"
+              />
+            </div>
+          </el-tooltip>
+          <span v-else>-</span>
+        </template>
+      </ms-table-column>
+
       <ms-table-column :label="$t('test_track.case.module')" prop="nodePath">
       </ms-table-column>
 
@@ -64,6 +92,8 @@ import TestCaseRelateList from "@/business/issue/TestCaseRelateList";
 import {getTestCaseIssueList} from "@/api/testCase";
 import {getUUID} from "metersphere-frontend/src/utils";
 import { getCurrentProjectID } from "metersphere-frontend/src/utils/token";
+import MsSingleTag from "metersphere-frontend/src/components/new-ui/MsSingleTag";
+import { getTagToolTips, parseColumnTag } from "@/business/case/test-case";
 
 export default {
   name: "TestCaseIssueList",
@@ -73,6 +103,7 @@ export default {
     PriorityTableItem,
     MsTableColumn,
     MsTable,
+    MsSingleTag,
   },
   data() {
     return {
@@ -208,8 +239,20 @@ export default {
       });
       window.open(routeUrl.href, '_blank');
     },
+    getTagToolTips(tags) {
+      return getTagToolTips(tags);
+    },
+    parseColumnTag(tags) {
+      return parseColumnTag(tags);
+    },
   },
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.oneLine {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+</style>
