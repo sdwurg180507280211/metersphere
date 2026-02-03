@@ -86,7 +86,7 @@
 
       <test-case-review-status-table-item sortable/>
 
-      <ms-table-column prop="tags" :label="$t('commons.tag')" width="90px" :show-overflow-tooltip="false">
+      <ms-table-column prop="tags" sortable="custom" :label="$t('commons.tag')" width="90px" :show-overflow-tooltip="false">
         <template v-slot:default="scope">
           <el-tooltip class="item" effect="dark" placement="top">
             <div v-html="getTagToolTips(scope.row.tags)" slot="content"></div>

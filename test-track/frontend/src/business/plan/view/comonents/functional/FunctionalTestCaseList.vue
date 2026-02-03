@@ -91,6 +91,7 @@
 
         <ms-table-column
             prop="tags"
+            sortable="custom"
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('commons.tag')"
