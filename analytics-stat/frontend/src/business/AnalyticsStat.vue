@@ -1,8 +1,10 @@
 <template>
   <el-col>
+    <!-- 二级导航菜单 -->
     <analytics-stat-header-menus />
-    <div>
-      <transition>
+    <!-- 页面内容区域 -->
+    <div class="content-container">
+      <transition name="fade" mode="out-in">
         <keep-alive>
           <router-view :baseUrl="baseUrl" />
         </keep-alive>
@@ -11,14 +13,46 @@
   </el-col>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue'
-import AnalyticsStatHeaderMenus from './head/AnalyticsStatHeaderMenus.vue'
+<script>
+/**
+ * 分析统计业务容器组件
+ * 
+ * 作用：
+ * 1. 包含二级导航菜单
+ * 2. 承载子路由内容
+ * 3. 使用 keep-alive 缓存页面状态
+ */
+import AnalyticsStatHeaderMenus from './head/AnalyticsStatHeaderMenus.vue';
 
-// 基础路径，用于子路由
-const baseUrl = ref('analytics-stat')
+export default {
+  name: 'AnalyticsStat',
+  components: {
+    AnalyticsStatHeaderMenus
+  },
+  data() {
+    return {
+      // 基础路径，用于子路由跳转
+      baseUrl: 'analytics-stat'
+    };
+  }
+};
 </script>
 
 <style scoped>
-/* 业务容器样式 */
+.content-container {
+  padding: 15px;
+  background-color: #f5f5f5;
+  min-height: calc(100vh - 92px);
+}
+
+/* 页面切换动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+
+.fade-enter,
+.fade-leave-to {
+  opacity: 0;
+}
 </style>
