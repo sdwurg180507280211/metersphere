@@ -312,7 +312,8 @@ export async function unmount() { app.unmount(); }
 | **导出方式** | 全局变量 + 函数返回值 | `export` 关键字 |
 | **浏览器兼容** | ✅ 直接在浏览器中执行 | ⚠️ 需要浏览器原生支持 ES Module |
 | **qiankun 2.x 支持** | ✅ 原生支持 | ❌ 不支持 |
-| **qiankun 3.x 支持** | ✅ 支持 | ✅ 支持（实验性） |
+
+> **注意**：qiankun 目前最新稳定版本为 2.x 系列（如 2.9.3），没有 3.x 版本。
 
 ### 3.3 HTML 入口文件差异
 
@@ -664,26 +665,27 @@ Vite 提供：ES Module + type="module" + 异步加载
 
 ### 4.3 深层原因
 
-**MeterSphere 主应用使用的 qiankun 版本较旧，不支持 ES Module 子应用**
+**MeterSphere 主应用使用的 qiankun 版本（2.9.3）不支持 ES Module 子应用**
 
 1. **qiankun 版本**：
-   - MeterSphere 使用 qiankun 2.x（约 2020-2021 年版本）
-   - qiankun 3.x（2022 年后）开始实验性支持 ES Module
-   - 但 MeterSphere 未升级
+   - MeterSphere 使用 qiankun 2.9.3
+   - qiankun 2.x 系列是目前的稳定版本，主要支持 UMD 格式
+   - qiankun 官方没有发布 3.x 版本
    
    **验证方法**：
    ```bash
    # 查看主应用的 qiankun 版本
    cd framework/sdk-parent/frontend
    cat package.json | grep qiankun
-   # 输出：qiankun 2.x.x
+   # 输出："qiankun": "2.9.3"
    ```
    
-   **qiankun 版本差异**：
-   | 版本 | 发布时间 | ES Module 支持 | UMD 支持 |
+   **qiankun 版本说明**：
+   | 版本 | 状态 | ES Module 支持 | UMD 支持 |
    |------|---------|---------------|---------|
-   | 2.x | 2020-2021 | ❌ 不支持 | ✅ 完全支持 |
-   | 3.x | 2022+ | ⚠️ 实验性支持 | ✅ 完全支持 |
+   | 2.x | 当前稳定版 | ❌ 不支持 | ✅ 完全支持 |
+   
+   > **注意**：qiankun 目前没有 3.x 版本，2.x 是最新稳定版本。
 
 2. **历史包袱**：
    - 所有现有子应用（api-test、test-track 等）都使用 Vue 2 + Webpack
@@ -941,27 +943,11 @@ Vite 提供：ES Module + type="module" + 异步加载
 
 ---
 
-### 方案 B：升级主应用 qiankun，支持 ES Module 子应用
+### 方案 B：升级主应用 qiankun（不可行）
 
-**优点**：
-- ✅ 可以继续使用 Vue 3 + Vite
-- ✅ 支持未来新增的现代化子应用
-- ✅ 利用 Vite 的快速构建和 HMR
+**说明**：qiankun 目前没有 3.x 版本，2.x 是最新稳定版本。因此升级 qiankun 来支持 ES Module 子应用的方案不可行。
 
-**缺点**：
-- ❌ 需要升级主应用的 qiankun 版本（可能影响现有模块）
-- ❌ 需要修改主应用的 `micro-app.js` 配置
-- ❌ 需要测试所有现有子应用的兼容性
-- ❌ 风险较高，可能引入新的问题
-
-**工作量**：大（约 1-2 天）
-
-**实施步骤**：
-1. 升级主应用 qiankun 到 3.x
-2. 修改 `micro-app.js`，支持 ES Module 加载
-3. 测试所有现有子应用（api-test、test-track 等）
-4. 修复兼容性问题
-5. 回归测试
+**替代方案**：如果未来 qiankun 发布支持 ES Module 的新版本，可以考虑升级。但目前最佳方案是将子应用降级为 Vue 2 + Vue CLI。
 
 ---
 
@@ -1020,17 +1006,11 @@ Vite 提供：ES Module + type="module" + 异步加载
 - 团队对 Vue 2 更熟悉
 - 不需要 Vue 3 的特定新特性
 
-### 长期方案：方案 B - 升级主应用 qiankun
+### 长期方案：等待 qiankun 官方支持
 
-**理由**：
-1. **面向未来**：支持现代化前端技术栈
-2. **统一升级**：可以逐步将所有子应用升级到 Vue 3
-3. **技术债务**：避免长期维护两套技术栈
+**说明**：目前 qiankun 没有 3.x 版本，2.x 是最新稳定版本。如果未来 qiankun 发布支持 ES Module 的新版本，可以考虑升级主应用并将子应用迁移回 Vue 3。
 
-**适用场景**：
-- 项目有充足的时间和资源
-- 计划逐步升级所有子应用
-- 需要利用 Vue 3 和 Vite 的新特性
+**当前建议**：使用 Vue 2 + Vue CLI 技术栈，与其他模块保持一致。
 
 ---
 
@@ -1169,43 +1149,18 @@ export async function unmount() {}
 
 ### 8.2 如果选择方案 B（升级 qiankun）
 
-**关键步骤**：
+**说明**：此方案目前不可行，因为 qiankun 没有 3.x 版本。
+
+如果未来 qiankun 发布支持 ES Module 的新版本，可以参考以下步骤：
 
 1. **升级 qiankun**：
    ```bash
    npm install qiankun@latest
    ```
 
-2. **修改 micro-app.js**：
-   ```javascript
-   import { registerMicroApps, start } from 'qiankun';
-   
-   registerMicroApps([
-     {
-       name: 'analytics-stat',
-       entry: '//localhost:8000/analytics-stat',
-       container: '#micro-app',
-       activeRule: '#/analytics-stat',
-       // 新增：支持 ES Module
-       sandbox: {
-         experimentalStyleIsolation: true
-       }
-     }
-   ]);
-   
-   start({
-     // 新增：支持 ES Module 加载
-     sandbox: {
-       experimentalStyleIsolation: true
-     }
-   });
-   ```
+2. **修改 micro-app.js**：根据新版本文档进行配置
 
-3. **测试所有子应用**：
-   - api-test
-   - test-track
-   - performance-test
-   - 等等
+3. **测试所有子应用**：确保兼容性
 
 ---
 
@@ -1245,11 +1200,17 @@ export async function unmount() {}
 
 ---
 
-**文档版本**：v1.1  
+**文档版本**：v1.2  
 **创建时间**：2026-02-02  
 **更新时间**：2026-02-03  
 **作者**：Kiro AI Assistant  
 **适用项目**：MeterSphere v2.10
+**qiankun 版本**：2.9.3（当前最新稳定版）
+
+**更新记录**：
+- v1.2 (2026-02-03): 修正 qiankun 版本信息，qiankun 没有 3.x 版本
+- v1.1 (2026-02-03): 添加技术原理图解
+- v1.0 (2026-02-02): 初始版本
 
 ---
 
@@ -1464,28 +1425,29 @@ export async function unmount() {}
 ### 10.5 技术栈兼容性矩阵
 
 ```
-┌─────────────────┬──────────────┬──────────────┬──────────────┐
-│   构建工具       │  输出格式    │ qiankun 2.x  │ qiankun 3.x  │
-├─────────────────┼──────────────┼──────────────┼──────────────┤
-│ Webpack         │ UMD          │ ✅ 完全支持  │ ✅ 完全支持  │
-│ (Vue CLI)       │              │              │              │
-├─────────────────┼──────────────┼──────────────┼──────────────┤
-│ Vite            │ ES Module    │ ❌ 不支持    │ ⚠️ 实验性    │
-│ (默认配置)      │              │              │   支持       │
-├─────────────────┼──────────────┼──────────────┼──────────────┤
-│ Vite            │ UMD          │ ⚠️ 需要特殊  │ ✅ 支持      │
-│ (Library 模式)  │ (手动配置)   │   配置       │              │
-├─────────────────┼──────────────┼──────────────┼──────────────┤
-│ Rollup          │ UMD          │ ✅ 支持      │ ✅ 支持      │
-├─────────────────┼──────────────┼──────────────┼──────────────┤
-│ Rollup          │ ES Module    │ ❌ 不支持    │ ⚠️ 实验性    │
-│                 │              │              │   支持       │
-└─────────────────┴──────────────┴──────────────┴──────────────┘
+┌─────────────────┬──────────────┬──────────────┐
+│   构建工具       │  输出格式    │ qiankun 2.x  │
+├─────────────────┼──────────────┼──────────────┤
+│ Webpack         │ UMD          │ ✅ 完全支持  │
+│ (Vue CLI)       │              │              │
+├─────────────────┼──────────────┼──────────────┤
+│ Vite            │ ES Module    │ ❌ 不支持    │
+│ (默认配置)      │              │              │
+├─────────────────┼──────────────┼──────────────┤
+│ Vite            │ UMD          │ ⚠️ 需要特殊  │
+│ (Library 模式)  │ (手动配置)   │   配置       │
+├─────────────────┼──────────────┼──────────────┤
+│ Rollup          │ UMD          │ ✅ 支持      │
+├─────────────────┼──────────────┼──────────────┤
+│ Rollup          │ ES Module    │ ❌ 不支持    │
+└─────────────────┴──────────────┴──────────────┘
 
 图例：
 ✅ 完全支持：开箱即用，无需额外配置
-⚠️ 实验性支持：需要额外配置，可能存在问题
+⚠️ 需要特殊配置：可以工作，但需要额外配置
 ❌ 不支持：无法使用
+
+注意：qiankun 目前没有 3.x 版本，2.x 是最新稳定版本。
 ```
 
 ---
@@ -1623,19 +1585,14 @@ vite-plugin-qiankun 工作流程：
 
 ---
 
-### Q5: 为什么不直接升级到 qiankun 3.x？
+### Q5: 为什么不升级 qiankun？
 
-**A**: qiankun 3.x 对 ES Module 的支持仍然是**实验性的**，而且升级会影响所有现有子应用。需要：
-1. 升级主应用的 qiankun 版本
-2. 测试 7 个现有子应用的兼容性
-3. 修复可能出现的问题
-4. 回归测试所有功能
+**A**: qiankun 目前没有 3.x 版本，2.9.3 是最新稳定版本。qiankun 2.x 系列不支持 ES Module 子应用，这是设计限制而非 bug。
 
-**风险评估**：
-- 现有子应用可能出现兼容性问题
-- 生产环境可能出现未知 bug
-- 回滚成本高
-- 不适合作为短期方案
+**当前状态**：
+- qiankun 最新版本：2.9.3
+- ES Module 支持：不支持
+- 官方建议：使用 UMD 格式的子应用
 
 ---
 
@@ -1733,12 +1690,12 @@ export default defineConfig({
 
 ---
 
-### Q9: 如果未来 MeterSphere 升级到 qiankun 3.x，analytics-stat 需要改回 Vue 3 吗？
+### Q9: 如果未来 qiankun 支持 ES Module，analytics-stat 需要改回 Vue 3 吗？
 
-**A**: 不一定需要。即使主应用升级到 qiankun 3.x，Vue 2 + Webpack 的子应用仍然可以正常工作。但如果你想利用 Vue 3 的新特性，可以考虑升级。
+**A**: 不一定需要。即使未来 qiankun 发布支持 ES Module 的新版本，Vue 2 + Webpack 的子应用仍然可以正常工作。但如果你想利用 Vue 3 的新特性，可以考虑升级。
 
 **升级时机建议**：
-1. 等主应用升级到 qiankun 3.x 并稳定运行
+1. 等 qiankun 官方发布支持 ES Module 的稳定版本
 2. 等其他子应用也开始升级到 Vue 3
 3. 统一升级，保持技术栈一致性
 

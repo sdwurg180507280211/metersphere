@@ -3,16 +3,16 @@
     <el-row type="flex">
       <!-- 二级导航菜单 -->
       <el-col :span="24">
-        <el-menu 
-          class="header-menu" 
-          :unique-opened="true" 
-          mode="horizontal" 
+        <el-menu
+          class="header-menu"
+          :unique-opened="true"
+          mode="horizontal"
           router
           :default-active="pathName"
         >
-          <el-menu-item 
-            v-for="menu in menus" 
-            :key="menu.path" 
+          <el-menu-item
+            v-for="menu in menus"
+            :key="menu.path"
             :index="menu.path"
           >
             {{ menu.name }}
@@ -23,51 +23,69 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-
-const route = useRoute()
-
-// 路由是否存活（用于强制刷新）
-const isRouterAlive = ref(true)
-
-// 当前激活的路径
-const pathName = ref('')
-
-// 二级导航菜单配置
-const menus = ref([
-  {
-    path: '/dashboard',
-    name: '数据概览'
+<script>
+/**
+ * 分析统计二级导航菜单组件
+ * 
+ * 功能：
+ * 1. 显示模块内的二级导航菜单
+ * 2. 监听路由变化，自动高亮当前菜单项
+ * 3. 支持路由跳转
+ */
+export default {
+  name: 'AnalyticsStatHeaderMenus',
+  data() {
+    return {
+      // 路由是否存活（用于强制刷新）
+      isRouterAlive: true,
+      // 当前激活的路径
+      pathName: '',
+      // 二级导航菜单配置
+      menus: [
+        {
+          path: '/analytics-stat/dashboard',
+          name: '数据概览'
+        },
+        {
+          path: '/analytics-stat/sql-console',
+          name: 'SQL查询台'
+        },
+        {
+          path: '/analytics-stat/data-dictionary',
+          name: '数据字典'
+        }
+      ]
+    };
   },
-  {
-    path: '/sql-console',
-    name: 'SQL查询台'
-  },
-  {
-    path: '/data-dictionary',
-    name: '数据字典'
-  }
-])
-
-// 监听路由变化，更新激活菜单
-watch(
-  () => route.path,
-  (newPath) => {
-    // 根据当前路径设置激活的菜单项
-    if (newPath.indexOf('/dashboard') >= 0) {
-      pathName.value = '/dashboard'
-    } else if (newPath.indexOf('/sql-console') >= 0) {
-      pathName.value = '/sql-console'
-    } else if (newPath.indexOf('/data-dictionary') >= 0) {
-      pathName.value = '/data-dictionary'
-    } else {
-      pathName.value = newPath
+  watch: {
+    /**
+     * 监听路由变化，更新激活的菜单项
+     */
+    '$route.path': {
+      handler(newPath) {
+        this.updateActivePath(newPath);
+      },
+      immediate: true
     }
   },
-  { immediate: true }
-)
+  methods: {
+    /**
+     * 根据当前路径设置激活的菜单项
+     * @param {string} path - 当前路由路径
+     */
+    updateActivePath(path) {
+      if (path.indexOf('/analytics-stat/dashboard') >= 0 || path === '/analytics-stat') {
+        this.pathName = '/analytics-stat/dashboard';
+      } else if (path.indexOf('/analytics-stat/sql-console') >= 0) {
+        this.pathName = '/analytics-stat/sql-console';
+      } else if (path.indexOf('/analytics-stat/data-dictionary') >= 0) {
+        this.pathName = '/analytics-stat/data-dictionary';
+      } else {
+        this.pathName = path;
+      }
+    }
+  }
+};
 </script>
 
 <style scoped>
@@ -76,7 +94,17 @@ watch(
   background-color: #fff;
 }
 
+.header-menu {
+  border-bottom: none;
+}
+
 .el-menu-item {
-  padding: 0 10px;
+  padding: 0 15px;
+  height: 40px;
+  line-height: 40px;
+}
+
+.el-menu-item.is-active {
+  border-bottom: 2px solid #409EFF;
 }
 </style>
