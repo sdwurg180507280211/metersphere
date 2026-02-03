@@ -337,11 +337,12 @@ export default {
     async uploadFile(param, progressCallback) {
       let progress = 0;
       let file = param.file;
-      let data = {"belongId": this.caseId, "belongType": "testcase"};
+      // 修复：uploadTestCaseAttachment 期望第二个参数是 sourceId（字符串），而不是对象
+      let sourceId = this.caseId;
       let CancelToken = axios.CancelToken;
       let self = this;
 
-      uploadTestCaseAttachment(file, data, CancelToken, self.cancelFileToken, progressCallback)
+      uploadTestCaseAttachment(file, sourceId, CancelToken, self.cancelFileToken, progressCallback)
         .then(response => { // 成功回调
           progress = 100;
           param.onSuccess(response);

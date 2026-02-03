@@ -105,18 +105,19 @@
                         :form-label-width="formLabelWidth"
                         :fields="testCaseTemplate.customFields"
                         :loading="loading"
+                        :disabled="!canEditCase"
                         :system-name-map="systemNameMap"/>
                     </el-form>
 
                     <form-rich-text-item
                       :label-width="formLabelWidth"
-                      :disabled="true"
+                      :disabled="!canEditCase"
                       :title="$t('test_track.case.prerequisite')"
                       :data="testCase"
                       prop="prerequisite"
                     />
                     <step-change-item
-                      :disable="true"
+                      :disable="!canEditCase"
                       :label-width="formLabelWidth"
                       :form="testCase"
                     />
@@ -129,7 +130,7 @@
                     <form-rich-text-item
                       :label-width="formLabelWidth"
                       v-if="testCase.stepModel === 'TEXT'"
-                      :disabled="true"
+                      :disabled="!canEditCase"
                       :title="$t('test_track.case.step_desc')"
                       :data="testCase"
                       prop="stepDescription"
@@ -137,7 +138,7 @@
                     <form-rich-text-item
                       :label-width="formLabelWidth"
                       v-if="testCase.stepModel === 'TEXT'"
-                      :disabled="true"
+                      :disabled="!canEditCase"
                       :title="$t('test_track.case.expected_results')"
                       :data="testCase"
                       prop="expectedResult"
@@ -158,13 +159,14 @@
                         :plan-id="testCase.planId"
                         v-if="otherInfoActive"
                         @openTest="openTest"
-                        :is-test-plan-edit="true"
+                        @openComment="openComment"
                         @syncRelationGraphOpen="syncRelationGraphOpen"
-                        :read-only="true"
+                        :read-only="!canEditCase"
                         :is-test-plan="true"
                         :project-id="testCase.projectId"
                         :form="testCase"
                         :case-id="testCase.caseId"
+                        type="edit"
                         ref="otherInfo"
                       />
                     </el-form-item>
@@ -187,6 +189,12 @@
               :case-id="testCase.caseId"
               ref="comment"
             />
+            <!-- 评论对话框 -->
+            <test-case-comment
+              :case-id="testCase.caseId"
+              @getComments="getComments"
+              ref="testCaseComment"
+            />
           </div>
         </el-col>
       </el-row>
@@ -202,7 +210,7 @@ import TestCaseAttachment from "@/business/case/components/TestCaseAttachment";
 import CaseComment from "@/business/case/components/CaseComment";
 import MsPreviousNextButton from "metersphere-frontend/src/components/MsPreviousNextButton";
 import ReviewComment from "@/business/review/commom/ReviewComment";
-import {buildTestCaseOldFields, parseCustomField,} from "metersphere-frontend/src/utils/custom_field";
+import {buildTestCaseOldFields, parseCustomField, buildCustomFields,} from "metersphere-frontend/src/utils/custom_field";
 import FormRichTextItem from "metersphere-frontend/src/components/FormRichTextItem";
 import MsFormDivider from "metersphere-frontend/src/components/MsFormDivider";
 import TestCaseEditOtherInfo from "@/business/case/components/TestCaseEditOtherInfo";
@@ -220,7 +228,10 @@ import {getTestTemplate} from "@/api/custom-field-template";
 import {checkProjectPermission} from "@/api/testCase";
 import {openCaseEdit, resetPlanCaseSystemField} from "@/business/case/test-case";
 import CustomFieldFormItems from "@/business/common/CustomFieldFormItems";
+import TestCaseComment from "@/business/case/components/TestCaseComment";
 import {getCurrentProjectID, getCurrentUser, parseMdImage, saveMarkDownImg} from "@/business/utils/sdk-utils";
+import {hasPermission} from "metersphere-frontend/src/utils/permission";
+import {post} from "metersphere-frontend/src/plugins/request";
 
 export default {
   name: "FunctionalTestCaseEdit",
@@ -241,6 +252,7 @@ export default {
     CaseComment,
     TestPlanTestCaseStatusButton,
     TestCaseAttachment,
+    TestCaseComment,
   },
   data() {
     return {
@@ -292,6 +304,12 @@ export default {
     pageTotal() {
       return Math.ceil(this.total / this.pageSize);
     },
+    // 是否允许编辑用例内容（复用现有权限）
+    canEditCase() {
+      return hasPermission('PROJECT_TRACK_CASE:READ+EDIT') &&
+             this.hasProjectPermission &&
+             !this.isReadOnly;
+    }
   },
   methods: {
     handleClose() {
@@ -355,9 +373,89 @@ export default {
           this.testCase.comment = "";
         }
         this.originalStatus = this.testCase.status;
+        
+        // 同步更新原始用例（如果有编辑权限）
+        if (this.canEditCase) {
+          this.syncOriginalTestCase();
+        }
+        
         if (command === 'save') {
           this.handleNext();
         }
+      });
+    },
+    // 同步更新原始用例
+    syncOriginalTestCase() {
+      // 构建原始用例编辑参数（参考 TestCaseEdit.vue 的 buildParam 方法）
+      let param = {
+        id: this.testCase.caseId,
+        name: this.testCase.name,
+        prerequisite: this.testCase.prerequisite,
+        stepModel: this.testCase.stepModel,
+        projectId: this.testCase.projectId,
+        nodeId: this.testCase.nodeId,
+        demandId: this.testCase.demandId,
+        demandName: this.testCase.demandName,
+        remark: this.testCase.remark,
+        type: 'functional',
+      };
+      
+      // 处理步骤数据
+      if (this.testCase.stepModel === 'STEP') {
+        // 步骤模式：从 steptResults 中提取步骤描述和预期结果
+        let steps = this.testCase.steptResults.map(step => ({
+          id: step.id,
+          num: step.num,
+          desc: step.desc,
+          result: step.result
+        }));
+        param.steps = JSON.stringify(steps);
+      } else {
+        // 文本模式
+        param.stepDescription = this.testCase.stepDescription;
+        param.expectedResult = this.testCase.expectedResult;
+        param.steps = JSON.stringify([]);
+      }
+      
+      // 处理自定义字段（使用 buildCustomFields 函数）
+      if (this.testCaseTemplate && this.testCaseTemplate.customFields) {
+        // 编辑已有用例时，所有自定义字段都标记为 isEdit: true
+        this.testCaseTemplate.customFields.forEach((item) => {
+          item.isEdit = true;
+        });
+        buildCustomFields(this.testCase, param, this.testCaseTemplate);
+        
+        // 解析旧字段（用例等级、责任人、用例状态）
+        this.testCaseTemplate.customFields.forEach((item) => {
+          if (item.name === '用例等级') {
+            param.priority = item.defaultValue;
+          }
+          if (item.name === '责任人') {
+            param.maintainer = item.defaultValue;
+          }
+          if (item.name === '用例状态') {
+            param.status = item.defaultValue;
+          }
+        });
+      }
+      
+      // 使用 FormData 格式发送请求（与原始用例编辑接口保持一致）
+      let formData = new FormData();
+      let requestJson = JSON.stringify(param, function (key, value) {
+        return key === 'file' ? undefined : value;
+      });
+      formData.append(
+        'request',
+        new Blob([requestJson], { type: 'application/json' })
+      );
+      
+      post('/test/case/edit', formData, {
+        headers: { 'Content-Type': undefined }
+      }).then(() => {
+        // 静默成功，不重复提示
+      }).catch((error) => {
+        this.$warning(this.$t('test_track.case.sync_to_original_failed') || '同步原始用例失败');
+        console.error('同步原始用例失败:', error);
       });
     },
     handleMdImages(param) {
@@ -483,16 +581,7 @@ export default {
           null,
           buildTestCaseOldFields(this.testCase)
         );
-        this.testCaseTemplate.customFields.forEach((item) => {
-          try {
-            let v = JSON.parse(item.defaultValue);
-            if (!(v instanceof Object) || ['multipleSelect', 'checkbox', 'multipleMember', 'multipleInput'].indexOf(item.type) > -1) {
-              item.defaultValue = v;
-            }
-          } catch (e) {
-            // nothing
-          }
-        });
+        // parseCustomField 已经正确处理了所有类型的字段值，无需再次解析
         this.isCustomFiledActive = true;
         if (!this.testCase.actualResult) {
           // 如果没值,使用模板的默认值
@@ -607,6 +696,16 @@ export default {
     },
     setPlanStatus(planId) {
       testPlanEditStatus(planId);
+    },
+    // 打开评论对话框
+    openComment() {
+      this.$refs.testCaseComment.open();
+    },
+    // 刷新评论列表
+    getComments() {
+      if (this.$refs.otherInfo) {
+        this.$refs.otherInfo.getComments(this.testCase);
+      }
     },
   },
 };
