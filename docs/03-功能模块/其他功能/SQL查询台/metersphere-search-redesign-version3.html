@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeterSphere 高级检索 - V3 完整版</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <style>
+        :root {
+            --ms-primary: #783887;
+            --ms-bg: #f5f7fa;
+            --ms-border: #e6e6e6;
+            --ms-text-main: #303133;
+            --ms-hover: #f5f7fa;
+            --ms-selected-bg: #f0f7ff;
+            --ms-warning: #e6a23c;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            font-size: 14px;
+            background-color: var(--ms-bg);
+            color: var(--ms-text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        .header {
+            height: 50px;
+            background: #fff;
+            border-bottom: 1px solid #dcdfe6;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            flex-shrink: 0;
+            z-index: 20;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .header-logo { font-size: 16px; font-weight: 700; color: var(--ms-primary); display:flex; align-items:center; gap:8px;}
+
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 220px;
+            background: #fff;
+            border-right: 1px solid #e6e6e6;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            padding-top: 10px;
+        }
+        .sidebar-group-title {
+            padding: 12px 20px 8px;
+            font-size: 12px;
+            color: #909399;
+            font-weight: 600;
+        }
+        .nav-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 8px;
+            color: #606266;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        .nav-item:hover { background: var(--ms-hover); color: var(--ms-primary); }
+        .nav-item.active { background: var(--ms-selected-bg); color: var(--ms-primary); font-weight: 500; border-right: 3px solid var(--ms-primary); }
+
+        /* --- Content Area --- */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        /* --- 1. Top Filter Bar --- */
+        .top-filter-bar {
+            padding: 12px 20px;
+            border-bottom: 1px solid #ebeef5;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            background: #fff;
+            flex-wrap: wrap;
+        }
+
+        .inline-add-filter-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 32px;
+            padding: 0 12px;
+            border: 1px dashed #dcdfe6;
+            border-radius: 4px;
+            color: #606266;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+        .inline-add-filter-btn:hover {
+            color: var(--ms-primary);
+            border-color: var(--ms-primary);
+            background: rgba(120, 56, 135, 0.05);
+        }
+
+        .add-filter-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--ms-primary);
+            cursor: pointer;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .add-filter-btn:hover { background: rgba(120, 56, 135, 0.1); }
+
+        /* --- Cross-project Warning --- */
+        .cross-project-warning {
+            width: 100%;
+            padding: 8px 12px;
+            background: #fdf6ec;
+            border: 1px solid #faecd8;
+            border-radius: 4px;
+            color: #e6a23c;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* --- 2. Active Tags Area --- */
+        .active-tags-bar {
+            padding: 8px 20px;
+            background: #fdfdfd;
+            border-bottom: 1px solid #ebeef5;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            min-height: 40px;
+            animation: slideDown 0.2s ease-out;
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .condition-tag {
+            background: #fff;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            padding: 2px 4px 2px 8px;
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .condition-field-label { color: #909399; margin-right: 6px; font-weight: 600; }
+
+        /* --- Result Toolbar --- */
+        .result-toolbar {
+            padding: 8px 20px;
+            border-bottom: 1px solid #ebeef5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fcfcfc;
+            height: 40px;
+            flex-shrink: 0;
+        }
+
+        /* --- View Area --- */
+        .view-container { flex: 1; overflow: hidden; position: relative; }
+        .list-view-wrap { height: 100%; width: 100%; }
+        .split-layout { display: flex; height: 100%; width: 100%; }
+
+        .split-left {
+            width: 320px;
+            border-right: 1px solid #e6e6e6;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            overflow-y: auto;
+        }
+        .split-item { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s; }
+        .split-item:hover { background: #fafafa; }
+        .split-item.active { background: #f0f7ff; border-left: 3px solid var(--ms-primary); }
+        .split-item-title { font-weight: 500; margin-bottom: 6px; color: #303133; line-height: 1.4; }
+        .split-item-meta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #909399; }
+
+        .split-right { flex: 1; background: #fff; overflow-y: auto; padding: 24px 40px; }
+        .detail-header { border-bottom: 1px solid #eee; padding-bottom: 16px; margin-bottom: 20px; }
+        .detail-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #1f2f3d; }
+        .detail-meta-row { display: flex; gap: 24px; margin-bottom: 10px; font-size: 13px; color: #606266; flex-wrap: wrap; }
+        .detail-section-title { font-size: 14px; font-weight: bold; border-left: 4px solid var(--ms-primary); padding-left: 10px; margin: 24px 0 12px; color: #303133; }
+        .detail-field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 32px; }
+        .detail-field-item { display: flex; flex-direction: column; gap: 4px; }
+        .detail-label { font-size: 12px; color: #909399; }
+        .detail-value { font-size: 14px; color: #303133; }
+
+        /* Column Config Group Style */
+        .col-config-group { margin-bottom: 12px; }
+        .col-config-title { font-size: 12px; font-weight: bold; color: #909399; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px dashed #eee; }
+        .col-config-checkboxes { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+        .col-config-checkboxes .el-checkbox { margin-right: 0 !important; }
+
+        /* --- User Selector Styles --- */
+        .user-selector-dropdown {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .user-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+        }
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .user-name { font-size: 13px; color: #303133; }
+        .user-email { font-size: 11px; color: #909399; }
+
+        .quick-option {
+            padding: 8px 12px;
+            background: #f5f7fa;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .quick-option:hover { background: #e6f7ff; }
+        .quick-option.selected { background: #e6f7ff; border: 1px solid #409eff; }
+
+        /* Field Group in Popover */
+        .field-group { margin-bottom: 12px; }
+        .field-group-title { font-size: 12px; color: #909399; margin-bottom: 8px; font-weight: 600; }
+        .field-group-items { display: flex; flex-wrap: wrap; gap: 8px; }
+
+        /* Element UI Overrides */
+        .el-select .el-input__inner { border-radius: 4px; }
+        .el-button--text { color: var(--ms-primary); }
+        .el-tag--dark { border-color: transparent; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-logo"><i class="el-icon-monitor"></i> MeterSphere Pro</div>
+        <div style="margin-left: auto; display: flex; gap: 15px; align-items: center; font-size: 14px;">
+            <i class="el-icon-bell" style="font-size: 18px; color: #606266;"></i>
+            <el-avatar size="small" style="background: #9b59b6">{{ currentUser.name.charAt(0) }}</el-avatar>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-group-title">查询中心</div>
+            <div class="nav-item active"><i class="el-icon-search"></i> 高级检索</div>
+            <div class="nav-item"><i class="el-icon-star-off"></i> 我的收藏</div>
+            <div class="nav-item"><i class="el-icon-time"></i> 最近浏览</div>
+            <div class="sidebar-group-title">共享视图</div>
+            <div class="nav-item"><i class="el-icon-data-line"></i> 迭代进度看板</div>
+            <div class="nav-item"><i class="el-icon-document-checked"></i> 待评审用例</div>
+            <div style="margin-top: auto; border-top: 1px solid #eee;">
+                <div class="nav-item"><i class="el-icon-setting"></i> 检索设置</div>
+                <div class="nav-item"><i class="el-icon-delete"></i> 回收站</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Top Filter Bar -->
+            <div class="top-filter-bar">
+                <!-- 业务模块选择 -->
+                <el-select v-model="currentModule" placeholder="业务模块" size="small" style="width: 130px; font-weight: bold;" @change="handleModuleChange">
+                    <el-option label="测试用例" value="test_case">
+                        <i class="el-icon-s-operation" style="color:#67c23a; margin-right:5px"></i>测试用例
+                    </el-option>
+                    <el-option label="缺陷 Bug" value="issue">
+                        <i class="el-icon-warning" style="color:#f56c6c; margin-right:5px"></i>缺陷 Bug
+                    </el-option>
+                    <el-option label="测试计划" value="test_plan">
+                        <i class="el-icon-date" style="color:#409eff; margin-right:5px"></i>测试计划
+                    </el-option>
+                    <el-option label="用例评审" value="test_case_review">
+                        <i class="el-icon-document-checked" style="color:#e6a23c; margin-right:5px"></i>用例评审
+                    </el-option>
+                </el-select>
+                
+                <div style="width: 1px; height: 16px; background: #ddd;"></div>
+
+                <!-- 工作空间多选 -->
+                <el-select v-model="selectedWorkspaces" multiple collapse-tags placeholder="选择空间" size="small" style="width: 200px" @change="handleWorkspaceChange">
+                    <el-option v-for="ws in workspaces" :key="ws.id" :label="ws.name" :value="ws.id"></el-option>
+                </el-select>
+
+                <!-- 项目多选 -->
+                <el-select v-model="selectedProjects" multiple collapse-tags placeholder="选择项目" size="small" style="width: 200px" @change="handleProjectChange">
+                    <el-option v-for="p in activeProjects" :key="p.id" :label="p.name" :value="p.id">
+                        <span style="float: left">{{ p.name }}</span>
+                        <span style="float: right; color: #ccc; font-size: 12px; margin-left: 10px">{{ p.wsName }}</span>
+                    </el-option>
+                </el-select>
+
+                <!-- 筛选条件按钮 -->
+                <el-popover placement="bottom-start" width="450" trigger="click" v-model="popoverVisible">
+                    <div style="padding: 10px;">
+                        <div style="font-weight: bold; margin-bottom: 12px; font-size: 13px;">选择筛选字段</div>
+                        
+                        <!-- 基础信息 -->
+                        <div class="field-group">
+                            <div class="field-group-title">📋 基础信息</div>
+                            <div class="field-group-items">
+                                <el-tag v-for="field in fieldsByGroup.basic" :key="field.value" size="small" style="cursor: pointer;"
+                                    :effect="isFieldSelected(field.value) ? 'dark' : 'plain'" @click="addFilter(field)">
+                                    <i :class="field.icon"></i> {{ field.label }}
+                                </el-tag>
+                            </div>
+                        </div>
+                        
+                        <!-- 人员相关（用户维度） -->
+                        <div class="field-group">
+                            <div class="field-group-title">👤 人员相关</div>
+                            <div class="field-group-items">
+                                <el-tag v-for="field in fieldsByGroup.user" :key="field.value" size="small" style="cursor: pointer;"
+                                    :effect="isFieldSelected(field.value) ? 'dark' : 'plain'" @click="addFilter(field)">
+                                    <i :class="field.icon"></i> {{ field.label }}
+                                </el-tag>
+                            </div>
+                        </div>
+                        
+                        <!-- 模块专属 -->
+                        <div class="field-group">
+                            <div class="field-group-title">🔧 {{ currentModuleMetadata.label }}专属</div>
+                            <div class="field-group-items">
+                                <el-tag v-for="field in fieldsByGroup.module" :key="field.value" size="small" style="cursor: pointer;"
+                                    :effect="isFieldSelected(field.value) ? 'dark' : 'plain'" @click="addFilter(field)"
+                                    :disabled="field.projectSpecific && !isSingleProjectMode">
+                                    <i :class="field.icon"></i> {{ field.label }}
+                                    <span v-if="field.projectSpecific" style="color:#e6a23c; margin-left:2px;">*</span>
+                                </el-tag>
+                            </div>
+                        </div>
+                        
+                        <!-- 自定义字段（仅单项目模式） -->
+                        <div class="field-group" v-if="isSingleProjectMode && customFields.length > 0">
+                            <div class="field-group-title">📝 自定义字段</div>
+                            <div class="field-group-items">
+                                <el-tag v-for="field in customFields" :key="field.value" size="small" style="cursor: pointer;"
+                                    :effect="isFieldSelected(field.value) ? 'dark' : 'plain'" @click="addFilter(field)">
+                                    {{ field.label }}
+                                </el-tag>
+                            </div>
+                        </div>
+                        
+                        <!-- 时间相关 -->
+                        <div class="field-group">
+                            <div class="field-group-title">📅 时间相关</div>
+                            <div class="field-group-items">
+                                <el-tag v-for="field in fieldsByGroup.date" :key="field.value" size="small" style="cursor: pointer;"
+                                    :effect="isFieldSelected(field.value) ? 'dark' : 'plain'" @click="addFilter(field)">
+                                    <i :class="field.icon"></i> {{ field.label }}
+                                </el-tag>
+                            </div>
+                        </div>
+                    </div>
+                    <div slot="reference" class="inline-add-filter-btn">
+                        <i class="el-icon-plus" style="margin-right: 4px;"></i> 筛选条件
+                    </div>
+                </el-popover>
+
+                <el-button type="primary" icon="el-icon-search" size="small" style="margin-left: auto;" @click="handleSearch" :loading="loading">查询</el-button>
+
+                <!-- 跨项目模式提示 -->
+                <div class="cross-project-warning" v-if="!isSingleProjectMode && selectedProjects.length > 0">
+                    <i class="el-icon-warning"></i>
+                    <span>跨项目查询仅支持系统字段筛选，如需使用自定义字段请选择单个项目</span>
+                </div>
+            </div>
+
+            <!-- Active Tags Bar -->
+            <div class="active-tags-bar" v-if="conditions.length > 0">
+                <div v-for="(cond, idx) in conditions" :key="idx" class="condition-tag">
+                    <span class="condition-field-label">{{ getFieldLabel(cond.field) }}:</span>
+                    
+                    <!-- 操作符选择 -->
+                    <el-select v-model="cond.op" size="mini" style="width: 75px; margin-right: 4px;">
+                        <el-option v-for="o in getOperators(cond.field)" :key="o.v" :label="o.l" :value="o.v"></el-option>
+                    </el-select>
+                    
+                    <!-- 根据字段类型渲染不同输入控件 -->
+                    <div style="width: 180px;">
+                        <!-- 日期类型 -->
+                        <el-date-picker v-if="getFieldType(cond.field) === 'date'" 
+                            v-model="cond.value" type="daterange" size="mini" style="width: 100%" 
+                            range-separator="-" start-placeholder="开始" end-placeholder="结束"
+                            value-format="yyyy-MM-dd"></el-date-picker>
+                        
+                        <!-- 下拉选择类型 -->
+                        <el-select v-else-if="getFieldType(cond.field) === 'select'" 
+                            v-model="cond.value" size="mini" style="width: 100%" placeholder="请选择" multiple collapse-tags>
+                            <el-option v-for="opt in getFieldOptions(cond.field)" :key="opt" :label="opt" :value="opt"></el-option>
+                        </el-select>
+                        
+                        <!-- 用户类型（多选用户） -->
+                        <el-select v-else-if="getFieldType(cond.field) === 'user'" 
+                            v-model="cond.value" size="mini" style="width: 100%" placeholder="选择用户" 
+                            multiple collapse-tags filterable remote :remote-method="searchUsers"
+                            :loading="userLoading">
+                            <!-- 快捷选项：我自己 -->
+                            <el-option key="CURRENT_USER" label="我自己" :value="currentUser.id">
+                                <div class="user-option">
+                                    <div class="user-avatar" style="background: #409eff;">⭐</div>
+                                    <div class="user-info">
+                                        <span class="user-name">我自己</span>
+                                        <span class="user-email">{{ currentUser.email }}</span>
+                                    </div>
+                                </div>
+                            </el-option>
+                            <el-option v-for="user in userList" :key="user.id" :label="user.name" :value="user.id">
+                                <div class="user-option">
+                                    <div class="user-avatar">{{ user.name.charAt(0) }}</div>
+                                    <div class="user-info">
+                                        <span class="user-name">{{ user.name }}</span>
+                                        <span class="user-email">{{ user.email }}</span>
+                                    </div>
+                                </div>
+                            </el-option>
+                        </el-select>
+                        
+                        <!-- 文本类型 -->
+                        <el-input v-else v-model="cond.value" size="mini" placeholder="输入值"></el-input>
+                    </div>
+                    
+                    <i class="el-icon-close" style="margin-left: 6px; cursor: pointer; color: #999;" @click="removeCondition(idx)"></i>
+                </div>
+                <el-button type="text" size="mini" style="margin-left: auto; color: #909399" @click="clearConditions">清空</el-button>
+            </div>
+
+            <!-- Result Toolbar -->
+            <div class="result-toolbar">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <el-radio-group v-model="viewMode" size="small" @change="handleViewModeChange">
+                        <el-radio-button label="list"><i class="el-icon-tickets"></i> 列表模式</el-radio-button>
+                        <el-radio-button label="split"><i class="el-icon-s-cooperation"></i> 详情模式</el-radio-button>
+                    </el-radio-group>
+                    <span style="color: #909399; font-size: 12px; margin-left: 10px;">
+                        共检索到 <b style="color: var(--ms-primary);">{{ results.length }}</b> 条数据
+                    </span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <!-- 列配置 -->
+                    <el-popover placement="bottom-end" width="450" trigger="click" @show="syncVisibleColumns">
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <div class="col-config-group">
+                                <div class="col-config-title">基础信息</div>
+                                <el-checkbox-group v-model="userSelectedColumns" class="col-config-checkboxes">
+                                    <el-checkbox v-for="c in groupedColumns.basic" :label="c.prop" :key="c.prop">{{ c.label }}</el-checkbox>
+                                </el-checkbox-group>
+                            </div>
+                            <div class="col-config-group">
+                                <div class="col-config-title">{{ currentModuleMetadata.label }}专属</div>
+                                <el-checkbox-group v-model="userSelectedColumns" class="col-config-checkboxes">
+                                    <el-checkbox v-for="c in groupedColumns.module" :label="c.prop" :key="c.prop">{{ c.label }}</el-checkbox>
+                                </el-checkbox-group>
+                            </div>
+                            <div class="col-config-group" style="margin-bottom:0">
+                                <div class="col-config-title">审计追踪</div>
+                                <el-checkbox-group v-model="userSelectedColumns" class="col-config-checkboxes">
+                                    <el-checkbox v-for="c in groupedColumns.system" :label="c.prop" :key="c.prop">{{ c.label }}</el-checkbox>
+                                </el-checkbox-group>
+                            </div>
+                        </div>
+                        <el-button slot="reference" icon="el-icon-setting" size="small" circle title="列配置"></el-button>
+                    </el-popover>
+                    <el-button icon="el-icon-download" size="small" circle title="导出Excel" @click="handleExport"></el-button>
+                </div>
+            </div>
+
+            <!-- View Container -->
+            <div class="view-container">
+                <!-- 列表视图 -->
+                <div v-if="viewMode === 'list'" class="list-view-wrap">
+                    <el-table :data="results" style="width: 100%" height="100%" stripe border size="medium" highlight-current-row
+                        @sort-change="handleSortChange" @row-click="handleRowClick">
+                        <el-table-column type="index" width="50" align="center" fixed="left"></el-table-column>
+                        <el-table-column v-for="c in activeTableColumns" :key="c.prop" :prop="c.prop" :label="c.label" 
+                            :min-width="c.width || 120" show-overflow-tooltip :sortable="c.sortable ? 'custom' : false">
+                            <template slot-scope="scope">
+                                <span v-if="c.prop === 'title'" style="font-weight: 500; color: #303133; cursor: pointer;" 
+                                    @click.stop="showDetail(scope.row)">{{ scope.row.title }}</span>
+                                <el-tag v-else-if="c.prop === 'status'" size="mini" :type="getStatusType(scope.row.status)" effect="dark" style="border-radius: 2px;">
+                                    {{ scope.row.status }}
+                                </el-tag>
+                                <el-tag v-else-if="c.prop === 'priority'" size="mini" :type="getPriorityType(scope.row.priority)" effect="plain">
+                                    {{ scope.row.priority }}
+                                </el-tag>
+                                <el-tag v-else-if="c.prop === 'severity'" size="mini" :type="getSeverityType(scope.row.severity)" effect="dark">
+                                    {{ scope.row.severity }}
+                                </el-tag>
+                                <!-- 用户字段显示头像 -->
+                                <div v-else-if="['creator', 'maintainer', 'assignee', 'principal', 'reviewer'].includes(c.prop)" style="display: flex; align-items: center; gap: 6px;">
+                                    <div class="user-avatar" style="width: 20px; height: 20px; font-size: 10px;">{{ (scope.row[c.prop] || '-').charAt(0) }}</div>
+                                    <span>{{ scope.row[c.prop] || '-' }}</span>
+                                </div>
+                                <span v-else>{{ scope.row[c.prop] || '-' }}</span>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+
+                <!-- 分屏详情视图 -->
+                <div v-else class="split-layout">
+                    <div class="split-left">
+                        <div v-for="item in results" :key="item.id" class="split-item" 
+                            :class="{active: selectedRow && selectedRow.id === item.id}" @click="selectedRow = item">
+                            <div class="split-item-title">{{ item.title }}</div>
+                            <div class="split-item-meta">
+                                <span>{{ item.id }}</span>
+                                <el-tag size="mini" :type="getStatusType(item.status)" effect="plain" style="border:none; padding:0;">{{ item.status }}</el-tag>
+                            </div>
+                            <div style="font-size: 11px; color: #aaa; margin-top: 4px;">
+                                <i class="el-icon-user"></i> {{ item.creator }} · {{ item.update_time }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 右侧详情面板 -->
+                    <div class="split-right" v-if="selectedRow">
+                        <div class="detail-header">
+                            <div style="font-size: 12px; color: #909399; margin-bottom: 8px;">
+                                {{ selectedRow.workspace }} / {{ selectedRow.project }} / {{ selectedRow.id }}
+                            </div>
+                            <div class="detail-title">
+                                <el-tag size="medium" :type="getModuleTagType()" effect="dark" style="vertical-align: 2px; margin-right: 8px;">
+                                    {{ currentModuleMetadata.shortLabel }}
+                                </el-tag>
+                                {{ selectedRow.title }}
+                            </div>
+                            <div class="detail-meta-row">
+                                <span><i class="el-icon-user"></i> 创建人: {{ selectedRow.creator }}</span>
+                                <span><i class="el-icon-date"></i> 创建时间: {{ selectedRow.create_time || '-' }}</span>
+                                <span><i class="el-icon-time"></i> 更新于: {{ selectedRow.update_time }}</span>
+                                <span v-if="selectedRow.relate_count"><i class="el-icon-link"></i> 关联: {{ selectedRow.relate_count }} 个需求</span>
+                            </div>
+                            <div>
+                                <el-button size="mini" type="primary" plain>编辑</el-button>
+                                <el-button size="mini" plain>流转状态</el-button>
+                                <el-button size="mini" plain>评论</el-button>
+                                <el-button size="mini" plain>分享</el-button>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section-title">基本属性</div>
+                        <div class="detail-field-grid">
+                            <div class="detail-field-item" v-for="f in currentModuleMetadata.fields" :key="f.value">
+                                <span class="detail-label">{{ f.label }}</span>
+                                <span class="detail-value">
+                                    <el-tag v-if="f.value === 'status'" size="small" :type="getStatusType(selectedRow[f.value])">{{ selectedRow[f.value] }}</el-tag>
+                                    <el-tag v-else-if="f.value === 'priority'" size="small" :type="getPriorityType(selectedRow[f.value])">{{ selectedRow[f.value] }}</el-tag>
+                                    <el-tag v-else-if="f.value === 'severity'" size="small" :type="getSeverityType(selectedRow[f.value])">{{ selectedRow[f.value] }}</el-tag>
+                                    <span v-else>{{ selectedRow[f.value] || '-' }}</span>
+                                </span>
+                            </div>
+                            <div class="detail-field-item">
+                                <span class="detail-label">创建时间</span>
+                                <span class="detail-value">{{ selectedRow.create_time || '-' }}</span>
+                            </div>
+                            <div class="detail-field-item">
+                                <span class="detail-label">更新时间</span>
+                                <span class="detail-value">{{ selectedRow.update_time || '-' }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section-title">详细描述</div>
+                        <div style="font-size: 14px; line-height: 1.6; color: #333; background: #fafafa; padding: 15px; border-radius: 4px;">
+                            <p>这里显示富文本描述内容...</p>
+                        </div>
+                        
+                        <div class="detail-section-title">活动日志</div>
+                        <el-timeline style="margin-top: 10px;">
+                            <el-timeline-item timestamp="2023/10/01" placement="top">
+                                <div style="font-size: 13px; color: #666">{{ selectedRow.creator }} 创建了此记录</div>
+                            </el-timeline-item>
+                            <el-timeline-item timestamp="2023/10/03" placement="top">
+                                <div style="font-size: 13px; color: #666">状态变更为 <span style="color: #409EFF">{{ selectedRow.status }}</span></div>
+                            </el-timeline-item>
+                        </el-timeline>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script>
+new Vue({
+    el: '#app',
+    data() {
+        return {
+            loading: false,
+            userLoading: false,
+            popoverVisible: false,
+            currentModule: 'test_case',
+            selectedWorkspaces: ['ws1'],
+            selectedProjects: ['p1'],
+            viewMode: 'list',
+            selectedRow: null,
+            conditions: [],
+            userSelectedColumns: [],
+            results: [],
+            userList: [],
+            
+            // 当前登录用户
+            currentUser: {
+                id: 'user-admin',
+                name: 'Admin',
+                email: 'admin@metersphere.io'
+            },
+
+            // 工作空间和项目数据
+            workspaces: [
+                { id: 'ws1', name: '默认工作空间', projects: [
+                    {id: 'p1', name: '商城系统', wsName: '默认工作空间'}, 
+                    {id: 'p2', name: '支付中心', wsName: '默认工作空间'}
+                ]},
+                { id: 'ws2', name: '研发中心', projects: [
+                    {id: 'p3', name: '基础设施', wsName: '研发中心'}
+                ]}
+            ],
+
+            // 通用系统字段
+            commonFields: [
+                { label: '标题', value: 'name', type: 'text', icon: 'el-icon-document', group: 'basic' },
+                { label: '编号', value: 'num', type: 'text', icon: 'el-icon-price-tag', group: 'basic' },
+                { label: '状态', value: 'status', type: 'select', icon: 'el-icon-open', options: ['新建','进行中','已完成','已关闭'], group: 'basic' }
+            ],
+            
+            // 用户维度字段
+            userFields: [
+                { label: '创建人', value: 'creator', type: 'user', icon: 'el-icon-user', group: 'user' },
+                { label: '最后更新人', value: 'updateUser', type: 'user', icon: 'el-icon-edit', group: 'user' }
+            ],
+            
+            // 时间字段
+            dateFields: [
+                { label: '创建时间', value: 'createTime', type: 'date', icon: 'el-icon-date', group: 'date' },
+                { label: '更新时间', value: 'updateTime', type: 'date', icon: 'el-icon-time', group: 'date' }
+            ],
+            
+            // 模拟的自定义字段（单项目模式下显示）
+            customFields: [
+                { label: '所属迭代', value: 'custom_sprint', type: 'select', options: ['Sprint 1', 'Sprint 2', 'Sprint 3'], group: 'custom', projectSpecific: true },
+                { label: '业务线', value: 'custom_bizline', type: 'select', options: ['电商', '金融', '物流'], group: 'custom', projectSpecific: true }
+            ],
+
+            // 各模块元数据
+            moduleMetadata: {
+                'test_case': {
+                    label: '测试用例',
+                    shortLabel: 'Case',
+                    fields: [
+                        { label: '优先级', value: 'priority', type: 'select', icon: 'el-icon-top', options: ['P0','P1','P2','P3'], group: 'module' },
+                        { label: '维护人', value: 'maintainer', type: 'user', icon: 'el-icon-s-custom', group: 'user' },
+                        { label: '用例类型', value: 'type', type: 'select', icon: 'el-icon-menu', options: ['功能','性能','接口'], group: 'module' },
+                        { label: '用例方式', value: 'method', type: 'select', icon: 'el-icon-edit-outline', options: ['手动','自动'], group: 'module' },
+                        { label: '所属模块', value: 'nodeId', type: 'treeSelect', icon: 'el-icon-folder', group: 'module' },
+                        { label: '评审状态', value: 'reviewStatus', type: 'select', icon: 'el-icon-document-checked', options: ['未评审','评审中','已通过','未通过'], group: 'module' }
+                    ],
+                    columns: [
+                        { prop: 'priority', label: '优先级', width: 80 },
+                        { prop: 'maintainer', label: '维护人', width: 100 },
+                        { prop: 'type', label: '类型', width: 80 },
+                        { prop: 'reviewStatus', label: '评审状态', width: 90 }
+                    ],
+                    defaultCols: ['id', 'title', 'status', 'priority', 'maintainer', 'reviewStatus']
+                },
+                'issue': {
+                    label: '缺陷',
+                    shortLabel: 'Bug',
+                    fields: [
+                        { label: '严重程度', value: 'severity', type: 'select', icon: 'el-icon-warning-outline', options: ['致命','严重','一般','轻微'], group: 'module' },
+                        { label: '指派给', value: 'assignee', type: 'user', icon: 'el-icon-s-check', group: 'user' },
+                        { label: '缺陷平台', value: 'platform', type: 'select', icon: 'el-icon-connection', options: ['Local','Jira','Tapd','禅道'], group: 'module' },
+                        { label: '环境', value: 'env', type: 'select', icon: 'el-icon-monitor', options: ['Dev','Test','Staging','Prod'], group: 'module' }
+                    ],
+                    columns: [
+                        { prop: 'severity', label: '严重度', width: 80 },
+                        { prop: 'assignee', label: '指派给', width: 100 },
+                        { prop: 'platform', label: '平台', width: 80 },
+                        { prop: 'env', label: '环境', width: 70 }
+                    ],
+                    defaultCols: ['id', 'title', 'status', 'severity', 'assignee', 'platform']
+                },
+
+                'test_plan': {
+                    label: '测试计划',
+                    shortLabel: 'Plan',
+                    fields: [
+                        { label: '负责人', value: 'principal', type: 'user', icon: 'el-icon-user-solid', group: 'user' },
+                        { label: '计划阶段', value: 'stage', type: 'select', icon: 'el-icon-s-flag', options: ['未开始','进行中','已完成'], group: 'module' },
+                        { label: '计划开始日期', value: 'plannedStartTime', type: 'date', icon: 'el-icon-date', group: 'date' },
+                        { label: '计划结束日期', value: 'plannedEndTime', type: 'date', icon: 'el-icon-date', group: 'date' }
+                    ],
+                    columns: [
+                        { prop: 'principal', label: '负责人', width: 100 },
+                        { prop: 'stage', label: '阶段', width: 80 },
+                        { prop: 'plannedStartTime', label: '计划开始', width: 100 },
+                        { prop: 'plannedEndTime', label: '计划结束', width: 100 }
+                    ],
+                    defaultCols: ['id', 'title', 'status', 'principal', 'stage', 'plannedStartTime']
+                },
+                'test_case_review': {
+                    label: '用例评审',
+                    shortLabel: 'Review',
+                    fields: [
+                        { label: '评审人', value: 'reviewer', type: 'user', icon: 'el-icon-view', group: 'user' },
+                        { label: '评审状态', value: 'reviewStatus', type: 'select', icon: 'el-icon-document-checked', options: ['未开始','进行中','已完成'], group: 'module' },
+                        { label: '评审截止日期', value: 'endTime', type: 'date', icon: 'el-icon-timer', group: 'date' }
+                    ],
+                    columns: [
+                        { prop: 'reviewer', label: '评审人', width: 100 },
+                        { prop: 'reviewStatus', label: '评审状态', width: 90 },
+                        { prop: 'endTime', label: '截止日期', width: 100 }
+                    ],
+                    defaultCols: ['id', 'title', 'status', 'reviewer', 'reviewStatus', 'endTime']
+                }
+            }
+        }
+    },
+
+    created() { 
+        this.mockSearch(); 
+        this.loadUsers();
+    },
+    
+    computed: {
+        // 是否为单项目模式
+        isSingleProjectMode() {
+            return this.selectedProjects.length === 1;
+        },
+        
+        // 当前可选项目列表
+        activeProjects() {
+            if (this.selectedWorkspaces.length === 0) return [];
+            return this.workspaces
+                .filter(ws => this.selectedWorkspaces.includes(ws.id))
+                .flatMap(ws => ws.projects);
+        },
+        
+        // 当前模块元数据
+        currentModuleMetadata() { 
+            return this.moduleMetadata[this.currentModule]; 
+        },
+        
+        // 所有可用字段（根据模块动态变化）
+        availableFields() { 
+            let fields = [
+                ...this.commonFields, 
+                ...this.userFields,
+                ...this.currentModuleMetadata.fields,
+                ...this.dateFields
+            ];
+            // 单项目模式下添加自定义字段
+            if (this.isSingleProjectMode) {
+                fields = [...fields, ...this.customFields];
+            }
+            return fields;
+        },
+        
+        // 按分组整理字段
+        fieldsByGroup() {
+            const fields = this.availableFields;
+            return {
+                basic: fields.filter(f => f.group === 'basic'),
+                user: fields.filter(f => f.group === 'user'),
+                module: fields.filter(f => f.group === 'module'),
+                date: fields.filter(f => f.group === 'date'),
+                custom: fields.filter(f => f.group === 'custom')
+            };
+        },
+
+        // 所有可用列定义
+        allColDefs() {
+            let base = [
+                { prop: 'id', label: 'ID', group: 'basic', sortable: true },
+                { prop: 'title', label: '标题', group: 'basic', width: 200 },
+                { prop: 'status', label: '状态', group: 'basic', width: 80 },
+                { prop: 'workspace', label: '所属空间', group: 'basic' },
+                { prop: 'project', label: '项目', group: 'basic' },
+                { prop: 'creator', label: '创建人', group: 'system' },
+                { prop: 'create_time', label: '创建时间', group: 'system', sortable: true },
+                { prop: 'update_time', label: '更新时间', group: 'system', sortable: true }
+            ];
+            let moduleCols = this.currentModuleMetadata.columns.map(c => ({...c, group: 'module'}));
+            return [...base, ...moduleCols];
+        },
+        
+        // 分组后的列配置
+        groupedColumns() {
+            return {
+                basic: this.allColDefs.filter(c => c.group === 'basic'),
+                system: this.allColDefs.filter(c => c.group === 'system'),
+                module: this.allColDefs.filter(c => c.group === 'module')
+            };
+        },
+        
+        // 当前显示的表格列
+        activeTableColumns() {
+            if (this.userSelectedColumns.length > 0) {
+                return this.allColDefs.filter(c => this.userSelectedColumns.includes(c.prop));
+            }
+            return this.allColDefs.filter(c => this.currentModuleMetadata.defaultCols.includes(c.prop));
+        }
+    },
+
+    methods: {
+        // 工作空间变更
+        handleWorkspaceChange() {
+            const validIds = this.activeProjects.map(p => p.id);
+            this.selectedProjects = this.selectedProjects.filter(id => validIds.includes(id));
+        },
+        
+        // 项目变更 - 处理跨项目字段切换
+        handleProjectChange() {
+            // 如果从单项目切换到多项目，清除项目特有字段的筛选条件
+            if (!this.isSingleProjectMode) {
+                const removedConditions = this.conditions.filter(c => {
+                    const field = this.availableFields.find(f => f.value === c.field);
+                    return field && field.projectSpecific;
+                });
+                if (removedConditions.length > 0) {
+                    this.$message.warning(`已移除 ${removedConditions.length} 个项目特有字段的筛选条件`);
+                    this.conditions = this.conditions.filter(c => {
+                        const field = this.availableFields.find(f => f.value === c.field);
+                        return !field || !field.projectSpecific;
+                    });
+                }
+            }
+        },
+        
+        // 模块切换
+        handleModuleChange() { 
+            this.conditions = []; 
+            this.userSelectedColumns = []; 
+            this.mockSearch(); 
+        },
+        
+        // 视图模式切换
+        handleViewModeChange(mode) { 
+            if (mode === 'split' && this.results.length > 0 && !this.selectedRow) {
+                this.selectedRow = this.results[0]; 
+            }
+        },
+        
+        // 执行查询
+        handleSearch() { 
+            this.loading = true; 
+            // 构建查询请求（模拟）
+            const request = {
+                module: this.currentModule,
+                workspaceIds: this.selectedWorkspaces,
+                projectIds: this.selectedProjects,
+                combine: this.buildCombine(),
+                orders: [{ name: 'update_time', type: 'desc' }]
+            };
+            console.log('查询请求:', JSON.stringify(request, null, 2));
+            
+            setTimeout(() => { 
+                this.loading = false; 
+                this.mockSearch(); 
+                this.$message.success('查询成功'); 
+            }, 500); 
+        },
+        
+        // 构建 combine 查询条件
+        buildCombine() {
+            const combine = {};
+            this.conditions.forEach(cond => {
+                if (cond.value && (Array.isArray(cond.value) ? cond.value.length > 0 : cond.value !== '')) {
+                    combine[cond.field] = {
+                        operator: cond.op,
+                        value: cond.value
+                    };
+                }
+            });
+            return combine;
+        },
+
+        // 添加筛选条件
+        addFilter(field) { 
+            if (!this.isFieldSelected(field.value)) {
+                // 根据字段类型设置默认操作符
+                let defaultOp = '=';
+                if (field.type === 'text') defaultOp = 'like';
+                if (field.type === 'select' || field.type === 'user') defaultOp = 'in';
+                if (field.type === 'date') defaultOp = 'between';
+                
+                this.conditions.push({ 
+                    field: field.value, 
+                    op: defaultOp, 
+                    value: field.type === 'select' || field.type === 'user' ? [] : '' 
+                }); 
+            }
+            this.popoverVisible = false; 
+        },
+        
+        // 移除筛选条件
+        removeCondition(idx) { 
+            this.conditions.splice(idx, 1); 
+        },
+        
+        // 清空所有条件
+        clearConditions() {
+            this.conditions = [];
+        },
+        
+        // 判断字段是否已选中
+        isFieldSelected(val) { 
+            return this.conditions.some(c => c.field === val); 
+        },
+        
+        // 获取字段标签
+        getFieldLabel(val) { 
+            const f = this.availableFields.find(f => f.value === val); 
+            return f ? f.label : val; 
+        },
+        
+        // 获取字段类型
+        getFieldType(val) { 
+            const f = this.availableFields.find(f => f.value === val); 
+            return f ? f.type : 'text'; 
+        },
+        
+        // 获取字段选项
+        getFieldOptions(val) { 
+            const f = this.availableFields.find(f => f.value === val); 
+            return f ? f.options : []; 
+        },
+        
+        // 获取操作符列表
+        getOperators(val) { 
+            const type = this.getFieldType(val);
+            if (type === 'select' || type === 'user') {
+                return [{l:'是',v:'in'}, {l:'不是',v:'not_in'}];
+            }
+            if (type === 'date') {
+                return [{l:'范围',v:'between'}, {l:'早于',v:'lt'}, {l:'晚于',v:'gt'}];
+            }
+            return [{l:'包含',v:'like'}, {l:'等于',v:'='}, {l:'不等于',v:'!='}]; 
+        },
+
+        // 加载用户列表
+        loadUsers() {
+            this.userList = [
+                { id: 'user-001', name: '张三', email: 'zhangsan@example.com' },
+                { id: 'user-002', name: '李四', email: 'lisi@example.com' },
+                { id: 'user-003', name: '王五', email: 'wangwu@example.com' },
+                { id: 'user-004', name: '赵六', email: 'zhaoliu@example.com' },
+                { id: 'user-005', name: '钱七', email: 'qianqi@example.com' }
+            ];
+        },
+        
+        // 搜索用户（远程搜索）
+        searchUsers(query) {
+            if (query !== '') {
+                this.userLoading = true;
+                setTimeout(() => {
+                    this.userLoading = false;
+                    // 模拟搜索结果
+                    this.userList = [
+                        { id: 'user-001', name: '张三', email: 'zhangsan@example.com' },
+                        { id: 'user-002', name: '李四', email: 'lisi@example.com' },
+                        { id: 'user-003', name: '王五', email: 'wangwu@example.com' }
+                    ].filter(u => u.name.includes(query) || u.email.includes(query));
+                }, 200);
+            } else {
+                this.loadUsers();
+            }
+        },
+        
+        // 同步列配置
+        syncVisibleColumns() { 
+            if (this.userSelectedColumns.length === 0) {
+                this.userSelectedColumns = this.activeTableColumns.map(c => c.prop); 
+            }
+        },
+        
+        // 排序变更
+        handleSortChange({ prop, order }) {
+            console.log('排序:', prop, order);
+            // 实际项目中这里会重新请求数据
+        },
+        
+        // 行点击
+        handleRowClick(row) {
+            this.selectedRow = row;
+        },
+        
+        // 显示详情
+        showDetail(row) {
+            this.selectedRow = row;
+            this.viewMode = 'split';
+        },
+        
+        // 导出
+        handleExport() {
+            if (this.results.length > 10000) {
+                this.$message.warning('结果数量超过 10000 条，请缩小查询范围后再导出');
+                return;
+            }
+            this.$message.success('正在导出 Excel...');
+        },
+
+        // 获取状态标签类型
+        getStatusType(s) { 
+            if(['已解决','已完成','已通过'].includes(s)) return 'success'; 
+            if(['新建','未开始','未评审'].includes(s)) return 'info'; 
+            if(['进行中','处理中','评审中'].includes(s)) return 'primary'; 
+            if(['已关闭','未通过'].includes(s)) return 'danger';
+            return 'info'; 
+        },
+        
+        // 获取优先级标签类型
+        getPriorityType(p) {
+            if (p === 'P0') return 'danger';
+            if (p === 'P1') return 'warning';
+            if (p === 'P2') return 'primary';
+            return 'info';
+        },
+        
+        // 获取严重程度标签类型
+        getSeverityType(s) {
+            if (s === '致命') return 'danger';
+            if (s === '严重') return 'warning';
+            if (s === '一般') return 'primary';
+            return 'info';
+        },
+        
+        // 获取模块标签类型
+        getModuleTagType() {
+            const types = {
+                'test_case': 'success',
+                'issue': 'danger',
+                'test_plan': 'primary',
+                'test_case_review': 'warning'
+            };
+            return types[this.currentModule] || 'info';
+        },
+
+        // 模拟查询数据
+        mockSearch() {
+            const data = [];
+            for(let i=1; i<=15; i++) {
+                if (this.currentModule === 'issue') {
+                    data.push({
+                        id: `BUG-${1000+i}`, 
+                        title: `【缺陷】登录页面在 Safari 浏览器下样式异常 - ${i}`, 
+                        status: ['新建','进行中','已解决','已关闭'][i%4],
+                        severity: ['致命','严重','一般','轻微'][i%4], 
+                        assignee: ['张三','李四','王五'][i%3], 
+                        platform: ['Local','Jira','Tapd'][i%3],
+                        env: ['Dev','Test','Staging','Prod'][i%4],
+                        creator: ['Admin','张三','李四'][i%3], 
+                        create_time: '2023-10-01', 
+                        update_time: '2023-10-05', 
+                        workspace: '默认空间', 
+                        project: '商城系统',
+                        relate_count: (i % 5) + 1
+                    });
+                } else if (this.currentModule === 'test_case') {
+                    data.push({
+                        id: `CASE-${1000+i}`, 
+                        title: `【功能】用户登录功能验证 - 正常流程 - ${i}`, 
+                        status: ['新建','进行中','已完成'][i%3],
+                        priority: ['P0','P1','P2','P3'][i%4], 
+                        maintainer: ['张三','李四','王五'][i%3], 
+                        type: ['功能','性能','接口'][i%3],
+                        reviewStatus: ['未评审','评审中','已通过','未通过'][i%4],
+                        creator: ['Admin','张三'][i%2], 
+                        create_time: '2023-09-20', 
+                        update_time: '2023-09-25', 
+                        workspace: '默认空间', 
+                        project: '商城系统',
+                        relate_count: (i % 3) + 1
+                    });
+                } else if (this.currentModule === 'test_plan') {
+                    data.push({
+                        id: `PLAN-${1000+i}`, 
+                        title: `【计划】v2.10.${i} 版本回归测试计划`, 
+                        status: ['未开始','进行中','已完成'][i%3],
+                        principal: ['张三','李四','王五'][i%3],
+                        stage: ['未开始','进行中','已完成'][i%3],
+                        plannedStartTime: '2023-10-01',
+                        plannedEndTime: '2023-10-15',
+                        creator: 'Admin', 
+                        create_time: '2023-09-25', 
+                        update_time: '2023-10-01', 
+                        workspace: '默认空间', 
+                        project: '商城系统'
+                    });
+                } else if (this.currentModule === 'test_case_review') {
+                    data.push({
+                        id: `REVIEW-${1000+i}`, 
+                        title: `【评审】登录模块用例评审 - 第${i}轮`, 
+                        status: ['未开始','进行中','已完成'][i%3],
+                        reviewer: ['张三','李四','王五'][i%3],
+                        reviewStatus: ['未开始','进行中','已完成'][i%3],
+                        endTime: '2023-10-20',
+                        creator: 'Admin', 
+                        create_time: '2023-10-01', 
+                        update_time: '2023-10-05', 
+                        workspace: '默认空间', 
+                        project: '商城系统'
+                    });
+                }
+            }
+            this.results = data;
+            if (this.viewMode === 'split' && data.length > 0) {
+                this.selectedRow = data[0];
+            }
+        }
+    }
+});
+</script>
+</body>
+</html>
