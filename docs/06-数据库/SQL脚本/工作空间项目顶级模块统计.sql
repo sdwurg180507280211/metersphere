@@ -4,6 +4,7 @@
 -- 创建时间：2026-01-29
 -- 更新时间：2026-01-30 - 新增回收站数据过滤(tc.delete_time IS NULL)
 -- 更新时间：2026-01-30 - 新增测试计划按模块统计SQL
+-- 更新时间：2026-02-06 - SQL3和SQL4添加创建时间范围过滤
 -- ==========================================
 
 -- 方式一：按工作空间名称查询（分离统计,避免笛卡尔积）
@@ -100,40 +101,52 @@ ORDER BY
     p.name, pmt.top_module_name;
 
 
--- SQL 3: 统计每个项目的功能用例数量、测试计划数量、缺陷数量(汇总统计-优化版)
+-- SQL 3: 统计每个项目的功能用例数量、测试计划数量、缺陷数量(汇总统计-优化版-带时间范围)
 -- 说明: 使用子查询分别统计,避免大表JOIN导致的性能问题
+-- 时间范围: 按创建时间过滤（test_case.create_time、test_plan.create_time、issues.create_time）
 SELECT
     w.name AS '工作空间名称',
     p.name AS '项目名称',
     COALESCE(tc_count.case_count, 0) AS '功能用例总数(排除回收站)',
     COALESCE(tp_count.plan_count, 0) AS '测试计划总数',
-    COALESCE(i_count.issue_count, 0) AS '缺陷总数'
+    COALESCE(i_count.issue_count, 0) AS '缺陷总数',
+    CONCAT(
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-01-01 00:00:00')),
+        ' ~ ',
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-02-06 23:59:59'))
+    ) AS '统计时间范围(创建时间)'
 FROM
     workspace w
     INNER JOIN project p ON w.id = p.workspace_id
-    -- 子查询1: 统计功能用例数量(排除回收站)
+    -- 子查询1: 统计功能用例数量(排除回收站,按创建时间过滤)
     LEFT JOIN (
         SELECT
             project_id,
             COUNT(id) AS case_count
         FROM test_case
         WHERE delete_time IS NULL
+          AND create_time >= UNIX_TIMESTAMP('2026-01-01 00:00:00') * 1000  -- 开始时间（毫秒时间戳）
+          AND create_time <= UNIX_TIMESTAMP('2026-02-06 23:59:59') * 1000  -- 结束时间（毫秒时间戳）
         GROUP BY project_id
     ) tc_count ON p.id = tc_count.project_id
-    -- 子查询2: 统计测试计划数量
+    -- 子查询2: 统计测试计划数量(按创建时间过滤)
     LEFT JOIN (
         SELECT
             project_id,
             COUNT(id) AS plan_count
         FROM test_plan
+        WHERE create_time >= UNIX_TIMESTAMP('2026-01-01 00:00:00') * 1000  -- 开始时间（毫秒时间戳）
+          AND create_time <= UNIX_TIMESTAMP('2026-02-06 23:59:59') * 1000  -- 结束时间（毫秒时间戳）
         GROUP BY project_id
     ) tp_count ON p.id = tp_count.project_id
-    -- 子查询3: 统计缺陷数量
+    -- 子查询3: 统计缺陷数量(按创建时间过滤)
     LEFT JOIN (
         SELECT
             project_id,
             COUNT(id) AS issue_count
         FROM issues
+        WHERE create_time >= UNIX_TIMESTAMP('2026-01-01 00:00:00') * 1000  -- 开始时间（毫秒时间戳）
+          AND create_time <= UNIX_TIMESTAMP('2026-02-06 23:59:59') * 1000  -- 结束时间（毫秒时间戳）
         GROUP BY project_id
     ) i_count ON p.id = i_count.project_id
 WHERE
@@ -142,8 +155,9 @@ ORDER BY
     p.name;
 
 
--- SQL 4: 统计每个项目下各状态的测试计划数量(不考虑模块)
+-- SQL 4: 统计每个项目下各状态的测试计划数量(不考虑模块-带时间范围)
 -- 说明: 测试计划状态包括 Prepare(未开始)、Underway(进行中)、Completed(已完成)、Finished(已结束)、Archived(已归档)
+-- 时间范围: 按创建时间过滤（test_plan.create_time）
 SELECT
     w.name AS '工作空间名称',
     p.name AS '项目名称',
@@ -152,15 +166,69 @@ SELECT
     COUNT(DISTINCT CASE WHEN tp.status = 'Underway' THEN tp.id END) AS '进行中',
     COUNT(DISTINCT CASE WHEN tp.status = 'Completed' THEN tp.id END) AS '已完成',
     COUNT(DISTINCT CASE WHEN tp.status = 'Finished' THEN tp.id END) AS '已结束',
-    COUNT(DISTINCT CASE WHEN tp.status = 'Archived' THEN tp.id END) AS '已归档'
+    COUNT(DISTINCT CASE WHEN tp.status = 'Archived' THEN tp.id END) AS '已归档',
+    CONCAT(
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-01-01 00:00:00')),
+        ' ~ ',
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-02-06 23:59:59'))
+    ) AS '统计时间范围(创建时间)'
 FROM
     workspace w
     INNER JOIN project p ON w.id = p.workspace_id
     LEFT JOIN test_plan tp ON p.id = tp.project_id
+        AND tp.create_time >= UNIX_TIMESTAMP('2026-01-01 00:00:00') * 1000  -- 开始时间（毫秒时间戳）
+        AND tp.create_time <= UNIX_TIMESTAMP('2026-02-06 23:59:59') * 1000  -- 结束时间（毫秒时间戳）
 WHERE
     w.name = '功能测试工作空间'  -- 替换为实际工作空间名称
 GROUP BY
     w.name, p.name
+ORDER BY
+    p.name;
+
+
+-- SQL 5: 统计某个工作空间下某个时间段内执行的功能用例数量和创建的缺陷数量
+-- 说明:
+--   1. 执行的功能用例：统计 test_plan_test_case 表中 update_time 在时间范围内的记录
+--   2. 创建的缺陷：统计 issues 表中 create_time 在时间范围内的记录
+--   3. 时间字段为毫秒时间戳，需要转换为日期格式
+--   4. 支持按项目分组统计
+SELECT
+    w.name AS '工作空间名称',
+    p.name AS '项目名称',
+    COALESCE(exec_count.executed_case_count, 0) AS '执行的功能用例数量',
+    COALESCE(issue_count.created_issue_count, 0) AS '创建的缺陷数量',
+    CONCAT(
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-01-01 00:00:00')),
+        ' ~ ',
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-02-05 23:59:59'))
+    ) AS '统计时间范围'
+FROM
+    workspace w
+    INNER JOIN project p ON w.id = p.workspace_id
+    -- 子查询1: 统计时间范围内执行的功能用例数量
+    LEFT JOIN (
+        SELECT
+            tp.project_id,
+            COUNT(DISTINCT tptc.id) AS executed_case_count
+        FROM test_plan_test_case tptc
+        INNER JOIN test_plan tp ON tptc.plan_id = tp.id
+        WHERE tptc.update_time >= UNIX_TIMESTAMP('2026-01-01 00:00:00') * 1000  -- 开始时间（毫秒时间戳）
+          AND tptc.update_time <= UNIX_TIMESTAMP('2026-02-05 23:59:59') * 1000  -- 结束时间（毫秒时间戳）
+          AND tptc.is_del = 0  -- 排除已删除的关联
+        GROUP BY tp.project_id
+    ) exec_count ON p.id = exec_count.project_id
+    -- 子查询2: 统计时间范围内创建的缺陷数量
+    LEFT JOIN (
+        SELECT
+            project_id,
+            COUNT(id) AS created_issue_count
+        FROM issues
+        WHERE create_time >= UNIX_TIMESTAMP('2026-01-01 00:00:00') * 1000  -- 开始时间（毫秒时间戳）
+          AND create_time <= UNIX_TIMESTAMP('2026-02-05 23:59:59') * 1000  -- 结束时间（毫秒时间戳）
+        GROUP BY project_id
+    ) issue_count ON p.id = issue_count.project_id
+WHERE
+    w.name = '功能测试工作空间'  -- 替换为实际工作空间名称
 ORDER BY
     p.name;
 
@@ -180,4 +248,23 @@ ORDER BY
 --    - delete_time 不为 NULL: 回收站中的用例(已删除)
 -- 10. 测试计划模块：test_plan 表通过 node_id 关联到 test_plan_node 表
 --     test_plan_node 表结构与 test_case_node 类似,也支持多层级树形结构
+-- 11. 时间范围统计（SQL5系列）：
+--     - 时间字段为毫秒时间戳（bigint类型）
+--     - 转换公式：UNIX_TIMESTAMP('日期时间') * 1000
+--     - 执行用例：统计 test_plan_test_case.update_time（用例执行时更新）
+--     - 创建缺陷：统计 issues.create_time（缺陷创建时间）
+--     - SQL5: 基础统计（总数）
+--     - SQL5-1: 按执行状态分组统计
+--     - SQL5-2: 按日期分组统计（趋势分析）
+-- 12. 用例执行状态：
+--     - Pass: 通过
+--     - Failure: 失败
+--     - Blocking: 阻塞
+--     - Skip: 跳过
+--     - Prepare: 未执行
+-- 13. SQL3和SQL4时间范围过滤（2026-02-06更新）：
+--     - SQL3: 按创建时间过滤（test_case.create_time、test_plan.create_time、issues.create_time）
+--     - SQL4: 按创建时间过滤（test_plan.create_time）
+--     - 统计某时间段内新创建的用例、测试计划、缺陷数量
+--     - 适用场景：统计新增数据、分析增长趋势
 -- ==========================================
