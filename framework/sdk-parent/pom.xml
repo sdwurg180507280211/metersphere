@@ -17,9 +17,9 @@
     <modules>
         <module>frontend</module>
         <module>domain</module>
-        <module>sdk</module>
         <module>xpack-interface</module>
         <module>jmeter</module>
+        <module>sdk</module>
     </modules>
 
     <build>

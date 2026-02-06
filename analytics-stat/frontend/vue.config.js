@@ -31,6 +31,13 @@ module.exports = defineConfig({
       'Access-Control-Allow-Origin': '*',
     },
   },
+  pages: {
+    index: {
+      entry: 'src/main.js',
+      template: 'public/index.html',
+      filename: 'index.html',
+    },
+  },
   configureWebpack: {
     devtool: 'cheap-module-source-map',
     resolve: {
@@ -48,6 +55,38 @@ module.exports = defineConfig({
       // 打包后js的名称
       filename: `js/${name}-[name].[contenthash:8].js`,
       chunkFilename: `js/${name}-[name].[contenthash:8].js`,
+    },
+    optimization: {
+      splitChunks: {
+        cacheGroups: {
+          'chunk-vendors': {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'chunk-vendors',
+            priority: 1,
+            minChunks: 3,
+            chunks: 'all',
+          },
+          'chunk-common': {
+            test: /[\\/]src[\\/]/,
+            name: 'chunk-common',
+            priority: 1,
+            minChunks: 5,
+            chunks: 'all',
+          },
+          echarts: {
+            test: /[\\/](echarts|zrender)[\\/]/,
+            name: 'echarts',
+            priority: 3,
+            chunks: 'all',
+          },
+          pinia: {
+            test: /[\\/]pinia[\\/]/,
+            name: 'pinia',
+            priority: 3,
+            chunks: 'all',
+          },
+        },
+      },
     },
   },
   css: {
