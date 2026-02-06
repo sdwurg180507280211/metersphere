@@ -340,7 +340,7 @@
             order by
             <foreach collection="request.orders" separator="," item="order">
                 <choose>
-                    <when test="order.name == 'custom_num' || order.name == 'num' || order.name == 'name' || order.name == 'priority'">
+                    <when test="order.name == 'custom_num' || order.name == 'num' || order.name == 'name' || order.name == 'priority' || order.name == 'tags'">
                         test_case.${order.name} ${order.type}
                     </when>
                     <otherwise>
