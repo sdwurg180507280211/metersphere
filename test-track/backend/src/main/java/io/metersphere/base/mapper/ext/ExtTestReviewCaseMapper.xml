@@ -165,6 +165,9 @@
                     <when test="order.name == 'name'">
                         test_case.name ${order.type}
                     </when>
+                    <when test="order.name == 'tags'">
+                        test_case.tags ${order.type}
+                    </when>
                     <otherwise>
                         test_case_review_test_case.${order.name} ${order.type}
                     </otherwise>
@@ -353,7 +356,7 @@
             order by
             <foreach collection="request.orders" separator="," item="order">
                 <choose>
-                    <when test="order.name == 'num' || order.name == 'custom_num' || order.name == 'priority' || order.name == 'name'">
+                    <when test="order.name == 'num' || order.name == 'custom_num' || order.name == 'priority' || order.name == 'name' || order.name == 'tags'">
                         test_case.${order.name} ${order.type}
                     </when>
                     <otherwise>
