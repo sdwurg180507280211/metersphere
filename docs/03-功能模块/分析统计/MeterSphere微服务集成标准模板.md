@@ -35,9 +35,10 @@
 | 4 | **WebMvcConfig** | `{module}/backend/src/main/java/.../config/WebMvcConfig.java` | ✅ | 将前端打包文件映射到 HTTP 路径 |
 | 5 | **Gateway SessionFilter** | `framework/gateway/.../SessionFilter.java` | ✅ | Gateway 路由转发规则 |
 | 6 | **Eureka 注册** | 依赖 `sdk` 模块即可 | ✅ | 服务注册与发现 |
-| 7 | **Flyway 迁移脚本** | `{module}/backend/src/main/resources/db/migration/` | 可选 | 数据库版本管理 |
-| 8 | **Dockerfile** | `{module}/backend/Dockerfile` | 可选 | Docker 镜像构建 |
-| 9 | **根 pom.xml** | `pom.xml` | ✅ | 在 `<modules>` 中添加新模块 |
+| 7 | **Flyway 迁移脚本** | `{module}/backend/src/main/resources/db/migration/` | **推荐** | 数据库版本管理（表结构、菜单配置等） |
+| 8 | **菜单配置 SQL** | `{module}/backend/src/main/resources/db/migration/V2__add_{module}_module.sql` | **推荐** | 在 system_parameter 表中添加模块菜单配置 |
+| 9 | **Dockerfile** | `{module}/backend/Dockerfile` | 可选 | Docker 镜像构建 |
+| 10 | **根 pom.xml** | `pom.xml` | ✅ | 在 `<modules>` 中添加新模块 |
 
 ### 1.2 前端配置
 
@@ -241,6 +242,54 @@ private static final String[] PREFIX = new String[]{
 
 ---
 
+### 3.8 菜单配置 SQL（重要）
+
+**创建文件**：`{module}/backend/src/main/resources/db/migration/V2__add_{module}_module.sql`
+
+```sql
+-- {模块中文名}模块菜单配置
+-- 创建时间: YYYY-MM-DD
+-- 说明: 在 system_parameter 表中添加模块的启用配置，用于控制左侧菜单显示
+
+SET SESSION innodb_lock_wait_timeout = 7200;
+
+-- 插入模块配置
+-- param_key: metersphere.module.{moduleCamelCase} (驼峰命名，与其他模块保持一致)
+-- param_value: ENABLE (启用) / DISABLE (禁用)
+-- type: text
+-- sort: 1
+INSERT INTO system_parameter (param_key, param_value, type, sort)
+VALUES ('metersphere.module.{moduleCamelCase}', 'ENABLE', 'text', 1)
+ON DUPLICATE KEY UPDATE param_value = 'ENABLE';
+
+SET SESSION innodb_lock_wait_timeout = DEFAULT;
+```
+
+**命名规则**：
+- `param_key` 格式：`metersphere.module.{moduleCamelCase}`
+- 驼峰命名示例：
+  - `analytics-stat` → `analyticsStat`
+  - `report-stat` → `reportStat`
+  - `test-track` → `testTrack`
+
+**作用**：
+- 控制左侧菜单是否显示该模块
+- `ENABLE`：显示菜单
+- `DISABLE`：隐藏菜单
+
+**参考示例**：
+
+| 模块 | param_key | param_value |
+| ---- | --------- | ----------- |
+| api-test | metersphere.module.api | ENABLE |
+| performance-test | metersphere.module.performance | ENABLE |
+| test-track | metersphere.module.testTrack | ENABLE |
+| report-stat | metersphere.module.reportStat | ENABLE |
+| workstation | metersphere.module.workstation | ENABLE |
+| analytics-stat | metersphere.module.analyticsStat | ENABLE |
+
+---
+
 ## 四、前端模块创建详解
 
 ### 4.1 目录结构模板
@@ -406,13 +455,14 @@ echo "Module ${MODULE_NAME} created successfully!"
 
 ### 5.2 手动创建步骤
 
-1. 创建目录结构
-2. 复制模板文件（从 `analytics-stat` 复制）
-3. 全局替换模块名和端口
-4. 修改根 pom.xml
-5. 修改 Gateway SessionFilter
-6. 实现业务逻辑
-7. 启动验证
+1. **创建目录结构**
+2. **复制模板文件**（从 `analytics-stat` 复制）
+3. **全局替换**模块名和端口
+4. **修改根 pom.xml**（添加模块）
+5. **修改 Gateway SessionFilter**（添加路由前缀）
+6. **创建菜单配置 SQL**（V2__add_{module}_module.sql）
+7. **实现业务逻辑**（Controller、Service、Mapper、页面组件）
+8. **启动验证**
 
 ### 5.3 验证步骤
 
@@ -423,14 +473,26 @@ cd framework/eureka && mvn spring-boot:run
 # 2. 启动 Gateway
 cd framework/gateway && mvn spring-boot:run
 
-# 3. 启动新模块后端
+# 3. 启动新模块后端（会自动执行 Flyway 迁移）
 cd {module}/backend && mvn spring-boot:run
 
-# 4. 启动新模块前端
+# 4. 验证菜单配置是否插入成功
+mysql -h localhost -u root -p'Password123@mysql' -e \
+  "SELECT * FROM metersphere.system_parameter WHERE param_key LIKE 'metersphere.module.%';"
+
+# 5. 启动新模块前端
 cd {module}/frontend && npm run serve
 
-# 5. 访问 http://localhost:8080/#/{module}
+# 6. 访问 http://localhost:8080/#/{module}
+# 7. 检查左侧菜单是否显示新模块
 ```
+
+**验证清单**：
+- ✅ Eureka 控制台显示服务已注册（http://localhost:8761）
+- ✅ 数据库 system_parameter 表中有模块配置记录
+- ✅ 主应用左侧菜单显示新模块
+- ✅ 点击菜单可以正常跳转到新模块页面
+- ✅ 新模块页面样式正常，功能可用
 
 ---
 
@@ -443,6 +505,54 @@ cd {module}/frontend && npm run serve
 | 路由不匹配 | 路由前缀与服务名不一致 | 检查 router/index.js 和 application.properties |
 | 样式丢失 | 未导入 metersphere-frontend 样式 | 检查 main.js 中的样式导入 |
 | 跨域错误 | devServer.headers 未配置 | 检查 vue.config.js 中的 CORS 配置 |
+| **左侧菜单不显示** | **未插入 system_parameter 配置** | **检查 Flyway 迁移脚本是否执行成功** |
+| **菜单配置未生效** | **param_key 命名错误** | **检查驼峰命名是否正确（如 analyticsStat）** |
+
+### 6.1 菜单不显示问题详细排查
+
+**症状**：新模块启动成功，但左侧菜单不显示
+
+**排查步骤**：
+
+1. **检查数据库配置**：
+```sql
+-- 查询所有模块配置
+SELECT * FROM metersphere.system_parameter 
+WHERE param_key LIKE 'metersphere.module.%';
+
+-- 检查新模块配置是否存在
+SELECT * FROM metersphere.system_parameter 
+WHERE param_key = 'metersphere.module.{moduleCamelCase}';
+```
+
+2. **检查 Flyway 执行状态**：
+```sql
+-- 查看 Flyway 迁移历史
+SELECT * FROM metersphere.flyway_schema_history 
+ORDER BY installed_on DESC LIMIT 10;
+
+-- 检查新模块的迁移脚本是否执行
+SELECT * FROM metersphere.flyway_schema_history 
+WHERE script LIKE '%{module}%';
+```
+
+3. **手动插入配置**（如果 Flyway 未执行）：
+```sql
+INSERT INTO metersphere.system_parameter (param_key, param_value, type, sort)
+VALUES ('metersphere.module.{moduleCamelCase}', 'ENABLE', 'text', 1)
+ON DUPLICATE KEY UPDATE param_value = 'ENABLE';
+```
+
+4. **重启服务**：
+```bash
+# 重启 Gateway（菜单配置由 Gateway 读取）
+cd framework/gateway && mvn spring-boot:run
+```
+
+5. **清除浏览器缓存**：
+- 按 `Ctrl+Shift+Delete`（Windows）或 `Cmd+Shift+Delete`（Mac）
+- 清除缓存和 Cookie
+- 重新登录
 
 ---
 
