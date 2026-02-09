@@ -35,7 +35,7 @@
         @order="initTableData"
         ref="table"
       >
-        <ms-table-column :label="$t('commons.id')" prop="num" sortable>
+        <ms-table-column :label="$t('commons.id')" prop="num" sortable="custom">
         </ms-table-column>
 
         <ms-table-column :label="$t('commons.name')" prop="name">
@@ -57,24 +57,27 @@
           :label="$t('commons.tag')"
           prop="tags"
           sortable="custom"
-          min-width="120"
+          min-width="180"
           :show-overflow-tooltip="false"
         >
           <template v-slot:default="scope">
-            <el-tooltip class="item" effect="dark" placement="top">
+            <el-tooltip class="item" effect="dark" placement="top" v-if="scope.row.tags && scope.row.tags.length > 0">
               <div v-html="getTagToolTips(scope.row.tags)" slot="content"></div>
               <div class="oneLine">
-                <ms-tag
-                  v-for="(itemName, index) in scope.row.tags"
+                <ms-single-tag
+                  v-for="(itemName, index) in parseColumnTag(scope.row.tags)"
                   :key="index"
                   type="success"
                   effect="plain"
-                  :show-tooltip="scope.row.tags && scope.row.tags.length === 1 && itemName.length * 12 <= 100"
+                  :show-tooltip="
+                    scope.row.tags.length === 1 && itemName.length * 12 <= 100
+                  "
                   :content="itemName"
                   style="margin-left: 0px; margin-right: 2px"
                 />
               </div>
             </el-tooltip>
+            <span v-else>-</span>
           </template>
         </ms-table-column>
 
@@ -111,6 +114,8 @@ import MsNodeTree from "metersphere-frontend/src/components/module/MsNodeTree";
 import PriorityTableItem from "@/business/common/tableItems/planview/PriorityTableItem";
 import TypeTableItem from "@/business/common/tableItems/planview/TypeTableItem";
 import MsTag from "metersphere-frontend/src/components/MsTag";
+import MsSingleTag from "metersphere-frontend/src/components/new-ui/MsSingleTag";
+import { getTagToolTips, parseColumnTag } from "@/business/case/test-case";
 import { getTestCaseRelateIssue } from "@/api/testCase";
 import { testCaseNodeListProject } from "@/api/test-case-node";
 
@@ -128,6 +133,7 @@ export default {
     MsTableColumn,
     MsTable,
     MsTag,
+    MsSingleTag,
   },
   data() {
     return {
@@ -227,18 +233,10 @@ export default {
       this.projectId = projectId;
     },
     getTagToolTips(tags) {
-      try {
-        let showTips = '';
-        if (tags) {
-          tags.forEach((item) => {
-            showTips += item + ',';
-          });
-          return showTips.substr(0, showTips.length - 1);
-        }
-        return '';
-      } catch (e) {
-        return '';
-      }
+      return getTagToolTips(tags);
+    },
+    parseColumnTag(tags) {
+      return parseColumnTag(tags);
     },
   },
 };
