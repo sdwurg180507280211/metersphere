@@ -10,7 +10,7 @@ SET SESSION innodb_lock_wait_timeout = 7200;
 -- type: text
 -- sort: 1
 INSERT INTO system_parameter (param_key, param_value, type, sort)
-VALUES ('metersphere.module.analytics-stat', 'ENABLE', 'text', 1)
+VALUES ('metersphere.module.analyticsStat', 'ENABLE', 'text', 1)
 ON DUPLICATE KEY UPDATE param_value = 'ENABLE';
 
 SET SESSION innodb_lock_wait_timeout = DEFAULT;
