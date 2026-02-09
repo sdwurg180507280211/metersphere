@@ -61,7 +61,7 @@
           :show-overflow-tooltip="false"
         >
           <template v-slot:default="scope">
-            <el-tooltip class="item" effect="dark" placement="top" v-if="scope.row.tags && scope.row.tags.length > 0">
+            <el-tooltip class="item" effect="dark" placement="top">
               <div v-html="getTagToolTips(scope.row.tags)" slot="content"></div>
               <div class="oneLine">
                 <ms-single-tag
@@ -77,7 +77,6 @@
                 />
               </div>
             </el-tooltip>
-            <span v-else>-</span>
           </template>
         </ms-table-column>
 
