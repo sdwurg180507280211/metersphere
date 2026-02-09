@@ -1052,6 +1052,7 @@
         <include refid="io.metersphere.base.mapper.TestCaseMapper.Base_Column_List"/>
         from test_case
         <include refid="notInQueryWhereCondition"></include>
+        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.orders"/>
     </select>
     <select id="getTestCaseByIds" resultType="io.metersphere.dto.TestCaseDTO">
         select
