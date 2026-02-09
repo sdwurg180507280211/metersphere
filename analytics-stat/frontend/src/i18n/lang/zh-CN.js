@@ -14,6 +14,7 @@ import mf from "metersphere-frontend/src/i18n/lang/zh-CN";
 // 本模块特有的翻译
 const message = {
   analytics: {
+    home: "工作台",
     dashboard: "数据概览",
     sql_console: "SQL查询台",
     data_dictionary: "数据字典",
@@ -30,6 +31,9 @@ const message = {
     query_failed: "查询失败",
     rows_affected: "影响行数",
     execution_time: "执行时间"
+  },
+  commons: {
+    analytics_stat: "分析统计"
   }
 };
 

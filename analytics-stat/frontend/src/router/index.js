@@ -57,8 +57,8 @@ Analytics.children.forEach(item => {
  * 3. Analytics 模块路由（使用 Layout 布局）
  */
 export const constantRoutes = [
-  // 根路径重定向到数据概览
-  { path: "/", redirect: "/analytics-stat/dashboard" },
+  // 根路径重定向到工作台首页
+  { path: "/", redirect: "/analytics-stat/home" },
   
   // 登录页 - 使用 metersphere-frontend 的统一登录组件
   // hidden: true 表示不在菜单中显示

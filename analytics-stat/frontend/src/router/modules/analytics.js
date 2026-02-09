@@ -5,7 +5,7 @@
  * Layout 组件提供：顶部导航栏、侧边菜单、面包屑等统一 UI
  * 
  * 路由结构：
- * - /analytics-stat/dashboard - 数据概览
+ * - /analytics-stat/home - 工作台首页
  * - /analytics-stat/sql-console - SQL 查询台
  * - /analytics-stat/data-dictionary - 数据字典
  */
@@ -14,14 +14,17 @@ import Layout from "metersphere-frontend/src/business/app-layout";
 export default {
   path: "/analytics-stat",
   name: "analytics-stat",
-  redirect: "/analytics-stat/dashboard",
+  redirect: "/analytics-stat/home",
   component: Layout,  // 使用统一布局组件
   children: [
     {
-      path: "dashboard",
-      name: "Dashboard",
-      component: () => import("@/views/Dashboard.vue"),
-      meta: { title: "数据概览" }
+      path: "home",
+      name: "analyticsStatHome",
+      component: () => import("@/business/home/AnalyticsStatHome.vue"),
+      meta: { 
+        title: "工作台",
+        requiresAuth: true
+      }
     },
     {
       path: "sql-console",
