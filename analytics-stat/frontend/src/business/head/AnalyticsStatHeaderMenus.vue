@@ -43,7 +43,7 @@ export default {
       // 二级导航菜单配置
       menus: [
         {
-          path: '/analytics-stat/dashboard',
+          path: '/analytics-stat/home',
           name: '数据概览'
         },
         {
@@ -74,8 +74,8 @@ export default {
      * @param {string} path - 当前路由路径
      */
     updateActivePath(path) {
-      if (path.indexOf('/analytics-stat/dashboard') >= 0 || path === '/analytics-stat') {
-        this.pathName = '/analytics-stat/dashboard';
+      if (path.indexOf('/analytics-stat/home') >= 0 || path === '/analytics-stat') {
+        this.pathName = '/analytics-stat/home';
       } else if (path.indexOf('/analytics-stat/sql-console') >= 0) {
         this.pathName = '/analytics-stat/sql-console';
       } else if (path.indexOf('/analytics-stat/data-dictionary') >= 0) {

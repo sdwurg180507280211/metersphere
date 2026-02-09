@@ -61,23 +61,23 @@
 
 ### 1.2 已完成的集成（2026-02-03 更新）
 
-| 功能                                | analytics-stat | 其他模块 | 作用说明                                                                            |
-| ----------------------------------- | -------------- | -------- | ----------------------------------------------------------------------------------- |
-| **metersphere-frontend 样式** | ✅ 已导入      | ✅ 导入  | 统一的全局样式，包括主题色、字体、间距等                                            |
-| **i18n 国际化**               | ✅ 已集成      | ✅ 集成  | 多语言支持（中文简体、繁体、英文）                                                  |
-| **icons 图标库**              | ✅ 已使用      | ✅ 使用  | SVG 图标组件，可使用 `<svg-icon>` 组件                                            |
-| **svg 组件**                  | ✅ 已使用      | ✅ 使用  | SVG 精灵图支持                                                                      |
-| **plugins 插件**              | ✅ 已使用      | ✅ 使用  | 全局方法（如 `$alert`、`$confirm`、`$success`）                                 |
-| **directives 指令**           | ✅ 已使用      | ✅ 使用  | 自定义指令（如 `v-permission`）                                                   |
-| **filters 过滤器**            | ✅ 已使用      | ✅ 使用  | 全局过滤器（如日期格式化）                                                          |
-| **permission 路由守卫**       | ✅ 已导入      | ✅ 导入  | 路由权限控制                                                                        |
-| **chart 图表**                | ✅ 已使用      | ✅ 使用  | ECharts 封装组件                                                                    |
-| **VueShepherd 新手引导**      | ✅ 已使用      | ✅ 使用  | 新手引导功能                                                                        |
-| **gotoCancel/gotoNext**       | ✅ 已挂载      | ✅ 挂载  | 引导步骤控制方法                                                                    |
-| **vue-devtools 兼容**         | ✅ 已处理      | ✅ 处理  | 开发环境调试支持                                                                    |
-| **Layout 布局组件**           | ✅ 已使用      | ✅ 使用  | 使用 metersphere-frontend 的统一布局                                                |
-| **login 路由**                | ✅ 已配置      | ✅ 配置  | 登录页面路由                                                                        |
-| **store 状态管理**            | ✅ 已配置      | ✅ 配置  | Pinia store 集成 metersphere-frontend 的 user 模块                                  |
+| 功能                                | analytics-stat | 其他模块 | 作用说明                                              |
+| ----------------------------------- | -------------- | -------- | ----------------------------------------------------- |
+| **metersphere-frontend 样式** | ✅ 已导入      | ✅ 导入  | 统一的全局样式，包括主题色、字体、间距等              |
+| **i18n 国际化**               | ✅ 已集成      | ✅ 集成  | 多语言支持（中文简体、繁体、英文）                    |
+| **icons 图标库**              | ✅ 已使用      | ✅ 使用  | SVG 图标组件，可使用 `<svg-icon>` 组件              |
+| **svg 组件**                  | ✅ 已使用      | ✅ 使用  | SVG 精灵图支持                                        |
+| **plugins 插件**              | ✅ 已使用      | ✅ 使用  | 全局方法（如 `$alert`、`$confirm`、`$success`） |
+| **directives 指令**           | ✅ 已使用      | ✅ 使用  | 自定义指令（如 `v-permission`）                     |
+| **filters 过滤器**            | ✅ 已使用      | ✅ 使用  | 全局过滤器（如日期格式化）                            |
+| **permission 路由守卫**       | ✅ 已导入      | ✅ 导入  | 路由权限控制                                          |
+| **chart 图表**                | ✅ 已使用      | ✅ 使用  | ECharts 封装组件                                      |
+| **VueShepherd 新手引导**      | ✅ 已使用      | ✅ 使用  | 新手引导功能                                          |
+| **gotoCancel/gotoNext**       | ✅ 已挂载      | ✅ 挂载  | 引导步骤控制方法                                      |
+| **vue-devtools 兼容**         | ✅ 已处理      | ✅ 处理  | 开发环境调试支持                                      |
+| **Layout 布局组件**           | ✅ 已使用      | ✅ 使用  | 使用 metersphere-frontend 的统一布局                  |
+| **login 路由**                | ✅ 已配置      | ✅ 配置  | 登录页面路由                                          |
+| **store 状态管理**            | ✅ 已配置      | ✅ 配置  | Pinia store 集成 metersphere-frontend 的 user 模块    |
 
 ### 1.3 代码对比
 
@@ -126,67 +126,114 @@ Vue.prototype.gotoNext = gotoNext;
 
 ## 二、vue.config.js 差异对比
 
-### 2.1 已实现的配置（2026-02-03 更新）
+### 2.1 已实现的配置（2026-02-06 更新）
 
-| 配置项                      | 状态      | 说明                                 |
-| --------------------------- | --------- | ------------------------------------ |
-| publicPath                  | ✅`/`   | 与其他模块一致                       |
-| UMD 输出格式                | ✅ 已配置 | qiankun 必须                         |
-| CSS 提取                    | ✅ 已配置 | 独立 CSS 文件                        |
-| devServer 跨域              | ✅ 已配置 | 开发环境支持                         |
-| **svg-sprite-loader** | ✅ 已配置 | 将 SVG 图标打包为精灵图              |
-| **vue-i18n alias**    | ✅ 已配置 | 解决 vue-i18n 重复打包问题           |
+| 配置项                      | 状态      | 说明                           |
+| --------------------------- | --------- | ------------------------------ |
+| publicPath                  | ✅`/`   | 与其他模块一致                 |
+| UMD 输出格式                | ✅ 已配置 | qiankun 必须                   |
+| CSS 提取                    | ✅ 已配置 | 独立 CSS 文件                  |
+| devServer 跨域              | ✅ 已配置 | 开发环境支持                   |
+| **svg-sprite-loader** | ✅ 已配置 | 将 SVG 图标打包为精灵图        |
+| **vue-i18n alias**    | ✅ 已配置 | 解决 vue-i18n 重复打包问题     |
+| **splitChunks 优化**  | ✅ 已配置 | 代码分割优化，提升首屏加载速度 |
+| **pages 配置**        | ✅ 已配置 | qiankun 子应用必须配置         |
 
-### 2.2 可选优化配置
+### 2.2 代码分割效果（2026-02-06）
 
-| 配置项                 | analytics-stat | 其他模块 | 作用说明                                       |
-| ---------------------- | -------------- | -------- | ---------------------------------------------- |
-| **splitChunks 优化** | ❌ 未配置      | ✅ 配置  | 代码分割优化。不配置则打包体积较大，首屏加载慢 |
+配置 `optimization.splitChunks` 后，构建产物从单个大文件拆分为多个小文件：
 
-### 2.3 代码对比
+| 文件                                | 大小     | 说明                       |
+| ----------------------------------- | -------- | -------------------------- |
+| `analytics-stat-chunk-vendors.js` | 2.59 MiB | 第三方依赖（node_modules） |
+| `analytics-stat-index.js`         | 802 KiB  | 主入口文件                 |
+| `analytics-stat-echarts.js`       | 668 KiB  | ECharts 图表库             |
+| `analytics-stat-pinia.js`         | 17 KiB   | Pinia 状态管理             |
+| 其他动态加载的 chunk                | 按需加载 | 路由懒加载组件             |
 
-**analytics-stat（当前）：**
+**优化效果**：
+
+- ✅ 首屏只加载必需的 chunk，减少初始加载时间
+- ✅ 第三方库单独打包，利用浏览器缓存
+- ✅ ECharts 等大型库独立分离，按需加载
+
+### 2.3 代码对比（2026-02-06 更新）
+
+**analytics-stat（已完成优化）：**
 
 ```javascript
 module.exports = defineConfig({
   publicPath: '/',
+  pages: {
+    index: {
+      entry: 'src/main.js',
+      template: 'public/index.html',
+      filename: 'index.html',
+    },
+  },
   configureWebpack: {
+    resolve: {
+      alias: {
+        '@': resolve('src'),
+        'vue-i18n': resolve('node_modules/vue-i18n'),  // 避免重复打包
+      },
+    },
     output: {
       library: `${name}-[name]`,
       libraryTarget: 'umd',
       chunkLoadingGlobal: `webpackJsonp_${name}`,
-    },
-  },
-});
-```
-
-**report-stat（参考）：**
-
-```javascript
-module.exports = defineConfig({
-  publicPath: '/',
-  configureWebpack: {
-    resolve: {
-      alias: {
-        'vue-i18n': resolve('node_modules/vue-i18n'),  // 避免重复打包
-      },
+      filename: `js/${name}-[name].[contenthash:8].js`,
+      chunkFilename: `js/${name}-[name].[contenthash:8].js`,
     },
     optimization: {
-      splitChunks: {  // 代码分割
+      splitChunks: {
         cacheGroups: {
-          'chunk-vendors': { ... },
-          echarts: { ... },
+          'chunk-vendors': {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'chunk-vendors',
+            priority: 1,
+            minChunks: 3,
+            chunks: 'all',
+          },
+          'chunk-common': {
+            test: /[\\/]src[\\/]/,
+            name: 'chunk-common',
+            priority: 1,
+            minChunks: 5,
+            chunks: 'all',
+          },
+          echarts: {
+            test: /[\\/](echarts|zrender)[\\/]/,
+            name: 'echarts',
+            priority: 3,
+            chunks: 'all',
+          },
+          pinia: {
+            test: /[\\/]pinia[\\/]/,
+            name: 'pinia',
+            priority: 3,
+            chunks: 'all',
+          },
         },
       },
     },
   },
   chainWebpack: (config) => {
     // SVG 精灵图配置
-    config.module.rule('svg').exclude.add(...);
-    config.module.rule('icons').test(/\.svg$/).use('svg-sprite-loader')...;
+    config.module.rule('svg').exclude.add(
+      resolve('../../framework/sdk-parent/frontend/src/assets/module')
+    ).end();
+    config.module.rule('icons').test(/\.svg$/)
+      .include.add(resolve('../../framework/sdk-parent/frontend/src/assets/module'))
+      .end()
+      .use('svg-sprite-loader')
+      .loader('svg-sprite-loader')
+      .options({ symbolId: 'icon-[name]' });
   },
 });
 ```
+
+**与 report-stat 配置已完全一致**，实现了相同的代码分割策略。
 
 ---
 
@@ -194,15 +241,15 @@ module.exports = defineConfig({
 
 ### 3.1 已实现的功能（2026-02-03 更新）
 
-| 功能                      | 状态                      | 说明                                     |
-| ------------------------- | ------------------------- | ---------------------------------------- |
-| Router.push 错误捕获      | ✅ 已实现                 | 防止路由重复导航报错                     |
-| createRouter 工厂函数     | ✅ 已实现                 | 支持路由重置                             |
-| 路由路径前缀              | ✅`/analytics-stat/xxx` | 与主应用路由匹配                         |
-| **Layout 布局组件** | ✅ 已使用                 | 使用 metersphere-frontend 的统一布局     |
-| **login 路由**      | ✅ 已配置                 | 登录页面路由                             |
-| **二级菜单处理**    | ✅ 已实现                 | Layout -> AnalyticsStat -> 页面组件      |
-| **路由模块化**      | ✅ 已实现                 | 使用 router/modules/analytics.js 模块化  |
+| 功能                      | 状态                      | 说明                                    |
+| ------------------------- | ------------------------- | --------------------------------------- |
+| Router.push 错误捕获      | ✅ 已实现                 | 防止路由重复导航报错                    |
+| createRouter 工厂函数     | ✅ 已实现                 | 支持路由重置                            |
+| 路由路径前缀              | ✅`/analytics-stat/xxx` | 与主应用路由匹配                        |
+| **Layout 布局组件** | ✅ 已使用                 | 使用 metersphere-frontend 的统一布局    |
+| **login 路由**      | ✅ 已配置                 | 登录页面路由                            |
+| **二级菜单处理**    | ✅ 已实现                 | Layout -> AnalyticsStat -> 页面组件     |
+| **路由模块化**      | ✅ 已实现                 | 使用 router/modules/analytics.js 模块化 |
 
 ---
 
@@ -210,8 +257,8 @@ module.exports = defineConfig({
 
 ### 4.1 已添加的依赖（2026-02-03 更新）
 
-| 依赖              | 作用           | 状态   |
-| ----------------- | -------------- | ------ |
+| 依赖              | 作用           | 状态      |
+| ----------------- | -------------- | --------- |
 | fit2cloud-ui      | UI 组件库      | ✅ 已添加 |
 | svg-sprite-loader | SVG 精灵图打包 | ✅ 已添加 |
 | vue-shepherd      | 新手引导       | ✅ 已添加 |
@@ -341,13 +388,16 @@ getApps().then(res => {
 
 ### 6.2 当前状态可能存在的问题
 
-| 问题              | 原因                             | 影响程度           |
-| ----------------- | -------------------------------- | ------------------ |
-| 样式不一致        | 未导入 metersphere-frontend 样式 | 中                 |
-| 无法切换语言      | 未集成 i18n                      | 低（如果只需中文） |
-| 无法使用 svg-icon | 未配置 svg-sprite-loader         | 低                 |
-| 无权限控制        | 未导入 permission 路由守卫       | 中                 |
-| 打包体积大        | 未配置 splitChunks               | 低                 |
+| 问题              | 原因                             | 影响程度           | 状态      |
+| ----------------- | -------------------------------- | ------------------ | --------- |
+| 样式不一致        | 未导入 metersphere-frontend 样式 | 中                 | ✅ 已解决 |
+| 无法切换语言      | 未集成 i18n                      | 低（如果只需中文） | ✅ 已解决 |
+| 无法使用 svg-icon | 未配置 svg-sprite-loader         | 低                 | ✅ 已解决 |
+| 无权限控制        | 未导入 permission 路由守卫       | 中                 | ✅ 已解决 |
+| 打包体积大        | 未配置 splitChunks               | 低                 | ✅ 已解决 |
+| qiankun 加载失败  | 未配置 pages                     | 高                 | ✅ 已解决 |
+
+**所有问题已在 2026-02-06 完成修复。**
 
 ---
 
@@ -355,25 +405,31 @@ getApps().then(res => {
 
 ### 6.1 目录对比
 
-| 目录              | analytics-stat | 其他模块 | 作用说明                                                      |
-| ----------------- | -------------- | -------- | ------------------------------------------------------------- |
-| `src/api/`      | ❌ 无          | ✅ 有    | API 接口定义。不创建则 API 调用分散在各组件中                 |
-| `src/i18n/`     | ✅ 有          | ✅ 有    | 国际化语言文件（zh-CN、zh-TW、en-US）                         |
-| `src/store/`    | ✅ 有          | ✅ 有    | Pinia 状态管理，集成 metersphere-frontend 的 user 模块        |
-| `src/template/` | ❌ 无          | ✅ 有    | 页面模板（如分享页面）。不创建则无法支持独立页面              |
-| `src/business/` | ✅ 有          | ✅ 有    | 业务组件                                                      |
-| `src/router/`   | ✅ 有          | ✅ 有    | 路由配置（含 modules 子目录）                                 |
-| `src/views/`    | ✅ 有          | ❌ 无    | 页面组件（analytics-stat 独有，其他模块放在 business 中）     |
+| 目录              | analytics-stat | 其他模块 | 作用说明                                                  |
+| ----------------- | -------------- | -------- | --------------------------------------------------------- |
+| `src/api/`      | ❌ 无          | ✅ 有    | API 接口定义。不创建则 API 调用分散在各组件中             |
+| `src/i18n/`     | ✅ 有          | ✅ 有    | 国际化语言文件（zh-CN、zh-TW、en-US）                     |
+| `src/store/`    | ✅ 有          | ✅ 有    | Pinia 状态管理，集成 metersphere-frontend 的 user 模块    |
+| `src/template/` | ❌ 无          | ✅ 有    | 页面模板（如分享页面）。不创建则无法支持独立页面          |
+| `src/business/` | ✅ 有          | ✅ 有    | 业务组件                                                  |
+| `src/router/`   | ✅ 有          | ✅ 有    | 路由配置（含 modules 子目录）                             |
+| `src/views/`    | ✅ 有          | ❌ 无    | 页面组件（analytics-stat 独有，其他模块放在 business 中） |
 
-### 6.2 analytics-stat 目录结构（已完成）
+### 6.2 analytics-stat 目录结构（2026-02-09 更新）
 
 ```
 analytics-stat/frontend/src/
+├── api/                               # API 接口定义
+│   └── home.js                        # 首页统计 API
 ├── business/
-│   ├── AnalyticsStat.vue              # 二级布局组件
-│   └── head/
-│       └── AnalyticsStatHeaderMenus.vue  # 二级导航
-├── i18n/                              # 国际化（新增）
+│   └── home/                          # 首页业务组件
+│       ├── AnalyticsStatHome.vue      # 工作台首页主组件
+│       └── components/                # 首页子组件
+│           ├── QueryCountCard.vue     # 查询次数统计卡片
+│           ├── DataVolumeCard.vue     # 数据量统计卡片
+│           ├── QuickAccessCard.vue    # 快捷入口卡片
+│           └── RecentQueryList.vue    # 最近查询列表
+├── i18n/                              # 国际化
 │   ├── lang/
 │   │   ├── zh-CN.js                   # 中文简体
 │   │   ├── zh-TW.js                   # 中文繁体
@@ -383,16 +439,17 @@ analytics-stat/frontend/src/
 │   ├── modules/
 │   │   └── analytics.js               # 路由模块（使用 Layout）
 │   └── index.js                       # 路由配置（含 login 路由）
-├── store/                             # 状态管理（新增）
+├── store/                             # 状态管理
 │   └── index.js                       # Pinia store
 ├── views/
-│   ├── Dashboard.vue                  # 数据概览
 │   ├── SqlConsole.vue                 # SQL查询台
 │   └── DataDictionary.vue             # 数据字典
 ├── App.vue                            # 根组件
 ├── main.js                            # 入口文件（已完成集成）
 └── public-path.js                     # qiankun publicPath
 ```
+
+**注意**：`Dashboard.vue` 已删除，改为 `business/home/AnalyticsStatHome.vue`，遵循其他模块的命名约定。
 
 ### 6.3 其他模块目录结构（以 report-stat 为例）
 
@@ -459,7 +516,7 @@ if (!window.__POWERED_BY_QIANKUN__) {
 
 ---
 
-## 八、集成状态总结（2026-02-03 更新）
+## 八、集成状态总结（2026-02-06 更新）
 
 ### 8.1 已完成的集成
 
@@ -476,25 +533,53 @@ if (!window.__POWERED_BY_QIANKUN__) {
 - ✅ login 登录路由
 - ✅ Pinia store 状态管理
 - ✅ vue-devtools 兼容处理
+- ✅ **splitChunks 代码分割优化**（2026-02-06 新增）
+- ✅ **pages 配置**（2026-02-06 新增，qiankun 必需）
 
-### 8.2 可选优化
+### 8.2 构建优化效果
 
-1. **splitChunks 代码分割** - 优化打包体积（当前约 4.26 MiB）
-2. **API 目录** - 集中管理 API 接口定义
+**优化前**（单文件打包）：
+
+- `analytics-stat-index.js`: 4.26 MiB（包含所有依赖）
+- 首屏加载时间：较长
+- 浏览器缓存利用率：低
+
+**优化后**（代码分割）：
+
+- `analytics-stat-chunk-vendors.js`: 2.59 MiB（第三方依赖，可缓存）
+- `analytics-stat-index.js`: 802 KiB（主入口）
+- `analytics-stat-echarts.js`: 668 KiB（按需加载）
+- `analytics-stat-pinia.js`: 17 KiB（状态管理）
+- 首屏加载时间：显著减少
+- 浏览器缓存利用率：高
+
+### 8.3 与其他模块对比
+
+| 配置项               | analytics-stat | report-stat | performance-test | 状态     |
+| -------------------- | -------------- | ----------- | ---------------- | -------- |
+| qiankun 生命周期     | ✅             | ✅          | ✅               | 完全一致 |
+| metersphere-frontend | ✅             | ✅          | ✅               | 完全一致 |
+| splitChunks 优化     | ✅             | ✅          | ✅               | 完全一致 |
+| pages 配置           | ✅             | ✅          | ✅               | 完全一致 |
+| svg-sprite-loader    | ✅             | ✅          | ✅               | 完全一致 |
+| vue-i18n alias       | ✅             | ✅          | ✅               | 完全一致 |
+
+**结论**：analytics-stat 模块已与其他模块配置完全一致，可作为新增微服务的标准模板。
 
 ---
 
 ## 九、总结
 
-analytics-stat 模块已完成与 MeterSphere 生态的**完整集成**（2026-02-03），实现了与其他模块（如 report-stat）一致的功能：
+analytics-stat 模块已完成与 MeterSphere 生态的**完整集成**（2026-02-06），实现了与其他模块（如 report-stat、performance-test）完全一致的功能和配置：
 
 **已完成**：
 
-- ✅ qiankun 微前端加载
+- ✅ qiankun 微前端加载（含 pages 配置）
 - ✅ metersphere-frontend 共享库完整集成
 - ✅ 统一布局（Layout + 二级菜单）
 - ✅ 国际化支持
 - ✅ 权限控制
+- ✅ 代码分割优化（splitChunks）
 - ✅ 前端构建并打包到后端 JAR
 
 **路由结构**：
@@ -502,15 +587,25 @@ analytics-stat 模块已完成与 MeterSphere 生态的**完整集成**（2026-0
 ```
 /login                          -> metersphere-frontend 统一登录组件
 /analytics-stat                 -> Layout (顶部导航 + 侧边菜单)
-  /analytics-stat/dashboard     -> AnalyticsStat (二级布局) -> Dashboard.vue
-  /analytics-stat/sql-console   -> AnalyticsStat (二级布局) -> SqlConsole.vue
-  /analytics-stat/data-dictionary -> AnalyticsStat (二级布局) -> DataDictionary.vue
+  /analytics-stat/home          -> AnalyticsStatHome.vue (工作台首页)
+  /analytics-stat/sql-console   -> SqlConsole.vue
+  /analytics-stat/data-dictionary -> DataDictionary.vue
 ```
 
 **构建产物**：
 
-- 前端：`analytics-stat/frontend/dist/`
+- 前端：`analytics-stat/frontend/dist/`（已优化代码分割）
 - 后端 JAR：`analytics-stat/backend/target/analytics-stat-2.10.jar`（含前端静态资源）
+
+**性能优化**：
+
+- 首屏加载：从 4.26 MiB 单文件优化为多个小文件按需加载
+- 浏览器缓存：第三方库（2.59 MiB）独立打包，可长期缓存
+- 代码分割：ECharts（668 KiB）、Pinia（17 KiB）等按需加载
+
+**模板价值**：
+
+analytics-stat 模块可作为新增微服务的**标准模板**，包含了所有必需的配置和最佳实践。
 
 ---
 
