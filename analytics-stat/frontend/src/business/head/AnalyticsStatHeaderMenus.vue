@@ -1,8 +1,10 @@
 <template>
   <div id="menu-bar" v-if="isRouterAlive">
     <el-row type="flex">
+      <!-- 项目切换组件 -->
+      <project-switch :project-name="currentProject" />
       <!-- 二级导航菜单 -->
-      <el-col :span="24">
+      <el-col :span="14">
         <el-menu
           class="header-menu"
           :unique-opened="true"
@@ -15,9 +17,13 @@
             :key="menu.path"
             :index="menu.path"
           >
-            {{ menu.name }}
+            {{ $t(menu.i18nKey) }}
           </el-menu-item>
         </el-menu>
+      </el-col>
+      <!-- 右上角按钮组（用户头像、语言切换、工作空间、任务中心、通知、帮助） -->
+      <el-col :span="10">
+        <ms-header-right-menus />
       </el-col>
     </el-row>
   </div>
@@ -25,34 +31,52 @@
 
 <script>
 /**
- * 分析统计二级导航菜单组件
+ * 分析统计顶部导航菜单组件
  * 
  * 功能：
- * 1. 显示模块内的二级导航菜单
- * 2. 监听路由变化，自动高亮当前菜单项
- * 3. 支持路由跳转
+ * 1. 左侧：项目切换（ProjectSwitch）
+ * 2. 中间：二级导航菜单（数据概览、SQL查询台、数据字典）
+ * 3. 右侧：公共按钮组（MsHeaderRightMenus）
+ *    - 用户头像
+ *    - 语言切换
+ *    - 工作空间切换
+ *    - 任务中心
+ *    - 通知
+ *    - 帮助引导
+ * 
+ * 参考：report-stat/frontend/src/business/header/ReportStatisticsHeaderMenus.vue
  */
+import ProjectSwitch from "metersphere-frontend/src/components/head/ProjectSwitch";
+import MsHeaderRightMenus from "metersphere-frontend/src/components/layout/HeaderRightMenus";
+import { PROJECT_NAME } from "metersphere-frontend/src/utils/constants";
+
 export default {
   name: 'AnalyticsStatHeaderMenus',
+  components: {
+    ProjectSwitch,
+    MsHeaderRightMenus
+  },
   data() {
     return {
       // 路由是否存活（用于强制刷新）
       isRouterAlive: true,
+      // 当前项目名称
+      currentProject: sessionStorage.getItem(PROJECT_NAME),
       // 当前激活的路径
       pathName: '',
-      // 二级导航菜单配置
+      // 二级导航菜单配置（使用 i18n key，支持多语言切换）
       menus: [
         {
           path: '/analytics/home',
-          name: '数据概览'
+          i18nKey: 'analytics.menu.home'
         },
         {
           path: '/analytics/sql-console',
-          name: 'SQL查询台'
+          i18nKey: 'analytics.menu.sql_console'
         },
         {
           path: '/analytics/data-dictionary',
-          name: '数据字典'
+          i18nKey: 'analytics.menu.data_dictionary'
         }
       ]
     };
@@ -83,6 +107,15 @@ export default {
       } else {
         this.pathName = path;
       }
+    },
+    /**
+     * 强制刷新路由
+     */
+    reload() {
+      this.isRouterAlive = false;
+      this.$nextTick(function () {
+        this.isRouterAlive = true;
+      });
     }
   }
 };
@@ -99,12 +132,6 @@ export default {
 }
 
 .el-menu-item {
-  padding: 0 15px;
-  height: 40px;
-  line-height: 40px;
-}
-
-.el-menu-item.is-active {
-  border-bottom: 2px solid #409EFF;
+  padding: 0 10px;
 }
 </style>
