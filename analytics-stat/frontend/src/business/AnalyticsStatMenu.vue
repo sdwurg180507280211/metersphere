@@ -40,17 +40,17 @@ export default {
       // 菜单配置
       menus: [
         {
-          index: '/analytics/home',
+          index: '/analytics-stat/home',
           title: '工作台',
           icon: 'el-icon-s-home'
         },
         {
-          index: '/analytics/sql-console',
+          index: '/analytics-stat/sql-console',
           title: 'SQL查询台',
           icon: 'el-icon-document'
         },
         {
-          index: '/analytics/data-dictionary',
+          index: '/analytics-stat/data-dictionary',
           title: '数据字典',
           icon: 'el-icon-collection'
         }

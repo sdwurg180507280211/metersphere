@@ -1,20 +1,20 @@
 /**
- * analytics 路由模块
+ * analytics-stat 路由模块
  * 
  * 使用 metersphere-frontend 的统一布局组件 Layout
  * Layout 组件提供：顶部导航栏、侧边菜单、面包屑等统一 UI
  * 
  * 路由结构：
- * - /analytics/home - 工作台首页
- * - /analytics/sql-console - SQL 查询台
- * - /analytics/data-dictionary - 数据字典
+ * - /analytics-stat/home - 工作台首页
+ * - /analytics-stat/sql-console - SQL 查询台
+ * - /analytics-stat/data-dictionary - 数据字典
  */
 import Layout from "metersphere-frontend/src/business/app-layout";
 
 export default {
-  path: "/analytics",
-  name: "analytics",
-  redirect: "/analytics/home",
+  path: "/analytics-stat",
+  name: "analytics-stat",
+  redirect: "/analytics-stat/home",
   component: Layout,  // 使用统一布局组件
   children: [
     {
