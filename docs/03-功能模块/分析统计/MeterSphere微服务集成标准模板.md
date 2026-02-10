@@ -187,29 +187,6 @@ public class {Module}Application {
 }
 ```
 
-**关键点说明**：
-
-1. **包名必须是 `io.metersphere`**
-   - ❌ 错误：`package io.metersphere.analyticsstat;`
-   - ✅ 正确：`package io.metersphere;`
-
-2. **为什么不能用子包名？**
-   - `@SpringBootApplication` 包含 `@ComponentScan`
-   - 默认扫描范围：当前包及其子包
-   - 如果启动类在 `io.metersphere.analyticsstat`，只会扫描 `io.metersphere.analyticsstat.*`
-   - SDK 的 Bean 在 `io.metersphere.service`、`io.metersphere.commons` 等包中
-   - 结果：SDK 的 Bean 无法被扫描到，导致注入失败
-
-3. **不需要手动配置 `@ComponentScan`**
-   - 使用标准包名 `io.metersphere` 后，Spring Boot 会自动扫描所有子包
-   - 包括：`io.metersphere.service`、`io.metersphere.commons`、`io.metersphere.controller` 等
-
-4. **其他模块的实现**
-   - `api-test`：`package io.metersphere;`
-   - `test-track`：`package io.metersphere;`
-   - `system-setting`：`package io.metersphere;`
-   - `analytics-stat`：`package io.metersphere;`（已重构）
-
 ### 3.4 application.properties
 
 ```properties
