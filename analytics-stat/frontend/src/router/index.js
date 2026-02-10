@@ -5,9 +5,9 @@
  * 
  * 路由结构：
  * - /login - 登录页（使用 metersphere-frontend 统一登录组件）
- * - /analytics-stat/dashboard - 数据概览
- * - /analytics-stat/sql-console - SQL 查询台
- * - /analytics-stat/data-dictionary - 数据字典
+ * - /analytics/dashboard - 数据概览
+ * - /analytics/sql-console - SQL 查询台
+ * - /analytics/data-dictionary - 数据字典
  * 
  * 布局说明：
  * - 使用 metersphere-frontend 的 Layout 组件作为统一布局
@@ -36,8 +36,8 @@ Vue.use(Router);
  * 2. AnalyticsStat 组件是二级布局（二级导航菜单 + 内容区域）
  * 3. 这段代码将路由结构从 Layout -> 页面组件 改为 Layout -> AnalyticsStat -> 页面组件
  * 
- * 处理前：/analytics-stat/dashboard -> Dashboard.vue
- * 处理后：/analytics-stat/dashboard -> AnalyticsStat.vue -> Dashboard.vue
+ * 处理前：/analytics/dashboard -> Dashboard.vue
+ * 处理后：/analytics/dashboard -> AnalyticsStat.vue -> Dashboard.vue
  * 
  * 这样可以在每个页面上方显示二级导航菜单
  */
@@ -58,7 +58,7 @@ Analytics.children.forEach(item => {
  */
 export const constantRoutes = [
   // 根路径重定向到工作台首页
-  { path: "/", redirect: "/analytics-stat/home" },
+  { path: "/", redirect: "/analytics/home" },
   
   // 登录页 - 使用 metersphere-frontend 的统一登录组件
   // hidden: true 表示不在菜单中显示
