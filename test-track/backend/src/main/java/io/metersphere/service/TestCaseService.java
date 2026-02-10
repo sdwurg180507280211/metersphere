@@ -687,16 +687,52 @@ public class TestCaseService {
             }
             List<TestCaseWithBLOBs> caseList = testCaseMapper.selectByExampleWithBLOBs(example);
 
-            // 如果上边字段全部相同，去检查 remark 和 steps
+            // 如果上边字段全部相同，去检查详细内容字段（根据步骤模式区分）
             if (!CollectionUtils.isEmpty(caseList)) {
                 String caseRemark = testCase.getRemark() == null ? StringUtils.EMPTY : testCase.getRemark();
-                String caseSteps = testCase.getSteps() == null ? StringUtils.EMPTY : testCase.getSteps();
                 String casePrerequisite = testCase.getPrerequisite() == null ? StringUtils.EMPTY : testCase.getPrerequisite();
+                
+                // 根据步骤模式决定比较哪些字段
+                String stepModel = testCase.getStepModel();
+                boolean isTextMode = "TEXT".equals(stepModel);
+                
+                // STEP 模式：比较 steps 字段（JSON格式）
+                String caseSteps = testCase.getSteps() == null ? StringUtils.EMPTY : testCase.getSteps();
+                
+                // TEXT 模式：比较 step_description 和 expected_result 字段
+                String caseStepDescription = testCase.getStepDescription() == null ? StringUtils.EMPTY : testCase.getStepDescription();
+                String caseExpectedResult = testCase.getExpectedResult() == null ? StringUtils.EMPTY : testCase.getExpectedResult();
+                
                 for (TestCaseWithBLOBs tc : caseList) {
-                    String steps = tc.getSteps() == null ? StringUtils.EMPTY : tc.getSteps();
                     String remark = tc.getRemark() == null ? StringUtils.EMPTY : tc.getRemark();
                     String prerequisite = tc.getPrerequisite() == null ? StringUtils.EMPTY : tc.getPrerequisite();
-                    if (StringUtils.equals(steps, caseSteps) && StringUtils.equals(remark, caseRemark) && StringUtils.equals(prerequisite, casePrerequisite)) {
+                    
+                    // 基础字段比较：remark 和 prerequisite 必须相同
+                    boolean baseFieldsMatch = StringUtils.equals(remark, caseRemark) && 
+                                             StringUtils.equals(prerequisite, casePrerequisite);
+                    
+                    if (!baseFieldsMatch) {
+                        continue; // 基础字段不同，跳过
+                    }
+                    
+                    // 根据步骤模式比较步骤内容
+                    boolean stepContentMatch = false;
+                    
+                    if (isTextMode) {
+                        // TEXT 模式：比较 step_description 和 expected_result
+                        String stepDescription = tc.getStepDescription() == null ? StringUtils.EMPTY : tc.getStepDescription();
+                        String expectedResult = tc.getExpectedResult() == null ? StringUtils.EMPTY : tc.getExpectedResult();
+                        
+                        stepContentMatch = StringUtils.equals(stepDescription, caseStepDescription) && 
+                                          StringUtils.equals(expectedResult, caseExpectedResult);
+                    } else {
+                        // STEP 模式（或 null）：比较 steps 字段
+                        String steps = tc.getSteps() == null ? StringUtils.EMPTY : tc.getSteps();
+                        stepContentMatch = StringUtils.equals(steps, caseSteps);
+                    }
+                    
+                    // 如果所有字段都匹配，则判定为重复用例
+                    if (stepContentMatch) {
                        if (checkRepeatFunction != null) {
                            if (checkRepeatFunction.apply(tc)) {
                                MSException.throwException(Translator.get("test_case_already_exists_in_module") + ": " + testCase.getName());
