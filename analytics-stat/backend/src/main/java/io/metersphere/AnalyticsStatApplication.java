@@ -1,4 +1,4 @@
-package io.metersphere.analyticsstat;
+package io.metersphere;
 
 import io.metersphere.autoconfigure.OpenApiConfig;
 import io.metersphere.autoconfigure.PermissionConfig;
