@@ -43,15 +43,15 @@ export default {
       // 二级导航菜单配置
       menus: [
         {
-          path: '/analytics-stat/home',
+          path: '/analytics/home',
           name: '数据概览'
         },
         {
-          path: '/analytics-stat/sql-console',
+          path: '/analytics/sql-console',
           name: 'SQL查询台'
         },
         {
-          path: '/analytics-stat/data-dictionary',
+          path: '/analytics/data-dictionary',
           name: '数据字典'
         }
       ]
@@ -74,12 +74,12 @@ export default {
      * @param {string} path - 当前路由路径
      */
     updateActivePath(path) {
-      if (path.indexOf('/analytics-stat/home') >= 0 || path === '/analytics-stat') {
-        this.pathName = '/analytics-stat/home';
-      } else if (path.indexOf('/analytics-stat/sql-console') >= 0) {
-        this.pathName = '/analytics-stat/sql-console';
-      } else if (path.indexOf('/analytics-stat/data-dictionary') >= 0) {
-        this.pathName = '/analytics-stat/data-dictionary';
+      if (path.indexOf('/analytics/home') >= 0 || path === '/analytics') {
+        this.pathName = '/analytics/home';
+      } else if (path.indexOf('/analytics/sql-console') >= 0) {
+        this.pathName = '/analytics/sql-console';
+      } else if (path.indexOf('/analytics/data-dictionary') >= 0) {
+        this.pathName = '/analytics/data-dictionary';
       } else {
         this.pathName = path;
       }
