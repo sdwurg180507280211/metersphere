@@ -37,9 +37,8 @@
 | 6 | **Eureka 注册** | 依赖 `sdk` 模块即可 | ✅ | 服务注册与发现 |
 | 7 | **Flyway 迁移脚本** | `{module}/backend/src/main/resources/db/migration/` | **推荐** | 数据库版本管理（表结构、菜单配置等） |
 | 8 | **菜单配置 SQL** | `{module}/backend/src/main/resources/db/migration/V2__add_{module}_module.sql` | **推荐** | 在 system_parameter 表中添加模块菜单配置 |
-| 9 | **远程调用Controller** | `{module}/backend/.../controller/remote/SystemSettingController.java` | ✅ | 转发系统级公共API到system-setting服务 |
-| 10 | **Dockerfile** | `{module}/backend/Dockerfile` | 可选 | Docker 镜像构建 |
-| 11 | **根 pom.xml** | `pom.xml` | ✅ | 在 `<modules>` 中添加新模块 |
+| 9 | **Dockerfile** | `{module}/backend/Dockerfile` | 可选 | Docker 镜像构建 |
+| 10 | **根 pom.xml** | `pom.xml` | ✅ | 在 `<modules>` 中添加新模块 |
 
 ### 1.2 前端配置
 
@@ -79,32 +78,24 @@
 ├── backend/
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── java/io/metersphere/              # ⚠️ 包名必须是 io.metersphere
-│   │   │   │   ├── {Module}Application.java      # 启动类
+│   │   │   ├── java/io/metersphere/{module}/
+│   │   │   │   ├── {Module}Application.java          # 启动类
 │   │   │   │   ├── config/
-│   │   │   │   │   └── WebMvcConfig.java         # 静态资源映射
-│   │   │   │   ├── controller/                   # REST API
-│   │   │   │   ├── service/                      # 业务逻辑
-│   │   │   │   ├── base/mapper/                  # MyBatis Mapper
-│   │   │   │   └── dto/                          # 数据传输对象
+│   │   │   │   │   └── WebMvcConfig.java             # 静态资源映射
+│   │   │   │   ├── controller/                       # REST API
+│   │   │   │   ├── service/                          # 业务逻辑
+│   │   │   │   ├── base/mapper/                      # MyBatis Mapper
+│   │   │   │   └── dto/                              # 数据传输对象
 │   │   │   └── resources/
-│   │   │       ├── application.properties        # 配置文件
-│   │   │       ├── db/migration/                 # Flyway 迁移脚本
-│   │   │       └── static/                       # 前端打包文件（Maven 自动复制）
-│   │   └── test/                                 # 单元测试
-│   ├── pom.xml                                   # Maven 配置
-│   └── Dockerfile                                # Docker 镜像（可选）
-├── frontend/                                     # 前端模块（见下节）
-└── pom.xml                                       # 父 POM
+│   │   │       ├── application.properties            # 配置文件
+│   │   │       ├── db/migration/                     # Flyway 迁移脚本
+│   │   │       └── static/                           # 前端打包文件（Maven 自动复制）
+│   │   └── test/                                     # 单元测试
+│   ├── pom.xml                                       # Maven 配置
+│   └── Dockerfile                                    # Docker 镜像（可选）
+├── frontend/                                         # 前端模块（见下节）
+└── pom.xml                                           # 父 POM
 ```
-
-**⚠️ 重要：包名规范**
-
-- **包名必须是 `io.metersphere`**，不能是 `io.metersphere.{module}`
-- 原因：Spring Boot 的 `@SpringBootApplication` 默认只扫描当前包及其子包
-- SDK 的公共服务（如 `BaseSystemSettingService`）在 `io.metersphere.service` 包中
-- 如果使用 `io.metersphere.{module}` 包名，会导致 SDK 的 Bean 无法注入
-- 参考：analytics-stat 模块已完成包名规范化重构（2026-02-10）
 
 ### 2.2 端口规划建议
 
@@ -159,27 +150,19 @@
 ### 3.3 Application.java 启动类
 
 ```java
-package io.metersphere;  // ⚠️ 必须是 io.metersphere，不能是 io.metersphere.{module}
+package io.metersphere.{module};
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.context.annotation.ComponentScan;
 
-/**
- * {模块名}微服务启动类
- * 
- * ⚠️ 重要：包名规范
- * - 包名必须是 io.metersphere（不能是 io.metersphere.{module}）
- * - 原因：@SpringBootApplication 默认只扫描当前包及其子包
- * - SDK 的公共服务在 io.metersphere.service 包中
- * - 如果包名是 io.metersphere.{module}，会导致 SDK 的 Bean 无法注入
- * 
- * 参考：analytics-stat 模块已完成包名规范化重构（2026-02-10）
- */
-@SpringBootApplication(exclude = {
-    // 根据需要排除不需要的自动配置
-})
+@SpringBootApplication
 @EnableDiscoveryClient  // 启用 Eureka 服务注册
+@ComponentScan(basePackages = {
+    "io.metersphere.commons",  // SDK 公共组件
+    "io.metersphere.{module}"  // 当前模块
+})
 public class {Module}Application {
     public static void main(String[] args) {
         SpringApplication.run({Module}Application.class, args);
@@ -187,34 +170,10 @@ public class {Module}Application {
 }
 ```
 
-**关键点说明**：
-
-1. **包名必须是 `io.metersphere`**
-   - ❌ 错误：`package io.metersphere.analyticsstat;`
-   - ✅ 正确：`package io.metersphere;`
-
-2. **为什么不能用子包名？**
-   - `@SpringBootApplication` 包含 `@ComponentScan`
-   - 默认扫描范围：当前包及其子包
-   - 如果启动类在 `io.metersphere.analyticsstat`，只会扫描 `io.metersphere.analyticsstat.*`
-   - SDK 的 Bean 在 `io.metersphere.service`、`io.metersphere.commons` 等包中
-   - 结果：SDK 的 Bean 无法被扫描到，导致注入失败
-
-3. **不需要手动配置 `@ComponentScan`**
-   - 使用标准包名 `io.metersphere` 后，Spring Boot 会自动扫描所有子包
-   - 包括：`io.metersphere.service`、`io.metersphere.commons`、`io.metersphere.controller` 等
-
-4. **其他模块的实现**
-   - `api-test`：`package io.metersphere;`
-   - `test-track`：`package io.metersphere;`
-   - `system-setting`：`package io.metersphere;`
-   - `analytics-stat`：`package io.metersphere;`（已重构）
-
 ### 3.4 application.properties
 
 ```properties
-# 服务名（必须）- 会成为路由前缀和模块key
-# 推荐使用简化命名: analytics-stat → analytics, report-stat → report
+# 服务名（必须）- 会成为路由前缀
 spring.application.name={module}
 
 # 服务端口（必须）
@@ -235,14 +194,6 @@ spring.flyway.baseline-on-migrate=true
 spring.flyway.locations=classpath:db/migration
 spring.flyway.table=flyway_schema_history_{module}
 ```
-
-**重要说明**：
-- `spring.application.name` 的值会自动成为:
-  1. Eureka注册的服务名(自动转大写)
-  2. Gateway `/services` 接口返回的 `serviceId`
-  3. 前端路由前缀 `/#/{module}`
-  4. 数据库模块key `metersphere.module.{module}`
-- 为避免命名不一致导致菜单不显示,建议使用简化命名
 
 ### 3.5 WebMvcConfig.java
 
@@ -291,91 +242,7 @@ private static final String[] PREFIX = new String[]{
 
 ---
 
-### 3.8 远程调用Controller（重要）
-
-**创建文件**：`{module}/backend/src/main/java/io/metersphere/{module}/controller/remote/SystemSettingController.java`
-
-```java
-package io.metersphere.{module}.controller.remote;
-
-import io.metersphere.service.remote.BaseSystemSettingService;
-import org.springframework.web.bind.annotation.*;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-
-/**
- * 系统设置远程调用Controller
- * 
- * 功能：将系统级公共API请求转发到 system-setting 服务
- * 
- * 转发路径：
- * - /system/* → system-setting 服务
- * - /module/* → system-setting 服务  
- * - /license/* → system-setting 服务
- * 
- * 原理：
- * 在qiankun微前端架构中,子应用的所有请求都会带上模块前缀(如 /{module})
- * 例如: /{module}/system/theme
- * 
- * Gateway会将请求路由到 {module} 服务
- * 本Controller接收请求后,通过 BaseSystemSettingService 转发到 system-setting 服务
- * 
- * 参考：project-management/backend/.../controller/remote/SystemSettingController.java
- */
-@RestController
-@RequestMapping(path = {
-        "/system",
-        "/module",
-        "/license"
-})
-public class SystemSettingController {
-    
-    @Resource
-    BaseSystemSettingService baseSystemSettingService;
-
-    /**
-     * 转发POST请求到 system-setting 服务
-     */
-    @PostMapping("/**")
-    public Object post(HttpServletRequest request, @RequestBody Object param) {
-        return baseSystemSettingService.post(request, param);
-    }
-
-    /**
-     * 转发GET请求到 system-setting 服务
-     */
-    @GetMapping("/**")
-    public Object get(HttpServletRequest request) {
-        return baseSystemSettingService.get(request);
-    }
-}
-```
-
-**为什么需要这个Controller?**
-
-在qiankun微前端架构中:
-1. 子应用的 `baseURL = '/{module}'`,所有请求都会加上模块前缀
-2. 例如主框架的 Layout 组件调用 `/system/theme`,在子应用中会变成 `/{module}/system/theme`
-3. Gateway 将 `/{module}/system/theme` 路由到 `{module}` 服务
-4. 如果 `{module}` 服务没有这个Controller,会返回404
-5. 有了这个Controller,请求会被转发到 `system-setting` 服务,返回正确结果
-
-**其他模块的实现**:
-- `project-management`: 有 `SystemSettingController`
-- `api-test`: 有 `SystemSettingController`
-- `test-track`: 有 `SystemSettingController`
-- `report-stat`: 有 `SystemSettingController`
-- `analytics-stat`: 有 `SystemSettingController`
-
-**如果缺少这个Controller会怎样?**
-- 浏览器控制台报错: `GET /{module}/system/theme 404 (Not Found)`
-- 浏览器控制台报错: `GET /{module}/module/list 404 (Not Found)`
-- 页面样式异常,功能不可用
-
----
-
-### 3.9 菜单配置 SQL（重要）
+### 3.8 菜单配置 SQL（重要）
 
 **创建文件**：`{module}/backend/src/main/resources/db/migration/V2__add_{module}_module.sql`
 
@@ -387,27 +254,23 @@ public class SystemSettingController {
 SET SESSION innodb_lock_wait_timeout = 7200;
 
 -- 插入模块配置
--- param_key: metersphere.module.{moduleKey} (必须与服务名保持一致)
+-- param_key: metersphere.module.{moduleCamelCase} (驼峰命名，与其他模块保持一致)
 -- param_value: ENABLE (启用) / DISABLE (禁用)
 -- type: text
 -- sort: 1
--- 
--- 重要: moduleKey 必须与 spring.application.name 保持一致
--- 例如: spring.application.name=analytics → param_key=metersphere.module.analytics
 INSERT INTO system_parameter (param_key, param_value, type, sort)
-VALUES ('metersphere.module.{moduleKey}', 'ENABLE', 'text', 1)
+VALUES ('metersphere.module.{moduleCamelCase}', 'ENABLE', 'text', 1)
 ON DUPLICATE KEY UPDATE param_value = 'ENABLE';
 
 SET SESSION innodb_lock_wait_timeout = DEFAULT;
 ```
 
 **命名规则**：
-- `param_key` 格式：`metersphere.module.{moduleKey}`
-- **推荐使用简化命名**（与服务名保持一致）：
-  - `analytics-stat` → `analytics`（推荐）
-  - `report-stat` → `report`
-  - `api-test` → `api`
-  - `test-track` → `track`
+- `param_key` 格式：`metersphere.module.{moduleCamelCase}`
+- 驼峰命名示例：
+  - `analytics-stat` → `analyticsStat`
+  - `report-stat` → `reportStat`
+  - `test-track` → `testTrack`
 
 **作用**：
 - 控制左侧菜单是否显示该模块
@@ -416,21 +279,14 @@ SET SESSION innodb_lock_wait_timeout = DEFAULT;
 
 **参考示例**：
 
-| 模块 | 服务名 | param_key | param_value | 说明 |
-| ---- | ------ | --------- | ----------- | ---- |
-| api-test | api | metersphere.module.api | ENABLE | 简化命名 |
-| performance-test | performance | metersphere.module.performance | ENABLE | 简化命名 |
-| test-track | track | metersphere.module.track | ENABLE | 简化命名 |
-| report-stat | report | metersphere.module.report | ENABLE | 简化命名 |
-| workstation | workstation | metersphere.module.workstation | ENABLE | 完整命名 |
-| analytics-stat | analytics | metersphere.module.analytics | ENABLE | 简化命名(推荐) |
-
-**重要说明**：
-- 模块key必须与服务名保持一致,否则左侧菜单不显示
-- 服务名通过Eureka注册后,Gateway的`/services`接口返回`serviceId`
-- 前端`micro-app.js`将`serviceId`存入`sessionStorage.micro_apps`
-- 前端`/module/list`接口读取数据库配置,存入`localStorage.modules`
-- `AsideMenus.vue`的`check(key)`方法要求两个key完全一致才显示菜单
+| 模块 | param_key | param_value |
+| ---- | --------- | ----------- |
+| api-test | metersphere.module.api | ENABLE |
+| performance-test | metersphere.module.performance | ENABLE |
+| test-track | metersphere.module.testTrack | ENABLE |
+| report-stat | metersphere.module.reportStat | ENABLE |
+| workstation | metersphere.module.workstation | ENABLE |
+| analytics-stat | metersphere.module.analyticsStat | ENABLE |
 
 ---
 
@@ -646,13 +502,11 @@ cd {module}/frontend && npm run serve
 | ---- | -------- | -------- |
 | 子应用加载失败 | Eureka 未注册 | 检查 http://localhost:8761 |
 | 静态资源 404 | SessionFilter 未配置 | 在 PREFIX 数组中添加模块前缀 |
-| **系统API 404** | **缺少远程调用Controller** | **添加 SystemSettingController** |
-| **SDK Bean 无法注入** | **包名不规范** | **包名必须是 `io.metersphere`** |
 | 路由不匹配 | 路由前缀与服务名不一致 | 检查 router/index.js 和 application.properties |
 | 样式丢失 | 未导入 metersphere-frontend 样式 | 检查 main.js 中的样式导入 |
 | 跨域错误 | devServer.headers 未配置 | 检查 vue.config.js 中的 CORS 配置 |
 | **左侧菜单不显示** | **未插入 system_parameter 配置** | **检查 Flyway 迁移脚本是否执行成功** |
-| **菜单配置未生效** | **param_key 命名错误** | **检查命名是否与服务名一致** |
+| **菜单配置未生效** | **param_key 命名错误** | **检查驼峰命名是否正确（如 analyticsStat）** |
 
 ### 6.1 菜单不显示问题详细排查
 
@@ -668,7 +522,7 @@ WHERE param_key LIKE 'metersphere.module.%';
 
 -- 检查新模块配置是否存在
 SELECT * FROM metersphere.system_parameter 
-WHERE param_key = 'metersphere.module.{module}';
+WHERE param_key = 'metersphere.module.{moduleCamelCase}';
 ```
 
 2. **检查 Flyway 执行状态**：
@@ -685,7 +539,7 @@ WHERE script LIKE '%{module}%';
 3. **手动插入配置**（如果 Flyway 未执行）：
 ```sql
 INSERT INTO metersphere.system_parameter (param_key, param_value, type, sort)
-VALUES ('metersphere.module.{module}', 'ENABLE', 'text', 1)
+VALUES ('metersphere.module.{moduleCamelCase}', 'ENABLE', 'text', 1)
 ON DUPLICATE KEY UPDATE param_value = 'ENABLE';
 ```
 
@@ -700,69 +554,19 @@ cd framework/gateway && mvn spring-boot:run
 - 清除缓存和 Cookie
 - 重新登录
 
-### 6.2 系统API 404问题详细排查
-
-**症状**：浏览器控制台报错 `GET /{module}/system/theme 404 (Not Found)`
-
-**原因**：缺少远程调用Controller,无法将系统级公共API转发到system-setting服务
-
-**排查步骤**：
-
-1. **检查Controller是否存在**：
-```bash
-# 查看是否有 SystemSettingController
-ls -la {module}/backend/src/main/java/io/metersphere/{module}/controller/remote/
-```
-
-2. **检查其他模块的实现**：
-```bash
-# 查看 project-management 的实现
-cat project-management/backend/src/main/java/io/metersphere/controller/remote/SystemSettingController.java
-```
-
-3. **添加Controller**（参考3.8节）
-
-4. **重启服务**：
-```bash
-cd {module}/backend && mvn spring-boot:run
-```
-
-5. **验证**：
-- 打开浏览器开发者工具 → Network
-- 访问模块页面
-- 检查 `/{module}/system/theme` 请求是否返回200
-- 检查 `/{module}/module/list` 请求是否返回200
-
 ---
 
 ## 七、最佳实践
 
 ### 7.1 命名规范
 
-| 类型 | 规范 | 示例 | 说明 |
-| ---- | ---- | ---- | ---- |
-| 模块名 | kebab-case | `analytics-stat` | 文件夹名称 |
-| **Java 包名** | **必须是 `io.metersphere`** | `io.metersphere` | **⚠️ 不能是 `io.metersphere.{module}`** |
-| Java 类名 | PascalCase | `AnalyticsStatApplication` | 类名 |
-| Vue 组件 | PascalCase | `AnalyticsStatHome.vue` | 组件名 |
-| 路由 path | kebab-case | `/analytics-stat/home` | 路由路径 |
-
-**⚠️ 重要：Java 包名规范**
-
-- **包名必须是 `io.metersphere`**，不能是 `io.metersphere.{module}`
-- 原因：Spring Boot 的 `@SpringBootApplication` 默认只扫描当前包及其子包
-- SDK 的公共服务（如 `BaseSystemSettingService`）在 `io.metersphere.service` 包中
-- 如果使用 `io.metersphere.{module}` 包名，会导致 SDK 的 Bean 无法注入
-- 参考：analytics-stat 模块已完成包名规范化重构（2026-02-10）
-
-**其他模块的包名对比**：
-
-| 模块 | 包名 | 是否规范 |
-| ---- | ---- | -------- |
-| api-test | `io.metersphere` | ✅ 规范 |
-| test-track | `io.metersphere` | ✅ 规范 |
-| system-setting | `io.metersphere` | ✅ 规范 |
-| analytics-stat | `io.metersphere` | ✅ 规范（已重构） |
+| 类型 | 规范 | 示例 |
+| ---- | ---- | ---- |
+| 模块名 | kebab-case | `analytics-stat` |
+| Java 包名 | 小写，与模块名一致 | `io.metersphere.analytics_stat` |
+| Java 类名 | PascalCase | `AnalyticsStatApplication` |
+| Vue 组件 | PascalCase | `AnalyticsStatHome.vue` |
+| 路由 path | kebab-case | `/analytics-stat/home` |
 
 ### 7.2 代码复用
 
