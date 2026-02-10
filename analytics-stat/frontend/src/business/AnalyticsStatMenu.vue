@@ -16,7 +16,7 @@
         :index="menu.index" 
         class="menu-item">
         <i :class="menu.icon"></i>
-        {{ menu.title }}
+        {{ $t(menu.i18nKey) }}
       </el-menu-item>
     </el-submenu>
   </el-menu>
@@ -37,21 +37,21 @@ export default {
   name: "AnalyticsStatMenu",
   data() {
     return {
-      // 菜单配置
+      // 菜单配置（使用 i18n key，支持多语言切换）
       menus: [
         {
           index: '/analytics/home',
-          title: '工作台',
+          i18nKey: 'analytics.menu.home',
           icon: 'el-icon-s-home'
         },
         {
           index: '/analytics/sql-console',
-          title: 'SQL查询台',
+          i18nKey: 'analytics.menu.sql_console',
           icon: 'el-icon-document'
         },
         {
           index: '/analytics/data-dictionary',
-          title: '数据字典',
+          i18nKey: 'analytics.menu.data_dictionary',
           icon: 'el-icon-collection'
         }
       ]
