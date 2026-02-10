@@ -1,9 +1,5 @@
 package io.metersphere;
 
-import io.metersphere.autoconfigure.OpenApiConfig;
-import io.metersphere.autoconfigure.PermissionConfig;
-import io.metersphere.autoconfigure.RsaConfig;
-import io.metersphere.autoconfigure.ShiroConfig;
 import io.metersphere.config.KafkaProperties;
 import io.metersphere.config.MinioProperties;
 import org.springframework.boot.SpringApplication;
@@ -31,18 +27,15 @@ import org.springframework.context.annotation.PropertySource;
  * - 微前端架构 (qiankun)
  *
  * 说明：
- * - 排除ShiroConfig：不需要独立的认证体系，通过Gateway统一认证
- * - 排除ShiroAutoConfiguration：排除Shiro的Spring Boot自动配置
- * - 排除RsaConfig、PermissionConfig、OpenApiConfig：简化配置
+ * - 保留 ShiroConfig：SDK 中 SessionUtils、ApiKeyFilter、CsrfFilter 等
+ *   大量使用 SecurityUtils.getSubject()，必须有 SecurityManager
+ * - 排除 Quartz、LDAP、Neo4j：本模块不需要这些功能
+ * - 参考 report-stat（ReportApplication）的排除配置
  */
 @SpringBootApplication(exclude = {
         QuartzAutoConfiguration.class,
         LdapAutoConfiguration.class,
-        Neo4jAutoConfiguration.class,
-        ShiroConfig.class,
-        RsaConfig.class,
-        PermissionConfig.class,
-        OpenApiConfig.class
+        Neo4jAutoConfiguration.class
 })
 @PropertySource(value = {
         "classpath:commons.properties",
