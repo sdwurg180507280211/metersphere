@@ -77,19 +77,19 @@ export default {
         {
           name: 'SQL查询台',
           icon: 'el-icon-document',
-          path: '/analytics-stat/sql-console',
+          path: '/analytics/sql-console',
           description: '执行自定义SQL查询'
         },
         {
           name: '数据字典',
           icon: 'el-icon-collection',
-          path: '/analytics-stat/data-dictionary',
+          path: '/analytics/data-dictionary',
           description: '查看系统数据字典'
         },
         {
           name: '综合查询',
           icon: 'el-icon-search',
-          path: '/analytics-stat/query',
+          path: '/analytics/query',
           description: '多维度数据查询'
         }
       ]
