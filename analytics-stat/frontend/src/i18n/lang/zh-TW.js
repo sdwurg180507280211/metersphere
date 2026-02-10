@@ -7,6 +7,13 @@ import mf from "metersphere-frontend/src/i18n/lang/zh-TW";
 
 const message = {
   analytics: {
+    title: "分析統計",
+    menu: {
+      home: "工作台",
+      sql_console: "SQL查詢台",
+      data_dictionary: "數據字典"
+    },
+    home: "工作台",
     dashboard: "數據概覽",
     sql_console: "SQL查詢台",
     data_dictionary: "數據字典",
@@ -23,6 +30,9 @@ const message = {
     query_failed: "查詢失敗",
     rows_affected: "影響行數",
     execution_time: "執行時間"
+  },
+  commons: {
+    analytics_stat: "分析統計"
   }
 };
 
