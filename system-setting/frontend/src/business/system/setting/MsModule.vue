@@ -74,6 +74,7 @@ export default {
       track: "ENABLE",
       ui: "ENABLE",
       workstation: "ENABLE",
+      analytics: "ENABLE",
     };
   },
   mounted() {
