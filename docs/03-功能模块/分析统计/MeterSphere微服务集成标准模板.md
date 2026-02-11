@@ -38,8 +38,9 @@
 | 7 | **Flyway 迁移脚本** | `{module}/backend/src/main/resources/db/migration/` | **推荐** | 数据库版本管理（表结构、菜单配置等） |
 | 8 | **菜单配置 SQL** | `{module}/backend/src/main/resources/db/migration/V2__add_{module}_module.sql` | **推荐** | 在 system_parameter 表中添加模块菜单配置 |
 | 9 | **远程调用Controller** | `{module}/backend/.../controller/remote/SystemSettingController.java` | ✅ | 转发系统级公共API到system-setting服务 |
-| 10 | **Dockerfile** | `{module}/backend/Dockerfile` | 可选 | Docker 镜像构建 |
-| 11 | **根 pom.xml** | `pom.xml` | ✅ | 在 `<modules>` 中添加新模块 |
+| 10 | **permission.json** | `{module}/backend/src/main/resources/permission.json` | ✅ | 权限配置文件（PermissionConfig 启动时加载，无权限需求可为空） |
+| 11 | **Dockerfile** | `{module}/backend/Dockerfile` | 可选 | Docker 镜像构建 |
+| 12 | **根 pom.xml** | `pom.xml` | ✅ | 在 `<modules>` 中添加新模块 |
 
 ### 1.2 前端配置
 
@@ -91,6 +92,7 @@
 │   │   │   │   └── dto/                          # 数据传输对象
 │   │   │   └── resources/
 │   │   │       ├── application.properties        # 配置文件
+│   │   │       ├── permission.json               # 权限配置（PermissionConfig 启动时加载）
 │   │   │       ├── db/migration/                 # Flyway 迁移脚本
 │   │   │       └── static/                       # 前端打包文件（Maven 自动复制）
 │   │   └── test/                                 # 单元测试
@@ -176,10 +178,21 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
  * - SDK 的公共服务在 io.metersphere.service 包中
  * - 如果包名是 io.metersphere.{module}，会导致 SDK 的 Bean 无法注入
  * 
+ * ⚠️ 重要：排除配置规范
+ * - 只排除 Quartz、LDAP、Neo4j（本模块不需要这些功能）
+ * - ❌ 绝对不能排除 ShiroConfig —— SDK 中 SessionUtils、ApiKeyFilter、CsrfFilter
+ *   大量使用 SecurityUtils.getSubject()，必须有 SecurityManager
+ * - ❌ 绝对不能排除 RsaConfig、PermissionConfig、OpenApiConfig
+ * - 参考 report-stat（ReportApplication）的排除配置
+ * 
  * 参考：analytics-stat 模块已完成包名规范化重构（2026-02-10）
  */
 @SpringBootApplication(exclude = {
-    // 根据需要排除不需要的自动配置
+    QuartzAutoConfiguration.class,   // 不需要定时任务
+    LdapAutoConfiguration.class,     // 不需要 LDAP 认证
+    Neo4jAutoConfiguration.class     // 不需要 Neo4j 图数据库
+    // ❌ 不要排除 ShiroConfig —— 会导致 "No SecurityManager accessible" 错误
+    // ❌ 不要排除 RsaConfig、PermissionConfig、OpenApiConfig
 })
 @EnableDiscoveryClient  // 启用 Eureka 服务注册
 public class {Module}Application {
@@ -411,6 +424,60 @@ SET SESSION innodb_lock_wait_timeout = DEFAULT;
 - 前端`/module/list`接口读取数据库配置,存入`localStorage.modules`
 - `AsideMenus.vue`的`check(key)`方法要求两个key完全一致才显示菜单
 
+### 3.10 permission.json 权限配置文件
+
+**创建文件**：`{module}/backend/src/main/resources/permission.json`
+
+SDK 中的 `PermissionConfig` 在启动时会加载 `classpath:/permission.json`，如果文件不存在会抛出 `NullPointerException`。
+
+**无权限需求时（最小模板）**：
+
+```json
+{
+  "permissions": [],
+  "resource": []
+}
+```
+
+**有权限需求时（参考 report-stat）**：
+
+```json
+{
+  "permissions": [
+    {
+      "id": "PROJECT_{MODULE}:READ",
+      "name": "permission.project_{module}.read",
+      "resourceId": "PROJECT_{MODULE}",
+      "license": false
+    },
+    {
+      "id": "PROJECT_{MODULE}:READ+CREATE",
+      "name": "permission.project_{module}.create",
+      "resourceId": "PROJECT_{MODULE}",
+      "license": false
+    }
+  ],
+  "resource": [
+    {
+      "id": "PROJECT_{MODULE}",
+      "name": "permission.project_{module}.name"
+    }
+  ]
+}
+```
+
+**字段说明**：
+- `permissions[].id`：权限标识，格式 `资源ID:操作`（如 `READ`、`READ+CREATE`、`READ+UPDATE`、`READ+DELETE`）
+- `permissions[].name`：权限名称的 i18n key（在 SDK 的 `permission.*` 中定义）
+- `permissions[].resourceId`：关联的资源 ID
+- `permissions[].license`：是否需要企业授权
+- `resource[].id`：资源标识
+- `resource[].name`：资源名称的 i18n key
+
+**参考模块**：
+- `report-stat`：有完整的权限配置（PROJECT_REPORT_ANALYSIS、PROJECT_ENTERPRISE_REPORT）
+- `analytics-stat`：空权限配置（暂无权限需求）
+
 ---
 
 ## 四、前端模块创建详解
@@ -542,7 +609,8 @@ if (!window.__POWERED_BY_QIANKUN__) {
 
 每个模块需要提供三个语言包文件，**所有菜单文字必须使用 i18n key，禁止硬编码中文**。
 
-**目录结构**：
+#### 4.8.1 目录结构
+
 ```
 {module}/frontend/src/i18n/
 ├── lang/
@@ -552,13 +620,197 @@ if (!window.__POWERED_BY_QIANKUN__) {
 └── index.js        # i18n 初始化
 ```
 
-**语言包模板**（以 zh-CN.js 为例）：
+#### 4.8.2 语言包代码模板
 
-**⚠️ i18n 规范要点**：
+以 zh-CN.js 为例：
+
+```javascript
+import el from "metersphere-frontend/src/i18n/lang/ele-zh-CN";
+import fu from "fit2cloud-ui/src/locale/lang/zh-CN";
+import mf from "metersphere-frontend/src/i18n/lang/zh-CN";
+
+const message = {
+  {module}: {
+    title: "模块名称",
+    menu: { home: "首页" },
+    // ... 本模块独有的翻译
+  }
+};
+
+export default {
+  ...el,    // ① Element UI 组件翻译
+  ...fu,    // ② fit2cloud-ui 组件翻译
+  ...mf,    // ③ SDK 公共翻译（~3600行，含 commons/project/user 等）
+  ...message // ④ 本模块私有翻译（后展开的覆盖先展开的同名 key）
+};
+```
+
+#### 4.8.3 合并优先级
+
+```
+el（Element UI） → fu（fit2cloud-ui） → mf（SDK公共） → message（模块私有）
+                                                          ↑ 最高优先级
+```
+
+⚠️ 如果模块 `message` 中定义了和 SDK 同名的顶级 key（如 `display`），模块的值会**整体覆盖** SDK 的值。这就是为什么**禁止在 message 中定义 `commons`**——否则会把 SDK 的 `commons`（~530行公共翻译）全部丢失。
+
+#### 4.8.4 翻译 key 归属决策树
+
+**核心规则**：
+- SDK 负责"大而全"的公共翻译（~3600行），所有模块共享
+- 各模块只负责 SDK 没覆盖到的、自己独有的业务翻译
+- `report-stat` 和 `workstation` 完全没有私有翻译，纯靠 SDK
+- `api-test` 和 `test-track` 的私有翻译是对 SDK 中已有 key 的**补充**（SDK 定义基础的，模块补充细节的）
+
+```
+你要添加/查找的翻译 key 属于哪一类？
+│
+├─ 🔵 跨模块公共翻译（所有模块都会用到）
+│  │
+│  │  负责方：SDK（framework/sdk-parent/frontend/src/i18n/lang/）
+│  │  引入方式：各子模块 import mf → ...mf 展开
+│  │
+│  ├── commons.*  ── 全局公共词汇（~530行，最大的 key）
+│  │   ├── 通用操作词：save / delete / edit / copy / confirm / cancel / create / refresh ...
+│  │   ├── 通用状态词：status / success / failed / running / idle ...
+│  │   ├── 通用实体词：project / workspace / user / member / role / group ...
+│  │   ├── 左侧菜单名：my_workstation / api / performance / analytics_stat / ui_test ...
+│  │   ├── 高级搜索：adv_search.*
+│  │   ├── 报表统计：report_statistics.*
+│  │   ├── 日期 / 月份 / 星期
+│  │   ├── SSL证书 / 文件上传状态
+│  │   └── 触发方式 / 依赖关系 / 默认模块 ...
+│  │
+│  ├── login.*  ────────────── 登录页
+│  ├── license.*  ──────────── 授权管理
+│  ├── display.*  ──────────── 显示设置（LOGO / 主题）
+│  ├── system_config.*  ────── 系统配置（站点URL / Prometheus / Selenium）
+│  ├── custom_field.*  ─────── 自定义字段
+│  ├── workspace.*  ────────── 工作空间管理（含 env_group 环境组）
+│  ├── organization.*  ─────── 组织管理（含 integration 服务集成 / message 消息设置）
+│  ├── project.*  ──────────── 项目管理（含版本管理 / 文件管理 / 代码片段）
+│  ├── member.*  ───────────── 成员管理
+│  ├── user.*  ─────────────── 用户管理
+│  ├── group.*  ────────────── 用户组与权限
+│  ├── role.*  ─────────────── 角色
+│  ├── report.*  ───────────── 测试报告（通用报告字段）
+│  ├── load_test.*  ────────── 性能测试（JMeter 相关，~150行）
+│  ├── api_test.*  ─────────── 接口测试（API定义 / 场景 / Mock / 协议 / 断言，~870行）
+│  ├── api_report.*  ───────── 接口测试报告
+│  ├── api_monitor.*  ──────── 接口监控
+│  ├── test_track  ─────────── 测试跟踪（独立子文件 track/zh-CN.js）
+│  │   ├── case.*  ── 用例管理
+│  │   ├── plan.*  ── 测试计划
+│  │   ├── review.*  ── 用例评审
+│  │   ├── issue.*  ── 缺陷管理
+│  │   ├── module.*  ── 模块树
+│  │   ├── home.*  ── 跟踪首页
+│  │   ├── report.*  ── 跟踪报告
+│  │   └── comment / demand / plan_view / review_view ...
+│  │
+│  ├── test_resource_pool.*  ── 测试资源池
+│  ├── system_parameter_setting.*  ── 邮件 / LDAP 设置
+│  ├── ldap.*  ─────────────── LDAP 配置
+│  ├── schedule.*  ─────────── 定时任务
+│  ├── quota.*  ────────────── 配额管理
+│  ├── schema.*  ───────────── JSON Schema
+│  ├── loop.*  ─────────────── 循环控制器
+│  ├── variables.*  ────────── CSV 变量
+│  ├── auth_source.*  ──────── 认证源
+│  ├── module.*  ───────────── 模块管理
+│  ├── table.*  ────────────── 表头字段
+│  ├── run_mode.*  ─────────── 运行模式（串行 / 并行 / 重试）
+│  ├── operating_log.*  ────── 操作日志
+│  ├── plugin.*  ───────────── 插件管理
+│  ├── mail.*  ─────────────── 邮件
+│  ├── notice.*  ───────────── 通知消息
+│  ├── permission.*  ───────── 权限定义（所有模块的权限名称，~370行）
+│  ├── env_options.*  ──────── 环境选项
+│  ├── error_report_library.*  ── 误报库
+│  ├── ui.*  ───────────────── UI测试（元素库 / 自动化 / 指令 / 报告，~380行）
+│  ├── project_application.*  ── 项目应用设置
+│  ├── task.*  ─────────────── 任务中心
+│  ├── envrionment.*  ──────── 环境导出
+│  ├── shepherd.*  ─────────── 新手引导
+│  ├── guide.*  ────────────── 引导页
+│  ├── side_task.*  ────────── 侧边任务
+│  ├── jar_config.*  ───────── JAR 配置
+│  ├── qrcode.*  ───────────── 扫码登录
+│  ├── announcement.*  ─────── 公告栏
+│  └── i18n.*  ─────────────── 导航标签（首页 / 定义 / 自动化）
+│
+├─ 🟢 模块私有翻译（只在该模块内使用）
+│  │
+│  │  负责方：各模块自己的 message 对象
+│  │  规则：❌ 不能定义 commons，只定义模块独有的业务 key
+│  │
+│  ├── api-test ── message 中的 key：
+│  │   ├── api_case.*  ── 接口用例（补充 SDK 没有的）
+│  │   ├── api_definition.*  ── 接口定义（补充）
+│  │   ├── filters.*  ── 筛选器
+│  │   ├── home.*  ── 接口首页仪表盘
+│  │   └── automation.*  ── 场景自动化（补充）
+│  │
+│  ├── test-track ── message 中的 key：
+│  │   ├── home.*  ── 跟踪首页（补充 SDK track 子文件没有的）
+│  │   ├── plan.*  ── 测试计划（补充）
+│  │   ├── review.*  ── 用例评审（补充）
+│  │   ├── case.*  ── 用例管理（补充）
+│  │   └── attachment.*  ── 附件管理
+│  │
+│  ├── performance-test ── message 中的 key：
+│  │   └── performance_test.*  ── 性能测试报告格式等（补充 SDK load_test 没有的）
+│  │
+│  ├── project-management ── message 中的 key：
+│  │   ├── pj.*  ── 项目环境 / 第三方检查
+│  │   ├── file_manage.*  ── 文件管理（补充）
+│  │   ├── pj_custom_field.*  ── 自定义字段（补充）
+│  │   ├── pj_app_manage.*  ── 应用管理
+│  │   ├── custom_template.*  ── 自定义模板（补充）
+│  │   ├── pj_batch_delete.*  ── 批量删除
+│  │   ├── project_version.*  ── 版本管理
+│  │   ├── file.*  ── 文件路径
+│  │   └── environment.*  ── 环境变量
+│  │
+│  ├── system-setting ── message 中的 key：
+│  │   ├── system_user.*  ── 系统用户（补充）
+│  │   ├── workflow.*  ── 工作流管理（二次开发新增）
+│  │   ├── system.*  ── 系统环境（补充）
+│  │   ├── display.*  ── 显示设置（⚠️ 会覆盖 SDK 同名 key）
+│  │   ├── system_custom_template.*  ── 系统模板
+│  │   └── qrcode.*  ── 扫码配置（补充）
+│  │
+│  ├── analytics-stat ── message 中的 key：
+│  │   └── analytics.*  ── 分析统计全部业务翻译
+│  │       ├── menu（菜单）/ home（工作台）/ sql_console（SQL查询台）
+│  │       └── data_dictionary（数据字典）/ dashboard（数据概览）
+│  │
+│  ├── report-stat ── message = {}（空）
+│  │   └── 完全依赖 SDK 翻译，自身无私有 key
+│  │
+│  └── workstation ── message = {}（空）
+│      └── 完全依赖 SDK 翻译，自身无私有 key
+│
+└─ 🟡 第三方组件库翻译（UI 框架自带）
+   │
+   │  负责方：npm 包自带，import 即用
+   │
+   ├── el（ele-zh-CN.js）── Element UI 组件翻译
+   │   └── 日期选择器 / 分页 / 表格 / 对话框 / 消息提示 ...
+   │
+   └── fu（fit2cloud-ui）── fit2cloud-ui 组件翻译
+       └── 搜索栏 / 布局组件 / 自定义组件 ...
+```
+
+#### 4.8.6 规范要点
+
 1. **菜单文字必须使用 i18n key**（如 `$t('{module}.menu.home')`），禁止硬编码中文
 2. **三个语言包必须同步维护**：zh-CN、zh-TW、en-US 的 key 结构必须一致
 3. **必须导入三个基础语言包**：`ele-*`（Element UI）、`fit2cloud-ui`、`metersphere-frontend`
 4. **模块特有翻译放在 `message` 对象中**，通过展开运算符合并
+5. **禁止在 `message` 中定义 `commons` key**，公共翻译统一放在 SDK 的 `commons` 中维护
+6. **左侧菜单模块名**：在 SDK 三个语言包的 `commons` 中添加对应 key（如 `analytics_stat: '分析统计'`），然后在 `AsideMenus.vue` 中用 `$t('commons.{module}')` 引用
+7. **模块私有 key 命名**：使用模块名作为命名空间（如 `analytics.*`），避免与 SDK key 冲突
 
 ### 4.9 router/index.js
 
@@ -679,6 +931,8 @@ cd {module}/frontend && npm run serve
 | **右上角按钮缺失** | **HeaderMenus 未导入 MsHeaderRightMenus** | **参考4.6节，导入 MsHeaderRightMenus 组件** |
 | **菜单文字显示为 key** | **i18n 语言包缺少对应翻译** | **检查 zh-CN/zh-TW/en-US 三个语言包的 key 是否完整** |
 | **菜单文字硬编码中文** | **未使用 $t() 国际化函数** | **将硬编码文字改为 `$t('{module}.menu.xxx')`** |
+| **Shiro SecurityManager 未初始化** | **排除了 ShiroConfig** | **不要排除 ShiroConfig/RsaConfig/PermissionConfig/OpenApiConfig，参考3.3节** |
+| **PermissionConfig NullPointerException** | **缺少 permission.json 文件** | **在 `src/main/resources/` 下创建 permission.json，参考3.10节** |
 | 路由不匹配 | 路由前缀与服务名不一致 | 检查 router/index.js 和 application.properties |
 | 样式丢失 | 未导入 metersphere-frontend 样式 | 检查 main.js 中的样式导入 |
 | 跨域错误 | devServer.headers 未配置 | 检查 vue.config.js 中的 CORS 配置 |
@@ -818,11 +1072,13 @@ cd {module}/backend && mvn spring-boot:run
 
 **核心规范要点**：
 - **后端包名**：必须是 `io.metersphere`，不能是 `io.metersphere.{module}`
+- **启动类排除配置**：只排除 Quartz/LDAP/Neo4j，绝对不能排除 ShiroConfig/RsaConfig/PermissionConfig/OpenApiConfig
+- **permission.json**：必须在 `src/main/resources/` 下创建，无权限需求可为空 `{"permissions":[],"resource":[]}`
 - **前端 HeaderMenus**：必须导入 `ProjectSwitch` + `MsHeaderRightMenus`，确保右上角按钮组正常显示
 - **i18n 国际化**：菜单文字禁止硬编码中文，必须使用 `$t()` 函数 + i18n key，三个语言包同步维护
 - **远程调用 Controller**：必须添加 `SystemSettingController`，转发系统级公共 API
 
 **参考模块**：
-- `analytics-stat`：最新的标准实现（含 HeaderMenus + i18n 规范化修复，2026-02-10）
+- `analytics-stat`：最新的标准实现（含 HeaderMenus + i18n + Shiro + permission.json 规范化修复，2026-02-11）
 - `report-stat`：成熟的参考实现
 - `performance-test`：完整的功能实现
