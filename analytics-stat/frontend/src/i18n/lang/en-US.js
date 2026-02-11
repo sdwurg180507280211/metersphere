@@ -2,11 +2,18 @@
  * English language pack
  */
 import el from "metersphere-frontend/src/i18n/lang/ele-en-US";
-import fu from "fit2cloud-ui/src/locale/lang/en_US";  // 注意：fit2cloud-ui 使用下划线
+import fu from "fit2cloud-ui/src/locale/lang/en_US";
 import mf from "metersphere-frontend/src/i18n/lang/en-US";
 
 const message = {
   analytics: {
+    title: "Analytics",
+    menu: {
+      home: "Home",
+      sql_console: "SQL Console",
+      data_dictionary: "Data Dictionary"
+    },
+    home: "Home",
     dashboard: "Dashboard",
     sql_console: "SQL Console",
     data_dictionary: "Data Dictionary",
@@ -23,6 +30,9 @@ const message = {
     query_failed: "Query Failed",
     rows_affected: "Rows Affected",
     execution_time: "Execution Time"
+  },
+  commons: {
+    analytics_stat: "Analytics"
   }
 };
 
