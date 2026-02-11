@@ -29,10 +29,49 @@ const message = {
     query_success: "查詢成功",
     query_failed: "查詢失敗",
     rows_affected: "影響行數",
-    execution_time: "執行時間"
-  },
-  commons: {
-    analytics_stat: "分析統計"
+    execution_time: "執行時間",
+    // 工作台首頁
+    query_count_stat: "查詢次數統計",
+    total_query_count: "總查詢次數",
+    data_volume_stat: "數據量統計",
+    total_data_volume: "總數據量",
+    quick_access: "快捷入口",
+    recent_queries: "最近查詢",
+    query_name: "查詢名稱",
+    type: "類型",
+    create_time: "建立時間",
+    status: "狀態",
+    success: "成功",
+    failed: "失敗",
+    comprehensive_query: "綜合查詢",
+    no_query_records: "暫無查詢記錄",
+    load_query_count_failed: "獲取查詢次數統計失敗",
+    load_data_volume_failed: "獲取數據量統計失敗",
+    load_recent_queries_failed: "獲取最近查詢列表失敗",
+    // 快捷入口描述
+    sql_console_desc: "執行自定義SQL查詢",
+    data_dictionary_desc: "查看系統數據字典",
+    comprehensive_query_desc: "多維度數據查詢",
+    // 數據字典頁面
+    add_dictionary: "新增字典",
+    dict_type: "字典類型",
+    dict_code: "字典編碼",
+    dict_label: "字典標籤",
+    dict_value: "字典值",
+    sort_order: "排序",
+    enabled: "啟用",
+    disabled: "禁用",
+    edit: "編輯",
+    delete: "刪除",
+    feature_in_development: "功能開發中...",
+    // SQL查詢台頁面
+    execute_query: "執行查詢",
+    sql_placeholder: "請輸入SQL查詢語句...",
+    sql_empty_warning: "請輸入SQL查詢語句",
+    no_query_result: "暫無查詢結果",
+    // Mock 數據（臨時，接入 API 後移除）
+    mock_query_user_stat: "用戶統計查詢",
+    mock_query_project_data: "項目數據查詢"
   }
 };
 

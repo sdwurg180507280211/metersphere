@@ -424,60 +424,6 @@ SET SESSION innodb_lock_wait_timeout = DEFAULT;
 - 前端`/module/list`接口读取数据库配置,存入`localStorage.modules`
 - `AsideMenus.vue`的`check(key)`方法要求两个key完全一致才显示菜单
 
-### 3.10 permission.json 权限配置文件
-
-**创建文件**：`{module}/backend/src/main/resources/permission.json`
-
-SDK 中的 `PermissionConfig` 在启动时会加载 `classpath:/permission.json`，如果文件不存在会抛出 `NullPointerException`。
-
-**无权限需求时（最小模板）**：
-
-```json
-{
-  "permissions": [],
-  "resource": []
-}
-```
-
-**有权限需求时（参考 report-stat）**：
-
-```json
-{
-  "permissions": [
-    {
-      "id": "PROJECT_{MODULE}:READ",
-      "name": "permission.project_{module}.read",
-      "resourceId": "PROJECT_{MODULE}",
-      "license": false
-    },
-    {
-      "id": "PROJECT_{MODULE}:READ+CREATE",
-      "name": "permission.project_{module}.create",
-      "resourceId": "PROJECT_{MODULE}",
-      "license": false
-    }
-  ],
-  "resource": [
-    {
-      "id": "PROJECT_{MODULE}",
-      "name": "permission.project_{module}.name"
-    }
-  ]
-}
-```
-
-**字段说明**：
-- `permissions[].id`：权限标识，格式 `资源ID:操作`（如 `READ`、`READ+CREATE`、`READ+UPDATE`、`READ+DELETE`）
-- `permissions[].name`：权限名称的 i18n key（在 SDK 的 `permission.*` 中定义）
-- `permissions[].resourceId`：关联的资源 ID
-- `permissions[].license`：是否需要企业授权
-- `resource[].id`：资源标识
-- `resource[].name`：资源名称的 i18n key
-
-**参考模块**：
-- `report-stat`：有完整的权限配置（PROJECT_REPORT_ANALYSIS、PROJECT_ENTERPRISE_REPORT）
-- `analytics-stat`：空权限配置（暂无权限需求）
-
 ---
 
 ## 四、前端模块创建详解
@@ -931,8 +877,6 @@ cd {module}/frontend && npm run serve
 | **右上角按钮缺失** | **HeaderMenus 未导入 MsHeaderRightMenus** | **参考4.6节，导入 MsHeaderRightMenus 组件** |
 | **菜单文字显示为 key** | **i18n 语言包缺少对应翻译** | **检查 zh-CN/zh-TW/en-US 三个语言包的 key 是否完整** |
 | **菜单文字硬编码中文** | **未使用 $t() 国际化函数** | **将硬编码文字改为 `$t('{module}.menu.xxx')`** |
-| **Shiro SecurityManager 未初始化** | **排除了 ShiroConfig** | **不要排除 ShiroConfig/RsaConfig/PermissionConfig/OpenApiConfig，参考3.3节** |
-| **PermissionConfig NullPointerException** | **缺少 permission.json 文件** | **在 `src/main/resources/` 下创建 permission.json，参考3.10节** |
 | 路由不匹配 | 路由前缀与服务名不一致 | 检查 router/index.js 和 application.properties |
 | 样式丢失 | 未导入 metersphere-frontend 样式 | 检查 main.js 中的样式导入 |
 | 跨域错误 | devServer.headers 未配置 | 检查 vue.config.js 中的 CORS 配置 |

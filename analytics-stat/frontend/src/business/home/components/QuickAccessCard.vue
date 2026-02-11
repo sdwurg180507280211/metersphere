@@ -1,7 +1,7 @@
 <template>
   <el-card>
     <div slot="header" style="padding: 24px;">
-      <span class="table-title">快捷入口</span>
+      <span class="table-title">{{ $t('analytics.quick_access') }}</span>
     </div>
     <div style="padding: 0 24px 24px 24px;">
       <el-row :gutter="20">
@@ -15,10 +15,10 @@
             @click="handleClick(item)">
             <i :class="item.icon" style="font-size: 32px; color: #409EFF;"></i>
             <div style="margin-top: 12px; font-size: 16px; font-weight: 500; color: #1f2329;">
-              {{ item.name }}
+              {{ $t(item.i18nKey) }}
             </div>
             <div style="margin-top: 8px; font-size: 14px; color: #8f959e;">
-              {{ item.description }}
+              {{ $t(item.descKey) }}
             </div>
           </div>
         </el-col>

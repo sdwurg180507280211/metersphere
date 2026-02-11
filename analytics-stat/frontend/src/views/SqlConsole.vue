@@ -3,9 +3,9 @@
     <el-card>
       <!-- 卡片头部 -->
       <div slot="header" class="header">
-        <span>SQL查询台</span>
+        <span>{{ $t('analytics.sql_console') }}</span>
         <el-button type="primary" icon="el-icon-video-play" @click="executeQuery">
-          执行查询
+          {{ $t('analytics.execute_query') }}
         </el-button>
       </div>
 
@@ -15,7 +15,7 @@
           v-model="sqlQuery"
           type="textarea"
           :rows="10"
-          placeholder="请输入SQL查询语句..."
+          :placeholder="$t('analytics.sql_placeholder')"
           class="sql-editor"
         />
       </div>
@@ -24,7 +24,7 @@
 
       <!-- 查询结果 -->
       <div class="result-container">
-        <h3>查询结果</h3>
+        <h3>{{ $t('analytics.query_result') }}</h3>
         <el-table
           v-if="queryResult.length > 0"
           :data="queryResult"
@@ -38,7 +38,7 @@
             :label="column"
           />
         </el-table>
-        <el-empty v-else description="暂无查询结果" />
+        <el-empty v-else :description="$t('analytics.no_query_result')" />
       </div>
     </el-card>
   </div>
@@ -71,12 +71,12 @@ export default {
      */
     executeQuery() {
       if (!this.sqlQuery.trim()) {
-        this.$message.warning('请输入SQL查询语句');
+        this.$message.warning(this.$t('analytics.sql_empty_warning'));
         return;
       }
 
       // TODO: 调用后端 API 执行查询
-      this.$message.info('查询功能开发中...');
+      this.$message.info(this.$t('analytics.feature_in_development'));
     }
   }
 };

@@ -72,25 +72,25 @@ export default {
       // 加载状态
       loading: false,
       
-      // 快捷入口配置
+      // 快捷入口配置（使用 i18n key，支持多语言切换）
       quickAccessItems: [
         {
-          name: 'SQL查询台',
+          i18nKey: 'analytics.menu.sql_console',
           icon: 'el-icon-document',
           path: '/analytics/sql-console',
-          description: '执行自定义SQL查询'
+          descKey: 'analytics.sql_console_desc'
         },
         {
-          name: '数据字典',
+          i18nKey: 'analytics.menu.data_dictionary',
           icon: 'el-icon-collection',
           path: '/analytics/data-dictionary',
-          description: '查看系统数据字典'
+          descKey: 'analytics.data_dictionary_desc'
         },
         {
-          name: '综合查询',
+          i18nKey: 'analytics.comprehensive_query',
           icon: 'el-icon-search',
           path: '/analytics/query',
-          description: '多维度数据查询'
+          descKey: 'analytics.comprehensive_query_desc'
         }
       ]
     };
@@ -143,7 +143,7 @@ export default {
         this.queryCount = 1234;
         this.queryTrend = 'up';
       } catch (error) {
-        this.$message.error('获取查询次数统计失败');
+        this.$message.error(this.$t('analytics.load_query_count_failed'));
         console.error(error);
       }
     },
@@ -162,7 +162,7 @@ export default {
         this.dataVolume = 1024;
         this.dataUnit = 'MB';
       } catch (error) {
-        this.$message.error('获取数据量统计失败');
+        this.$message.error(this.$t('analytics.load_data_volume_failed'));
         console.error(error);
       }
     },
@@ -180,21 +180,21 @@ export default {
         this.recentQueries = [
           {
             id: '1',
-            name: '用户统计查询',
+            name: this.$t('analytics.mock_query_user_stat'),
             type: 'sql',
             createTime: new Date(),
             status: 'success'
           },
           {
             id: '2',
-            name: '项目数据查询',
+            name: this.$t('analytics.mock_query_project_data'),
             type: 'query',
             createTime: new Date(),
             status: 'success'
           }
         ];
       } catch (error) {
-        this.$message.error('获取最近查询列表失败');
+        this.$message.error(this.$t('analytics.load_recent_queries_failed'));
         console.error(error);
       }
     }

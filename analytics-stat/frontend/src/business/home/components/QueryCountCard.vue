@@ -2,7 +2,7 @@
   <el-card class="dashboard-card">
     <div class="main-info-card">
       <div style="padding: 24px;">
-        <div class="dashboard-title">查询次数统计</div>
+        <div class="dashboard-title">{{ $t('analytics.query_count_stat') }}</div>
         <div class="common-amount" style="margin-top: 16px;">
           <span style="font-size: 32px; font-weight: 500; color: #1f2329;">{{ count }}</span>
           <span style="margin-left: 8px;">
@@ -12,7 +12,7 @@
           </span>
         </div>
         <div style="margin-top: 8px; color: #8f959e; font-size: 14px;">
-          总查询次数
+          {{ $t('analytics.total_query_count') }}
         </div>
       </div>
     </div>

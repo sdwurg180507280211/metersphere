@@ -1,7 +1,7 @@
 <template>
   <el-card>
     <div slot="header" style="padding: 24px;">
-      <span class="table-title">最近查询</span>
+      <span class="table-title">{{ $t('analytics.recent_queries') }}</span>
     </div>
     <div style="padding: 0 24px 24px 24px;">
       <el-table
@@ -10,21 +10,21 @@
         @row-click="handleRowClick">
         <el-table-column
           prop="name"
-          label="查询名称"
+          :label="$t('analytics.query_name')"
           min-width="200">
         </el-table-column>
         <el-table-column
           prop="type"
-          label="类型"
+          :label="$t('analytics.type')"
           width="120">
           <template slot-scope="scope">
             <el-tag v-if="scope.row.type === 'sql'" type="primary" size="small">SQL</el-tag>
-            <el-tag v-else type="success" size="small">综合查询</el-tag>
+            <el-tag v-else type="success" size="small">{{ $t('analytics.comprehensive_query') }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column
           prop="createTime"
-          label="创建时间"
+          :label="$t('analytics.create_time')"
           width="180">
           <template slot-scope="scope">
             {{ formatTime(scope.row.createTime) }}
@@ -32,27 +32,27 @@
         </el-table-column>
         <el-table-column
           prop="status"
-          label="状态"
+          :label="$t('analytics.status')"
           width="100">
           <template slot-scope="scope">
             <el-tag 
               v-if="scope.row.status === 'success'" 
               type="success" 
               size="small">
-              成功
+              {{ $t('analytics.success') }}
             </el-tag>
             <el-tag 
               v-else 
               type="danger" 
               size="small">
-              失败
+              {{ $t('analytics.failed') }}
             </el-tag>
           </template>
         </el-table-column>
       </el-table>
       
       <div v-if="queries.length === 0" style="text-align: center; padding: 40px 0; color: #8f959e;">
-        暂无查询记录
+        {{ $t('analytics.no_query_records') }}
       </div>
     </div>
   </el-card>
