@@ -14,6 +14,12 @@ import mf from "metersphere-frontend/src/i18n/lang/zh-CN";
 // 本模块特有的翻译
 const message = {
   analytics: {
+    title: "分析统计",
+    menu: {
+      home: "工作台",
+      sql_console: "SQL查询台",
+      data_dictionary: "数据字典"
+    },
     home: "工作台",
     dashboard: "数据概览",
     sql_console: "SQL查询台",
