@@ -19,6 +19,8 @@ UNIQUE KEY uk_new_id (new_id)
 -- 第二步：插入数据（从user表查询并填充用户名和邮箱）
 -- ========================================
 INSERT INTO user_id_mapping (old_id, new_id, user_name, user_email) VALUES
+('changkeqi', 'zkr_changkeqi', '畅珂琦', NULL),
+('wangzichen', 'zkr_wangzichen001', '王子晨', NULL),
 ('anqi', 'rtdl_anqi', '安奇', NULL),
 ('bitaocun', 'trxl_biyaocun', '毕桃存', NULL),
 ('caoxueman', 'py_caoxueman', '曹雪曼', NULL),

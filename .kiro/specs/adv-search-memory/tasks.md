@@ -1,80 +1,73 @@
-# 实施计划：高级搜索记忆功能
+# 实现计划：高级搜索条件记忆功能
 
 ## 概述
 
-基于纯前端 localStorage 方案，为 MsTableAdvSearchBar 组件增加搜索条件记忆能力。改动集中在 4 个文件（tableUtils.js、MsTableAdvSearchBar.vue、MsSearch.vue、MsTableHeader.vue），加上 Consumer 页面传入 moduleKey。
+基于设计文档，将搜索条件记忆功能拆分为工具函数实现、两个组件改造、测试三个阶段。工具函数先行，组件改造复用同一套函数，最后通过属性测试和单元测试验证正确性。
 
 ## 任务
 
-- [ ] 1. 实现 localStorage 工具函数
-  - [ ] 1.1 在 `framework/sdk-parent/frontend/src/utils/tableUtils.js` 中新增三个工具函数
-    - 新增 `saveAdvSearchCondition(userId, moduleKey, conditions)` — 将搜索条件序列化为 JSON 并存入 localStorage，key 格式为 `ADV_SEARCH_{userId}_{moduleKey}`，用 try-catch 包裹 setItem 防止存储失败
-    - 新增 `getAdvSearchCondition(userId, moduleKey)` — 从 localStorage 读取并解析 JSON，解析失败返回 null
-    - 新增 `clearAdvSearchCondition(userId, moduleKey)` — 从 localStorage 删除对应 key
-    - 添加详细中文注释，保持与现有 `saveLastTableSortField`、`saveCustomTableWidth` 一致的代码风格
-    - _Requirements: 1.1, 1.3, 1.4, 5.1, 5.2, 6.1, 6.2, 6.3, 6.4_
+- [x] 1. 在 tableUtils.js 中实现搜索记忆工具函数
+  - [x] 1.1 实现 `_buildAdvSearchStorageKey`、`saveAdvSearchCondition`、`getAdvSearchCondition`、`clearAdvSearchCondition` 四个函数
+    - 在 `framework/sdk-parent/frontend/src/utils/tableUtils.js` 末尾添加
+    - `saveAdvSearchCondition`：从 components 数组提取 key、operator.value、value，序列化为 JSON 存入 localStorage，try-catch 包裹
+    - `getAdvSearchCondition`：从 localStorage 读取并解析 JSON，解析失败返回 null，try-catch 包裹
+    - `clearAdvSearchCondition`：删除对应 localStorage 记录，try-catch 包裹
+    - 添加详细中文注释
+    - _Requirements: 1.1, 1.2, 1.3, 6.1, 6.2, 6.3, 6.4_
 
-  - [ ]* 1.2 为工具函数编写属性测试
-    - **Property 1: 搜索条件存取往返一致性**
-    - **Validates: Requirements 1.1, 1.2, 1.4, 2.1, 2.2**
-    - **Property 2: 重置操作清除存储数据**
-    - **Validates: Requirements 1.3**
-    - **Property 4: 存储键隔离性**
+  - [ ]* 1.2 编写工具函数的属性测试
+    - 在 `framework/sdk-parent/frontend/src/utils/__tests__/advSearchMemory.test.js` 中编写
+    - 使用 fast-check 库
+    - **Property 1: 保存-读取往返一致性**
+    - **Validates: Requirements 1.1, 1.2, 2.1, 2.2**
+    - **Property 2: 存储隔离性**
     - **Validates: Requirements 3.1, 3.2**
-    - **Property 5: 损坏的 JSON 数据安全降级**
-    - **Validates: Requirements 5.1**
+    - **Property 3: 清除有效性**
+    - **Validates: Requirements 1.3**
 
-- [ ] 2. 修改 MsTableAdvSearchBar 组件核心逻辑
-  - [ ] 2.1 在 `MsTableAdvSearchBar.vue` 中新增 `moduleKey` prop 和记忆相关方法
-    - 新增 `moduleKey` prop（String 类型，默认空字符串）
-    - 新增 `isMemoryEnabled()` 方法 — 判断 moduleKey 是否非空
-    - 新增 `serializeConditions()` 方法 — 遍历 `optional.components`，提取每项的 key、operator.value、value、custom 标记，返回 `{ version: 1, items: [...] }` 结构
-    - 新增 `restoreSearchCondition(savedData)` 方法 — 遍历 savedData.items，在 `condition.components` 中查找匹配 key 的组件，找到则克隆并设置 operator.value 和 value 加入 optional.components，未找到则跳过
-    - 在文件顶部 import `saveAdvSearchCondition`、`getAdvSearchCondition`、`clearAdvSearchCondition` 和 `getCurrentUserId`
-    - _Requirements: 2.1, 2.2, 2.3, 3.3, 4.1, 4.2, 4.3, 5.3_
+  - [ ]* 1.3 编写工具函数的单元测试
+    - 在同一测试文件中编写
+    - 测试 localStorage JSON 损坏时返回 null（需求 5.1）
+    - 测试 localStorage 写入异常时静默忽略（需求 5.2）
+    - 测试空组件数组的保存和读取
+    - _Requirements: 5.1, 5.2_
 
-  - [ ] 2.2 修改 `search()` 方法，在搜索执行后保存条件
-    - 在 `this.visible = false` 之前，判断 `isMemoryEnabled()`，若启用则调用 `saveAdvSearchCondition(getCurrentUserId(), this.moduleKey, this.serializeConditions())`
-    - _Requirements: 1.1, 1.2_
+- [x] 2. 改造 MsTableAdvSearchBar 组件（旧版）
+  - [x] 2.1 添加 moduleKey prop 并改造 search/reset/init 方法
+    - 修改 `framework/sdk-parent/frontend/src/components/search/MsTableAdvSearchBar.vue`
+    - 添加 `moduleKey` 可选 prop，默认值为空字符串
+    - 在 `search()` 方法末尾添加 `saveAdvSearchCondition` 调用（仅当 moduleKey 非空且 userId 有效时）
+    - 在 `reset()` 方法末尾添加 `clearAdvSearchCondition` 调用
+    - 在 `init()` 方法中 slice 截取后添加回填逻辑，调用 `getAdvSearchCondition` 和 `_restoreSearchConditions`
+    - 实现 `_restoreSearchConditions` 方法：遍历已保存条件，匹配 optional.components 中的 key，恢复 operator.value 和 value，跳过不存在的字段
+    - 导入 `getCurrentUserId` 和三个工具函数
+    - 添加详细中文注释
+    - _Requirements: 1.1, 1.3, 2.1, 2.2, 2.3, 3.3, 4.1, 4.2, 4.3, 5.3_
 
-  - [ ] 2.3 修改 `reset()` 方法，在重置后清除存储
-    - 在 `this.$emit('search')` 之前，判断 `isMemoryEnabled()`，若启用则调用 `clearAdvSearchCondition(getCurrentUserId(), this.moduleKey)`
-    - _Requirements: 1.3_
+- [x] 3. 改造 MsTableAdvSearch 组件（新版）
+  - [x] 3.1 添加 moduleKey prop 并改造 search/reset/init 方法
+    - 修改 `framework/sdk-parent/frontend/src/components/new-ui/MsTableAdvSearch.vue`
+    - 与 2.1 完全相同的改动逻辑
+    - 添加 `moduleKey` 可选 prop，默认值为空字符串
+    - 在 `search()` 方法末尾添加 `saveAdvSearchCondition` 调用
+    - 在 `reset()` 方法末尾添加 `clearAdvSearchCondition` 调用
+    - 在 `init()` 方法中添加回填逻辑
+    - 实现 `_restoreSearchConditions` 方法
+    - 导入 `getCurrentUserId` 和三个工具函数
+    - 添加详细中文注释
+    - _Requirements: 1.1, 1.3, 2.1, 2.2, 2.3, 3.3, 4.1, 4.2, 4.3, 5.3_
 
-  - [ ] 2.4 修改 `init()` 方法，在初始化后回填条件
-    - 在现有 init 逻辑末尾（slice 和 disable 设置之后），判断 `isMemoryEnabled()`，若启用则调用 `getAdvSearchCondition(getCurrentUserId(), this.moduleKey)` 获取存储数据
-    - 若返回非 null，调用 `restoreSearchCondition()` 回填
-    - _Requirements: 2.1, 2.4_
-
-  - [ ]* 2.5 为回填逻辑编写属性测试
-    - **Property 3: 不存在的字段在回填时被跳过**
+  - [ ]* 3.2 编写回填逻辑的属性测试
+    - 在测试文件中添加
+    - **Property 4: 回填仅恢复已知字段**
     - **Validates: Requirements 2.3, 5.3**
 
-- [ ] 3. Checkpoint — 确保核心逻辑测试通过
-  - 确保所有测试通过，如有问题请向用户确认。
-
-- [ ] 4. 透传 moduleKey 属性到组件链
-  - [ ] 4.1 修改 `MsSearch.vue`，新增 `moduleKey` prop 并透传给 `MsTableAdvSearchBar`
-    - 新增 `moduleKey` prop（String 类型，默认空字符串）
-    - 在模板中 `<ms-table-adv-search-bar>` 上添加 `:module-key="moduleKey"`
-    - _Requirements: 4.1, 4.2_
-
-  - [ ] 4.2 修改 `MsTableHeader.vue`，新增 `moduleKey` prop 并透传给 `MsSearch`
-    - 新增 `moduleKey` prop（String 类型，默认空字符串）
-    - 在模板中 `<ms-search>` 上添加 `:module-key="moduleKey"`
-    - _Requirements: 4.1, 4.2_
-
-- [ ] 5. 在 Consumer 页面接入搜索记忆
-  - [ ] 5.1 修改 `IssueList.vue`（缺陷列表）作为首个接入页面
-    - 在 `<ms-table-header>` 上添加 `:module-key="tableHeaderKey"`，复用已有的 `tableHeaderKey: "ISSUE_LIST"`
-    - _Requirements: 4.3_
-
-- [ ] 6. Final checkpoint — 确保所有测试通过
+- [x] 4. 检查点 - 确保所有测试通过
   - 确保所有测试通过，如有问题请向用户确认。
 
 ## 备注
 
-- 标记 `*` 的任务为可选任务，可跳过以加快 MVP 进度
-- 每个任务引用了具体的需求编号以便追溯
-- Consumer 页面（任务 5）仅以 IssueList 为示例，其他页面可按相同模式逐步接入
-- 所有代码修改需添加详细中文注释
+- 标记 `*` 的子任务为可选，可跳过以加速 MVP 交付
+- 每个任务引用了具体的需求编号，确保可追溯性
+- 工具函数优先实现，两个组件复用同一套函数
+- 属性测试验证通用正确性，单元测试覆盖边界情况

@@ -27,6 +27,7 @@
           :base-search-tip="tip"
           :condition.sync="condition"
           :show-base-search="haveSearch"
+          :module-key="moduleKey"
           @search="search">
         </ms-search>
       </span>
@@ -124,6 +125,11 @@ export default {
       default() {
         return true;
       }
+    },
+    // 模块标识符，透传给 MsSearch → MsTableAdvSearchBar 启用搜索记忆功能
+    moduleKey: {
+      type: String,
+      default: '',
     },
     versionOptions: {
       type: Array,
