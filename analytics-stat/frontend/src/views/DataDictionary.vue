@@ -3,9 +3,9 @@
     <el-card>
       <!-- 卡片头部 -->
       <div slot="header" class="header">
-        <span>数据字典</span>
+        <span>{{ $t('analytics.data_dictionary') }}</span>
         <el-button type="primary" icon="el-icon-plus" @click="handleAdd">
-          新增字典
+          {{ $t('analytics.add_dictionary') }}
         </el-button>
       </div>
 
@@ -15,32 +15,32 @@
         border
         style="width: 100%"
       >
-        <el-table-column prop="dictType" label="字典类型" width="150" />
-        <el-table-column prop="dictCode" label="字典编码" width="150" />
-        <el-table-column prop="dictLabel" label="字典标签" width="150" />
-        <el-table-column prop="dictValue" label="字典值" />
-        <el-table-column prop="sortOrder" label="排序" width="80" />
-        <el-table-column label="状态" width="80">
+        <el-table-column prop="dictType" :label="$t('analytics.dict_type')" width="150" />
+        <el-table-column prop="dictCode" :label="$t('analytics.dict_code')" width="150" />
+        <el-table-column prop="dictLabel" :label="$t('analytics.dict_label')" width="150" />
+        <el-table-column prop="dictValue" :label="$t('analytics.dict_value')" />
+        <el-table-column prop="sortOrder" :label="$t('analytics.sort_order')" width="80" />
+        <el-table-column :label="$t('analytics.status')" width="80">
           <template slot-scope="{ row }">
             <el-tag :type="row.enabled ? 'success' : 'danger'">
-              {{ row.enabled ? '启用' : '禁用' }}
+              {{ row.enabled ? $t('analytics.enabled') : $t('analytics.disabled') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column :label="$t('commons.operating')" width="150" fixed="right">
           <template slot-scope="{ row }">
             <el-button type="text" size="small" @click="handleEdit(row)">
-              编辑
+              {{ $t('analytics.edit') }}
             </el-button>
             <el-button type="text" size="small" style="color: #F56C6C;" @click="handleDelete(row)">
-              删除
+              {{ $t('analytics.delete') }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <!-- 空状态 -->
-      <el-empty v-if="dictionaryList.length === 0" description="暂无数据" />
+      <el-empty v-if="dictionaryList.length === 0" :description="$t('analytics.no_data')" />
     </el-card>
   </div>
 </template>
@@ -66,7 +66,7 @@ export default {
      * 新增字典
      */
     handleAdd() {
-      this.$message.info('新增功能开发中...');
+      this.$message.info(this.$t('analytics.feature_in_development'));
     },
 
     /**
@@ -75,7 +75,7 @@ export default {
      */
     handleEdit(row) {
       console.log('编辑:', row);
-      this.$message.info('编辑功能开发中...');
+      this.$message.info(this.$t('analytics.feature_in_development'));
     },
 
     /**
@@ -84,7 +84,7 @@ export default {
      */
     handleDelete(row) {
       console.log('删除:', row);
-      this.$message.info('删除功能开发中...');
+      this.$message.info(this.$t('analytics.feature_in_development'));
     }
   }
 };

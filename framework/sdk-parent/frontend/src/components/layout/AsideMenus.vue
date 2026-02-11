@@ -57,7 +57,7 @@
     <el-menu-item index="/analytics" @click="activeAnalyticsStat()" v-if="check('analytics')" onselectstart="return false">
       <div>
         <svg-icon iconClass="analytics-stat" class-name="ms-menu-img"/>
-        <span slot="title" class="ms-menu-item-title">分析统计</span>
+        <span slot="title" class="ms-menu-item-title">{{ $t('commons.analytics_stat') }}</span>
       </div>
     </el-menu-item>
 

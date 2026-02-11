@@ -36,10 +36,49 @@ const message = {
     query_success: "查询成功",
     query_failed: "查询失败",
     rows_affected: "影响行数",
-    execution_time: "执行时间"
-  },
-  commons: {
-    analytics_stat: "分析统计"
+    execution_time: "执行时间",
+    // 工作台首页
+    query_count_stat: "查询次数统计",
+    total_query_count: "总查询次数",
+    data_volume_stat: "数据量统计",
+    total_data_volume: "总数据量",
+    quick_access: "快捷入口",
+    recent_queries: "最近查询",
+    query_name: "查询名称",
+    type: "类型",
+    create_time: "创建时间",
+    status: "状态",
+    success: "成功",
+    failed: "失败",
+    comprehensive_query: "综合查询",
+    no_query_records: "暂无查询记录",
+    load_query_count_failed: "获取查询次数统计失败",
+    load_data_volume_failed: "获取数据量统计失败",
+    load_recent_queries_failed: "获取最近查询列表失败",
+    // 快捷入口描述
+    sql_console_desc: "执行自定义SQL查询",
+    data_dictionary_desc: "查看系统数据字典",
+    comprehensive_query_desc: "多维度数据查询",
+    // 数据字典页面
+    add_dictionary: "新增字典",
+    dict_type: "字典类型",
+    dict_code: "字典编码",
+    dict_label: "字典标签",
+    dict_value: "字典值",
+    sort_order: "排序",
+    enabled: "启用",
+    disabled: "禁用",
+    edit: "编辑",
+    delete: "删除",
+    feature_in_development: "功能开发中...",
+    // SQL查询台页面
+    execute_query: "执行查询",
+    sql_placeholder: "请输入SQL查询语句...",
+    sql_empty_warning: "请输入SQL查询语句",
+    no_query_result: "暂无查询结果",
+    // Mock 数据（临时，接入 API 后移除）
+    mock_query_user_stat: "用户统计查询",
+    mock_query_project_data: "项目数据查询"
   }
 };
 

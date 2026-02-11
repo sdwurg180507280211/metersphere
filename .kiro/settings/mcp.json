@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "chrome-devtools": {
-      "command": "/Users/edy/.nvm/versions/node/v20.19.6/bin/npx",
+      "command": "/Users/zhaozhiwei/.nvm/versions/node/v20.19.6/bin/npx",
       "args": [
         "-y",
         "chrome-devtools-mcp@latest",
@@ -9,8 +9,8 @@
         "--channel=stable"
       ],
       "env": {
-        "PATH": "/Users/edy/.nvm/versions/node/v20.19.6/bin:/usr/local/bin:/usr/bin:/bin",
-        "NODE_PATH": "/Users/edy/.nvm/versions/node/v20.19.6/lib/node_modules"
+        "PATH": "/Users/zhaozhiwei/.nvm/versions/node/v20.19.6/bin:/usr/local/bin:/usr/bin:/bin",
+        "NODE_PATH": "/Users/zhaozhiwei/.nvm/versions/node/v20.19.6/lib/node_modules"
       },
       "autoApprove": [
         // 页面导航与控制
@@ -18,49 +18,41 @@
         "reload_page",
         "go_back",
         "go_forward",
-        
         // 截图与快照
         "take_screenshot",
-        "take_snapshot",          // 获取 DOM + 样式快照（结构化数据）
-        
+        "take_snapshot", // 获取 DOM + 样式快照（结构化数据）
         // 控制台日志
         "list_console_messages",
         "clear_console_messages",
-        
         // 网络监控
         "list_network_requests",
         "get_network_request_details",
-        
         // 元素交互
         "click",
         "hover",
         "type_text",
         "press_key",
         "scroll_to",
-        
         // DOM 操作
         "get_element_html",
         "get_element_text",
         "get_computed_style",
         "find_elements",
-        
         // 页面信息
         "get_page_content",
         "get_page_title",
         "get_page_url",
-        
         // 脚本执行
         "evaluate_script",
         "call_function",
-        
         // 性能与审计
         "start_performance_recording",
         "stop_performance_recording",
         "run_lighthouse_audit",
-        
         // 存储与 Cookie
         "get_cookies",
-        "set_cookie"
+        "set_cookie",
+        "wait_for"
       ],
       "disabled": false
     }
