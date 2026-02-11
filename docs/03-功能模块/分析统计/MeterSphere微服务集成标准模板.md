@@ -51,9 +51,11 @@
 | 4 | **vue.config.js** | `{module}/frontend/vue.config.js` | ✅ | Webpack 配置、UMD 打包、代码分割 |
 | 5 | **router/index.js** | `{module}/frontend/src/router/index.js` | ✅ | Vue Router 配置、路由前缀 |
 | 6 | **App.vue** | `{module}/frontend/src/App.vue` | ✅ | 应用根组件 |
-| 7 | **i18n** | `{module}/frontend/src/i18n/` | 推荐 | 多语言支持（zh-CN、zh-TW、en-US） |
-| 8 | **store** | `{module}/frontend/src/store/` | 推荐 | Pinia 状态管理 |
-| 9 | **pom.xml** | `{module}/frontend/pom.xml` | ✅ | frontend-maven-plugin 配置 |
+| 7 | **HeaderMenus** | `{module}/frontend/src/business/head/{Module}HeaderMenus.vue` | ✅ | 顶部导航栏（项目切换 + 二级菜单 + 右上角按钮组） |
+| 8 | **二级布局容器** | `{module}/frontend/src/business/{Module}.vue` | ✅ | 二级布局（HeaderMenus + 左侧菜单 + 内容区域） |
+| 9 | **i18n** | `{module}/frontend/src/i18n/` | ✅ | 多语言支持（zh-CN、zh-TW、en-US），菜单文字禁止硬编码 |
+| 10 | **store** | `{module}/frontend/src/store/` | 推荐 | Pinia 状态管理 |
+| 11 | **pom.xml** | `{module}/frontend/pom.xml` | ✅ | frontend-maven-plugin 配置 |
 
 ### 1.3 主应用配置
 
@@ -423,10 +425,14 @@ SET SESSION innodb_lock_wait_timeout = DEFAULT;
 ├── src/
 │   ├── api/                          # API 接口定义
 │   ├── business/                     # 业务组件
+│   │   ├── head/
+│   │   │   └── {Module}HeaderMenus.vue  # 顶部导航栏（项目切换+二级菜单+右上角按钮组）
+│   │   ├── {Module}.vue              # 二级布局容器（HeaderMenus+左侧菜单+内容区域）
+│   │   ├── {Module}Menu.vue          # 左侧菜单（可选）
 │   │   └── home/
 │   │       ├── {Module}Home.vue
 │   │       └── components/
-│   ├── i18n/                         # 国际化
+│   ├── i18n/                         # 国际化（⚠️ 菜单文字禁止硬编码，必须使用 i18n key）
 │   │   ├── lang/
 │   │   │   ├── zh-CN.js
 │   │   │   ├── zh-TW.js
@@ -509,7 +515,52 @@ if (!window.__POWERED_BY_QIANKUN__) {
 - `splitChunks` 代码分割优化
 - `svg-sprite-loader` SVG 精灵图支持
 
-### 4.6 router/index.js
+### 4.6 顶部导航栏组件（HeaderMenus）
+
+每个微服务模块都需要一个顶部导航栏组件，提供：
+- 左侧：项目切换（ProjectSwitch）
+- 中间：二级导航菜单
+- 右侧：公共按钮组（MsHeaderRightMenus）—— 用户头像、语言切换、工作空间、任务中心、通知、帮助
+
+**创建文件**：`{module}/frontend/src/business/head/{Module}HeaderMenus.vue`
+
+**⚠️ 常见问题**：
+- 如果右上角没有按钮（用户头像、语言切换等），检查是否导入了 `MsHeaderRightMenus`
+- 菜单文字显示为 key（如 `{module}.menu.home`），检查 i18n 语言包是否配置正确
+
+### 4.7 二级布局容器组件
+
+二级布局容器组件将 HeaderMenus + 左侧菜单 + 内容区域组合在一起。
+
+**创建文件**：`{module}/frontend/src/business/{Module}.vue`
+
+**布局模式选择**：
+- **有左侧菜单**（如 analytics-stat）：使用 `MsContainer` + `MsAsideContainer` + `MsMainContainer`
+- **无左侧菜单**（如 report-stat）：直接使用 `<router-view />`
+
+### 4.8 i18n 国际化规范
+
+每个模块需要提供三个语言包文件，**所有菜单文字必须使用 i18n key，禁止硬编码中文**。
+
+**目录结构**：
+```
+{module}/frontend/src/i18n/
+├── lang/
+│   ├── zh-CN.js    # 中文简体
+│   ├── zh-TW.js    # 中文繁体
+│   └── en-US.js    # 英文
+└── index.js        # i18n 初始化
+```
+
+**语言包模板**（以 zh-CN.js 为例）：
+
+**⚠️ i18n 规范要点**：
+1. **菜单文字必须使用 i18n key**（如 `$t('{module}.menu.home')`），禁止硬编码中文
+2. **三个语言包必须同步维护**：zh-CN、zh-TW、en-US 的 key 结构必须一致
+3. **必须导入三个基础语言包**：`ele-*`（Element UI）、`fit2cloud-ui`、`metersphere-frontend`
+4. **模块特有翻译放在 `message` 对象中**，通过展开运算符合并
+
+### 4.9 router/index.js
 
 ```javascript
 import Vue from 'vue';
@@ -625,6 +676,9 @@ cd {module}/frontend && npm run serve
 | 静态资源 404 | SessionFilter 未配置 | 在 PREFIX 数组中添加模块前缀 |
 | **系统API 404** | **缺少远程调用Controller** | **添加 SystemSettingController** |
 | **SDK Bean 无法注入** | **包名不规范** | **包名必须是 `io.metersphere`** |
+| **右上角按钮缺失** | **HeaderMenus 未导入 MsHeaderRightMenus** | **参考4.6节，导入 MsHeaderRightMenus 组件** |
+| **菜单文字显示为 key** | **i18n 语言包缺少对应翻译** | **检查 zh-CN/zh-TW/en-US 三个语言包的 key 是否完整** |
+| **菜单文字硬编码中文** | **未使用 $t() 国际化函数** | **将硬编码文字改为 `$t('{module}.menu.xxx')`** |
 | 路由不匹配 | 路由前缀与服务名不一致 | 检查 router/index.js 和 application.properties |
 | 样式丢失 | 未导入 metersphere-frontend 样式 | 检查 main.js 中的样式导入 |
 | 跨域错误 | devServer.headers 未配置 | 检查 vue.config.js 中的 CORS 配置 |
@@ -762,7 +816,13 @@ cd {module}/backend && mvn spring-boot:run
 
 本文档提供了 MeterSphere 新增微服务模块的**完整标准模板**，使用本模板可以快速创建符合 MeterSphere 规范的新微服务模块，确保与现有生态的无缝集成。
 
+**核心规范要点**：
+- **后端包名**：必须是 `io.metersphere`，不能是 `io.metersphere.{module}`
+- **前端 HeaderMenus**：必须导入 `ProjectSwitch` + `MsHeaderRightMenus`，确保右上角按钮组正常显示
+- **i18n 国际化**：菜单文字禁止硬编码中文，必须使用 `$t()` 函数 + i18n key，三个语言包同步维护
+- **远程调用 Controller**：必须添加 `SystemSettingController`，转发系统级公共 API
+
 **参考模块**：
-- `analytics-stat`：最新的标准实现
+- `analytics-stat`：最新的标准实现（含 HeaderMenus + i18n 规范化修复，2026-02-10）
 - `report-stat`：成熟的参考实现
 - `performance-test`：完整的功能实现
