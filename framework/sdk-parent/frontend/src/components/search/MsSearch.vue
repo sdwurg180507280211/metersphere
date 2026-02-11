@@ -9,6 +9,7 @@
     <ms-table-adv-search-bar
       :show-link="showAdvSearchLink"
       :condition.sync="condition"
+      :module-key="moduleKey"
       @search="search"
       class="ms-adv-search"
       ref="advSearch"/>
@@ -49,7 +50,12 @@ export default {
       default() {
         return 240;
       }
-    }
+    },
+    // 模块标识符，透传给 MsTableAdvSearchBar 启用搜索记忆功能
+    moduleKey: {
+      type: String,
+      default: '',
+    },
   },
   computed: {
     showAdvSearchLink() {

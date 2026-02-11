@@ -946,3 +946,81 @@ export function getCustomFieldFilter(field, userFilter) {
   }
   return null;
 }
+
+// ============================================================
+// 高级搜索条件记忆功能 - 工具函数
+// 用于在 localStorage 中保存、读取、清除高级搜索条件
+// 存储键格式：ADV_SEARCH_{userId}_{moduleKey}
+// ============================================================
+
+/**
+ * 生成高级搜索条件的 localStorage 存储键
+ * 格式为 ADV_SEARCH_{userId}_{moduleKey}，确保用户隔离和模块隔离
+ * @param {string} userId - 用户 ID
+ * @param {string} moduleKey - 模块标识符（如 ISSUE_LIST、TEST_CASE_LIST）
+ * @returns {string} 存储键
+ */
+function _buildAdvSearchStorageKey(userId, moduleKey) {
+  return `ADV_SEARCH_${userId}_${moduleKey}`;
+}
+
+/**
+ * 保存高级搜索条件到 localStorage
+ * 从 components 数组中提取每个搜索项的 key、operator.value、value，
+ * 序列化为 JSON 字符串后存入 localStorage。
+ * 所有操作包裹在 try-catch 中，存储失败（如空间已满）时静默忽略，不影响搜索功能。
+ * @param {string} userId - 用户 ID
+ * @param {string} moduleKey - 模块标识符
+ * @param {Array} components - 搜索组件数组（optional.components）
+ */
+export function saveAdvSearchCondition(userId, moduleKey, components) {
+  try {
+    // 从组件数组中提取需要持久化的字段：key、operator 值、搜索值
+    const conditions = (components || []).map((comp) => ({
+      key: comp.key,
+      operator: comp.operator ? comp.operator.value : undefined,
+      value: comp.value,
+    }));
+    const storageKey = _buildAdvSearchStorageKey(userId, moduleKey);
+    localStorage.setItem(storageKey, JSON.stringify(conditions));
+  } catch (e) {
+    // 静默忽略存储异常（如 localStorage 空间已满），不影响正常搜索流程
+  }
+}
+
+/**
+ * 从 localStorage 读取高级搜索条件
+ * 读取对应存储键的 JSON 字符串并解析为数组。
+ * 如果记录不存在或 JSON 解析失败（数据损坏），返回 null。
+ * @param {string} userId - 用户 ID
+ * @param {string} moduleKey - 模块标识符
+ * @returns {Array|null} 搜索条件数组，不存在或解析失败时返回 null
+ */
+export function getAdvSearchCondition(userId, moduleKey) {
+  try {
+    const storageKey = _buildAdvSearchStorageKey(userId, moduleKey);
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) {
+      return null;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    // JSON 解析失败（数据损坏）时返回 null，组件将按默认条件展示
+    return null;
+  }
+}
+
+/**
+ * 清除 localStorage 中的高级搜索条件
+ * 删除对应存储键的记录。操作包裹在 try-catch 中，删除失败时静默忽略。
+ * @param {string} userId - 用户 ID
+ * @param {string} moduleKey - 模块标识符
+ */
+export function clearAdvSearchCondition(userId, moduleKey) {
+  try {
+    const storageKey = _buildAdvSearchStorageKey(userId, moduleKey);
+    localStorage.removeItem(storageKey);
+  } catch (e) {
+    // 静默忽略删除异常，不影响重置功能
+  }
+}
