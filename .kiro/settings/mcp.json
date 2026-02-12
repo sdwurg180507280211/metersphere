@@ -52,7 +52,13 @@
         // 存储与 Cookie
         "get_cookies",
         "set_cookie",
-        "wait_for"
+        "wait_for",
+        "get_network_request",
+        "list_pages",
+        "select_page",
+        "get_console_message",
+        "get_console_message",
+        "get_console_message"
       ],
       "disabled": false
     }

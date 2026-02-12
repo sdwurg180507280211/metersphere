@@ -40,7 +40,8 @@
         <div class="ms-task-opt-btn" @click="packUp">
           {{ $t("commons.task_close") }}
         </div>
-        <micro-app
+        <!-- 【迁移】使用 MicroAppWrapper 替代 MicroApp -->
+        <micro-app-wrapper
           v-if="isMicroAppInited"
           :to="microAppConfig.url"
           :service="microAppConfig.service"
@@ -178,15 +179,15 @@ import {
   stopBatchTask,
   stopTask,
 } from "../../api/task";
-import MicroApp from "../../components/MicroApp";
-import { prefetchApps } from "qiankun";
+// 【迁移】使用 MicroAppWrapper 替代 MicroApp（micro-app 替代 qiankun 的 loadMicroApp）
+import MicroAppWrapper from "../../components/MicroAppWrapper";
 import TaskCenterItem from "./TaskCenterItem";
 import { getUUID } from "../../utils";
 
 export default {
   name: "MsTaskCenter",
   components: {
-    MicroApp,
+    MicroAppWrapper,
     MsDrawer,
     TaskCenterItem,
     MsTaskReportStatus: () => import("./TaskReportStatus"),
@@ -607,37 +608,8 @@ export default {
       this.taskVisible = true;
     },
     prefetchApps() {
-      const microPorts = JSON.parse(sessionStorage.getItem("micro_ports"));
-      let apps = [];
-      if (microPorts.api) {
-        apps.push({
-          name: "api",
-          entry: "//127.0.0.1:" + (microPorts.api - 4000),
-        });
-      }
-      if (microPorts.performance) {
-        apps.push({
-          name: "performance",
-          entry: "//127.0.0.1:" + (microPorts.performance - 4000),
-        });
-      }
-      if (microPorts.ui) {
-        apps.push({
-          name: "ui",
-          entry: "//127.0.0.1:" + (microPorts.ui - 4000),
-        });
-      }
-
-      if (process.env.NODE_ENV !== "development") {
-        // 替换成后端的端口
-        apps.forEach((app) => {
-          app.entry = app.entry.replace(
-            /127\.0\.0\.1:\d+/g,
-            window.location.host + "/" + app.name
-          );
-        });
-      }
-      prefetchApps(apps);
+      // 【迁移】预加载已由主应用 micro-app-setup.js 中的 preFetchApps() 统一处理
+      // TaskCenter 不再需要单独预加载，避免重复加载
     },
   },
 };

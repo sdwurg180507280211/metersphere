@@ -1,12 +1,13 @@
-// webpack打包公共文件路径
+// webpack打包公共文件路径（micro-app 适配）
 import {getApps} from "metersphere-frontend/src/api/apps";
 
-if (window.__POWERED_BY_QIANKUN__) {
-  __webpack_public_path__ = window.__INJECTED_PUBLIC_PATH_BY_QIANKUN__;
+// micro-app 自动注入 __MICRO_APP_PUBLIC_PATH__，用于设置子应用资源基础路径
+if (window.__MICRO_APP_ENVIRONMENT__) {
+  __webpack_public_path__ = window.__MICRO_APP_PUBLIC_PATH__;
 }
 
-
-if (!window.__POWERED_BY_QIANKUN__) {
+// 独立运行时，从网关获取服务列表（与原逻辑一致）
+if (!window.__MICRO_APP_ENVIRONMENT__) {
   getApps()
     .then(res => {
       let modules = {}, microPorts = {};

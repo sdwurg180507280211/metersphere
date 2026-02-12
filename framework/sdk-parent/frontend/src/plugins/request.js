@@ -7,18 +7,24 @@ import {getUrlParams, getUUID} from "../utils";
 import {initTaskData} from "../api/novice";
 import {Base64} from "js-base64";
 
-// baseURL 根据是否是独立运行修改
+// baseURL 根据是否在微前端环境中运行来设置
+// micro-app 环境下，API 请求需要加上 /{serviceId} 前缀，通过 gateway 路由到对应后端服务
+// 独立运行时 baseURL 为空，直接请求当前域名
 let baseURL = '';
-if (window.__POWERED_BY_QIANKUN__) {
+if (window.__MICRO_APP_ENVIRONMENT__ || window.__POWERED_BY_QIANKUN__) {
   baseURL = '/' + packageJSON.name
 }
 
-// url 中直接写了 module， eg: /setting
-if (window.location.pathname.startsWith('/' + packageJSON.name)) {
-  if (window.location.search.indexOf('shareId=') > -1) {
-    baseURL = '/' + packageJSON.name;
-  } else {
-    window.location.href = '/'
+// 独立运行时（非微前端环境），如果 URL 中直接写了模块路径（如 /setting），
+// 需要设置 baseURL 或跳转到首页（shareId 场景除外）
+// 【注意】微前端环境下不执行此逻辑，因为 pathname 可能是 /{serviceId}（子应用入口 URL）
+if (!window.__MICRO_APP_ENVIRONMENT__ && !window.__POWERED_BY_QIANKUN__) {
+  if (window.location.pathname.startsWith('/' + packageJSON.name)) {
+    if (window.location.search.indexOf('shareId=') > -1) {
+      baseURL = '/' + packageJSON.name;
+    } else {
+      window.location.href = '/'
+    }
   }
 }
 
@@ -287,14 +293,15 @@ export const socket = (url) => {
     protocol = "wss://";
   }
   let uri = protocol + window.location.host + url;
-  if (window.__POWERED_BY_QIANKUN__) {
+  // 微前端环境下，WebSocket 需要加上 /{serviceId} 前缀通过 gateway 路由
+  if (window.__MICRO_APP_ENVIRONMENT__ || window.__POWERED_BY_QIANKUN__) {
     uri = protocol + window.location.host + "/" + packageJSON.name + url;
   }
   return new WebSocket(uri);
 };
 
 export const generateShareUrl = (name, shareUrl) => {
-  if (window.__POWERED_BY_QIANKUN__) {
+  if (window.__MICRO_APP_ENVIRONMENT__ || window.__POWERED_BY_QIANKUN__) {
     return window.location.origin + '/' + packageJSON.name + name + shareUrl;
   } else {
     return window.location.origin + name + shareUrl;
@@ -302,7 +309,7 @@ export const generateShareUrl = (name, shareUrl) => {
 }
 
 export const generateModuleUrl = (url) => {
-  if (window.__POWERED_BY_QIANKUN__) {
+  if (window.__MICRO_APP_ENVIRONMENT__ || window.__POWERED_BY_QIANKUN__) {
     return window.location.origin + '/' + packageJSON.name + url;
   } else {
     return window.location.origin + url;

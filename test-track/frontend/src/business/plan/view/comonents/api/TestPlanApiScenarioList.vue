@@ -252,7 +252,7 @@
           size="90%"
         >
           <!-- 接口场景报告 -->
-          <micro-app
+          <micro-app-wrapper
             :to="`/automation/report/view/${reportId}`"
             service="api"
           />
@@ -318,7 +318,7 @@ import {
   testPlanScenarioList,
 } from "@/api/remote/plan/test-plan-scenario";
 import {apiAutomationReduction} from "@/api/remote/api/api-automation";
-import MicroApp from "metersphere-frontend/src/components/MicroApp";
+import MicroAppWrapper from "metersphere-frontend/src/components/MicroAppWrapper";
 import MsTestPlanApiStatus from "@/business/plan/view/comonents/api/TestPlanApiStatus";
 import {getVersionFilters} from "@/business/utils/sdk-utils";
 import {TEST_PLAN_API_SCENARIO_CONFIGS} from "metersphere-frontend/src/components/search/search-components";
@@ -339,7 +339,7 @@ export default {
     MsTableMoreBtn,
     MsTableHeader,
     MsTag,
-    MicroApp,
+    MicroAppWrapper,
     BatchEdit,
     MsPlanRunMode,
     MsTaskCenter,

@@ -59,10 +59,9 @@ module.exports = defineConfig({
       fallback: { stream: require.resolve("stream-browserify") },
     },
     output: {
-      // 把子应用打包成 umd 库格式(必须)
-      library: `${name}-[name]`,
-      libraryTarget: "umd",
-      chunkLoadingGlobal: `webpackJsonp_${name}`,
+      // 移除 library 和 libraryTarget（micro-app 不需要 UMD 打包格式）
+      chunkLoadingGlobal: `webpackJsonp_${name}`, // 保留，避免多应用 chunk 冲突
+      globalObject: 'window', // 确保全局对象指向 window，micro-app 指南推荐
       // 打包后js的名称
       filename: `js/${name}-[name].[contenthash:8].js`,
       chunkFilename: `js/${name}-[name].[contenthash:8].js`,

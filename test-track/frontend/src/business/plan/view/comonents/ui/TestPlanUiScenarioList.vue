@@ -241,7 +241,7 @@
           size="90%"
           @close="search"
         >
-          <micro-app
+          <micro-app-wrapper
             :to="`/ui/report/view/${reportId}`"
             route-name="ApiReportView"
             :route-params="{ showCancelButton: false, reportId, view: true }"
@@ -310,7 +310,7 @@ import {
 import {getVersionFilters} from "@/business/utils/sdk-utils";
 import {uiAutomationReduction, uiAutomationVerifySeleniumServer,} from "@/api/remote/ui/api-scenario";
 import i18n from "@/i18n";
-import MicroApp from "metersphere-frontend/src/components/MicroApp";
+import MicroAppWrapper from "metersphere-frontend/src/components/MicroAppWrapper";
 import MsTestPlanApiStatus from "@/business/plan/view/comonents/api/TestPlanApiStatus";
 import UiRunMode from "@/business/plan/view/comonents/ui/UiRunMode";
 import {baseSocket} from "@/api/base-network";
@@ -330,7 +330,7 @@ export default {
     MsTablePagination,
     MsTableHeader,
     MsTag,
-    MicroApp,
+    MicroAppWrapper,
     BatchEdit,
     MsTaskCenter,
     MsPlanRunMode,

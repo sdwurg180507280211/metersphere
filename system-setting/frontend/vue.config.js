@@ -49,10 +49,10 @@ module.exports = defineConfig({
       },
     },
     output: {
-      // 把子应用打包成 umd 库格式(必须)
-      library: `${name}-[name]`,
-      libraryTarget: "umd",
-      chunkLoadingGlobal: `webpackJsonp_${name}`,
+      // 【已移除】library 和 libraryTarget（micro-app 不需要 UMD 打包格式）
+      // 注意：移除的是 webpack 的 UMD 打包配置，保留的是 main.js 中的 UMD 生命周期模式
+      chunkLoadingGlobal: `webpackJsonp_${name}`,  // 保留，避免多应用 chunk 冲突
+      globalObject: 'window',                       // 【新增】确保全局对象指向 window
       // 打包后js的名称
       filename: `js/${name}-[name].[contenthash:8].js`,
       chunkFilename: `js/${name}-[name].[contenthash:8].js`,
