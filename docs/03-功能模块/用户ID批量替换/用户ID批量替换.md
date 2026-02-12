@@ -1,3 +1,4 @@
+```
 USE metersphere_dev;
 
 -- ========================================
@@ -18,7 +19,12 @@ UNIQUE KEY uk_new_id (new_id)
 -- ========================================
 -- 第二步：插入数据（从user表查询并填充用户名和邮箱）
 -- ========================================
-INSERT INTO user_id_mapping (old_id, new_id, user_name, user_email) VALUES
+INSERT IGNORE INTO user_id_mapping (old_id, new_id, user_name, user_email) VALUES
+('tangli', 'tangli002', '汤黎', NULL),
+('chenyanlei', 'chenyanlei001', '陈岩磊', NULL),
+('zhanghao', 'zkr_zhanghao1', '张浩', NULL),
+('zhangxue', 'zkr zhangxue001', '张雪', NULL),
+
 ('changkeqi', 'zkr_changkeqi', '畅珂琦', NULL),
 ('wangzichen', 'zkr_wangzichen001', '王子晨', NULL),
 ('anqi', 'rtdl_anqi', '安奇', NULL),
@@ -248,7 +254,6 @@ INSERT INTO user_id_mapping (old_id, new_id, user_name, user_email) VALUES
 ('liuyujie', 'liuyujie102', '刘雨洁', NULL),
 ('xuheyan', 'zkr_xuheyan', '徐鹤严', NULL);
 
-
 -- 插入带双引号的映射记录（用于自定义字段）
 INSERT INTO user_id_mapping (old_id, new_id, user_name, user_email)
 SELECT
@@ -258,13 +263,6 @@ user_name,
 user_email
 FROM user_id_mapping
 WHERE old_id NOT LIKE '"%"';
-
-
-
-
-
-
-
 
 -- ========================================
 -- 执行前检查清单
@@ -920,7 +918,8 @@ UPDATE notification n
 INNER JOIN user_id_mapping m ON n.operator = m.old_id
 SET n.operator = m.new_id
 WHERE n.operator IS NOT NULL;
-------------------------------------------------
+-----------------------------
+
 UPDATE notification n
 INNER JOIN user_id_mapping m ON n.receiver = m.old_id
 SET n.receiver = m.new_id
@@ -992,7 +991,8 @@ WHERE gb.creator IS NOT NULL;
 UPDATE user_group_backup_20260126 ugb
 INNER JOIN user_id_mapping m ON ugb.user_id = m.old_id
 SET ugb.user_id = m.new_id;
------------------------------------------------
+---------------------------
+
 -- ========================================
 -- 最后更新user表主键（最关键的一步）
 -- ========================================
@@ -1129,3 +1129,4 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ========================================
 -- 保留映射表至少1个月，便于问题追溯
 -- DROP TABLE IF EXISTS user_id_mapping;
+```
