@@ -26,7 +26,7 @@ module.exports = defineConfig({
         ws: false,
       },
     },
-    // 跨域配置,支持qiankun加载
+    // 跨域配置，支持 micro-app 跨域加载
     headers: {
       'Access-Control-Allow-Origin': '*',
     },
@@ -48,10 +48,9 @@ module.exports = defineConfig({
       },
     },
     output: {
-      // 把子应用打包成 umd 库格式(qiankun必须)
-      library: `${name}-[name]`,
-      libraryTarget: 'umd',
-      chunkLoadingGlobal: `webpackJsonp_${name}`,
+      // 【已移除】library 和 libraryTarget（micro-app 不需要 UMD 打包格式）
+      chunkLoadingGlobal: `webpackJsonp_${name}`,  // 保留，避免多应用 chunk 冲突
+      globalObject: 'window',                       // 【新增】确保全局对象指向 window
       // 打包后js的名称
       filename: `js/${name}-[name].[contenthash:8].js`,
       chunkFilename: `js/${name}-[name].[contenthash:8].js`,

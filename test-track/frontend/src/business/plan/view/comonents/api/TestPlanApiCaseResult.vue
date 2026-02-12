@@ -2,7 +2,7 @@
   <el-dialog :close-on-click-modal="false" :title="'测试结果'" width="60%" height="300px"
              :visible.sync="visible" class="api-import" @close="close">
     <div v-loading="loading">
-      <micro-app v-if="showReport" route-name="ApiReportView"
+      <micro-app-wrapper v-if="showReport" route-name="ApiReportView"
                  service="api"
                  :route-params="{response, reportId}"/>
     </div>
@@ -10,13 +10,13 @@
 </template>
 
 <script>
-import MicroApp from "metersphere-frontend/src/components/MicroApp";
+import MicroAppWrapper from "metersphere-frontend/src/components/MicroAppWrapper";
 import {apiDefinitionPlanReportGetByCaseId} from "@/api/remote/api/api-definition-report";
 import {getApiReportDetail} from "@/api/remote/api/api-definition-report";
 
 export default {
   name: "TestPlanApiCaseResult",
-  components: {MicroApp},
+  components: {MicroAppWrapper},
   data() {
     return {
       visible: false,

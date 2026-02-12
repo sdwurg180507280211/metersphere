@@ -68,7 +68,7 @@
           :is-template="isTemplate"
           :template-report="response"
         />
-        <micro-app
+        <micro-app-wrapper
           v-show="!isTemplate"
           route-name="ApiScenarioReportView"
           service="api"
@@ -105,7 +105,7 @@ import MsTable from "metersphere-frontend/src/components/table/MsTable";
 import MsTableColumn from "metersphere-frontend/src/components/table/MsTableColumn";
 import MsAsideContainer from "metersphere-frontend/src/components/MsAsideContainer";
 import MsMainContainer from "metersphere-frontend/src/components/MsMainContainer";
-import MicroApp from "metersphere-frontend/src/components/MicroApp";
+import MicroAppWrapper from "metersphere-frontend/src/components/MicroAppWrapper";
 import MsTestPlanApiStatus from "@/business/plan/view/comonents/api/TestPlanApiStatus";
 
 export default {
@@ -114,7 +114,7 @@ export default {
     MsTestPlanApiStatus,
     MsMainContainer,
     MsAsideContainer,
-    MicroApp,
+    MicroAppWrapper,
     MsTableColumn,
     MsTable,
     StatusTableItem,

@@ -22,7 +22,7 @@
     <ms-main-container>
       <div v-if="showResponse">
         <div v-if="!isTemplate && reportShow">
-          <micro-app
+          <micro-app-wrapper
             v-if="isShare"
             route-name="sharePerReportView"
             service="performance"
@@ -33,7 +33,7 @@
               isPlanReport: true,
             }"
           />
-          <micro-app
+          <micro-app-wrapper
             v-else
             route-name="perReportView"
             service="performance"
@@ -74,7 +74,7 @@ import LoadFailureResult from "@/business/plan/view/comonents/report/detail/comp
 
 import MsAsideContainer from "metersphere-frontend/src/components/MsAsideContainer";
 import MsMainContainer from "metersphere-frontend/src/components/MsMainContainer";
-import MicroApp from "metersphere-frontend/src/components/MicroApp";
+import MicroAppWrapper from "metersphere-frontend/src/components/MicroAppWrapper";
 
 export default {
   name: "LoadAllResult",
@@ -86,7 +86,7 @@ export default {
     MethodTableItem,
     TypeTableItem,
     LoadCaseReportView,
-    MicroApp,
+    MicroAppWrapper,
   },
   props: {
     planId: String,

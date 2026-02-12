@@ -8,8 +8,8 @@
 
 ## 任务
 
-- [ ] 1. 主应用 micro-app 基础设施搭建
-  - [ ] 1.1 安装 micro-app 依赖并创建初始化配置
+- [x] 1. 主应用 micro-app 基础设施搭建
+  - [x] 1.1 安装 micro-app 依赖并创建初始化配置
     - 在 `framework/sdk-parent/frontend/package.json` 中添加 `@micro-zoe/micro-app` 依赖
     - 创建 `framework/sdk-parent/frontend/src/micro-app-setup.js`：
       - 添加 `Vue.config.ignoredElements = ['micro-app']`（Vue 2 必须，否则报 Unknown custom element 警告）
@@ -19,14 +19,14 @@
     - 在 `framework/sdk-parent/frontend/src/main.js` 中引入 `micro-app-setup.js`（与现有 `micro-app.js` 并行）
     - _Requirements: 1.1, 1.5, 8.1_
 
-  - [ ] 1.2 创建模块配置表和双模式加载逻辑
+  - [x] 1.2 创建模块配置表和双模式加载逻辑
     - 创建 `framework/sdk-parent/frontend/src/micro-app-config.js`，定义 `MIGRATED_MODULES` 配置表
     - 配置表结构：`{ migrated: boolean, isViteApp: boolean }`，`isViteApp` 用于决定是否开启 iframe 沙箱
     - 初始状态所有模块标记为 `migrated: false, isViteApp: false`
     - 修改 `framework/sdk-parent/frontend/src/micro-app.js`，在 `registerMicroApps` 前过滤已迁移模块（已迁移的不注册到 qiankun）
     - _Requirements: 6.1, 6.4, 8.2_
 
-  - [ ] 1.3 改造 App.vue 支持 micro-app 子应用容器
+  - [x] 1.3 改造 App.vue 支持 micro-app 子应用容器
     - 在 `framework/sdk-parent/frontend/src/App.vue` 中添加 `<micro-app>` 标签（与 `#micro-app` div 并存）
     - 根据当前路由和模块配置表决定使用哪种容器
     - 添加 `:iframe="currentApp.isViteApp || false"` 属性，Vue 3 + Vite 子应用自动开启 iframe 沙箱
@@ -49,15 +49,15 @@
     - 使用 fast-check 生成随机配置表（含 isViteApp 标记），验证 iframe 属性设置正确
     - **Validates: Requirements 8.1, 8.2**
 
-- [ ] 2. 跨应用通信机制改造
-  - [ ] 2.1 创建 EventBus 兼容适配器
+- [x] 2. 跨应用通信机制改造
+  - [x] 2.1 创建 EventBus 兼容适配器
     - 创建 `framework/sdk-parent/frontend/src/utils/micro-app-event-bus.js`
     - 实现 `createEventBusAdapter()` 函数：
       - 桥接 micro-app `addDataListener` → 本地 Vue EventBus（跨应用 → 本地）
       - 桥接 micro-app `addGlobalDataListener` → 本地 Vue EventBus（全局广播 → 本地）
     - _Requirements: 4.1, 4.2_
 
-  - [ ] 2.2 实现全局广播机制
+  - [x] 2.2 实现全局广播机制
     - 在主应用中实现 `broadcastEvent(eventData)` 函数
     - 使用 `microApp.setGlobalData()` 一次性广播到所有子应用（替代遍历 EventBus 逐个通知）
     - 集成到项目切换（projectChange）和工作空间切换（changeWs）事件处理中
@@ -74,8 +74,8 @@
     - 使用 fast-check 生成随机子应用集合，验证全部收到广播
     - **Validates: Requirements 4.3**
 
-- [ ] 3. MicroAppWrapper 按需加载组件
-  - [ ] 3.1 创建 MicroAppWrapper.vue 组件
+- [x] 3. MicroAppWrapper 按需加载组件
+  - [x] 3.1 创建 MicroAppWrapper.vue 组件
     - 创建 `framework/sdk-parent/frontend/src/components/MicroAppWrapper.vue`
     - 实现与 `MicroApp.vue` 相同的 props 接口（to、service、routeParams、routeName）
     - 内部使用 `<micro-app>` 标签替代 `loadMicroApp`
@@ -90,19 +90,19 @@
     - 使用 fast-check 生成随机切换序列，验证资源释放
     - **Validates: Requirements 3.2, 7.4**
 
-- [ ] 4. Checkpoint - 基础设施验证
+- [x] 4. Checkpoint - 基础设施验证
   - 确保所有测试通过，验证 micro-app 基础设施在双模式下正常工作
   - 确认 qiankun 原有功能未受影响
   - 如有问题请告知
 
-- [ ] 5. 子应用改造模板和工具
-  - [ ] 5.1 创建子应用 public-path.js 改造模板
+- [x] 5. 子应用改造模板和工具
+  - [x] 5.1 创建子应用 public-path.js 改造模板
     - 将 `__POWERED_BY_QIANKUN__` 替换为 `__MICRO_APP_ENVIRONMENT__`
     - 将 `__INJECTED_PUBLIC_PATH_BY_QIANKUN__` 替换为 `__MICRO_APP_PUBLIC_PATH__`
     - 保留独立运行时的服务列表获取逻辑
     - _Requirements: 2.2, 5.4_
 
-  - [ ] 5.2 创建子应用 main.js 改造模板（UMD 生命周期模式）
+  - [x] 5.2 创建子应用 main.js 改造模板（UMD 生命周期模式）
     - 移除 qiankun 生命周期导出（`export async function bootstrap/mount/unmount/update`）
     - 采用 micro-app 的 UMD 生命周期模式：将渲染逻辑放入 `window.mount = (data) => { ... }`
     - 【关键】`window.mount(data)` 的 `data` 参数由 micro-app 自动传入，来源于 `<micro-app :data="appData">` 的 data 属性
@@ -115,7 +115,7 @@
     - 【注意】这里的「UMD 模式」是 micro-app 的生命周期管理概念，与 webpack 的 `libraryTarget: 'umd'` 打包格式无关
     - _Requirements: 2.1, 2.3, 2.5_
 
-  - [ ] 5.3 创建子应用 vue.config.js 改造模板
+  - [x] 5.3 创建子应用 vue.config.js 改造模板
     - 移除 `library` 和 `libraryTarget: 'umd'` 配置（micro-app 不需要 UMD 打包格式）
     - 保留 `chunkLoadingGlobal` 避免多应用 chunk 冲突
     - 新增 `globalObject: 'window'`（micro-app 指南推荐）
@@ -128,59 +128,59 @@
     - 使用 fast-check 生成随机路径，验证 publicPath 设置
     - **Validates: Requirements 5.4**
 
-- [ ] 6. 第一批子应用迁移（简单模块）
-  - [ ] 6.1 迁移 workstation 子应用
+- [x] 6. 第一批子应用迁移（简单模块）
+  - [x] 6.1 迁移 workstation 子应用
     - 按模板改造 `workstation/frontend/src/public-path.js`
     - 按模板改造 `workstation/frontend/src/main.js`（UMD 生命周期模式：window.mount/unmount，移除 qiankun 生命周期导出）
     - 按模板改造 `workstation/frontend/vue.config.js`（移除 libraryTarget: 'umd' 打包配置，添加 globalObject）
     - 在模块配置表中将 workstation 标记为 `{ migrated: true, isViteApp: false }`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [ ] 6.2 迁移 report-stat 子应用
+  - [x] 6.2 迁移 report-stat 子应用
     - 按模板改造 `report-stat/frontend/src/public-path.js`
     - 按模板改造 `report-stat/frontend/src/main.js`（UMD 生命周期模式）
     - 按模板改造 `report-stat/frontend/vue.config.js`（移除 UMD 打包配置）
     - 在模块配置表中将 report-stat 标记为 `{ migrated: true, isViteApp: false }`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [ ] 6.3 迁移 analytics-stat 子应用
+  - [x] 6.3 迁移 analytics-stat 子应用
     - 按模板改造 `analytics-stat/frontend/src/public-path.js`
     - 按模板改造 `analytics-stat/frontend/src/main.js`（UMD 生命周期模式）
     - 按模板改造 `analytics-stat/frontend/vue.config.js`（移除 UMD 打包配置）
     - 在模块配置表中将 analytics-stat 标记为 `{ migrated: true, isViteApp: false }`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-- [ ] 7. Checkpoint - 第一批迁移验证
+- [x] 7. Checkpoint - 第一批迁移验证
   - 验证 workstation、report-stat、analytics-stat 在 micro-app 下正常加载
   - 验证未迁移模块仍通过 qiankun 正常工作
   - 验证模块间切换正常
   - 如有问题请告知
 
-- [ ] 8. 第二批子应用迁移（中等复杂度）
-  - [ ] 8.1 迁移 project-management 子应用
+- [x] 8. 第二批子应用迁移（中等复杂度）
+  - [x] 8.1 迁移 project-management 子应用
     - 按模板改造 public-path.js、main.js（UMD 生命周期模式）、vue.config.js（移除 UMD 打包配置）
     - 在模块配置表中标记为 `{ migrated: true, isViteApp: false }`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [ ] 8.2 迁移 system-setting 子应用
+  - [x] 8.2 迁移 system-setting 子应用
     - 按模板改造 public-path.js、main.js（UMD 生命周期模式）、vue.config.js（移除 UMD 打包配置）
     - 在模块配置表中标记为 `{ migrated: true, isViteApp: false }`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [ ] 8.3 迁移 performance-test 子应用
+  - [x] 8.3 迁移 performance-test 子应用
     - 按模板改造 public-path.js、main.js（UMD 生命周期模式）、vue.config.js（移除 UMD 打包配置）
     - 在模块配置表中标记为 `{ migrated: true, isViteApp: false }`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-- [ ] 9. 第三批子应用迁移（高复杂度 - 含按需加载）
-  - [ ] 9.1 迁移 test-track 子应用
+- [x] 9. 第三批子应用迁移（高复杂度 - 含按需加载）
+  - [x] 9.1 迁移 test-track 子应用
     - 按模板改造 public-path.js、main.js（UMD 生命周期模式）、vue.config.js（移除 UMD 打包配置）
     - 将所有 `<micro-app>` 组件引用（约 10 处）从 `MicroApp` 替换为 `MicroAppWrapper`
     - 涉及文件：TestPlanApiCaseResult.vue、TestPlanApiScenarioList.vue、TestPlanUiScenarioList.vue、TestPlanLoadCaseList.vue、ApiScenarioFailureResult.vue、UiScenarioResult.vue、LoadAllResult.vue
     - 在模块配置表中标记为 `{ migrated: true, isViteApp: false }`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.1_
 
-  - [ ] 9.2 迁移 api-test 子应用
+  - [x] 9.2 迁移 api-test 子应用
     - 按模板改造 public-path.js、vue.config.js（移除 UMD 打包配置）
     - main.js 改造需特别处理：
       - UMD 生命周期模式的 `window.mount(data)` 中根据 data 参数决定使用 router 还是 microRouter
@@ -190,12 +190,12 @@
     - 在模块配置表中标记为 `{ migrated: true, isViteApp: false }`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [ ] 9.3 迁移 TaskCenter 组件中的 MicroApp 引用
+  - [x] 9.3 迁移 TaskCenter 组件中的 MicroApp 引用
     - 将 `framework/sdk-parent/frontend/src/components/task/TaskCenter.vue` 中的 `MicroApp` 替换为 `MicroAppWrapper`
     - 更新 import 路径和组件注册
     - _Requirements: 3.2_
 
-- [ ] 10. Checkpoint - 全量迁移验证
+- [x] 10. Checkpoint - 全量迁移验证
   - 验证所有 8 个子应用在 micro-app 下正常加载
   - 验证所有跨模块嵌入场景正常（test-track 中的 API/性能/UI 报告）
   - 验证 TaskCenter 报告查看正常
@@ -204,7 +204,7 @@
   - 如有问题请告知
 
 - [ ] 11. 清理 qiankun 残留代码
-  - [ ] 11.1 移除主应用 qiankun 相关代码
+  - [x] 11.1 移除主应用 qiankun 相关代码
     - 删除 `framework/sdk-parent/frontend/src/micro-app.js`（qiankun 注册逻辑）
     - 删除 `framework/sdk-parent/frontend/src/components/MicroApp.vue`（旧按需加载组件）
     - 从 `framework/sdk-parent/frontend/src/main.js` 中移除 `import './micro-app'`

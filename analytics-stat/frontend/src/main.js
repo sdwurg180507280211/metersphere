@@ -1,18 +1,16 @@
 /**
  * analytics-stat 微服务入口文件
- * 
- * 技术栈：Vue 2.7 + Vue Router 3 + Element UI + qiankun 2.x
- * 
+ *
+ * 技术栈：Vue 2.7 + Vue Router 3 + Element UI + micro-app
+ *
  * 集成说明：
  * - 使用 metersphere-frontend 的统一样式、图标、插件、指令、过滤器
  * - 使用 metersphere-frontend 的 Layout 布局组件和 login 登录组件
  * - 使用 metersphere-frontend 的路由权限控制
- * 
- * 生命周期函数说明：
- * - bootstrap: 子应用初始化时调用一次
- * - mount: 每次进入子应用时调用
- * - unmount: 每次离开子应用时调用
- * - update: 主应用更新 props 时调用
+ *
+ * 生命周期模式：micro-app UMD 生命周期
+ * - window.mount(data): 每次进入子应用时调用，data 由 micro-app 自动传入
+ * - window.unmount(): 每次离开子应用时调用，销毁 Vue 实例
  */
 import "./public-path";
 import Vue from "vue";
@@ -41,10 +39,14 @@ import VueShepherd from "vue-shepherd";
 import "metersphere-frontend/src/assets/shepherd/shepherd-theme.css";
 import { gotoCancel, gotoNext } from "metersphere-frontend/src/utils";
 
+// 【新增】引入 EventBus 兼容适配器，替代从 qiankun props 接收 eventBus
+import { createEventBusAdapter } from "metersphere-frontend/src/utils/micro-app-event-bus";
+
 // 关闭生产环境提示
 Vue.config.productionTip = false;
 
-// 初始化 Pinia 状态管理
+// 【关键】Vue 插件注册放在 mount 外部，只执行一次
+// UMD 生命周期模式的优势：模块频繁切换时不会重复注册插件
 const pinia = createPinia();
 pinia.use(PersistedState);  // 开启持久化，存储在 localStorage
 
@@ -72,89 +74,45 @@ let instance = null;
 
 /**
  * 渲染函数
- * @param {Object} props - qiankun 传递的 props
- * @param {HTMLElement} props.container - qiankun 提供的挂载容器
- * @param {Vue} props.eventBus - 主应用传递的事件总线
+ *
+ * 【关键】micro-app with 沙箱解析子应用 HTML 时，空的 <div id="app"></div>
+ * 可能被丢弃（不会出现在 micro-app-body 中）。因此 mount 时需要确保
+ * 挂载点存在，不存在则手动创建。
  */
-function render(props = {}) {
-  const { container, eventBus = new Vue() } = props;
-  
-  // 添加全局事件总线，用于与主应用通信
-  Vue.prototype.$EventBus = eventBus;
-  
-  // 创建 Vue 实例
+function mount() {
+  // 创建 EventBus
+  Vue.prototype.$EventBus = window.__MICRO_APP_ENVIRONMENT__
+    ? createEventBusAdapter()
+    : new Vue();
+
+  // 确保挂载点 #app 存在（micro-app 可能丢弃空 div）
+  let appEl = document.querySelector('#app');
+  if (!appEl) {
+    appEl = document.createElement('div');
+    appEl.id = 'app';
+    document.body.appendChild(appEl);
+  }
+
   instance = new Vue({
     i18n,
     router,
     pinia,
     render: (h) => h(App),
-  }).$mount(container ? container.querySelector("#app") : "#app");
-
-  // 解决 qiankun 下 vue-devtools 不显示的问题
-  if (process.env.NODE_ENV === "development") {
-    const instanceDiv = document.createElement("div");
-    instanceDiv.__vue__ = instance;
-    document.body.appendChild(instanceDiv);
-  }
+  }).$mount(appEl);
 }
 
-// 独立运行时（非 qiankun 环境）
-if (!window.__POWERED_BY_QIANKUN__) {
-  console.log("[analytics-stat] Running in standalone mode");
-  render();
-}
-
-/**
- * qiankun 生命周期 - bootstrap
- * 子应用初始化时调用一次，下次进入时不会再触发
- * 通常用于全局变量初始化、不会在 unmount 阶段被销毁的缓存等
- */
-export async function bootstrap(props) {
-  console.log("[analytics-stat] app bootstraped");
-}
-
-/**
- * qiankun 生命周期 - mount
- * 每次进入子应用时调用，触发应用渲染
- */
-export async function mount(props) {
-  console.log("[analytics-stat] props from main framework", props);
-  // 监听全局状态变化
-  props.onGlobalStateChange((state, prev) => {
-    // state: 变更后的状态; prev: 变更前的状态
-    console.log("[analytics-stat] global state changed", state, prev);
-  });
-  // 设置全局状态
-  props.setGlobalState({ event: "opendialog" });
-  render(props);
-}
-
-/**
- * qiankun 生命周期 - unmount
- * 每次离开子应用时调用，销毁 Vue 实例
- */
-export async function unmount(props) {
-  console.log("[analytics-stat] app unmount");
+// micro-app UMD 生命周期模式
+// micro-app 会在子应用渲染时自动调用 window.mount()
+// 非微前端环境直接调用 mount()
+window.mount = () => { mount(); };
+window.unmount = () => {
   if (instance) {
     instance.$destroy();
-    instance.$el.innerHTML = "";
+    instance.$el.innerHTML = '';
     instance = null;
   }
-}
+};
 
-/**
- * qiankun 生命周期 - update
- * 主应用更新 props 时调用
- * 目前主要用于路由参数更新
- */
-export async function update(props) {
-  const { defaultPath, routeParams, routeName } = props;
-  // 微服务过来的路由
-  if (defaultPath || routeName) {
-    router.push({
-      path: defaultPath,
-      params: routeParams,
-      name: routeName,
-    });
-  }
+if (!window.__MICRO_APP_ENVIRONMENT__) {
+  mount();
 }

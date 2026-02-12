@@ -1,6 +1,7 @@
 import {registerMicroApps, start} from 'qiankun';
 import {getApps} from './api/apps'
 import Vue from "vue"
+import {isMigrated} from './micro-app-config'
 
 const getActiveRule = (hash) => (location) => location.hash.startsWith(hash);
 
@@ -17,6 +18,11 @@ getApps()
 
       // 网关排除
       if (name === 'gateway') {
+        return;
+      }
+
+      // 已迁移到 micro-app 的模块不注册到 qiankun，避免双重注册冲突
+      if (isMigrated(name)) {
         return;
       }
       modules[name] = true;

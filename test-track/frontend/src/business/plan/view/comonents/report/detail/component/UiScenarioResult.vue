@@ -59,7 +59,7 @@
     </ms-aside-container>
     <el-main>
       <div v-if="showResponse">
-        <micro-app
+        <micro-app-wrapper
           v-show="!isTemplate"
           v-if="reportId !== null"
           service="ui"
@@ -94,7 +94,7 @@ import MsTable from "metersphere-frontend/src/components/table/MsTable";
 import MsTableColumn from "metersphere-frontend/src/components/table/MsTableColumn";
 import MsAsideContainer from "metersphere-frontend/src/components/MsAsideContainer";
 import MsMainContainer from "metersphere-frontend/src/components/MsMainContainer";
-import MicroApp from "metersphere-frontend/src/components/MicroApp";
+import MicroAppWrapper from "metersphere-frontend/src/components/MicroAppWrapper";
 import MsTestPlanApiStatus from "@/business/plan/view/comonents/api/TestPlanApiStatus";
 
 export default {
@@ -103,7 +103,7 @@ export default {
     MsTestPlanApiStatus,
     MsMainContainer,
     MsAsideContainer,
-    MicroApp,
+    MicroAppWrapper,
     MsTableColumn,
     MsTable,
     StatusTableItem,

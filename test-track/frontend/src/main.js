@@ -1,3 +1,4 @@
+// public-path.js 必须在最顶部引入，确保资源路径在其他模块加载前设置好
 import "./public-path"
 import "@/business/utils/track-table-header";
 import Vue from "vue"
@@ -22,9 +23,12 @@ import CKEditor from '@ckeditor/ckeditor5-vue';
 import VueShepherd from 'vue-shepherd'; // 新手引导
 import 'metersphere-frontend/src/assets/shepherd/shepherd-theme.css';
 import { gotoCancel, gotoNext } from "metersphere-frontend/src/utils";
+// 【新增】引入 EventBus 兼容适配器，替代从 qiankun props 接收 eventBus
+import { createEventBusAdapter } from "metersphere-frontend/src/utils/micro-app-event-bus";
 
 Vue.config.productionTip = false
 
+// 【关键】字体大小计算和窗口监听放在 mount 外部，只执行一次
 function calcFontSize(){
   const w = document.body.clientWidth
   document.documentElement.style.fontSize = 16 * (w / 1440) + 'px'
@@ -32,8 +36,10 @@ function calcFontSize(){
 calcFontSize()
 window.addEventListener('resize',calcFontSize)
 
+// 【关键】Vue 插件注册放在 mount 外部，只执行一次
+// UMD 生命周期模式的优势：模块频繁切换时不会重复注册插件
 const pinia = createPinia()
-pinia.use(PersistedState)//开启缓存，存储在localstorage
+pinia.use(PersistedState) // 开启缓存，存储在 localStorage
 
 Vue.use(ElementUI, {
   i18n: (key, value) => i18n.t(key, value)
@@ -57,67 +63,32 @@ Vue.prototype.gotoNext = gotoNext;
 
 let instance = null;
 Vue.prototype._i18n = i18n;
-function render(props = {}) {
-  const {container, eventBus = new Vue()} = props;
-  // 添加全局事件总线
-  Vue.prototype.$EventBus = eventBus;
+
+/**
+ * 渲染函数
+ *
+ * 【重要】不再依赖 micro-app 的 UMD 生命周期自动检测来调用 mount()。
+ * 新策略：子应用始终自行挂载，保留 window.unmount 供 micro-app 卸载时调用。
+ */
+function mount() {
+  Vue.prototype.$EventBus = window.__MICRO_APP_ENVIRONMENT__
+    ? createEventBusAdapter()
+    : new Vue();
 
   instance = new Vue({
     i18n,
     router,
     pinia,
     render: h => h(App),
-  }).$mount(container ? container.querySelector('#app') : '#app');
+  }).$mount('#app');
+}
 
-  // 解决qiankun下，vue-devtools不显示的问题
-  if (process.env.NODE_ENV === 'development') {
-    const instanceDiv = document.createElement('div')
-    instanceDiv.__vue__ = instance
-    document.body.appendChild(instanceDiv)
+window.unmount = () => {
+  if (instance) {
+    instance.$destroy();
+    instance.$el.innerHTML = '';
+    instance = null;
   }
-}
+};
 
-// 独立运行时
-if (!window.__POWERED_BY_QIANKUN__) {
-  render();
-}
-
-/**
- * bootstrap 只会在微应用初始化的时候调用一次，下次微应用重新进入时会直接调用 mount 钩子，不会再重复触发 bootstrap。
- * 通常我们可以在这里做一些全局变量的初始化，比如不会在 unmount 阶段被销毁的应用级别的缓存等。
- */
-export async function bootstrap(props) {
-}
-
-/**
- * 应用每次进入都会调用 mount 方法，通常我们在这里触发应用的渲染方法
- */
-export async function mount(props) {
-  props.onGlobalStateChange((state, prev) => {
-    // state: 变更后的状态; prev 变更前的状态
-  });
-  props.setGlobalState({event: 'opendialog'});
-  render(props);
-}
-
-/**
- * 应用每次 切出/卸载 会调用的方法，通常在这里我们会卸载微应用的应用实例
- */
-export async function unmount(props) {
-  instance.$destroy();
-}
-
-/**
- * 更新钩子，目前只有routeParams更新，后续有其他属性更新再添加
- */
-export async function update (props) {
-  const { defaultPath, routeParams, routeName } = props;
-  // 微服务过来的路由
-  if (defaultPath || routeName) {
-    microRouter.push({
-      path: defaultPath,
-      params: routeParams,
-      name: routeName,
-    });
-  }
-}
+mount();

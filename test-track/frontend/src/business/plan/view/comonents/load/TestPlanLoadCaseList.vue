@@ -143,7 +143,7 @@
                @close="handleClose"
                :destroy-on-close="true"
                size="80%">
-      <micro-app :to="`/performance/report/view/${reportId}`" service="performance"/>
+      <micro-app-wrapper :to="`/performance/report/view/${reportId}`" service="performance"/>
     </el-drawer>
     <load-case-config ref="loadCaseConfig"/>
     <ms-task-center ref="taskCenter" :show-menu="false"/>
@@ -173,7 +173,7 @@ import {
   testPlanLoadCaseRunBatch,
   testPlanLoadCaseSelectAllTableRows, testPlanLoadCaseUpdate, testPlanLoadList
 } from "@/api/remote/plan/test-plan-load-case";
-import MicroApp from "metersphere-frontend/src/components/MicroApp";
+import MicroAppWrapper from "metersphere-frontend/src/components/MicroAppWrapper";
 import {baseSocket} from "@/api/base-network";
 
 let refreshTable = undefined;
@@ -191,7 +191,7 @@ export default {
     MsPerformanceTestStatus,
     MsPlanRunMode,
     LoadCaseConfig,
-    MicroApp,
+    MicroAppWrapper,
     MsTaskCenter
   },
   data() {
