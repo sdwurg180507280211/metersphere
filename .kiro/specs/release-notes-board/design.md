@@ -221,7 +221,7 @@ public class ReleaseNote implements Serializable {
 
 ### Flyway 迁移脚本
 
-位置：`system-setting/backend/src/main/resources/db/migration/V135__release_note.sql`
+位置：`system-setting/backend/src/main/resources/db/migration/V149__release_note.sql`
 
 ```sql
 CREATE TABLE IF NOT EXISTS `release_note` (

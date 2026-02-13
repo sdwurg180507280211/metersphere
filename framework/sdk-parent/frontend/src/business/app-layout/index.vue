@@ -83,6 +83,7 @@ export default {
       },
       announcementScroll: false,
       announcementScrollSpeed: 15,  // 滚动速度（秒），默认15秒
+      announcementFontSize: 14,     // 字体大小（px），默认14px
     };
   },
   created() {
@@ -140,7 +141,9 @@ export default {
     announcementStyle() {
       return {
         backgroundColor: this.announcementStyleConfig.backgroundColor,
-        color: this.announcementStyleConfig.textColor
+        color: this.announcementStyleConfig.textColor,
+        fontSize: this.announcementFontSize + 'px',
+        lineHeight: (this.announcementFontSize + 16) + 'px'
       };
     },
     /**
@@ -220,6 +223,17 @@ export default {
         }
       }).catch(() => {
         this.announcementScrollSpeed = 15;
+      });
+
+      // 获取公告字体大小配置
+      getSystemParameter('announcement.font.size').then(response => {
+        if (response.data && response.data.paramValue) {
+          this.announcementFontSize = parseInt(response.data.paramValue) || 14;
+        } else {
+          this.announcementFontSize = 14;
+        }
+      }).catch(() => {
+        this.announcementFontSize = 14;
       });
     },
     updateHeaderHeight() {

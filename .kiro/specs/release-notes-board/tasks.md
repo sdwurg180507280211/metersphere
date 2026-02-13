@@ -7,7 +7,7 @@
 ## Tasks
 
 - [ ] 1. 数据库表和实体类
-  - [ ] 1.1 创建 Flyway 迁移脚本 `system-setting/backend/src/main/resources/db/migration/V135__release_note.sql`
+  - [ ] 1.1 创建 Flyway 迁移脚本 `system-setting/backend/src/main/resources/db/migration/V149__release_note.sql`
     - 创建 `release_note` 表：id(VARCHAR(50) PK)、title(VARCHAR(100))、content(TEXT)、creator(VARCHAR(50))、create_time(BIGINT)、update_time(BIGINT)
     - 创建索引 `idx_create_time` ON `create_time` DESC
     - _Requirements: 6.1, 6.2, 6.3_

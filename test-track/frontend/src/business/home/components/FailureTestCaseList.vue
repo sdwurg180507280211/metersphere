@@ -1,10 +1,13 @@
 <template>
-  <div style="margin: 24px" class="failure-case-table">
-    <span class="table-title">
-      {{ $t("api_test.home_page.failed_case_list.title") }}
-    </span>
+  <div class="dashboard-card">
+    <el-card shadow="never" class="box-card" style="height: 100%">
+      <div slot="header" class="clearfix">
+        <span class="dashboard-title">
+          {{ $t("api_test.home_page.failed_case_list.title") }}
+        </span>
+      </div>
+    <div class="failure-case-table">
     <div
-      style="margin-top: 16px"
       v-loading="loading"
       element-loading-background="#FFFFFF"
     >
@@ -135,6 +138,8 @@
         />
       </div>
     </div>
+    </div>
+    </el-card>
   </div>
 </template>
 
@@ -235,5 +240,10 @@ export default {
 .failure-case-table :deep(.status-label) {
   width: 75px;
   text-align: center;
+}
+
+/* 对齐上方卡片的 header 样式 */
+.el-card :deep(.el-card__header) {
+  border-bottom: 0px solid #EBEEF5;
 }
 </style>
