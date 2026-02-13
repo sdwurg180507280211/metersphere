@@ -68,7 +68,12 @@ let instance = null;
  * micro-app UMD 生命周期模式：micro-app 检测到 window.mount 后自动调用。
  * 配合主应用 <micro-app inline> 属性，确保脚本在沙箱内执行。
  *
- * @param {Object} data - 可选，路由参数（按需加载场景由主应用传入）
+ * 【路由选择逻辑】
+ * - micro-app 子应用模式（整个模块加载）：使用 router（完整路由表，含 /api/home 等）
+ * - 按需加载模式（被其他模块嵌入，如报告查看）：使用 microRouter（仅含嵌入路由）
+ * - 独立运行模式：使用 router
+ *
+ * @param {Object} data - 可选，路由参数（micro-app 或按需加载场景传入）
  */
 function mount(data) {
   // 创建 EventBus：
@@ -79,21 +84,36 @@ function mount(data) {
     ? createEventBusAdapter()
     : new Vue();
 
-  // 根据 data 参数决定使用哪个路由实例：
-  // - 有 defaultPath 或 routeName → 按需加载场景，使用 microRouter（内存路由）
-  // - 无路由参数 → 全局路由激活场景，使用 router（正常 hash 路由）
-  const useRouter = (data && (data.defaultPath || data.routeName)) ? microRouter : router;
+  // 【路由选择】
+  // micro-app 子应用模式：使用完整路由（router），因为需要渲染 /api/home 等页面
+  // 按需加载模式（非 micro-app 环境，由其他模块通过 data 参数嵌入）：使用 microRouter
+  const isMicroAppMode = isMicroAppEnv();
+  const isEmbedMode = !isMicroAppMode && data && (data.defaultPath || data.routeName);
+  const useRouter = isEmbedMode ? microRouter : router;
+
+  // 确保挂载点 #app 存在（micro-app with 沙箱可能丢弃空 div）
+  let appEl = document.querySelector('#app');
+  if (!appEl) {
+    appEl = document.createElement('div');
+    appEl.id = 'app';
+    document.body.appendChild(appEl);
+  }
 
   instance = new Vue({
     i18n,
     router: useRouter,
     pinia,
     render: (h) => h(App),
-  }).$mount('#app');
+  }).$mount(appEl);
 
-  // 如果有目标路由参数，跳转到指定页面
+  // micro-app 模式下，根据主应用传入的 defaultPath 导航到对应页面
+  if (isMicroAppMode && data && data.defaultPath) {
+    router.push({ path: data.defaultPath }).catch(() => {});
+  }
+
+  // 按需加载模式下，使用 microRouter 导航
   // 场景：test-track 中嵌入接口测试报告，传入 defaultPath 指向具体的报告页面
-  if (data && (data.defaultPath || data.routeName)) {
+  if (isEmbedMode) {
     microRouter.push({
       path: data.defaultPath,
       params: data.routeParams,
@@ -122,12 +142,13 @@ window.mount = (data) => {
   if (isMicroAppEnv()) {
     window.microApp?.addDataListener((newData) => {
       if (newData && (newData.defaultPath || newData.routeName)) {
-        const targetRouter = instance?.$router || microRouter;
+        // micro-app 模式下使用完整路由（instance.$router 即 router）
+        const targetRouter = instance?.$router || router;
         targetRouter.push({
           path: newData.defaultPath,
           params: newData.routeParams,
           name: newData.routeName,
-        });
+        }).catch(() => {});
       }
     });
   }
