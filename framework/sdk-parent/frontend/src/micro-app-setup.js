@@ -22,6 +22,53 @@ microApp.start({
   // 开启 fiber 模式：异步执行子应用 JS，减少主线程阻塞
   // MeterSphere 有 8 个子应用，fiber 模式可改善首屏性能
   fiber: true,
+  /**
+   * 自定义 fetch —— 修复生产环境子应用静态资源路径问题
+   *
+   * 【问题背景】
+   * 子应用 vue.config.js 中 publicPath: "/"，构建产物 HTML 中资源路径为绝对路径：
+   *   <script src="/js/performance-index.88d254c6.js">
+   *   <link href="/css/performance-index.5e60ba21.css">
+   *
+   * micro-app 的 CompletionPath() 对绝对路径（以 / 开头）只补全 origin，不补全路径：
+   *   CompletionPath("/js/xxx", "http://host/performance/")
+   *   → "http://host/js/xxx"  （期望 "http://host/performance/js/xxx"）
+   *
+   * 导致请求到达 Gateway 时，Gateway 的 static 目录中没有子应用的 JS/CSS，
+   * 请求 fallback 到主应用 index.html，返回 HTML 而非 JS → 解析失败。
+   *
+   * 【修复方案】
+   * 在 custom fetch 中检测：如果请求 URL 的路径以 /js/ 或 /css/ 开头，
+   * 且 appName 对应一个已注册的子应用，则在路径前补全 /{appName}/ 前缀，
+   * 使请求正确路由到子应用后端的 static 目录。
+   *
+   * 【影响范围】
+   * - 仅影响生产环境（开发环境子应用直接访问 dev server，不经过 Gateway）
+   * - 仅影响 HTML 中以绝对路径引用的初始 JS/CSS（动态 chunk 由 __webpack_public_path__ 控制）
+   * - 不影响 API 请求（API 路径不以 /js/ 或 /css/ 开头）
+   */
+  fetch(url, options, appName) {
+    // 仅在生产环境且有子应用名称时进行路径修正
+    if (process.env.NODE_ENV !== 'development' && appName && MIGRATED_MODULES[appName]) {
+      try {
+        const urlObj = new URL(url, window.location.origin);
+        const pathname = urlObj.pathname;
+        // 检测绝对路径的静态资源：/js/xxx、/css/xxx、/fonts/xxx、/img/xxx
+        // 且路径中尚未包含 /{appName}/ 前缀（避免重复补全）
+        if (/^\/(js|css|fonts|img)\//.test(pathname) && !pathname.startsWith('/' + appName + '/')) {
+          // 补全路径前缀：/js/xxx → /{appName}/js/xxx
+          urlObj.pathname = '/' + appName + pathname;
+          const newUrl = urlObj.toString();
+          // console.log('[micro-app] 资源路径修正:', url, '→', newUrl);
+          return window.fetch(newUrl, options).then(res => res.text());
+        }
+      } catch (e) {
+        // URL 解析失败时不阻塞，降级为默认行为
+          console.warn('[micro-app] 资源路径修正失败:', url, e);
+      }
+    }
+    return window.fetch(url, options).then(res => res.text());
+  },
   // 全局生命周期回调，用于监控子应用加载状态
   lifeCycles: {
     created(e) {
