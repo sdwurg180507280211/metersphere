@@ -38,6 +38,8 @@ import {getCurrentUser, getCurrentWorkspaceId} from "../../utils/token";
 import {getUserWorkspaceList, switchWorkspace, getWorkspaceModules} from "../../api/workspace";
 import {useUserStore} from "@/store";
 import {getDefaultSecondLevelMenu} from "../../router";
+// 【新增】引入 micro-app 全局广播函数，用于跨应用事件通知
+import {broadcastEvent} from "../../utils/micro-app-event-bus";
 
 const userStore = useUserStore();
 
@@ -150,6 +152,10 @@ export default {
             userStore.switchWorkspace(response);
             // 工作空间变了之后项目一定会变
             this.$EventBus.$emit('projectChange');
+            // 【新增】通过 micro-app 全局广播，通知所有子应用项目已切换
+            broadcastEvent({ type: 'projectChange' });
+            // 【新增】通过 micro-app 全局广播，通知所有子应用工作空间已切换
+            broadcastEvent({ type: 'changeWs' });
             this.$router.push(this.getRedirectUrl(response.data))
               .then(() => {
                 stopFullScreenLoading(loading);
