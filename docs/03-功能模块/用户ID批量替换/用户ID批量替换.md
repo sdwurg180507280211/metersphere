@@ -1,3 +1,4 @@
+```
 USE metersphere_dev;
 
 -- ========================================
@@ -18,7 +19,14 @@ UNIQUE KEY uk_new_id (new_id)
 -- ========================================
 -- 第二步：插入数据（从user表查询并填充用户名和邮箱）
 -- ========================================
-INSERT INTO user_id_mapping (old_id, new_id, user_name, user_email) VALUES
+INSERT IGNORE INTO user_id_mapping (old_id, new_id, user_name, user_email) VALUES
+('tangli', 'tangli002', '汤黎', NULL),
+('chenyanlei', 'chenyanlei001', '陈岩磊', NULL),
+('zhanghao', 'zkr_zhanghao1', '张浩', NULL),
+('zhangxue', 'zkr zhangxue001', '张雪', NULL),
+
+('changkeqi', 'zkr_changkeqi', '畅珂琦', NULL),
+('wangzichen', 'zkr_wangzichen001', '王子晨', NULL),
 ('anqi', 'rtdl_anqi', '安奇', NULL),
 ('bitaocun', 'trxl_biyaocun', '毕桃存', NULL),
 ('caoxueman', 'py_caoxueman', '曹雪曼', NULL),
@@ -246,7 +254,6 @@ INSERT INTO user_id_mapping (old_id, new_id, user_name, user_email) VALUES
 ('liuyujie', 'liuyujie102', '刘雨洁', NULL),
 ('xuheyan', 'zkr_xuheyan', '徐鹤严', NULL);
 
-
 -- 插入带双引号的映射记录（用于自定义字段）
 INSERT INTO user_id_mapping (old_id, new_id, user_name, user_email)
 SELECT
@@ -256,13 +263,6 @@ user_name,
 user_email
 FROM user_id_mapping
 WHERE old_id NOT LIKE '"%"';
-
-
-
-
-
-
-
 
 -- ========================================
 -- 执行前检查清单
@@ -918,6 +918,80 @@ UPDATE notification n
 INNER JOIN user_id_mapping m ON n.operator = m.old_id
 SET n.operator = m.new_id
 WHERE n.operator IS NOT NULL;
+-----------------------------
+
+UPDATE notification n
+INNER JOIN user_id_mapping m ON n.receiver = m.old_id
+SET n.receiver = m.new_id
+WHERE n.receiver IS NOT NULL;
+
+-- ========================================
+-- 13. 汇总表中缺失的UPDATE语句（补充）
+-- ========================================
+
+-- 13.1 更新接口场景关注人表（取消注释，汇总表序号8）
+UPDATE api_scenario_follow asf
+INNER JOIN user_id_mapping m ON asf.follow_id = m.old_id
+SET asf.follow_id = m.new_id;
+
+-- 13.2 更新缺陷评论表（汇总表序号27）
+UPDATE issue_comment ic
+INNER JOIN user_id_mapping m ON ic.author = m.old_id
+SET ic.author = m.new_id
+WHERE ic.author IS NOT NULL;
+
+-- 13.3 更新缺陷报告人字段（汇总表序号29，之前只更新了creator）
+UPDATE issues i
+INNER JOIN user_id_mapping m ON i.reporter = m.old_id
+SET i.reporter = m.new_id
+WHERE i.reporter IS NOT NULL;
+
+-- 13.4 更新缺陷变更记录详情表中的用户ID（汇总表序号25、26）
+-- 注意：old_value和new_value中存储的是用户ID，需要替换
+UPDATE issue_change_log_detail icld
+INNER JOIN user_id_mapping m ON icld.old_value = m.old_id
+SET icld.old_value = m.new_id
+WHERE icld.old_value IS NOT NULL;
+
+UPDATE issue_change_log_detail icld
+INNER JOIN user_id_mapping m ON icld.new_value = m.old_id
+SET icld.new_value = m.new_id
+WHERE icld.new_value IS NOT NULL;
+
+-- 13.5 更新测试用例评论表（汇总表序号48）
+UPDATE test_case_comment tcc
+INNER JOIN user_id_mapping m ON tcc.author = m.old_id
+SET tcc.author = m.new_id
+WHERE tcc.author IS NOT NULL;
+
+-- 13.6 更新测试计划负责人表（汇总表序号64）
+UPDATE test_plan_principal tpp
+INNER JOIN user_id_mapping m ON tpp.principal_id = m.old_id
+SET tpp.principal_id = m.new_id
+WHERE tpp.principal_id IS NOT NULL;
+
+-- 13.7 更新UI场景报告表（汇总表序号76、77）
+UPDATE ui_scenario_report usr_report
+INNER JOIN user_id_mapping m ON usr_report.user_id = m.old_id
+SET usr_report.user_id = m.new_id
+WHERE usr_report.user_id IS NOT NULL;
+
+UPDATE ui_scenario_report usr_report
+INNER JOIN user_id_mapping m ON usr_report.create_user = m.old_id
+SET usr_report.create_user = m.new_id
+WHERE usr_report.create_user IS NOT NULL;
+
+-- 13.8 更新备份表（汇总表序号23、81）
+-- 注意：备份表可选更新，如不需要可跳过
+UPDATE group_backup_20260126 gb
+INNER JOIN user_id_mapping m ON gb.creator = m.old_id
+SET gb.creator = m.new_id
+WHERE gb.creator IS NOT NULL;
+
+UPDATE user_group_backup_20260126 ugb
+INNER JOIN user_id_mapping m ON ugb.user_id = m.old_id
+SET ugb.user_id = m.new_id;
+---------------------------
 
 -- ========================================
 -- 最后更新user表主键（最关键的一步）
@@ -1055,3 +1129,4 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ========================================
 -- 保留映射表至少1个月，便于问题追溯
 -- DROP TABLE IF EXISTS user_id_mapping;
+```

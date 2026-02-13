@@ -21,9 +21,17 @@
             </el-col>
           </el-row>
 
-          <el-row style="margin-top: 16px">
-            <el-col style="background-color: #ffffff">
-              <ms-failure-test-case-list @redirectPage="redirectPage" />
+          <!-- 需求上线内容 与 失败用例 TOP10 左右各占一半 -->
+          <el-row :gutter="16" style="margin-top: 16px">
+            <el-col :span="12">
+              <div style="background-color: #ffffff; height: 100%">
+                <release-notes-board />
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div style="background-color: #ffffff; height: 100%">
+                <ms-failure-test-case-list @redirectPage="redirectPage" />
+              </div>
             </el-col>
           </el-row>
 
@@ -58,6 +66,7 @@ import ReviewList from "./components/ReviewList";
 import MsRunningTaskList from "./components/RunningTaskList";
 import { getUUID } from "metersphere-frontend/src/utils";
 import MsFailureTestCaseList from "@/business/home/components/FailureTestCaseList";
+import ReleaseNotesBoard from "@/business/home/components/ReleaseNotesBoard";  // 版本发布公告看板组件
 import {hasPermission} from "@/business/utils/sdk-utils";
 
 // require("echarts/lib/component/legend");
@@ -65,6 +74,7 @@ export default {
   name: "TrackHome",
   components: {
     MsFailureTestCaseList,
+    ReleaseNotesBoard,  // 注册版本发布公告看板组件
     ReviewList,
     BugCountCard,
     RelevanceCaseCard,

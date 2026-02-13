@@ -80,6 +80,10 @@ import components from "../search/search-components";
 import { BUILTIN_ADV_SEARCH_KEYS } from "../search/search-components";
 import { cloneDeep, concat, slice } from "lodash-es";
 import { _findByKey, _findIndexByKey } from "../search/custom-component";
+// 导入用户身份工具函数，用于获取当前登录用户 ID
+import { getCurrentUserId } from "../../utils/token";
+// 导入高级搜索条件记忆相关的工具函数（保存、读取、清除）
+import { saveAdvSearchCondition, getAdvSearchCondition, clearAdvSearchCondition } from "../../utils/tableUtils";
 
 // 高级搜索参数组装规则（非常关键）：
 // 1) 内置字段 key：由 search-components.js 统一维护（BUILTIN_ADV_SEARCH_KEYS），后端直接识别 combine[key]。
@@ -108,6 +112,12 @@ export default {
       default() {
         return 6; // 默认展示的搜索条件数量
       },
+    },
+    // 模块标识符，用于区分不同业务页面的搜索记忆上下文
+    // 为空时不启用搜索记忆功能，保持原有行为
+    moduleKey: {
+      type: String,
+      default: '',
     },
   },
   data() {
@@ -267,6 +277,16 @@ export default {
       this.condition.combine = condition;
       this.$emit("update:condition", this.condition);
       this.$emit("search", condition);
+
+      // 【搜索记忆】保存当前搜索条件到 localStorage
+      // 仅当传入了 moduleKey 且能获取到有效用户 ID 时才执行保存
+      if (this.moduleKey) {
+        const userId = getCurrentUserId();
+        if (userId) {
+          saveAdvSearchCondition(userId, this.moduleKey, this.optional.components);
+        }
+      }
+
       this.visible = false;
     },
     setCondition(condition, component) {
@@ -338,6 +358,14 @@ export default {
       this.condition.combine = undefined;
       this.$emit("update:condition", this.condition);
       this.$emit("search");
+
+      // 【搜索记忆】重置时清除 localStorage 中保存的搜索条件
+      if (this.moduleKey) {
+        const userId = getCurrentUserId();
+        if (userId) {
+          clearAdvSearchCondition(userId, this.moduleKey);
+        }
+      }
     },
     init() {
       this.config = this.doInit(true);
@@ -354,6 +382,19 @@ export default {
         0,
         this.showItemSize
       );
+
+      // 【搜索记忆】从 localStorage 回填上次保存的搜索条件
+      // 在 slice 截取默认显示条件之后、设置 disable 状态之前执行
+      if (this.moduleKey) {
+        const userId = getCurrentUserId();
+        if (userId) {
+          const saved = getAdvSearchCondition(userId, this.moduleKey);
+          if (saved) {
+            this._restoreSearchConditions(saved);
+          }
+        }
+      }
+
       let allComponent = this.condition.custom
         ? concat(
             this.config.components[0].child,
@@ -435,6 +476,34 @@ export default {
       if (data) {
         this.$set(data, "disable", false);
       }
+    },
+    /**
+     * 【搜索记忆】回填已保存的搜索条件到当前组件列表
+     * 遍历 savedConditions 数组，在 optional.components 中查找匹配的 key：
+     * - 找到则恢复该组件的 operator.value 和 value
+     * - 未找到（字段已被删除或模板变更）则跳过，不影响其余字段
+     * @param {Array} savedConditions - 从 localStorage 读取的搜索条件数组
+     */
+    _restoreSearchConditions(savedConditions) {
+      if (!Array.isArray(savedConditions)) {
+        return;
+      }
+      savedConditions.forEach((saved) => {
+        // 在当前显示的搜索组件中查找与已保存条件 key 匹配的组件
+        const target = _findByKey(this.optional.components, saved.key);
+        if (!target) {
+          // 字段在当前模板中不存在，跳过（兼容模板字段变更场景）
+          return;
+        }
+        // 恢复操作符值（如 like、in、equals 等）
+        if (saved.operator !== undefined && target.operator) {
+          target.operator.value = saved.operator;
+        }
+        // 恢复搜索值（可能是字符串、数组等多种类型）
+        if (saved.value !== undefined) {
+          target.value = saved.value;
+        }
+      });
     },
     // 搜索组件的字段变换时触发
     changeSearchItemKey(newData, oldData) {
