@@ -25,6 +25,8 @@ import 'metersphere-frontend/src/assets/shepherd/shepherd-theme.css';
 import { gotoCancel, gotoNext } from "metersphere-frontend/src/utils";
 // 【新增】引入 EventBus 兼容适配器，替代从 qiankun props 接收 eventBus
 import { createEventBusAdapter } from "metersphere-frontend/src/utils/micro-app-event-bus";
+// 【新增】引入 micro-app 环境检测工具，兼容 inline 模式
+import { isMicroAppEnv } from "metersphere-frontend/src/utils/micro-app-env";
 
 Vue.config.productionTip = false
 
@@ -67,22 +69,36 @@ Vue.prototype._i18n = i18n;
 /**
  * 渲染函数
  *
- * 【重要】不再依赖 micro-app 的 UMD 生命周期自动检测来调用 mount()。
- * 新策略：子应用始终自行挂载，保留 window.unmount 供 micro-app 卸载时调用。
+ * 【关键】micro-app with 沙箱 + inline 模式下，子应用 HTML 中空的
+ * <div id="app"></div> 可能被丢弃。因此 mount 时需要确保挂载点存在。
  */
 function mount() {
-  Vue.prototype.$EventBus = window.__MICRO_APP_ENVIRONMENT__
+  // 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，
+  // 使用 isMicroAppEnv() 兼容检测
+  Vue.prototype.$EventBus = isMicroAppEnv()
     ? createEventBusAdapter()
     : new Vue();
+
+  // 确保挂载点 #app 存在（micro-app 可能丢弃空 div）
+  let appEl = document.querySelector('#app');
+  if (!appEl) {
+    appEl = document.createElement('div');
+    appEl.id = 'app';
+    document.body.appendChild(appEl);
+  }
 
   instance = new Vue({
     i18n,
     router,
     pinia,
     render: h => h(App),
-  }).$mount('#app');
+  }).$mount(appEl);
 }
 
+// micro-app UMD 生命周期模式
+// micro-app 会在子应用渲染时自动调用 window.mount()
+// 非微前端环境直接调用 mount()
+window.mount = () => { mount(); };
 window.unmount = () => {
   if (instance) {
     instance.$destroy();
@@ -91,4 +107,9 @@ window.unmount = () => {
   }
 };
 
-mount();
+// 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，
+// 必须使用 isMicroAppEnv() 检测，否则子应用会在 micro-app 环境下自动 mount，
+// 与 micro-app 调用 window.mount() 冲突导致双重挂载
+if (!isMicroAppEnv()) {
+  mount();
+}

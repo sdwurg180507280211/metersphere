@@ -1,8 +1,7 @@
 /**
  * micro-app 微前端框架初始化配置
  *
- * 本文件负责初始化京东 micro-app 微前端框架，替代 qiankun 的注册和启动逻辑。
- * 与现有 micro-app.js（qiankun 逻辑）并行运行，支持渐进式迁移。
+ * 本文件负责初始化京东 micro-app 微前端框架。
  *
  * 【设计决策】
  * - 不在全局设置 iframe: true，只有 Vue 3 + Vite 子应用需要 iframe 沙箱

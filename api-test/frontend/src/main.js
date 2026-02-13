@@ -28,6 +28,8 @@ import { gotoCancel, gotoNext } from 'metersphere-frontend/src/utils';
 import VueVirtualTree from '@fit2cloud-ui/vue-virtual-tree';
 // 【新增】引入 EventBus 兼容适配器，替代从 qiankun props 接收 eventBus
 import { createEventBusAdapter } from 'metersphere-frontend/src/utils/micro-app-event-bus';
+// 【新增】引入 micro-app 环境检测工具，兼容 inline 模式
+import { isMicroAppEnv } from 'metersphere-frontend/src/utils/micro-app-env';
 
 Vue.config.productionTip = false;
 
@@ -63,12 +65,8 @@ let instance = null;
 /**
  * 渲染函数（含按需加载路由处理）
  *
- * 【重要】不再依赖 micro-app 的 UMD 生命周期自动检测来调用 mount()。
- * 原因：micro-app with 沙箱的 defineProperty 劫持在当前 webpack 打包模式下
- * 无法正确拦截 window.mount 的赋值，导致 UMD 模式检测失败，子应用永远不会被挂载。
- *
- * 新策略：子应用始终自行挂载（无论独立运行还是 micro-app 环境），
- * 同时保留 window.unmount 供 micro-app 在子应用卸载时调用。
+ * micro-app UMD 生命周期模式：micro-app 检测到 window.mount 后自动调用。
+ * 配合主应用 <micro-app inline> 属性，确保脚本在沙箱内执行。
  *
  * @param {Object} data - 可选，路由参数（按需加载场景由主应用传入）
  */
@@ -76,7 +74,8 @@ function mount(data) {
   // 创建 EventBus：
   // - micro-app 环境下：使用适配器，桥接 micro-app 数据通信到本地 EventBus
   // - 独立运行时：使用普通 Vue 实例（与原 qiankun 独立运行时行为一致）
-  Vue.prototype.$EventBus = window.__MICRO_APP_ENVIRONMENT__
+  // 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，使用 isMicroAppEnv()
+  Vue.prototype.$EventBus = isMicroAppEnv()
     ? createEventBusAdapter()
     : new Vue();
 
@@ -103,7 +102,37 @@ function mount(data) {
   }
 }
 
-// 卸载函数：供 micro-app 在子应用卸载时调用
+// micro-app UMD 生命周期模式
+// micro-app 会在子应用渲染时自动调用 window.mount(data)
+// data 参数由主应用通过 <micro-app :data="appData"> 传入
+window.mount = (data) => {
+  // 确保挂载点 #app 存在（micro-app 沙箱可能丢弃空 div）
+  let appEl = document.querySelector('#app');
+  if (!appEl) {
+    appEl = document.createElement('div');
+    appEl.id = 'app';
+    document.body.appendChild(appEl);
+  }
+  mount(data);
+
+  // 注册数据监听（替代 qiankun 的 update 钩子）
+  // 典型场景：MicroAppWrapper 组件的 to/routeParams 属性变化时，
+  // 主应用通过 setData 发送新的路由参数，子应用通过 addDataListener 接收并跳转
+  // 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，使用 isMicroAppEnv()
+  if (isMicroAppEnv()) {
+    window.microApp?.addDataListener((newData) => {
+      if (newData && (newData.defaultPath || newData.routeName)) {
+        const targetRouter = instance?.$router || microRouter;
+        targetRouter.push({
+          path: newData.defaultPath,
+          params: newData.routeParams,
+          name: newData.routeName,
+        });
+      }
+    });
+  }
+};
+
 window.unmount = () => {
   if (instance) {
     instance.$destroy();
@@ -112,23 +141,10 @@ window.unmount = () => {
   }
 };
 
-// 直接挂载（micro-app 环境和独立运行均适用）
-mount();
-
-// 监听主应用后续数据更新（替代 qiankun 的 update 钩子）
-// window.mount(data) 处理初始数据，addDataListener 处理运行时动态更新
-// 典型场景：MicroAppWrapper 组件的 to/routeParams 属性变化时，
-// 主应用通过 setData 发送新的路由参数，子应用通过 addDataListener 接收并跳转
-if (window.__MICRO_APP_ENVIRONMENT__) {
-  window.microApp?.addDataListener((data) => {
-    if (data && (data.defaultPath || data.routeName)) {
-      // 优先使用当前 Vue 实例的 $router，降级使用 microRouter
-      const targetRouter = instance?.$router || microRouter;
-      targetRouter.push({
-        path: data.defaultPath,
-        params: data.routeParams,
-        name: data.routeName,
-      });
-    }
-  });
+// 非微前端环境直接挂载
+// 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，
+// 必须使用 isMicroAppEnv() 检测，否则子应用会在 micro-app 环境下自动 mount，
+// 与 micro-app 调用 window.mount() 冲突导致双重挂载
+if (!isMicroAppEnv()) {
+  mount();
 }

@@ -11,8 +11,8 @@ import plugins from "./plugins";
 import directives from "./directive";
 import filters from "./filters";
 import "./router/permission";
-import "./micro-app";
-import "./micro-app-setup"; // micro-app 框架初始化（与 qiankun 并行，支持渐进式迁移）
+import "./micro-app"; // 微前端服务列表初始化 + 预加载
+import "./micro-app-setup"; // micro-app 框架初始化
 import VuePapaParse from "vue-papa-parse";
 import VueShepherd from "vue-shepherd"; // 新手引导
 import "./assets/shepherd/shepherd-theme.css";
