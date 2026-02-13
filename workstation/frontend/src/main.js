@@ -21,6 +21,8 @@ import 'metersphere-frontend/src/assets/shepherd/shepherd-theme.css';
 import { gotoCancel, gotoNext } from 'metersphere-frontend/src/utils';
 // 【新增】引入 EventBus 兼容适配器，替代从 qiankun props 接收 eventBus
 import { createEventBusAdapter } from 'metersphere-frontend/src/utils/micro-app-event-bus';
+// 【新增】引入 micro-app 环境检测工具，兼容 inline 模式
+import { isMicroAppEnv } from 'metersphere-frontend/src/utils/micro-app-env';
 
 Vue.config.productionTip = false;
 
@@ -54,7 +56,9 @@ let instance = null;
  * <div id="app"></div> 可能被丢弃。因此 mount 时需要确保挂载点存在。
  */
 function mount() {
-  Vue.prototype.$EventBus = window.__MICRO_APP_ENVIRONMENT__
+  // 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，
+  // 使用 isMicroAppEnv() 兼容检测
+  Vue.prototype.$EventBus = isMicroAppEnv()
     ? createEventBusAdapter()
     : new Vue();
 
@@ -86,6 +90,9 @@ window.unmount = () => {
   }
 };
 
-if (!window.__MICRO_APP_ENVIRONMENT__) {
+// 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，
+// 必须使用 isMicroAppEnv() 检测，否则子应用会在 micro-app 环境下自动 mount，
+// 与 micro-app 调用 window.mount() 冲突导致双重挂载
+if (!isMicroAppEnv()) {
   mount();
 }

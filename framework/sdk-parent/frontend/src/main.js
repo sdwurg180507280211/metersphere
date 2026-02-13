@@ -11,7 +11,8 @@ import plugins from "./plugins";
 import directives from "./directive";
 import filters from "./filters";
 import "./router/permission";
-import "./micro-app"; // 微前端服务列表初始化 + 预加载
+// 迁移到 app-init.js，移除 qiankun 残留代码（micro-app.js）
+import "./app-init"; // 微前端服务列表初始化 + 预加载
 import "./micro-app-setup"; // micro-app 框架初始化
 import VuePapaParse from "vue-papa-parse";
 import VueShepherd from "vue-shepherd"; // 新手引导

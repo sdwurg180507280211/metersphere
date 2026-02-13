@@ -34,6 +34,8 @@ import {hasPermissions} from "../../utils/permission";
 import {getProjectModules, getUserProjectList, switchProject} from "../../api/project";
 import {useUserStore} from "@/store";
 import {getDefaultSecondLevelMenu} from "../../router";
+// 【新增】引入 micro-app 全局广播函数，用于跨应用事件通知
+import {broadcastEvent} from "../../utils/micro-app-event-bus";
 
 export default {
   name: "SearchList",
@@ -229,6 +231,8 @@ export default {
         .then(response => {
           this.userStore.switchProject(response);
           this.$EventBus.$emit('projectChange');
+          // 【新增】通过 micro-app 全局广播，通知所有子应用项目已切换
+          broadcastEvent({ type: 'projectChange' });
           this.changeProjectName(projectId);
           // 刷新路由
           this.reloadPage();
