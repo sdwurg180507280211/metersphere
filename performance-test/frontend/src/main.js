@@ -55,8 +55,8 @@ let instance = null;
 /**
  * 渲染函数（含按需加载路由处理）
  *
- * 【重要】不再依赖 micro-app 的 UMD 生命周期自动检测来调用 mount()。
- * 新策略：子应用始终自行挂载，保留 window.unmount 供 micro-app 卸载时调用。
+ * micro-app UMD 生命周期模式：micro-app 检测到 window.mount 后自动调用。
+ * 配合主应用 <micro-app inline> 属性，确保脚本在沙箱内执行。
  *
  * @param {Object} data - 可选，路由参数（按需加载场景由主应用传入）
  */
@@ -84,6 +84,34 @@ function mount(data) {
   }
 }
 
+// micro-app UMD 生命周期模式
+// micro-app 会在子应用渲染时自动调用 window.mount(data)
+// data 参数由主应用通过 <micro-app :data="appData"> 传入
+window.mount = (data) => {
+  // 确保挂载点 #app 存在（micro-app 沙箱可能丢弃空 div）
+  let appEl = document.querySelector('#app');
+  if (!appEl) {
+    appEl = document.createElement('div');
+    appEl.id = 'app';
+    document.body.appendChild(appEl);
+  }
+  mount(data);
+
+  // 注册数据监听（替代 qiankun 的 update 钩子）
+  if (window.__MICRO_APP_ENVIRONMENT__) {
+    window.microApp?.addDataListener((newData) => {
+      if (newData && (newData.defaultPath || newData.routeName)) {
+        const targetRouter = instance?.$router || microRouter;
+        targetRouter.push({
+          path: newData.defaultPath,
+          params: newData.routeParams,
+          name: newData.routeName,
+        });
+      }
+    });
+  }
+};
+
 window.unmount = () => {
   if (instance) {
     instance.$destroy();
@@ -92,22 +120,7 @@ window.unmount = () => {
   }
 };
 
-mount();
-
-// 监听主应用后续数据更新（替代 qiankun 的 update 钩子）
-// window.mount(data) 处理初始数据，addDataListener 处理运行时动态更新
-// 典型场景：MicroAppWrapper 组件的 to/routeParams 属性变化时，
-// 主应用通过 setData 发送新的路由参数，子应用通过 addDataListener 接收并跳转
-if (window.__MICRO_APP_ENVIRONMENT__) {
-  window.microApp?.addDataListener((data) => {
-    if (data && (data.defaultPath || data.routeName)) {
-      // 优先使用当前 Vue 实例的 $router，降级使用 microRouter
-      const targetRouter = instance?.$router || microRouter;
-      targetRouter.push({
-        path: data.defaultPath,
-        params: data.routeParams,
-        name: data.routeName,
-      });
-    }
-  });
+// 非微前端环境直接挂载
+if (!window.__MICRO_APP_ENVIRONMENT__) {
+  mount();
 }

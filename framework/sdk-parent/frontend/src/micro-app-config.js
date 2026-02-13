@@ -1,26 +1,13 @@
 /**
  * 微前端模块配置表
  *
- * 本文件定义所有子应用的迁移状态配置，用于渐进式迁移期间
- * 控制每个模块使用 qiankun 还是 micro-app 加载。
+ * 本文件定义所有子应用的配置信息，用于控制各模块的加载行为。
  *
  * 【配置字段说明】
- * - migrated {boolean}: 是否已迁移到 micro-app
- *   - true: 使用 micro-app 的 <micro-app> 标签加载
- *   - false: 继续使用 qiankun 的 registerMicroApps 注册加载
+ * - migrated {boolean}: 是否启用 micro-app 加载（保留字段，当前所有模块均为 true）
  * - isViteApp {boolean}: 是否为 Vue 3 + Vite 构建的子应用
  *   - true: 开启 iframe 沙箱（Vite 输出 <script type="module">，with 沙箱无法拦截）
  *   - false: 使用默认的 with 沙箱（Vue 2 + Webpack 子应用）
- *
- * 【迁移流程】
- * 1. 将目标模块的 migrated 改为 true
- * 2. 完成该模块的 main.js / public-path.js / vue.config.js 改造
- * 3. 验证模块在 micro-app 下正常工作
- * 4. 如出现问题，将 migrated 改回 false 即可回退到 qiankun
- *
- * 【回退机制】
- * 将任意模块的 migrated 改回 false，该模块会自动恢复 qiankun 加载方式，
- * 无需修改其他代码。这是渐进式迁移的核心安全保障。
  */
 
 const MIGRATED_MODULES = {
@@ -45,14 +32,10 @@ const MIGRATED_MODULES = {
 };
 
 /**
- * 判断指定模块是否已迁移到 micro-app
+ * 判断指定模块是否已启用 micro-app 加载
  *
- * 用于主应用各处判断模块加载方式：
- * - App.vue 中决定使用 <micro-app> 还是 qiankun 容器
- * - micro-app.js 中过滤已迁移模块，不注册到 qiankun
- *
- * @param {string} moduleName - 模块名称（即 serviceId），如 'api-test'
- * @returns {boolean} 是否已迁移，未在配置表中的模块返回 false
+ * @param {string} moduleName - 模块名称（即 serviceId），如 'api'
+ * @returns {boolean} 是否已启用，未在配置表中的模块返回 false
  */
 function isMigrated(moduleName) {
   return MIGRATED_MODULES[moduleName]?.migrated === true;
@@ -69,7 +52,7 @@ function isMigrated(moduleName) {
  * - MicroAppWrapper.vue 中设置按需加载的沙箱模式
  * - preFetchApps() 中为 Vite 子应用预加载设置 iframe: true
  *
- * @param {string} moduleName - 模块名称（即 serviceId），如 'api-test'
+ * @param {string} moduleName - 模块名称（即 serviceId），如 'api'
  * @returns {boolean} 是否为 Vite 子应用，未在配置表中的模块返回 false
  */
 function isViteApp(moduleName) {

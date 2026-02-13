@@ -1,16 +1,18 @@
-// webpack 打包公共文件路径
-// 迁移说明：将 qiankun 的环境变量替换为 micro-app 的环境变量
-// - __POWERED_BY_QIANKUN__ → __MICRO_APP_ENVIRONMENT__
-// - __INJECTED_PUBLIC_PATH_BY_QIANKUN__ → __MICRO_APP_PUBLIC_PATH__
+// webpack 打包公共文件路径（micro-app 适配）
+// 【关键】使用 isMicroAppEnv() 兼容 inline 模式，
+// inline 模式下 __MICRO_APP_ENVIRONMENT__ 在 __MICRO_APP_PROXY_WINDOW__ 中
 import { getApps } from 'metersphere-frontend/src/api/apps';
+import { isMicroAppEnv, getMicroAppPublicPath } from 'metersphere-frontend/src/utils/micro-app-env';
 
 // micro-app 环境下，使用 micro-app 自动注入的公共路径
-if (window.__MICRO_APP_ENVIRONMENT__) {
-  __webpack_public_path__ = window.__MICRO_APP_PUBLIC_PATH__;
+// 【关键】inline 模式下需要从 __MICRO_APP_PROXY_WINDOW__ 获取
+if (isMicroAppEnv()) {
+  // eslint-disable-next-line no-undef
+  __webpack_public_path__ = getMicroAppPublicPath();
 }
 
 // 独立运行时，从网关获取服务列表（与原逻辑一致）
-if (!window.__MICRO_APP_ENVIRONMENT__) {
+if (!isMicroAppEnv()) {
   getApps().then((res) => {
     let modules = {},
       microPorts = {};

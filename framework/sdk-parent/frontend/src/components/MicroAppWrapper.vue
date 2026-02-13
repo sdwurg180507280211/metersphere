@@ -1,7 +1,7 @@
 <template>
   <div class="micro-app-wrapper">
     <!--
-      micro-app 标签替代 qiankun 的 loadMicroApp 按需加载方式
+      micro-app 标签实现按需加载子应用
       - destroy: 组件销毁时强制清除缓存资源，避免内存泄漏（按需加载场景必须开启）
       - clear-data: 卸载时清空通讯缓存，防止下次加载时收到残留数据
       - fiber: 异步执行子应用 JS，减少主线程阻塞
@@ -27,15 +27,15 @@
 import { MIGRATED_MODULES } from '../micro-app-config';
 
 /**
- * MicroAppWrapper - 按需加载子应用组件（替代 qiankun 的 MicroApp.vue）
+ * MicroAppWrapper - 按需加载子应用组件
  *
  * 用于跨模块嵌入场景，如：
  * - test-track 中嵌入 API 场景报告、API 用例结果
  * - TaskCenter 中动态加载不同模块的报告视图
  * - 性能测试报告、UI 场景报告等跨模块展示
  *
- * 与 MicroApp.vue 保持相同的 props 接口（to、service、routeParams、routeName），
- * 内部使用 micro-app 的 <micro-app> 标签替代 qiankun 的 loadMicroApp。
+ * 提供与旧组件相同的 props 接口（to、service、routeParams、routeName），
+ * 内部使用 micro-app 的 <micro-app> 标签实现按需加载。
  */
 export default {
   name: 'MicroAppWrapper',

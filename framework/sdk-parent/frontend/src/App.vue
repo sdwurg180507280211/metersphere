@@ -2,23 +2,21 @@
   <div id="app">
     <!-- 主应用容器 -->
     <router-view/>
-    <!-- micro-app 子应用容器（已迁移模块使用） -->
+    <!-- micro-app 子应用容器 -->
     <micro-app
-      v-if="currentApp && currentApp.migrated"
+      v-if="currentApp"
       :name="currentApp.name"
       :url="currentApp.entry"
       :data="appData"
       :destroy="false"
       :fiber="true"
       :iframe="currentApp.isViteApp || false"
-      inline
-      disable-memory-router
-      disable-scopecss
+      :inline="true"
+      :disable-memory-router="true"
+      :disable-scopecss="true"
       @datachange="handleDataChange"
       @error="handleError"
     />
-    <!-- qiankun 子应用容器（未迁移模块，过渡期保留） -->
-    <div v-if="!currentApp || !currentApp.migrated" id="micro-app"></div>
   </div>
 </template>
 <script>
@@ -29,7 +27,7 @@ import axios from "axios";
 import {useUserStore} from "@/store";
 import {getCurrentUserId} from "@/utils/token";
 import {hasPermissions} from "@/utils/permission";
-// 引入模块配置表，用于判断当前模块使用 micro-app 还是 qiankun 加载
+// 引入模块配置表，用于判断当前模块的加载方式和技术栈
 import {MIGRATED_MODULES, isMigrated, isViteApp} from "@/micro-app-config";
 
 export default {

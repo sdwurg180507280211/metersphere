@@ -203,7 +203,7 @@
   - 验证页面刷新后状态恢复正常
   - 如有问题请告知
 
-- [ ] 11. 清理 qiankun 残留代码
+- [x] 11. 清理 qiankun 残留代码
   - [x] 11.1 移除主应用 qiankun 相关代码
     - 删除 `framework/sdk-parent/frontend/src/micro-app.js`（qiankun 注册逻辑）
     - 删除 `framework/sdk-parent/frontend/src/components/MicroApp.vue`（旧按需加载组件）
@@ -212,7 +212,7 @@
     - 删除 `framework/sdk-parent/frontend/public/js/dev/qiankun.umd.js` 和 `prd/qiankun.umd.min.js`
     - _Requirements: 1.4, 3.5, 4.4_
 
-  - [ ] 11.2 移除 qiankun npm 依赖
+  - [x] 11.2 移除 qiankun npm 依赖
     - 从 `framework/sdk-parent/frontend/package.json` 中移除 `qiankun: "2.9.3"` 依赖
     - 运行 `npm install` 更新 lock 文件
     - _Requirements: 1.4_
@@ -222,7 +222,7 @@
     - 使用 fast-check 生成随机模块+路由组合，验证恢复逻辑
     - **Validates: Requirements 7.5**
 
-- [ ] 12. Final checkpoint - 最终验证
+- [x] 12. Final checkpoint - 最终验证
   - 确保所有测试通过
   - 确认项目中无 qiankun 残留引用（搜索 `__POWERED_BY_QIANKUN__`、`registerMicroApps`、`loadMicroApp` 等关键词）
   - 确认构建产物正常（`npm run build` 各模块）

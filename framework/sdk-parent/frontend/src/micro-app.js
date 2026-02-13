@@ -2,6 +2,7 @@ import {registerMicroApps, start} from 'qiankun';
 import {getApps} from './api/apps'
 import Vue from "vue"
 import {isMigrated} from './micro-app-config'
+import {preFetchApps} from './micro-app-setup'
 
 const getActiveRule = (hash) => (location) => location.hash.startsWith(hash);
 
@@ -21,12 +22,16 @@ getApps()
         return;
       }
 
+      // 所有模块都需要添加到 modules 中，用于左侧菜单显示
+      modules[name] = true;
+      microPorts[name] = svc.port;
+
       // 已迁移到 micro-app 的模块不注册到 qiankun，避免双重注册冲突
+      // 但仍然需要在 modules 中保留，以便菜单正常显示
       if (isMigrated(name)) {
         return;
       }
-      modules[name] = true;
-      microPorts[name] = svc.port;
+
       apps.push({
         name,
         entry: '//127.0.0.1:' + (svc.port - 4000),
@@ -52,6 +57,10 @@ getApps()
     registerMicroApps(apps);
     //启动
     start();
+
+    // 【新增】调用 micro-app 预加载，在浏览器空闲时预加载已迁移模块的静态资源
+    // 提升模块切换体验，减少首次加载延迟
+    preFetchApps(res.data);
   })
   .catch(e => {
     console.error(e);
