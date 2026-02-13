@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.base.mapper.ReleaseNoteMapper">
+
+  <!-- 结果映射：release_note 表字段 → ReleaseNote 实体属性 -->
+  <resultMap id="BaseResultMap" type="io.metersphere.base.domain.ReleaseNote">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="content" jdbcType="LONGVARCHAR" property="content" />
+    <result column="creator" jdbcType="VARCHAR" property="creator" />
+    <result column="create_time" jdbcType="BIGINT" property="createTime" />
+    <result column="update_time" jdbcType="BIGINT" property="updateTime" />
+  </resultMap>
+
+  <!-- 基础列列表 -->
+  <sql id="Base_Column_List">
+    id, title, content, creator, create_time, update_time
+  </sql>
+
+  <!-- 按主键查询单条记录 -->
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from release_note
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+
+  <!-- 查询所有记录，按创建时间倒序（配合 PageHelper 分页使用） -->
+  <select id="selectAll" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from release_note
+    order by create_time desc
+  </select>
+
+  <!-- 自定义查询：获取最近 N 条记录，按创建时间倒序 -->
+  <select id="selectRecent" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from release_note
+    order by create_time desc
+    limit #{limit}
+  </select>
+
+  <!-- 按主键删除 -->
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from release_note
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+
+  <!-- 插入一条完整记录 -->
+  <insert id="insert" parameterType="io.metersphere.base.domain.ReleaseNote">
+    insert into release_note (id, title, content, creator, create_time, update_time)
+    values (#{id,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, #{content,jdbcType=LONGVARCHAR},
+      #{creator,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT})
+  </insert>
+
+
+  <!-- 按主键选择性更新：仅更新非 null 字段 -->
+  <update id="updateByPrimaryKeySelective" parameterType="io.metersphere.base.domain.ReleaseNote">
+    update release_note
+    <set>
+      <if test="title != null">title = #{title,jdbcType=VARCHAR},</if>
+      <if test="content != null">content = #{content,jdbcType=LONGVARCHAR},</if>
+      <if test="creator != null">creator = #{creator,jdbcType=VARCHAR},</if>
+      <if test="createTime != null">create_time = #{createTime,jdbcType=BIGINT},</if>
+      <if test="updateTime != null">update_time = #{updateTime,jdbcType=BIGINT},</if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+
+</mapper>
