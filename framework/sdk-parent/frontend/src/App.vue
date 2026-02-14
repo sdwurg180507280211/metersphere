@@ -1,37 +1,15 @@
 <template>
   <div id="app">
-    <!-- 主应用容器 -->
     <router-view/>
-    <!-- micro-app 子应用容器 -->
-    <!-- :key 绑定 currentApp.name，当模块名变化时 Vue 销毁旧实例并创建新实例，
-         触发子应用完整生命周期（created → beforemount → mounted） -->
-    <micro-app
-      v-if="currentApp"
-      :key="currentApp.name"
-      :name="currentApp.name"
-      :url="currentApp.entry"
-      :data="appData"
-      :destroy="false"
-      :fiber="true"
-      :iframe="currentApp.isViteApp || false"
-      :inline="true"
-      :disable-memory-router="true"
-      :disable-scopecss="true"
-      @datachange="handleDataChange"
-      @error="handleError"
-    />
   </div>
 </template>
 <script>
-
 
 import {getQueryVariable, getUrlParameterWidthRegExp} from "@/utils";
 import axios from "axios";
 import {useUserStore} from "@/store";
 import {getCurrentUserId} from "@/utils/token";
 import {hasPermissions} from "@/utils/permission";
-// 引入模块配置表，用于判断当前模块的加载方式和技术栈
-import {MIGRATED_MODULES, isMigrated, isViteApp} from "@/micro-app-config";
 
 export default {
   name: "AppLayout",
@@ -39,78 +17,7 @@ export default {
     return {
     };
   },
-  computed: {
-    /**
-     * 从当前 hash 路由中提取模块名称
-     * MeterSphere 使用 hash 路由，格式为 #/{moduleName}/...
-     * 例如 #/api-test/definition → 模块名为 'api-test'
-     */
-    currentModuleName() {
-      // 优先从 $route.path 获取（Vue Router 已解析 hash）
-      const path = this.$route.path || '';
-      // 路径格式: /moduleName/... ，提取第一段作为模块名
-      const match = path.match(/^\/([^/]+)/);
-      return match ? match[1] : '';
-    },
-    /**
-     * 当前激活的子应用配置
-     * 根据模块名从配置表中获取迁移状态和技术栈信息
-     * 返回 null 表示当前路由不对应任何子应用（如主应用自身页面）
-     */
-    currentApp() {
-      const name = this.currentModuleName;
-      if (!name || !MIGRATED_MODULES[name]) {
-        return null;
-      }
-      const config = MIGRATED_MODULES[name];
-      return {
-        name: name,
-        entry: this.getEntryUrl(name),
-        migrated: config.migrated,
-        isViteApp: config.isViteApp,
-      };
-    },
-    /**
-     * 传递给子应用的数据
-     * 通过 <micro-app :data="appData"> 传入，子应用在 window.mount(data) 中接收
-     */
-    appData() {
-      return {
-        // 当前路由的完整路径，子应用可据此恢复路由状态
-        defaultPath: this.$route.path,
-      };
-    },
-  },
   methods: {
-    /**
-     * 计算子应用入口 URL
-     * 开发环境：//127.0.0.1:{port-4000}（与 micro-app.js 中的逻辑一致）
-     * 生产环境：{origin}/{serviceId}
-     *
-     * @param {string} name - 模块名称（serviceId）
-     * @returns {string} 子应用入口 URL
-     */
-    getEntryUrl(name) {
-      const microPorts = JSON.parse(sessionStorage.getItem('micro_ports') || '{}');
-      if (process.env.NODE_ENV === 'development') {
-        return '//127.0.0.1:' + (microPorts[name] - 4000);
-      }
-      return window.location.origin + '/' + name;
-    },
-    /**
-     * 处理子应用通过 dispatch 发送的数据
-     * e.detail.data 包含子应用发送的数据对象
-     */
-    handleDataChange(e) {
-      console.log('[App.vue] 收到子应用数据:', e.detail.data);
-    },
-    /**
-     * 处理子应用加载错误
-     * 记录错误日志，便于排查问题
-     */
-    handleError(e) {
-      console.error('[App.vue] 子应用加载出错:', e.detail.name, e.detail.error);
-    },
   },
   beforeMount() {
     const router = this.$router

@@ -32,7 +32,22 @@
       <el-main class="container">
         <div :class="isFixed ? 'ms-left-fixed': 'ms-aside-left'"/>
         <div :class="isFixed ? 'ms-right-fixed': 'ms-main-view ms-aside-right'">
-          <router-view v-if="isShow"/>
+          <micro-app
+            v-if="currentApp"
+            :key="currentApp.name"
+            :name="currentApp.name"
+            :url="currentApp.entry"
+            :data="appData"
+            :destroy="false"
+            :fiber="true"
+            :iframe="currentApp.isViteApp || false"
+            :inline="true"
+            :disable-memory-router="true"
+            :disable-scopecss="true"
+            @datachange="handleDataChange"
+            @error="handleError"
+          />
+          <router-view v-else-if="isShow"/>
         </div>
       </el-main>
       <mx-theme/>
@@ -54,6 +69,7 @@ import {ORIGIN_COLOR} from "../../utils/constants";
 import {getDisplayInfo, getSystemTheme, isLogin, getSystemParameter} from "../../api/user";
 import {useUserStore} from "@/store";
 import {getModuleList} from "../../api/module";
+import {MIGRATED_MODULES} from "../../micro-app-config";
 
 
 export default {
@@ -134,6 +150,29 @@ export default {
     };
   },
   computed: {
+    currentModuleName() {
+      const path = this.$route.path || '';
+      const match = path.match(/^\/([^/]+)/);
+      return match ? match[1] : '';
+    },
+    currentApp() {
+      const name = this.currentModuleName;
+      if (!name || !MIGRATED_MODULES[name]) {
+        return null;
+      }
+      const config = MIGRATED_MODULES[name];
+      return {
+        name: name,
+        entry: this.getEntryUrl(name),
+        migrated: config.migrated,
+        isViteApp: config.isViteApp,
+      };
+    },
+    appData() {
+      return {
+        defaultPath: this.$route.path,
+      };
+    },
     /**
      * 公告栏动态样式
      * 根据样式配置返回背景色和文字颜色
@@ -160,6 +199,19 @@ export default {
     }
   },
   methods: {
+    getEntryUrl(name) {
+      const microPorts = JSON.parse(sessionStorage.getItem('micro_ports') || '{}');
+      if (process.env.NODE_ENV === 'development') {
+        return '//127.0.0.1:' + (microPorts[name] - 4000);
+      }
+      return window.location.origin + '/' + name;
+    },
+    handleDataChange(e) {
+      console.log('[Layout] 收到子应用数据:', e.detail.data);
+    },
+    handleError(e) {
+      console.error('[Layout] 子应用加载出错:', e.detail.name, e.detail.error);
+    },
     loadAnnouncement() {
       // 获取公告内容
       getSystemParameter('announcement.content').then(response => {
