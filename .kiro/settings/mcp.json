@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "chrome-devtools": {
-      "command": "/Users/zhaozhiwei/.nvm/versions/node/v20.19.6/bin/npx",
+      "command": "/Users/edy/.nvm/versions/node/v20.19.6/bin/npx",
       "args": [
         "-y",
         "chrome-devtools-mcp@latest",
@@ -9,8 +9,8 @@
         "--channel=stable"
       ],
       "env": {
-        "PATH": "/Users/zhaozhiwei/.nvm/versions/node/v20.19.6/bin:/usr/local/bin:/usr/bin:/bin",
-        "NODE_PATH": "/Users/zhaozhiwei/.nvm/versions/node/v20.19.6/lib/node_modules"
+        "PATH": "/Users/edy/.nvm/versions/node/v20.19.6/bin:/usr/local/bin:/usr/bin:/bin",
+        "NODE_PATH": "/Users/edy/.nvm/versions/node/v20.19.6/lib/node_modules"
       },
       "autoApprove": [
         "navigate_page",
@@ -41,14 +41,33 @@
         "stop_performance_recording",
         "run_lighthouse_audit",
         "get_cookies",
-        "set_cookie",
-        "wait_for",
-        "get_network_request",
-        "list_pages",
-        "select_page",
-        "get_console_message",
-        "get_console_message",
-        "get_console_message"
+        "set_cookie"
+      ],
+      "disabled": false
+    },
+    "gitee": {
+      "command": "/Users/edy/.nvm/versions/node/v20.19.6/bin/npx",
+      "args": [
+        "-y",
+        "@gitee/mcp-gitee@latest"
+      ],
+      "env": {
+        "GITEE_API_BASE": "https://gitee.com/api/v5",
+        "GITEE_ACCESS_TOKEN": "b7b7f85d83121c560fdf6eaa64ba4a0c",
+        "PATH": "/Users/edy/.nvm/versions/node/v20.19.6/bin:/usr/local/bin:/usr/bin:/bin",
+        "NODE_PATH": "/Users/edy/.nvm/versions/node/v20.19.6/lib/node_modules"
+      },
+      "autoApprove": [],
+      "disabled": false
+    },
+    "exa": {
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp?exaApiKey=f410d5c2-5db6-420f-8eae-2e23687c891c",
+      "headers": {},
+      "autoApprove": [
+        "web_search_exa",
+        "web_search_exa",
+        "web_search_exa"
       ],
       "disabled": false
     }

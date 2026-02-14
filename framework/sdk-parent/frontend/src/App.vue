@@ -3,8 +3,11 @@
     <!-- 主应用容器 -->
     <router-view/>
     <!-- micro-app 子应用容器 -->
+    <!-- :key 绑定 currentApp.name，当模块名变化时 Vue 销毁旧实例并创建新实例，
+         触发子应用完整生命周期（created → beforemount → mounted） -->
     <micro-app
       v-if="currentApp"
+      :key="currentApp.name"
       :name="currentApp.name"
       :url="currentApp.entry"
       :data="appData"
