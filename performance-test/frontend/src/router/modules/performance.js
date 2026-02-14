@@ -1,4 +1,8 @@
 import Layout from "metersphere-frontend/src/business/app-layout";
+import {isMicroAppEnv} from "metersphere-frontend/src/utils/micro-app-env";
+
+// 微前端环境下用透传组件替换 Layout，避免子应用渲染重复的侧边栏
+const PassThrough = {render: h => h('router-view')};
 
 const PerformanceTestHome = () => import('@/business/home/PerformanceTestHome')
 const EditPerformanceTest = () => import('@/business/test/EditPerformanceTest')
@@ -12,7 +16,7 @@ export default {
   path: "/performance",
   name: "Performance",
   redirect: '/performance/home',
-  component: Layout,
+  component: isMicroAppEnv() ? PassThrough : Layout,
   children: [
     {
       path: 'home',

@@ -10,12 +10,16 @@
  * - /analytics/data-dictionary - 数据字典
  */
 import Layout from "metersphere-frontend/src/business/app-layout";
+import {isMicroAppEnv} from "metersphere-frontend/src/utils/micro-app-env";
+
+// 微前端环境下用透传组件替换 Layout，避免子应用渲染重复的侧边栏
+const PassThrough = {render: h => h('router-view')};
 
 export default {
   path: "/analytics",
   name: "analytics",
   redirect: "/analytics/home",
-  component: Layout,  // 使用统一布局组件
+  component: isMicroAppEnv() ? PassThrough : Layout,
   children: [
     {
       path: "home",
