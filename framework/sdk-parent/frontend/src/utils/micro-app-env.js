@@ -12,23 +12,10 @@
 /**
  * 判断当前是否运行在 micro-app 子应用环境中
  *
- * micro-app 的 with 沙箱会将 __MICRO_APP_ENVIRONMENT__ 注入到子应用的沙箱 window 上。
- *
  * @returns {boolean} 是否在 micro-app 环境中
  */
 export function isMicroAppEnv() {
   return !!window.__MICRO_APP_ENVIRONMENT__;
-}
-
-/**
- * 判断当前是否运行在微前端环境中
- *
- * 已完成 qiankun → micro-app 迁移，仅检测 micro-app 环境
- *
- * @returns {boolean} 是否在微前端环境中
- */
-export function isMicroEnv() {
-  return isMicroAppEnv();
 }
 
 /**
