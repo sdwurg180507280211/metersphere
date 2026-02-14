@@ -24,7 +24,7 @@ import 'metersphere-frontend/src/assets/shepherd/shepherd-theme.css';
 import { gotoCancel, gotoNext } from 'metersphere-frontend/src/utils';
 // 【新增】引入 EventBus 兼容适配器，替代从 qiankun props 接收 eventBus
 import { createEventBusAdapter } from 'metersphere-frontend/src/utils/micro-app-event-bus';
-// 【新增】引入 micro-app 环境检测工具，兼容 inline 模式
+// 【新增】引入 micro-app 环境检测工具
 import { isMicroAppEnv } from 'metersphere-frontend/src/utils/micro-app-env';
 
 Vue.config.productionTip = false;
@@ -58,7 +58,6 @@ let instance = null;
  * 渲染函数（含按需加载路由处理）
  *
  * micro-app UMD 生命周期模式：micro-app 检测到 window.mount 后自动调用。
- * 配合主应用 <micro-app inline> 属性，确保脚本在沙箱内执行。
  *
  * 【路由选择逻辑】
  * - micro-app 子应用模式（整个模块加载）：使用 router（完整路由表，含 /performance/home 等）
@@ -68,8 +67,7 @@ let instance = null;
  * @param {Object} data - 可选，路由参数（micro-app 或按需加载场景传入）
  */
 function mount(data) {
-  // 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，
-  // 使用 isMicroAppEnv() 兼容检测
+  // micro-app 环境下使用适配器桥接通信，独立运行时使用普通 Vue 实例
   Vue.prototype.$EventBus = isMicroAppEnv()
     ? createEventBusAdapter()
     : new Vue();
@@ -124,8 +122,7 @@ window.mount = (data) => {
   }
   mount(data);
 
-  // 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，
-  // 使用 isMicroAppEnv() 兼容检测，确保 addDataListener 正确注册
+  // micro-app 环境下注册数据监听，接收主应用路由更新
   if (isMicroAppEnv()) {
     window.microApp?.addDataListener((newData) => {
       if (newData && (newData.defaultPath || newData.routeName)) {
@@ -149,9 +146,7 @@ window.unmount = () => {
   }
 };
 
-// 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，
-// 必须使用 isMicroAppEnv() 检测，否则子应用会在 micro-app 环境下自动 mount，
-// 与 micro-app 调用 window.mount() 冲突导致双重挂载
+// 非微前端环境直接挂载，micro-app 环境由框架调用 window.mount()
 if (!isMicroAppEnv()) {
   mount();
 }
