@@ -41,7 +41,8 @@
         "stop_performance_recording",
         "run_lighthouse_audit",
         "get_cookies",
-        "set_cookie"
+        "set_cookie",
+        "list_pages"
       ],
       "disabled": false
     },
