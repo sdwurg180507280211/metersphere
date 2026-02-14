@@ -22,8 +22,6 @@ export function createEventBusAdapter() {
   const localBus = new Vue();
 
   // 仅在 micro-app 子应用环境下注册监听器
-  // 【inline 模式兼容性修复】使用 isMicroAppEnv() 替代直接检查 window.__MICRO_APP_ENVIRONMENT__，
-  // 因为 inline 模式下 __MICRO_APP_ENVIRONMENT__ 不在 window 上，而在 __MICRO_APP_PROXY_WINDOW__ 中
   if (isMicroAppEnv()) {
     // 监听主应用通过 data 属性 / setData 传来的数据
     // 场景：主应用向指定子应用发送事件（如路由更新、项目切换通知等）

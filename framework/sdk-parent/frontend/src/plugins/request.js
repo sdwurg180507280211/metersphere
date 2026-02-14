@@ -10,12 +10,7 @@ import {Base64} from "js-base64";
 // baseURL 根据是否在微前端环境中运行来设置
 // micro-app 环境下，API 请求需要加上 /{serviceId} 前缀，通过 gateway 路由到对应后端服务
 // 独立运行时 baseURL 为空，直接请求当前域名
-//
-// 【关键】micro-app inline 模式下，子应用 JS 在主应用 window 上执行，
-// __MICRO_APP_ENVIRONMENT__ 不在 window 上，而在 __MICRO_APP_PROXY_WINDOW__ 中。
-// 需要同时检查两个位置来判断是否处于微前端环境。
-const isMicroEnv = window.__MICRO_APP_ENVIRONMENT__
-  || (window.__MICRO_APP_PROXY_WINDOW__ && window.__MICRO_APP_PROXY_WINDOW__.__MICRO_APP_ENVIRONMENT__);
+const isMicroEnv = !!window.__MICRO_APP_ENVIRONMENT__;
 
 let baseURL = '';
 if (isMicroEnv) {

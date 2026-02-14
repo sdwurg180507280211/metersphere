@@ -16,8 +16,7 @@ import { getApps } from 'metersphere-frontend/src/api/apps';
 import { isMicroAppEnv, getMicroAppPublicPath } from 'metersphere-frontend/src/utils/micro-app-env';
 
 if (isMicroAppEnv()) {
-  // micro-app 自动注入 __MICRO_APP_PUBLIC_PATH__，用于设置子应用资源基础路径
-  // 【关键】inline 模式下需要从 __MICRO_APP_PROXY_WINDOW__ 获取
+  // micro-app 环境下，使用 micro-app 自动注入的公共路径
   // eslint-disable-next-line no-undef
   __webpack_public_path__ = getMicroAppPublicPath();
 }

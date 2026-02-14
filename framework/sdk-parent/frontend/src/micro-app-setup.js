@@ -5,7 +5,7 @@
  *
  * 【设计决策】
  * - 不在全局设置 iframe: true，只有 Vue 3 + Vite 子应用需要 iframe 沙箱
- * - Vue 2 + Webpack 子应用使用默认的 with 沙箱即可
+ * - Vue 2 + Webpack 子应用使用默认的 with 沙箱
  * - Vite 子应用通过 <micro-app iframe> 标签属性单独开启
  */
 import microApp from '@micro-zoe/micro-app';

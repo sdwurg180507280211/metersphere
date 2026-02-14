@@ -20,7 +20,7 @@ import 'metersphere-frontend/src/assets/shepherd/shepherd-theme.css';
 import { gotoCancel, gotoNext } from 'metersphere-frontend/src/utils';
 // 【新增】引入 EventBus 兼容适配器，替代从 qiankun props 接收 eventBus
 import { createEventBusAdapter } from 'metersphere-frontend/src/utils/micro-app-event-bus';
-// 【新增】引入 micro-app 环境检测工具，兼容 inline 模式
+// 【新增】引入 micro-app 环境检测工具
 import { isMicroAppEnv } from 'metersphere-frontend/src/utils/micro-app-env';
 
 Vue.config.productionTip = false;
@@ -57,7 +57,7 @@ let instance = null;
  */
 function mount() {
   // 创建 EventBus
-  // 【关键】inline 模式下 window.__MICRO_APP_ENVIRONMENT__ 为 undefined，使用 isMicroAppEnv()
+  // micro-app 环境下使用适配器桥接通信，独立运行时使用普通 Vue 实例
   Vue.prototype.$EventBus = isMicroAppEnv()
     ? createEventBusAdapter()
     : new Vue();
