@@ -2,7 +2,7 @@
 
 ## 简介
 
-MeterSphere 从 qiankun 迁移到 micro-app 微前端框架后，代码评审发现了 5 个 Bug。这些 Bug 涉及跨应用事件通信断裂、inline 模式下环境检测失败导致双重挂载、EventBus 适配器内部兼容性问题、qiankun 残留代码仍在执行、以及预加载调用链断裂。本需求文档定义了修复这些 Bug 所需的全部验收标准。
+MeterSphere 从 qiankun 迁移到 micro-app 微前端框架后，代码评审发现了 6 个 Bug。这些 Bug 涉及跨应用事件通信断裂、inline 模式下环境检测失败导致双重挂载、EventBus 适配器内部兼容性问题、qiankun 残留代码仍在执行、预加载调用链断裂、以及侧边栏菜单点击无法触发子应用生命周期切换。本需求文档定义了修复这些 Bug 所需的全部验收标准。
 
 ## 术语表
 
@@ -16,6 +16,9 @@ MeterSphere 从 qiankun 迁移到 micro-app 微前端框架后，代码评审发
 - **createEventBusAdapter()**：micro-app-event-bus.js 中定义的 EventBus 适配器工厂函数，创建兼容 micro-app 数据通信的本地 EventBus
 - **preFetchApps()**：micro-app-setup.js 中定义的预加载函数，利用 micro-app 的 preFetch API 预加载子应用资源
 - **UMD 生命周期**：micro-app 的子应用挂载模式，通过 window.mount() 和 window.unmount() 控制生命周期
+- **micro-app 标签**：`<micro-app>` 自定义元素，micro-app 框架用于加载和渲染子应用的容器标签
+- **Vue key 属性**：Vue 的特殊属性，用于标识 VNode 的唯一性，当 key 变化时 Vue 会销毁旧元素并创建新元素
+- **SPA 导航**：单页应用内部通过 Vue Router 进行的路由跳转，不触发浏览器页面刷新
 
 ## 需求
 
@@ -72,3 +75,15 @@ MeterSphere 从 qiankun 迁移到 micro-app 微前端框架后，代码评审发
 1. WHEN qiankun 代码（micro-app.js）被移除后, THE Main_App SHALL 在获取服务列表后调用 preFetchApps() 进行子应用资源预加载
 2. WHEN preFetchApps() 被调用时, THE preFetchApps SHALL 接收完整的服务列表数据，排除网关服务后对所有子应用执行预加载
 3. WHEN Main_App 启动完成后, THE Main_App SHALL 将服务列表信息（micro_apps、micro_ports）写入 sessionStorage，供子应用间跨模块嵌入和端口映射使用
+
+### 需求 6：侧边栏菜单点击触发子应用生命周期切换
+
+**用户故事：** 作为 MeterSphere 用户，我希望点击侧边栏菜单在不同模块间切换时，子应用能正确触发生命周期事件（created → beforemount → mounted），以便每个模块都能正常初始化和渲染，而无需手动刷新页面。
+
+#### 验收标准
+
+1. WHEN 用户点击侧边栏菜单从一个模块切换到另一个模块（例如从 /track 切换到 /api）, THE Main_App 的 `<micro-app>` 标签 SHALL 通过 Vue key 属性绑定 `currentApp.name`，使 Vue 在模块名变化时销毁旧的 micro-app 实例并创建新实例，从而触发子应用完整的生命周期
+2. WHEN 用户点击侧边栏的接口测试菜单（/api）且当前已在 /api 路由, THE AsideMenus 组件 SHALL 使用 Vue Router 进行 SPA 导航，移除 active() 方法中的 `window.location.href` 强制刷新逻辑
+3. WHEN 用户点击侧边栏的统计分析菜单（/analytics）, THE AsideMenus 组件 SHALL 使用 Vue Router 进行 SPA 导航，移除 activeAnalyticsStat() 方法中的 `window.location.href` 强制刷新逻辑
+4. WHEN `<micro-app>` 标签因 key 变化被 Vue 销毁时, THE micro-app 框架 SHALL 触发旧子应用的 unmount 生命周期，完成资源清理
+5. WHEN `<micro-app>` 标签因 key 变化被 Vue 重新创建时, THE micro-app 框架 SHALL 触发新子应用的完整生命周期（created → beforemount → mounted），确保子应用正常初始化

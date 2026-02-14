@@ -3,6 +3,7 @@ import Router from "vue-router"
 import Layout from "../business/app-layout"
 import {hasPermissions} from "../utils/permission";
 import {SECOND_LEVEL_ROUTE_PERMISSION_MAP} from "../utils/constants";
+import {MIGRATED_MODULES} from "../micro-app-config";
 
 // 加载modules中的路由
 const modules = require.context("./modules", true, /\.js$/)
@@ -14,6 +15,20 @@ Router.prototype.push = function push(location) {
 }
 
 Vue.use(Router)
+
+// 为所有 micro-app 子应用模块生成路由占位
+// Layout 组件确保侧边栏和顶部栏正常显示
+// 子应用实际内容由 App.vue 中的 <micro-app> 标签渲染
+const microAppRoutes = Object.keys(MIGRATED_MODULES).map(name => ({
+  path: `/${name}`,
+  component: Layout,
+  name: name,
+  children: [{
+    // 匹配所有子路径，如 /track/plan、/api/definition/edit/xxx
+    path: '*',
+    component: {render: h => h('div')}
+  }]
+}));
 
 export const constantRoutes = [
   {
@@ -36,7 +51,8 @@ export const constantRoutes = [
     path: "/",
     component: Layout,
     redirect: "/setting/personsetting",
-  }
+  },
+  ...microAppRoutes,
 ]
 
 /**
