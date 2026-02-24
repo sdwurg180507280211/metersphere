@@ -1,13 +1,8 @@
 <template>
   <div class="card-container">
     <ms-table-header :condition.sync="condition" @search="search" ref="tableHeader"
-                     :show-create="false" class="table-header" :tip="$t('commons.search_by_id_name_tag')">
-
-      <!-- 不显示 “全部用例” 标题,使标题为空 -->
-      <template v-slot:title>
-        <span></span>
-      </template>
-
+                     :show-create="false" class="table-header" :tip="$t('commons.search_by_id_name_tag')"
+                     :title="selectNodeName || null">
       <template v-slot:button>
         <ms-table-button v-permission="['PROJECT_TRACK_CASE:READ']" v-if="!showMyTestCase" icon="el-icon-s-custom"
                          :content="$t('test_track.plan_view.my_case')" @click="searchMyTestCase"/>
@@ -470,6 +465,11 @@ export default {
     },
     planStatus: {
       type: String
+    },
+    // 左侧树选中的模块名称，显示在表格上方标题区域
+    selectNodeName: {
+      type: String,
+      default: ''
     }
   },
   computed: {
