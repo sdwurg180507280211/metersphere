@@ -637,8 +637,23 @@ export default {
         delete this.page.condition['unClosedTestPlanIssue'];
         delete this.page.condition['allTestPlanIssue'];
       }
-      this.page.condition.projectId = this.projectId;
-      this.page.condition.workspaceId = this.workspaceId;
+      // 我在做：判断高级搜索 combine 中是否选了"所属工作空间"或"所属项目"
+      // 目的是：如果用户在高级搜索中指定了跨工作空间/跨项目筛选，就不能再用外层的
+      //         projectId / workspaceId 把范围卡死在当前项目，否则 combine 条件形同虚设
+      // 如果不这样做：高级搜索选了其他工作空间/项目，后端 WHERE 仍然只返回当前项目的缺陷
+      let combine = this.page.condition.combine || {};
+      let hasWorkspaceFilter = combine.workspaceIds && combine.workspaceIds.value && combine.workspaceIds.value.length > 0;
+      let hasProjectFilter = combine.projectIds && combine.projectIds.value && combine.projectIds.value.length > 0;
+
+      if (hasWorkspaceFilter || hasProjectFilter) {
+        // 跨项目/跨工作空间搜索：清除外层限制，让 combine 条件全权控制范围
+        this.page.condition.projectId = null;
+        this.page.condition.workspaceId = null;
+      } else {
+        // 默认行为：只看当前项目的缺陷（与原逻辑一致）
+        this.page.condition.projectId = this.projectId;
+        this.page.condition.workspaceId = this.workspaceId;
+      }
       this.page.condition.orders = getLastTableSortField(this.tableHeaderKey);
       getIssues(this.page.currentPage, this.page.pageSize, this.page.condition)
         .then((response) => {
@@ -775,9 +790,17 @@ export default {
       this.$refs.issueExport.open();
     },
     exportIssue(data) {
+      // 我在做：导出时也需要判断是否有跨项目/跨工作空间的高级搜索条件
+      // 目的是：导出走的是同一套 getIssues SQL，如果硬编码 projectId/workspaceId，
+      //         跨项目搜索后导出只会导出当前项目的缺陷，与列表显示不一致
+      // 如果不这样做：用户在高级搜索选了多个项目后导出，实际只导出当前项目的数据
+      let exportCombine = this.page.condition.combine || {};
+      let exportHasWsFilter = exportCombine.workspaceIds && exportCombine.workspaceIds.value && exportCombine.workspaceIds.value.length > 0;
+      let exportHasProjFilter = exportCombine.projectIds && exportCombine.projectIds.value && exportCombine.projectIds.value.length > 0;
+
       let param = {
-        "projectId": getCurrentProjectID(),
-        "workspaceId": getCurrentWorkspaceId(),
+        "projectId": (exportHasWsFilter || exportHasProjFilter) ? null : getCurrentProjectID(),
+        "workspaceId": (exportHasWsFilter || exportHasProjFilter) ? null : getCurrentWorkspaceId(),
         "userId": getCurrentUserId(),
         "isSelectAll": this.page.condition.selectAll,
         "exportIds": this.$refs.table.selectIds,

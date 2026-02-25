@@ -53,14 +53,9 @@
     <select id="getIssues" resultType="io.metersphere.xpack.track.dto.IssuesDao">
         select
         <include refid="Issue_List_Column"/>
-        <if test="request.projectId != null||request.workspaceId != null">
-            , project.name as projectName
-        </if>
+        , project.name as projectName
         from issues
-        <if test="request.projectId != null||request.workspaceId != null">
-            left join
-            project on issues.project_id = project.id
-        </if>
+        left join project on issues.project_id = project.id
         <if test="request.isCustomSorted and request.customFieldId != null">
             left join custom_field_issues cfi on issues.id = cfi.resource_id and cfi.field_id = #{request.customFieldId}
         </if>
@@ -391,6 +386,20 @@
             and issues.update_time
             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
                 <property name="object" value="${condition}.updateTime"/>
+            </include>
+        </if>
+        <!-- 高级搜索：按所属工作空间筛选（多选，支持 in / not in） -->
+        <if test="${condition}.workspaceIds != null">
+            and project.workspace_id
+            <include refid="condition">
+                <property name="object" value="${condition}.workspaceIds"/>
+            </include>
+        </if>
+        <!-- 高级搜索：按所属项目筛选（多选，支持 in / not in） -->
+        <if test="${condition}.projectIds != null">
+            and issues.project_id
+            <include refid="condition">
+                <property name="object" value="${condition}.projectIds"/>
             </include>
         </if>
         <if test="${condition}.customs != null and ${condition}.customs.size() > 0">

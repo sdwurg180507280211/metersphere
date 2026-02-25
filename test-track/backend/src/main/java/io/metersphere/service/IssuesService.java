@@ -2375,11 +2375,17 @@ public class IssuesService {
             }
         }
 
-        // 状态过滤时, 设置自定义状态字段ID
-        Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
-        if (StringUtils.equals(project.getPlatform(), "Local")) {
-            CustomField statusField = baseCustomFieldService.getCustomFieldByName(request.getProjectId(), SystemCustomField.ISSUE_STATUS);
-            request.setStatusFieldId(statusField.getId());
+        // 我在做：状态过滤时, 设置自定义状态字段ID
+        // 目的是：让 MyBatis XML 中 doneStatus 条件能正确引用 Local 平台的状态字段
+        // 如果不这样做：projectId 为 null（跨项目/跨工作空间高级搜索）时会 NPE
+        if (StringUtils.isNotBlank(request.getProjectId())) {
+            Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
+            if (project != null && StringUtils.equals(project.getPlatform(), "Local")) {
+                CustomField statusField = baseCustomFieldService.getCustomFieldByName(request.getProjectId(), SystemCustomField.ISSUE_STATUS);
+                if (statusField != null) {
+                    request.setStatusFieldId(statusField.getId());
+                }
+            }
         }
     }
 
