@@ -482,26 +482,12 @@ export default {
       // 保存列宽
       saveCustomTableWidth(this.fieldKey, column.columnKey, newWidth);
     },
-    /**
-     * 表格布局重计算
-     * 优化：原来执行 3 次 setTimeout（300ms/600ms/900ms），导致近 1 秒内持续触发 DOM 重排
-     * 改为：先用 requestAnimationFrame 在下一帧执行一次，再用单次 setTimeout 兜底处理延迟渲染的列
-     * 效果：从 3 次重排降为最多 2 次，总耗时从 900ms 降为 ~350ms
-     */
     doLayout() {
       if (this.$refs.table) {
-        // 第一次：下一帧立即重排，处理大部分场景
-        requestAnimationFrame(() => {
-          if (this.$refs.table) {
-            this.$refs.table.doLayout();
-          }
-        });
-        // 第二次：兜底处理异步渲染的列（如自定义字段列延迟加载）
-        setTimeout(() => {
-          if (this.$refs.table) {
-            this.$refs.table.doLayout();
-          }
-        }, 350);
+        // 表格错位问题，执行三次
+        for (let i = 1; i <= 3; i++) {
+          setTimeout(this.$refs.table.doLayout, 300 * i);
+        }
       }
     },
     showPopover(row, column, cell) {
