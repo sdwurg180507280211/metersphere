@@ -42,7 +42,10 @@
         "run_lighthouse_audit",
         "get_cookies",
         "set_cookie",
-        "list_pages"
+        "list_pages",
+        "select_page",
+        "get_console_message",
+        "get_network_request"
       ],
       "disabled": false
     },
