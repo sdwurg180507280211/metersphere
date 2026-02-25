@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Shell 错误检测",
+  "description": "在 shell 命令执行后检测是否有错误发生，如果错误是非显而易见的，提醒记录到 .learnings/ERRORS.md",
+  "version": "1",
+  "when": {
+    "type": "postToolUse",
+    "toolTypes": [
+      "shell"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "检查刚才执行的 shell 命令结果。如果命令失败且错误是非显而易见的（不是简单的拼写错误或路径不存在），按照 .kiro/steering/self-improvement.md 中的 Error 格式记录到 .learnings/ERRORS.md。如果命令成功或错误是显而易见的，不需要做任何操作。"
+  }
+}
