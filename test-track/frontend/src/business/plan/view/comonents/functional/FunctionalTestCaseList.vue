@@ -1,13 +1,8 @@
 <template>
   <div class="card-container">
     <ms-table-header :condition.sync="condition" @search="search" ref="tableHeader"
-                     :show-create="false" class="table-header" :tip="$t('commons.search_by_id_name_tag')">
-
-      <!-- 不显示 “全部用例” 标题,使标题为空 -->
-      <template v-slot:title>
-        <span></span>
-      </template>
-
+                     :show-create="false" class="table-header" :tip="$t('commons.search_by_id_name_tag')"
+                     :title="selectNodeName || null">
       <template v-slot:button>
         <ms-table-button v-permission="['PROJECT_TRACK_CASE:READ']" v-if="!showMyTestCase" icon="el-icon-s-custom"
                          :content="$t('test_track.plan_view.my_case')" @click="searchMyTestCase"/>
@@ -20,8 +15,9 @@
       </template>
     </ms-table-header>
 
+    <!-- 使用独立的 loading 状态，避免 result 被 Promise 覆盖导致闪烁 -->
     <ms-table
-        v-loading="result.loading"
+        v-loading="loading"
         :field-key="tableHeaderKey"
         :data="tableData"
         :condition="condition"
@@ -390,6 +386,7 @@ export default {
       screenHeight: 'calc(100vh - 275px)',
       tableLabel: [],
       result: {},
+      loading: false, // 独立的加载状态，参考 IssueList 的实现，避免 result 被 Promise 覆盖导致闪烁
       deletePath: "/test/case/delete",
       condition: {
         components: TEST_PLAN_TEST_CASE_CONFIGS,
@@ -468,6 +465,11 @@ export default {
     },
     planStatus: {
       type: String
+    },
+    // 左侧树选中的模块名称，显示在表格上方标题区域
+    selectNodeName: {
+      type: String,
+      default: ''
     }
   },
   computed: {
@@ -563,9 +565,6 @@ export default {
       },
       deep: true
     },
-    condition() {
-      this.$emit('setCondition', this.condition);
-    },
     pageCount() {
       this.currentPage = 1;
     }
@@ -575,10 +574,13 @@ export default {
     this.pageCount = Math.ceil(this.total / this.pageSize);
   },
   mounted() {
-    this.getTemplateField();
+    // 先加载自定义字段模板，完成后再加载表格数据，避免并行导致闪烁
+    // 参考 IssueList 的串行加载模式：模板 → 数据
+    this.getTemplateField(() => {
+      this.refreshTableAndPlan();
+    });
     this.$emit('setCondition', this.condition);
     this.$EventBus.$on("openFailureTestCase", this.handleOpenFailureTestCase);
-    this.refreshTableAndPlan();
     this.hasEditPermission = hasPermission('PROJECT_TRACK_PLAN:READ+EDIT');
     this.getMaintainerOptions();
     this.getVersionOptions();
@@ -614,8 +616,14 @@ export default {
         this.$refs.testPlanTestCaseEdit.openTestCaseEdit(this.tableData[this.tableData.length - 1], this.tableData);
       });
     },
-    getTemplateField() {
-      this.result.loading = true;
+    /**
+     * 加载自定义字段模板和项目成员
+     * @param {Function} callback - 模板加载完成后的回调，用于串行触发表格数据加载
+     * 闪烁根因：模板和表格数据并行加载，表格数据先返回渲染一次，模板回来后 resetHeader 又渲染一次
+     * 修复方式：模板加载完成后，再通过 callback 触发表格数据加载，保证串行
+     */
+    getTemplateField(callback) {
+      this.loading = true;
       let p1 = getProjectMember()
           .then((response) => {
             this.members = response.data;
@@ -646,7 +654,13 @@ export default {
           if (this.$refs.table) {
             this.$refs.table.resetHeader();
           }
-          this.result.loading = false;
+          // 模板和表头就绪后，通过回调触发表格数据加载
+          if (typeof callback === 'function') {
+            callback();
+          } else {
+            // 无回调时关闭 loading（兜底）
+            this.loading = false;
+          }
         });
       });
     },
@@ -668,9 +682,7 @@ export default {
       initCondition(this.condition, this.condition.selectAll);
       this.enableOrderDrag = this.condition.orders.length > 0 ? false : true;
 
-      this.autoCheckStatus();
       if (this.planId) {
-        // param.planId = this.planId;
         this.condition.planId = this.planId;
       }
       if (this.clickType) {
@@ -687,7 +699,9 @@ export default {
       }
       this.condition.projectId = getCurrentProjectID();
       if (this.planId) {
-        this.result = getTestPlanTestCase(this.currentPage, this.pageSize, this.condition)
+        // 使用独立 loading 控制加载状态，不再将 Promise 赋值给 result
+        this.loading = true;
+        getTestPlanTestCase(this.currentPage, this.pageSize, this.condition)
             .then((r) => {
               this.total = r.data.itemCount;
               this.pageCount = Math.ceil(this.total / this.pageSize);
@@ -712,6 +726,11 @@ export default {
               if (typeof callback === "function") {
                 callback();
               }
+            })
+            .finally(() => {
+              this.loading = false;
+              // 数据加载完成后，通知父组件更新 condition（替代原来的 condition watcher）
+              this.$emit('setCondition', this.condition);
             });
         this.getNexPageData();
       }
@@ -763,6 +782,8 @@ export default {
         this.$refs.tableHeader.resetSearchData();
       }
       this.getTestPlanById();
+      // autoCheckStatus 只在初始加载/刷新计划时调用，不在每次翻页/搜索时调用
+      this.autoCheckStatus();
       this.initTableData();
     },
     search() {

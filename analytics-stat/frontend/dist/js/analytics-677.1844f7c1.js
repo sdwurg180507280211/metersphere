@@ -1,0 +1,1 @@
+"use strict";(window["webpackJsonp_analytics"]=window["webpackJsonp_analytics"]||[]).push([[677],{65677:function(n,t,r){r.r(t),r.d(t,{default:function(){return i}});var e,u,a={created(){const{params:n,query:t}=this.$route,{path:r}=n;this.$router.replace({path:"/"+r,query:t})},render:function(n){return n()}},s=a,c=r(81656),o=(0,c.A)(s,e,u,!1,null,null,null),i=o.exports}}]);
