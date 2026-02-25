@@ -83,14 +83,4 @@ public class WorkspaceController {
     public WorkspaceResource listResource(@PathVariable String groupId, @PathVariable String type) {
         return workspaceService.listResource(groupId, type);
     }
-
-    /**
-     * 获取所有工作空间列表（用于高级搜索下拉选项）
-     * 不需要权限校验，因为用户只能看到自己有权限的工作空间
-     * @return 工作空间列表
-     */
-    @GetMapping("/list/all")
-    public List<Workspace> listAllWorkspaces() {
-        return workspaceService.getWorkspaceList(new WorkspaceRequest());
-    }
 }

@@ -165,13 +165,6 @@
             <if test="proRequest.projectId != null">
                 AND p.id = #{proRequest.projectId}
             </if>
-            <!-- 支持高级搜索的工作空间多选筛选 -->
-            <if test="proRequest.workspaceIds != null and proRequest.workspaceIds.size() > 0">
-                AND p.workspace_id IN
-                <foreach collection="proRequest.workspaceIds" item="wsId" separator="," open="(" close=")">
-                    #{wsId}
-                </foreach>
-            </if>
         </where>
         <if test="proRequest.orders != null and proRequest.orders.size() > 0">
             ORDER BY
