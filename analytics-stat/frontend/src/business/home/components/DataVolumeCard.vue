@@ -1,57 +1,76 @@
 <template>
-  <el-card class="dashboard-card">
-    <div class="main-info-card">
-      <div style="padding: 24px;">
-        <div class="dashboard-title">{{ $t('analytics.data_volume_stat') }}</div>
-        <div class="common-amount" style="margin-top: 16px;">
-          <span style="font-size: 32px; font-weight: 500; color: #1f2329;">{{ volume }}</span>
-          <span style="margin-left: 8px; font-size: 18px; color: #8f959e;">{{ unit }}</span>
-        </div>
-        <div style="margin-top: 8px; color: #8f959e; font-size: 14px;">
-          {{ $t('analytics.total_data_volume') }}
-        </div>
+  <!-- 数据量统计卡片 -->
+  <el-card class="dashboard-card" shadow="never">
+    <div class="card-content">
+      <div class="dashboard-title">{{ t('analytics.data_volume_stat') }}</div>
+      <div class="amount-row">
+        <span class="amount-number">{{ volume }}</span>
+        <span class="amount-unit">{{ unit }}</span>
       </div>
+      <div class="sub-text">{{ t('analytics.total_data_volume') }}</div>
     </div>
   </el-card>
 </template>
 
-<script>
+<script setup lang="ts">
 /**
  * 数据量统计卡片
- * 
- * 功能：
- * 1. 展示数据量
- * 2. 展示单位（MB/GB/TB）
+ *
+ * Props:
+ * - volume: 数据量数值
+ * - unit: 单位 'MB' | 'GB' | 'TB'
  */
-export default {
-  name: "DataVolumeCard",
-  
-  props: {
-    // 数据量
-    volume: {
-      type: Number,
-      default: 0
-    },
-    // 单位：'MB' | 'GB' | 'TB'
-    unit: {
-      type: String,
-      default: 'MB',
-      validator: (value) => ['MB', 'GB', 'TB'].includes(value)
-    }
-  }
-};
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
+withDefaults(defineProps<{
+  volume: number
+  unit: 'MB' | 'GB' | 'TB'
+}>(), {
+  volume: 0,
+  unit: 'MB',
+})
 </script>
 
 <style scoped>
 .dashboard-card {
   height: 208px;
-  border: 0;
+  border: 1px solid #dee0e3;
+  border-radius: 4px;
 }
 
-.main-info-card {
-  height: 100%;
+.card-content {
+  padding: 8px;
+}
+
+.dashboard-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #1f2329;
+}
+
+.amount-row {
+  margin-top: 16px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: baseline;
+}
+
+.amount-number {
+  font-size: 32px;
+  font-weight: 500;
+  color: #1f2329;
+}
+
+.amount-unit {
+  margin-left: 8px;
+  font-size: 18px;
+  color: #8f959e;
+}
+
+.sub-text {
+  margin-top: 8px;
+  color: #8f959e;
+  font-size: 14px;
 }
 </style>

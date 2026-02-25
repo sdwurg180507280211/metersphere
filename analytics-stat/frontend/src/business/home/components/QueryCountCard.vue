@@ -1,61 +1,81 @@
 <template>
-  <el-card class="dashboard-card">
-    <div class="main-info-card">
-      <div style="padding: 24px;">
-        <div class="dashboard-title">{{ $t('analytics.query_count_stat') }}</div>
-        <div class="common-amount" style="margin-top: 16px;">
-          <span style="font-size: 32px; font-weight: 500; color: #1f2329;">{{ count }}</span>
-          <span style="margin-left: 8px;">
-            <i v-if="trend === 'up'" class="el-icon-top" style="color: #67C23A;"></i>
-            <i v-else-if="trend === 'down'" class="el-icon-bottom" style="color: #F56C6C;"></i>
-            <i v-else class="el-icon-minus" style="color: #909399;"></i>
-          </span>
-        </div>
-        <div style="margin-top: 8px; color: #8f959e; font-size: 14px;">
-          {{ $t('analytics.total_query_count') }}
-        </div>
+  <!-- 查询次数统计卡片 -->
+  <el-card class="dashboard-card" shadow="never">
+    <div class="card-content">
+      <div class="dashboard-title">{{ t('analytics.query_count_stat') }}</div>
+      <div class="amount-row">
+        <span class="amount-number">{{ count }}</span>
+        <span class="trend-icon">
+          <!-- 趋势图标：上升/下降/持平 -->
+          <el-icon v-if="trend === 'up'" color="#67C23A"><Top /></el-icon>
+          <el-icon v-else-if="trend === 'down'" color="#F56C6C"><Bottom /></el-icon>
+          <el-icon v-else color="#909399"><Minus /></el-icon>
+        </span>
       </div>
+      <div class="sub-text">{{ t('analytics.total_query_count') }}</div>
     </div>
   </el-card>
 </template>
 
-<script>
+<script setup lang="ts">
 /**
  * 查询次数统计卡片
- * 
- * 功能：
- * 1. 展示查询次数
- * 2. 展示趋势（上升/下降/持平）
+ *
+ * Props:
+ * - count: 查询次数
+ * - trend: 趋势方向 'up' | 'down' | 'stable'
  */
-export default {
-  name: "QueryCountCard",
-  
-  props: {
-    // 查询次数
-    count: {
-      type: Number,
-      default: 0
-    },
-    // 趋势：'up' | 'down' | 'stable'
-    trend: {
-      type: String,
-      default: 'stable',
-      validator: (value) => ['up', 'down', 'stable'].includes(value)
-    }
-  }
-};
+import { useI18n } from 'vue-i18n'
+import { Top, Bottom, Minus } from '@element-plus/icons-vue'
+
+const { t } = useI18n()
+
+withDefaults(defineProps<{
+  count: number
+  trend: 'up' | 'down' | 'stable'
+}>(), {
+  count: 0,
+  trend: 'stable',
+})
 </script>
 
 <style scoped>
 .dashboard-card {
   height: 208px;
-  border: 0;
+  border: 1px solid #dee0e3;
+  border-radius: 4px;
 }
 
-.main-info-card {
-  height: 100%;
+.card-content {
+  padding: 8px;
+}
+
+.dashboard-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #1f2329;
+}
+
+.amount-row {
+  margin-top: 16px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+}
+
+.amount-number {
+  font-size: 32px;
+  font-weight: 500;
+  color: #1f2329;
+}
+
+.trend-icon {
+  margin-left: 8px;
+  font-size: 20px;
+}
+
+.sub-text {
+  margin-top: 8px;
+  color: #8f959e;
+  font-size: 14px;
 }
 </style>

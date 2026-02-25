@@ -1,13 +1,15 @@
 <template>
   <div class="sql-console">
-    <el-card>
+    <el-card shadow="never">
       <!-- 卡片头部 -->
-      <div slot="header" class="header">
-        <span>{{ $t('analytics.sql_console') }}</span>
-        <el-button type="primary" icon="el-icon-video-play" @click="executeQuery">
-          {{ $t('analytics.execute_query') }}
-        </el-button>
-      </div>
+      <template #header>
+        <div class="header">
+          <span>{{ t('analytics.sql_console') }}</span>
+          <el-button type="primary" :icon="VideoPlay" @click="executeQuery">
+            {{ t('analytics.execute_query') }}
+          </el-button>
+        </div>
+      </template>
 
       <!-- SQL 编辑器 -->
       <div class="editor-container">
@@ -15,7 +17,7 @@
           v-model="sqlQuery"
           type="textarea"
           :rows="10"
-          :placeholder="$t('analytics.sql_placeholder')"
+          :placeholder="t('analytics.sql_placeholder')"
           class="sql-editor"
         />
       </div>
@@ -24,7 +26,7 @@
 
       <!-- 查询结果 -->
       <div class="result-container">
-        <h3>{{ $t('analytics.query_result') }}</h3>
+        <h3>{{ t('analytics.query_result') }}</h3>
         <el-table
           v-if="queryResult.length > 0"
           :data="queryResult"
@@ -38,53 +40,52 @@
             :label="column"
           />
         </el-table>
-        <el-empty v-else :description="$t('analytics.no_query_result')" />
+        <el-empty v-else :description="t('analytics.no_query_result')" />
       </div>
     </el-card>
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 /**
  * SQL 查询台页面
- * 
+ *
  * 功能：
  * 1. 提供 SQL 输入框
  * 2. 执行 SQL 查询
- * 3. 展示查询结果
+ * 3. 展示查询结果（表格形式）
+ *
+ * TODO: 后续可集成 Monaco Editor 替代 textarea，提供语法高亮
  */
-export default {
-  name: 'SqlConsole',
-  data() {
-    return {
-      // SQL 查询语句
-      sqlQuery: '',
-      // 查询结果数据
-      queryResult: [],
-      // 结果列名
-      resultColumns: []
-    };
-  },
-  methods: {
-    /**
-     * 执行 SQL 查询
-     */
-    executeQuery() {
-      if (!this.sqlQuery.trim()) {
-        this.$message.warning(this.$t('analytics.sql_empty_warning'));
-        return;
-      }
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
+import { VideoPlay } from '@element-plus/icons-vue'
 
-      // TODO: 调用后端 API 执行查询
-      this.$message.info(this.$t('analytics.feature_in_development'));
-    }
+const { t } = useI18n()
+
+/** SQL 查询语句 */
+const sqlQuery = ref('')
+/** 查询结果数据 */
+const queryResult = ref<Record<string, any>[]>([])
+/** 结果列名 */
+const resultColumns = ref<string[]>([])
+
+/** 执行 SQL 查询 */
+function executeQuery() {
+  if (!sqlQuery.value.trim()) {
+    ElMessage.warning(t('analytics.sql_empty_warning'))
+    return
   }
-};
+  // TODO: 调用后端 API 执行查询
+  ElMessage.info(t('analytics.feature_in_development'))
+}
 </script>
 
 <style scoped>
 .sql-console {
   width: 100%;
+  padding: 20px;
 }
 
 .header {
@@ -97,7 +98,8 @@ export default {
   margin-bottom: 20px;
 }
 
-.sql-editor >>> .el-textarea__inner {
+/* textarea 使用等宽字体 */
+:deep(.sql-editor .el-textarea__inner) {
   font-family: 'Courier New', Consolas, monospace;
   font-size: 14px;
 }
