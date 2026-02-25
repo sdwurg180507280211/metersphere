@@ -6,7 +6,7 @@
     >
       <!-- 表头统计内容  -->
       <ms-table-count-bar
-        :count-content="$t('case.all_case_content') + ' (' + page.total + ')'"
+        :count-content="countBarTitle"
       ></ms-table-count-bar>
     </div>
 
@@ -655,6 +655,19 @@ export default {
         });
       }
       return map;
+    },
+    /**
+     * 表头统计栏标题：根据左侧树选中的模块动态显示
+     * - 未选中 / 选中根节点 → 显示"全部用例 (N)"
+     * - 选中子模块 → 显示"模块名 (N)"
+     */
+    countBarTitle() {
+      let label = this.$t('case.all_case_content');
+      if (this.selectNode && this.selectNode.data
+          && this.selectNode.data.id !== 'root') {
+        label = this.selectNode.data.name || label;
+      }
+      return label + ' (' + this.page.total + ')';
     },
   },
   created: function () {
