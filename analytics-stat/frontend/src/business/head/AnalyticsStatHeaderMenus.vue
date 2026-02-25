@@ -1,9 +1,7 @@
 <template>
   <div id="menu-bar" v-if="isRouterAlive">
     <el-row type="flex">
-      <!-- 项目切换组件 -->
-      <project-switch :project-name="currentProject" />
-      <!-- 二级导航菜单 -->
+      <!-- 二级导航菜单（分析统计为全局视角，不需要项目切换） -->
       <el-col :span="14">
         <el-menu
           class="header-menu"
@@ -34,34 +32,24 @@
  * 分析统计顶部导航菜单组件
  * 
  * 功能：
- * 1. 左侧：项目切换（ProjectSwitch）
- * 2. 中间：二级导航菜单（数据概览、SQL查询台、数据字典）
- * 3. 右侧：公共按钮组（MsHeaderRightMenus）
- *    - 用户头像
- *    - 语言切换
- *    - 工作空间切换
- *    - 任务中心
- *    - 通知
- *    - 帮助引导
+ * 1. 左侧：二级导航菜单（数据概览、SQL查询台、数据字典）
+ * 2. 右侧：公共按钮组（MsHeaderRightMenus）
+ *    - 用户头像、语言切换、工作空间切换、任务中心、通知、帮助引导
  * 
+ * 说明：分析统计为全局视角模块，不需要项目切换组件
  * 参考：report-stat/frontend/src/business/header/ReportStatisticsHeaderMenus.vue
  */
-import ProjectSwitch from "metersphere-frontend/src/components/head/ProjectSwitch";
 import MsHeaderRightMenus from "metersphere-frontend/src/components/layout/HeaderRightMenus";
-import { PROJECT_NAME } from "metersphere-frontend/src/utils/constants";
 
 export default {
   name: 'AnalyticsStatHeaderMenus',
   components: {
-    ProjectSwitch,
     MsHeaderRightMenus
   },
   data() {
     return {
       // 路由是否存活（用于强制刷新）
       isRouterAlive: true,
-      // 当前项目名称
-      currentProject: sessionStorage.getItem(PROJECT_NAME),
       // 当前激活的路径
       pathName: '',
       // 二级导航菜单配置（使用 i18n key，支持多语言切换）
