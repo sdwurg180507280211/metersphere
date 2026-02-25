@@ -1,125 +1,105 @@
 <template>
-  <div id="menu-bar" v-if="isRouterAlive">
-    <el-row type="flex">
-      <!-- 二级导航菜单（分析统计为全局视角，不需要项目切换） -->
+  <!-- 顶部导航栏：左侧二级菜单 + 右侧用户信息 -->
+  <div class="menu-bar">
+    <el-row type="flex" justify="space-between" align="middle">
+      <!-- 左侧：二级导航菜单（分析统计为全局视角，不需要项目切换） -->
       <el-col :span="14">
         <el-menu
           class="header-menu"
           :unique-opened="true"
           mode="horizontal"
           router
-          :default-active="pathName"
+          :default-active="activePath"
+          :ellipsis="false"
         >
           <el-menu-item
             v-for="menu in menus"
             :key="menu.path"
             :index="menu.path"
           >
-            {{ $t(menu.i18nKey) }}
+            {{ t(menu.i18nKey) }}
           </el-menu-item>
         </el-menu>
       </el-col>
-      <!-- 右上角按钮组（用户头像、语言切换、工作空间、任务中心、通知、帮助） -->
-      <el-col :span="10">
-        <ms-header-right-menus />
+      <!-- 右侧：模块标题（Vue 3 版本不再依赖 SDK 的 HeaderRightMenus） -->
+      <el-col :span="10" class="right-section">
+        <span class="module-title">{{ t('analytics.title') }}</span>
       </el-col>
     </el-row>
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 /**
  * 分析统计顶部导航菜单组件
- * 
+ *
  * 功能：
- * 1. 左侧：二级导航菜单（数据概览、SQL查询台、数据字典）
- * 2. 右侧：公共按钮组（MsHeaderRightMenus）
- *    - 用户头像、语言切换、工作空间切换、任务中心、通知、帮助引导
- * 
- * 说明：分析统计为全局视角模块，不需要项目切换组件
- * 参考：report-stat/frontend/src/business/header/ReportStatisticsHeaderMenus.vue
+ * 1. 左侧：二级导航菜单（工作台、SQL查询台、数据字典）
+ * 2. 右侧：模块标题
+ *
+ * 与 Vue 2 版本的差异：
+ * - 不再依赖 metersphere-frontend 的 MsHeaderRightMenus 组件
+ *   （Vue 3 版本无法使用 Vue 2 SDK 组件，且分析统计为独立模块，
+ *    不需要工作空间切换、任务中心等全局功能）
+ * - 使用 computed 替代 watch + data 实现路径匹配
+ * - 使用 useRoute / useI18n 替代 Options API
  */
-import MsHeaderRightMenus from "metersphere-frontend/src/components/layout/HeaderRightMenus";
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
-export default {
-  name: 'AnalyticsStatHeaderMenus',
-  components: {
-    MsHeaderRightMenus
-  },
-  data() {
-    return {
-      // 路由是否存活（用于强制刷新）
-      isRouterAlive: true,
-      // 当前激活的路径
-      pathName: '',
-      // 二级导航菜单配置（使用 i18n key，支持多语言切换）
-      menus: [
-        {
-          path: '/analytics/home',
-          i18nKey: 'analytics.menu.home'
-        },
-        {
-          path: '/analytics/sql-console',
-          i18nKey: 'analytics.menu.sql_console'
-        },
-        {
-          path: '/analytics/data-dictionary',
-          i18nKey: 'analytics.menu.data_dictionary'
-        }
-      ]
-    };
-  },
-  watch: {
-    /**
-     * 监听路由变化，更新激活的菜单项
-     */
-    '$route.path': {
-      handler(newPath) {
-        this.updateActivePath(newPath);
-      },
-      immediate: true
-    }
-  },
-  methods: {
-    /**
-     * 根据当前路径设置激活的菜单项
-     * @param {string} path - 当前路由路径
-     */
-    updateActivePath(path) {
-      if (path.indexOf('/analytics/home') >= 0 || path === '/analytics') {
-        this.pathName = '/analytics/home';
-      } else if (path.indexOf('/analytics/sql-console') >= 0) {
-        this.pathName = '/analytics/sql-console';
-      } else if (path.indexOf('/analytics/data-dictionary') >= 0) {
-        this.pathName = '/analytics/data-dictionary';
-      } else {
-        this.pathName = path;
-      }
-    },
-    /**
-     * 强制刷新路由
-     */
-    reload() {
-      this.isRouterAlive = false;
-      this.$nextTick(function () {
-        this.isRouterAlive = true;
-      });
-    }
-  }
-};
+const route = useRoute()
+const { t } = useI18n()
+
+/** 二级导航菜单配置 */
+const menus = [
+  { path: '/analytics/home', i18nKey: 'analytics.menu.home' },
+  { path: '/analytics/sql-console', i18nKey: 'analytics.menu.sql_console' },
+  { path: '/analytics/data-dictionary', i18nKey: 'analytics.menu.data_dictionary' },
+]
+
+/**
+ * 根据当前路由路径计算激活的菜单项
+ * 使用 computed 替代 Vue 2 版本的 watch + updateActivePath 方法
+ */
+const activePath = computed(() => {
+  const path = route.path
+  // 匹配菜单路径前缀，支持子路径高亮
+  const matched = menus.find((m) => path.startsWith(m.path))
+  if (matched) return matched.path
+  // 根路径默认高亮工作台
+  if (path === '/analytics') return '/analytics/home'
+  return path
+})
 </script>
 
 <style scoped>
-#menu-bar {
+.menu-bar {
   border-bottom: 1px solid #e6e6e6;
   background-color: #fff;
+  height: 50px;
+  line-height: 50px;
 }
 
 .header-menu {
   border-bottom: none;
+  height: 50px;
 }
 
-.el-menu-item {
+/* Element Plus 的 el-menu-item 样式覆盖 */
+.header-menu .el-menu-item {
   padding: 0 10px;
+  height: 50px;
+  line-height: 50px;
+}
+
+.right-section {
+  text-align: right;
+  padding-right: 20px;
+}
+
+.module-title {
+  font-size: 14px;
+  color: #606266;
 }
 </style>

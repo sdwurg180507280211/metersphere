@@ -1,63 +1,77 @@
 <template>
-  <el-menu 
-    menu-trigger="click" 
-    :default-active="$route.path"
-    :default-openeds="['1']"
-    router 
-    class="analytics-menu">
-    <el-submenu index="1">
-      <template v-slot:title>
-        <font-awesome-icon class="icon analytics" :icon="['fas', 'chart-bar']" size="lg"/>
-        <span>{{ $t('commons.analytics_stat') }}</span>
+  <!-- 左侧菜单：分析统计功能导航 -->
+  <el-menu
+    :default-active="route.path"
+    :default-openeds="['analytics-group']"
+    router
+    class="analytics-menu"
+  >
+    <el-sub-menu index="analytics-group">
+      <template #title>
+        <el-icon><DataAnalysis /></el-icon>
+        <span>{{ t('commons.analytics_stat') }}</span>
       </template>
-      <el-menu-item 
-        v-for="menu in menus" 
+      <el-menu-item
+        v-for="menu in menus"
         :key="menu.index"
-        :index="menu.index" 
-        class="menu-item">
-        <i :class="menu.icon"></i>
-        {{ $t(menu.i18nKey) }}
+        :index="menu.index"
+        class="menu-item"
+      >
+        <el-icon><component :is="menu.icon" /></el-icon>
+        <span>{{ t(menu.i18nKey) }}</span>
       </el-menu-item>
-    </el-submenu>
+    </el-sub-menu>
   </el-menu>
 </template>
 
-<script>
+<script setup lang="ts">
 /**
  * 分析统计左侧菜单组件
- * 
+ *
  * 功能：
  * 1. 显示分析统计模块的功能菜单
- * 2. 支持路由跳转
- * 3. 自动高亮当前激活菜单
- * 
- * 参考：system-setting/frontend/src/business/SettingMenu.vue
+ * 2. 支持路由跳转（通过 el-menu 的 router 属性）
+ * 3. 自动高亮当前激活菜单（通过 default-active 绑定 route.path）
+ *
+ * 与 Vue 2 版本的差异：
+ * - 使用 Element Plus 的 el-icon + 图标组件替代 Element UI 的 i 标签图标
+ * - 使用 useRoute() 替代 this.$route
+ * - 使用 useI18n() 替代 this.$t()
  */
-export default {
-  name: "AnalyticsStatMenu",
-  data() {
-    return {
-      // 菜单配置（使用 i18n key，支持多语言切换）
-      menus: [
-        {
-          index: '/analytics/home',
-          i18nKey: 'analytics.menu.home',
-          icon: 'el-icon-s-home'
-        },
-        {
-          index: '/analytics/sql-console',
-          i18nKey: 'analytics.menu.sql_console',
-          icon: 'el-icon-document'
-        },
-        {
-          index: '/analytics/data-dictionary',
-          i18nKey: 'analytics.menu.data_dictionary',
-          icon: 'el-icon-collection'
-        }
-      ]
-    };
-  }
-};
+import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { DataAnalysis, HomeFilled, Document, Collection } from '@element-plus/icons-vue'
+import { markRaw } from 'vue'
+import type { Component } from 'vue'
+
+const route = useRoute()
+const { t } = useI18n()
+
+/** 菜单项类型定义 */
+interface MenuItem {
+  index: string
+  i18nKey: string
+  icon: Component
+}
+
+/** 菜单配置（使用 i18n key，支持多语言切换） */
+const menus: MenuItem[] = [
+  {
+    index: '/analytics/home',
+    i18nKey: 'analytics.menu.home',
+    icon: markRaw(HomeFilled),
+  },
+  {
+    index: '/analytics/sql-console',
+    i18nKey: 'analytics.menu.sql_console',
+    icon: markRaw(Document),
+  },
+  {
+    index: '/analytics/data-dictionary',
+    i18nKey: 'analytics.menu.data_dictionary',
+    icon: markRaw(Collection),
+  },
+]
 </script>
 
 <style scoped>
@@ -65,23 +79,8 @@ export default {
   border-right: 0;
 }
 
-.analytics-menu .menu-item {
+.menu-item {
   height: 40px;
   line-height: 40px;
-}
-
-.icon {
-  width: 24px;
-  margin-right: 10px;
-}
-
-.analytics {
-  color: #409EFF;
-}
-
-.menu-item i {
-  margin-right: 8px;
-  font-size: 16px;
-  color: #606266;
 }
 </style>

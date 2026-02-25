@@ -26,260 +26,138 @@
   </div>
 </template>
 
-<script>
-import QueryCountCard from "./components/QueryCountCard";
-import DataVolumeCard from "./components/DataVolumeCard";
-import QuickAccessCard from "./components/QuickAccessCard";
-import RecentQueryList from "./components/RecentQueryList";
-
+<script setup lang="ts">
 /**
  * 分析统计模块工作台首页
- * 
+ *
  * 功能：
- * 1. 展示查询次数统计
- * 2. 展示数据量统计
- * 3. 提供快捷入口
- * 4. 展示最近查询列表
- * 
- * 布局说明：
- * - 采用左右布局，左侧菜单由父组件 AnalyticsStat.vue 提供
- * - 本组件只负责右侧内容区域的展示
- * - 移除了 ms-container 嵌套，由父组件统一管理
+ * 1. 展示查询次数统计（QueryCountCard）
+ * 2. 展示数据量统计（DataVolumeCard）
+ * 3. 提供快捷入口（QuickAccessCard）
+ * 4. 展示最近查询列表（RecentQueryList）
+ *
+ * 与 Vue 2 版本的差异：
+ * - 使用 Composition API（ref / onMounted / onActivated）替代 Options API
+ * - 使用 Element Plus 图标组件替代 Element UI 的 i 标签图标
+ * - 使用 ElMessage 替代 this.$message
+ * - 使用 markRaw 包裹图标组件，避免 Vue 3 响应式代理开销
  */
-export default {
-  name: "AnalyticsStatHome",
+import { ref, onMounted, onActivated, markRaw } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
+import { Document, Collection, Search } from '@element-plus/icons-vue'
 
-  components: {
-    QueryCountCard,
-    DataVolumeCard,
-    QuickAccessCard,
-    RecentQueryList
+import QueryCountCard from './components/QueryCountCard.vue'
+import DataVolumeCard from './components/DataVolumeCard.vue'
+import QuickAccessCard from './components/QuickAccessCard.vue'
+import RecentQueryList from './components/RecentQueryList.vue'
+import type { QueryRecord } from './components/RecentQueryList.vue'
+import type { QuickAccessItem } from './components/QuickAccessCard.vue'
+
+const { t } = useI18n()
+
+// ========== 响应式状态 ==========
+
+/** 查询次数 */
+const queryCount = ref(0)
+/** 查询趋势 */
+const queryTrend = ref<'up' | 'down' | 'stable'>('stable')
+/** 数据量 */
+const dataVolume = ref(0)
+/** 数据量单位 */
+const dataUnit = ref<'MB' | 'GB' | 'TB'>('MB')
+/** 最近查询列表 */
+const recentQueries = ref<QueryRecord[]>([])
+
+/** 快捷入口配置 */
+const quickAccessItems: QuickAccessItem[] = [
+  {
+    i18nKey: 'analytics.menu.sql_console',
+    icon: markRaw(Document),
+    path: '/analytics/sql-console',
+    descKey: 'analytics.sql_console_desc',
   },
-
-  data() {
-    return {
-      // 查询次数统计
-      queryCount: 0,
-      queryTrend: 'stable', // 'up' | 'down' | 'stable'
-      
-      // 数据量统计
-      dataVolume: 0,
-      dataUnit: 'MB', // 'MB' | 'GB' | 'TB'
-      
-      // 最近查询列表
-      recentQueries: [],
-      
-      // 加载状态
-      loading: false,
-      
-      // 快捷入口配置（使用 i18n key，支持多语言切换）
-      quickAccessItems: [
-        {
-          i18nKey: 'analytics.menu.sql_console',
-          icon: 'el-icon-document',
-          path: '/analytics/sql-console',
-          descKey: 'analytics.sql_console_desc'
-        },
-        {
-          i18nKey: 'analytics.menu.data_dictionary',
-          icon: 'el-icon-collection',
-          path: '/analytics/data-dictionary',
-          descKey: 'analytics.data_dictionary_desc'
-        },
-        {
-          i18nKey: 'analytics.comprehensive_query',
-          icon: 'el-icon-search',
-          path: '/analytics/query',
-          descKey: 'analytics.comprehensive_query_desc'
-        }
-      ]
-    };
+  {
+    i18nKey: 'analytics.menu.data_dictionary',
+    icon: markRaw(Collection),
+    path: '/analytics/data-dictionary',
+    descKey: 'analytics.data_dictionary_desc',
   },
-
-  mounted() {
-    this.initData();
+  {
+    i18nKey: 'analytics.comprehensive_query',
+    icon: markRaw(Search),
+    path: '/analytics/sql-console',
+    descKey: 'analytics.comprehensive_query_desc',
   },
+]
 
-  activated() {
-    // 子应用激活时刷新数据
-    this.refreshStats();
-  },
+// ========== 数据加载方法 ==========
 
-  methods: {
-    /**
-     * 初始化数据
-     */
-    initData() {
-      this.loading = true;
-      Promise.all([
-        this.loadQueryCount(),
-        this.loadDataVolume(),
-        this.loadRecentQueries()
-      ]).finally(() => {
-        this.loading = false;
-      });
-    },
-
-    /**
-     * 刷新统计数据
-     */
-    refreshStats() {
-      this.loadQueryCount();
-      this.loadDataVolume();
-      this.loadRecentQueries();
-    },
-
-    /**
-     * 加载查询次数统计
-     */
-    async loadQueryCount() {
-      try {
-        // TODO: 调用后端 API
-        // const res = await getQueryCount();
-        // this.queryCount = res.data.total;
-        // this.queryTrend = res.data.trend;
-        
-        // Mock 数据
-        this.queryCount = 1234;
-        this.queryTrend = 'up';
-      } catch (error) {
-        this.$message.error(this.$t('analytics.load_query_count_failed'));
-        console.error(error);
-      }
-    },
-
-    /**
-     * 加载数据量统计
-     */
-    async loadDataVolume() {
-      try {
-        // TODO: 调用后端 API
-        // const res = await getDataVolume();
-        // this.dataVolume = res.data.volume;
-        // this.dataUnit = res.data.unit;
-        
-        // Mock 数据
-        this.dataVolume = 1024;
-        this.dataUnit = 'MB';
-      } catch (error) {
-        this.$message.error(this.$t('analytics.load_data_volume_failed'));
-        console.error(error);
-      }
-    },
-
-    /**
-     * 加载最近查询列表
-     */
-    async loadRecentQueries() {
-      try {
-        // TODO: 调用后端 API
-        // const res = await getRecentQueries({ limit: 10 });
-        // this.recentQueries = res.data;
-        
-        // Mock 数据
-        this.recentQueries = [
-          {
-            id: '1',
-            name: this.$t('analytics.mock_query_user_stat'),
-            type: 'sql',
-            createTime: new Date(),
-            status: 'success'
-          },
-          {
-            id: '2',
-            name: this.$t('analytics.mock_query_project_data'),
-            type: 'query',
-            createTime: new Date(),
-            status: 'success'
-          }
-        ];
-      } catch (error) {
-        this.$message.error(this.$t('analytics.load_recent_queries_failed'));
-        console.error(error);
-      }
-    }
+/** 加载查询次数统计 */
+async function loadQueryCount() {
+  try {
+    // TODO: 调用后端 API
+    // const res = await api.getQueryCount()
+    queryCount.value = 1234
+    queryTrend.value = 'up'
+  } catch {
+    ElMessage.error(t('analytics.load_query_count_failed'))
   }
-};
+}
+
+/** 加载数据量统计 */
+async function loadDataVolume() {
+  try {
+    // TODO: 调用后端 API
+    dataVolume.value = 1024
+    dataUnit.value = 'MB'
+  } catch {
+    ElMessage.error(t('analytics.load_data_volume_failed'))
+  }
+}
+
+/** 加载最近查询列表 */
+async function loadRecentQueries() {
+  try {
+    // TODO: 调用后端 API
+    recentQueries.value = [
+      {
+        id: '1',
+        name: t('analytics.mock_query_user_stat'),
+        type: 'sql',
+        createTime: new Date(),
+        status: 'success',
+      },
+      {
+        id: '2',
+        name: t('analytics.mock_query_project_data'),
+        type: 'query',
+        createTime: new Date(),
+        status: 'success',
+      },
+    ]
+  } catch {
+    ElMessage.error(t('analytics.load_recent_queries_failed'))
+  }
+}
+
+/** 初始化所有数据 */
+function initData() {
+  loadQueryCount()
+  loadDataVolume()
+  loadRecentQueries()
+}
+
+// 组件挂载时加载数据
+onMounted(() => initData())
+
+// keep-alive 激活时刷新数据
+onActivated(() => initData())
 </script>
 
 <style scoped>
 .analytics-stat-home {
   padding: 20px;
-  background-color: #f5f6f7;
   min-height: calc(100vh - 50px);
-}
-
-/* 卡片样式 */
-:deep(.el-card__header) {
-  border: 0px;
-  padding: 24px;
-}
-
-:deep(.el-card__body) {
-  border: 0px;
-  padding: 0px;
-  margin: 0px 24px 24px 24px;
-}
-
-:deep(.el-card) {
-  border: 0;
-}
-
-/* 统计卡片样式 */
-:deep(.dashboard-card) {
-  height: 208px;
-}
-
-:deep(.main-info-card) {
-  height: 208px;
-  width: 100%;
-  color: #646a73;
-  background-color: #ffffff;
-  box-sizing: border-box;
-  border: 1px solid #dee0e3;
-  border-radius: 4px;
-}
-
-:deep(.dashboard-title) {
-  font-size: 18px;
-  font-weight: 500;
-  color: #1f2329;
-}
-
-/* 表格样式 */
-:deep(.home-table-cell) {
-  height: 40px;
-  background-color: #f5f6f7;
-  font-size: 14px;
-  font-weight: 500;
-  border: 1px solid rgba(31, 35, 41, 0.15);
-  border-right-width: 0;
-  border-left-width: 0;
-  color: #646a73;
-  line-height: 22px;
-}
-
-:deep(.table-title) {
-  color: #1f2329;
-  font-weight: 500;
-  font-size: 18px;
-  line-height: 26px;
-}
-
-:deep(.el-table__row) {
-  height: 40px;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 22px;
-  color: #1f2329;
-}
-
-:deep(.el-table__body tr:hover) {
-  cursor: pointer;
-}
-
-:deep(.el-table .cell) {
-  padding-left: 12px;
-  padding-right: 12px;
 }
 </style>
