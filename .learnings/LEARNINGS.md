@@ -901,3 +901,335 @@ MeterSphere 所有模块通过 `@PropertySource("file:/opt/metersphere/conf/mete
 - Related Files: metersphere/analytics-stat/backend/src/main/resources/es-mappings/knowledge_base.json
 - Tags: Elasticsearch, IK分词, Docker, 插件安装, analysis-ik, infini.cloud
 - See Also: LRN-20260226-006
+
+## [LRN-20260226-008] best_practice
+
+**Logged**: 2026-02-26T21:30:00Z
+**Priority**: high
+**Status**: pending
+**Area**: backend
+
+### 摘要
+MeterSphere 微服务的认证机制：Gateway 用 X-AUTH-TOKEN header + Redis session，子服务直连无法通过认证，API 测试必须走 Gateway
+
+### 详情
+在测试 analytics-stat 知识库检索接口时，发现以下非显而易见的认证机制：
+
+1. **MeterSphere 不使用 Cookie 认证**：登录接口 `POST /signin` 的响应不包含 `Set-Cookie` header，而是在响应头中返回 `X-AUTH-TOKEN: <sessionId>`，同时在响应 body 的 `data.sessionId` 和 `data.csrfToken` 中也返回。后续请求需要在 header 中携带 `X-AUTH-TOKEN` 和 `CSRF-TOKEN`。用 `curl -c cookie.txt` 保存 cookie 的方式无效。
+
+2. **直连子服务端口无法通过认证**：每个子服务（如 analytics-stat:8009）使用 SDK 的 `ShiroConfig` 配置了 `ServletContainerSessionManager`，这是基于 Servlet 容器的本地 session 管理。而 Gateway 使用 Redis 存储 session（Spring Session），两者的 session 存储不共享。直连子服务时，即使携带了从 Gateway 获取的 `X-AUTH-TOKEN`，子服务的 Shiro 也无法识别（因为 session 不在本地 Servlet 容器中），返回 `302 + Authentication-Status: invalid`。
+
+3. **正确的 API 测试路径是通过 Gateway**：`http://localhost:8000/<服务名>/<接口路径>`。Gateway 的 `SessionFilter` 会从 Redis 中查找 session，验证通过后将用户信息注入到转发请求的 header 中，子服务的 Shiro 通过这些 header 完成认证。
+
+4. **Gateway 对 URL 中的非 ASCII 字符敏感**：直接在 URL 中放中文（如 `?query=测试平台`）会返回 400 Bad Request（空 body）。必须 URL encode（`?query=%E6%B5%8B%E8%AF%95%E5%B9%B3%E5%8F%B0`）。这是 Spring Cloud Gateway（基于 Netty）的默认行为，比 Tomcat 更严格。
+
+5. **Gateway 500 + "Cannot deserialize" 错误**：URL encode 后请求能到达 Gateway 的 SessionFilter，但返回 `{"success":false,"message":"Cannot deserialize","data":null}`。这说明 Gateway 在反序列化 Redis 中的 session 时出错，可能是 session 中存储的对象类在 Gateway 的 classpath 中不存在（Gateway 是 WebFlux 应用，不包含业务模块的 DTO 类）。这个问题需要进一步排查。
+
+### curl 测试 MeterSphere API 的正确姿势
+```bash
+# 1. 登录获取 token
+TOKEN=$(curl -s -X POST 'http://localhost:8000/signin' \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"metersphere"}' \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['sessionId'])")
+
+CSRF=$(curl -s -X POST 'http://localhost:8000/signin' \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"metersphere"}' \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['csrfToken'])")
+
+# 2. 带 token 调接口（通过 Gateway，URL encode 中文参数）
+curl -s -G \
+  -H "X-AUTH-TOKEN: $TOKEN" \
+  -H "CSRF-TOKEN: $CSRF" \
+  --data-urlencode 'query=测试平台' \
+  'http://localhost:8000/analytics/knowledge/search/hybrid?topK=5'
+
+# 3. 不要直连子服务端口（会被 Shiro 拦截）
+# ❌ curl http://localhost:8009/knowledge/search/hybrid  → 302
+```
+
+### 建议操作
+- 测试 MeterSphere 任何模块的 API 时，始终通过 Gateway（8000 端口）
+- 使用 `X-AUTH-TOKEN` header 而非 cookie
+- 中文参数必须 URL encode
+- 如果遇到 "Cannot deserialize" 错误，检查 Gateway 的 classpath 是否包含 session 中存储的对象类
+
+### 元数据
+- Source: conversation
+- Related Files: framework/sdk-parent/sdk/src/main/java/io/metersphere/autoconfigure/ShiroConfig.java, framework/sdk-parent/sdk/src/main/java/io/metersphere/commons/utils/FilterChainUtils.java, framework/gateway/src/main/java/io/metersphere/gateway/filter/SessionFilter.java
+- Tags: 认证, X-AUTH-TOKEN, Shiro, Gateway, session, Redis, curl, API测试
+- See Also: LRN-20260225-005, LRN-20260226-005
+
+## [LRN-20260226-009] best_practice
+
+**Logged**: 2026-02-26T22:00:00Z
+**Priority**: high
+**Status**: pending
+**Area**: frontend
+
+### 摘要
+Vue 3 独立子应用在 MeterSphere 微前端环境下必须手动注入认证 header，否则所有 API 请求都会被 Gateway 返回 401
+
+### 详情
+analytics-stat 前端从 Vue 2 迁移到 Vue 3 后，使用独立的 `axios.create()` 发送 API 请求。搜索接口 `GET /analytics/knowledge/search/hybrid` 始终返回 `401 UNAUTHORIZED "Not found session"`，但页面本身能正常加载（因为页面加载走的是主应用的请求链路）。
+
+根因分析：
+1. **Vue 2 模块的认证是 SDK 自动处理的**：所有 Vue 2 模块通过 `import { request } from 'metersphere-frontend/src/plugins/request'` 使用 SDK 提供的 axios 实例，该实例的请求拦截器会自动从 `localStorage["Admin-Token"]` 读取 `sessionId` 和 `csrfToken`，注入到 `X-AUTH-TOKEN` 和 `CSRF-TOKEN` header 中，同时从 `sessionStorage` 读取 `workspace_id` 和 `project_id` 注入到 `WORKSPACE` 和 `PROJECT` header 中。
+
+2. **Vue 3 模块脱离了 SDK 体系**：Vue 3 无法引用 Vue 2 的 SDK 组件（参见 LRN-20260225-004），因此使用独立的 `axios.create()`。但最初只设置了 `baseURL: '/analytics'` 和 `withCredentials: true`，没有注入认证 header。`withCredentials: true` 只确保发送 cookie，而 MeterSphere 不使用 cookie 认证（参见 LRN-20260226-008），所以完全无效。
+
+3. **对比正常请求和失败请求的 header 差异**是定位此问题的关键方法：通过 DevTools Network 面板对比 setting 模块（正常 200）和 analytics 模块（401）的请求 header，立即发现 analytics 的请求缺少 `x-auth-token`、`csrf-token`、`workspace`、`project` 四个 header。
+
+4. **修复方案**：在独立 axios 实例上添加请求拦截器，复刻 SDK `request.js` 的 token 注入逻辑：
+   ```typescript
+   http.interceptors.request.use((config) => {
+     const tokenStr = localStorage.getItem('Admin-Token')
+     if (tokenStr) {
+       const user = JSON.parse(tokenStr)
+       if (user?.sessionId) config.headers['X-AUTH-TOKEN'] = user.sessionId
+       if (user?.csrfToken) config.headers['CSRF-TOKEN'] = user.csrfToken
+     }
+     const workspaceId = sessionStorage.getItem('workspace_id')
+     if (workspaceId) config.headers['WORKSPACE'] = workspaceId
+     const projectId = sessionStorage.getItem('project_id')
+     if (projectId) config.headers['PROJECT'] = projectId
+     return config
+   })
+   ```
+
+5. **关键常量值**（与 SDK 保持一致）：
+   - `localStorage` key: `"Admin-Token"`（SDK 的 `TokenKey`）
+   - `sessionStorage` keys: `"workspace_id"`（SDK 的 `WORKSPACE_ID`）、`"project_id"`（SDK 的 `PROJECT_ID`）
+   - Header names: `X-AUTH-TOKEN`、`CSRF-TOKEN`、`WORKSPACE`、`PROJECT`
+
+### 建议操作
+后续在 MeterSphere 中新增任何 Vue 3 子应用（或其他脱离 SDK 的前端模块），创建 axios 实例时必须同步添加认证 header 注入拦截器。可以将此拦截器抽取为独立的 `auth-interceptor.ts` 工具文件，供多个 API 模块复用。
+
+### 元数据
+- Source: conversation
+- Related Files: metersphere/analytics-stat/frontend/src/api/knowledge.ts, metersphere/framework/sdk-parent/frontend/src/plugins/request.js, metersphere/framework/sdk-parent/frontend/src/utils/constants.js
+- Tags: 认证, X-AUTH-TOKEN, axios, 拦截器, Vue3, 微前端, Gateway, 401, analytics-stat
+- See Also: LRN-20260226-008, LRN-20260225-004
+
+---
+
+## [LRN-20260226-010] gotcha
+
+**Logged**: 2026-02-26T23:00:00Z
+**Priority**: high
+**Status**: pending
+**Area**: backend
+
+### 摘要
+Lombok `@Data` + Jackson 对 `boolean isXxx` 字段的命名陷阱：getter `isXxx()` 被 Jackson 映射为 JSON 属性 `xxx`（去掉 `is` 前缀），与 ES/数据库中的 `isXxx` 字段名不匹配
+
+### 详情
+知识库检索接口 `GET /analytics/knowledge/search/hybrid` 返回 200 但 Jackson 反序列化 ES 响应时抛出 `UnrecognizedPropertyException: Unrecognized field "isPublic"`。
+
+根因链路：
+1. `EsDocument.java` 定义了 `private boolean isPublic`
+2. Lombok `@Data` 生成 getter `isPublic()` 和 setter `setPublic(boolean)`
+3. Jackson 根据 JavaBean 规范推断 JSON 属性名：对于 `isXxx()` getter，属性名是 `xxx`（去掉 `is` 前缀）→ 映射为 `"public"`
+4. ES 中存储的字段名是 `"isPublic"`（PaiSmart 原始字段名）
+5. Jackson 在 ES 响应中看到 `"isPublic"` 字段，但只认识 `"public"`，抛出 `UnrecognizedPropertyException`
+6. 错误信息中的 `9 known properties` 列表里确实只有 `"public"` 而没有 `"isPublic"`
+
+修复方案：
+- 在 `isPublic` 字段上添加 `@JsonProperty("isPublic")`，显式告诉 Jackson 这个字段对应 JSON 中的 `"isPublic"`
+- 在类上添加 `@JsonIgnoreProperties(ignoreUnknown = true)`，防止 ES 返回的其他未知字段导致反序列化失败
+
+这个问题的非显而易见之处：
+- `boolean isPublic` 在 Java 中看起来很自然，但 Lombok + Jackson 的组合会产生意外的属性名映射
+- 如果字段类型是 `Boolean`（包装类型）而非 `boolean`（基本类型），Lombok 生成的 getter 是 `getIsPublic()`，Jackson 映射为 `"isPublic"`，反而不会有这个问题
+- PaiSmart 原项目使用 JPA + Spring Data，JPA 不依赖 JavaBean getter 命名规范做 JSON 序列化，所以同样的字段定义在 PaiSmart 中没有问题
+
+### 通用规则
+在使用 Lombok `@Data` + Jackson 的项目中，避免用 `boolean isXxx` 命名字段。推荐做法：
+1. 改用 `Boolean isXxx`（包装类型，getter 为 `getIsXxx()`）
+2. 或加 `@JsonProperty("isXxx")` 显式指定
+3. 或改名为 `boolean xxxFlag` / `boolean publicFlag` 避免 `is` 前缀
+
+### 元数据
+- Source: error
+- Related Files: metersphere/analytics-stat/backend/src/main/java/io/metersphere/knowledge/dto/EsDocument.java, PaiSmart/src/main/java/com/yizhaoqi/smartpai/entity/EsDocument.java
+- Tags: Lombok, Jackson, boolean, isPublic, JsonProperty, 反序列化, ES, 命名陷阱
+- See Also: LRN-20260226-009
+
+---
+
+## [LRN-20260226-011] gotcha
+
+**Logged**: 2026-02-26T16:45:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: infra
+
+### 摘要
+steering 文档中的 MySQL 连接命令 `mysql -h localhost` 在本地开发环境不可用，MySQL 运行在 Docker 容器中，必须用 `docker exec mysql mysql` 连接
+
+### 详情
+steering 的 `chinese-rules.md` 中数据库连接信息写的是：
+```bash
+mysql -h localhost -u root -p'Password123@mysql' -e "USE metersphere_dev;"
+```
+
+但实际环境中 MySQL 运行在名为 `mysql` 的 Docker 容器内，宿主机没有安装 mysql client，也没有暴露 3306 端口到 localhost（或者暴露了但没有本地 mysql 命令）。正确的连接方式是：
+```bash
+docker exec mysql mysql -u root -p'Password123@mysql' -e "USE metersphere_dev;"
+```
+
+如果需要执行 SQL 文件：
+```bash
+docker exec -i mysql mysql -u root -p'Password123@mysql' metersphere_dev < path/to/script.sql
+```
+
+注意 `-i` 参数是必须的（允许 stdin 重定向），不加 `-i` 会报 `the input device is not a TTY`。
+
+### 建议操作
+后续所有数据库操作都用 `docker exec mysql mysql` 而非 `mysql -h localhost`。如果 steering 文档有更新机会，应修正连接命令。
+
+### 元数据
+- Source: error
+- Related Files: .kiro/steering/chinese-rules.md
+- Tags: MySQL, Docker, 数据库连接, steering文档, 环境差异
+- See Also: LRN-20260226-005
+
+---
+
+## [LRN-20260226-012] gotcha
+
+**Logged**: 2026-02-26T16:50:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: backend
+
+### 摘要
+analytics-stat 模块的 Flyway 迁移脚本不会自动执行，`db/migration/` 下的 SQL 文件需要手动在 MySQL 中执行
+
+### 详情
+analytics-stat 的 `backend/src/main/resources/db/migration/V2__add_knowledge_base_tables.sql` 包含了 `kb_file_upload`、`kb_document_vectors`、`kb_chunk_info` 三张表的建表语句，但启动 analytics-stat 后端时这些表并没有被自动创建。
+
+可能的原因：
+1. analytics-stat 模块可能没有配置 Flyway 自动迁移（`spring.flyway.enabled=false` 或未引入 flyway 依赖）
+2. MeterSphere 其他模块（如 system-setting）可能有 Flyway 配置，但 analytics-stat 作为新增模块可能遗漏了
+3. 迁移脚本放在 `db/migration/` 目录下只是作为文档/参考，实际建表需要手动执行
+
+手动建表命令：
+```bash
+docker exec -i mysql mysql -u root -p'Password123@mysql' metersphere_dev < analytics-stat/backend/src/main/resources/db/migration/V2__add_knowledge_base_tables.sql
+```
+
+### 建议操作
+- 新增数据库表时，不要依赖 Flyway 自动迁移，手动执行 SQL 脚本
+- 或者检查 analytics-stat 的 pom.xml 和 application.properties 是否需要添加 Flyway 配置
+- 迁移脚本仍然保留在 `db/migration/` 目录下作为版本化的 DDL 记录
+
+### 元数据
+- Source: error
+- Related Files: metersphere/analytics-stat/backend/src/main/resources/db/migration/V2__add_knowledge_base_tables.sql, metersphere/analytics-stat/backend/src/main/resources/application.properties
+- Tags: Flyway, 数据库迁移, 建表, analytics-stat, 手动执行
+- See Also: LRN-20260226-004
+
+---
+
+## [LRN-20260226-013] gotcha
+
+**Logged**: 2026-02-26T17:00:00Z
+**Priority**: high
+**Status**: active
+**Area**: backend
+
+### 摘要
+MeterSphere 每个模块必须使用独立的 `spring.flyway.table` 名，共用版本表会导致迁移脚本被静默跳过
+
+### 详情
+analytics-stat 的 Flyway 迁移脚本（V1、V2）没有自动执行，最初误判为"Flyway 未配置"或"不会自动执行"（LRN-20260226-012 的结论是错误的）。
+
+实际根因：`application.properties` 中 `spring.flyway.table=metersphere_version`，与 system-setting 模块共用同一张版本记录表。该表已有 149 条迁移记录（V1 到 V149），Flyway 启动时发现 V1、V2 的版本号低于已有最高版本 149，判定为"已执行过"，静默跳过。
+
+这个问题的非显而易见之处：
+- Flyway 不会报错或警告，只是在 DEBUG 日志中记录 "Resolved migration V1 was ignored because it is below the baseline"
+- `spring.flyway.baseline-on-migrate=true` + `baseline-version=0` 的组合意味着 Flyway 会自动创建 baseline，但如果版本表已存在且有更高版本的记录，baseline 不会重新创建
+- 从 system-setting 复制 application.properties 模板时，很容易忘记改 `flyway.table` 的值
+
+项目中各模块的 Flyway 版本表命名约定：
+
+| 模块 | flyway.table |
+|------|-------------|
+| system-setting | `metersphere_version` |
+| api-test | `api_version` |
+| test-track | `track_version` |
+| performance-test | `performance_version` |
+| project-management | `project_management_version` |
+| report-stat | `report_version`（推测） |
+| analytics-stat | `analytics_version`（已修复） |
+
+### 建议操作
+- 新增模块时，`spring.flyway.table` 必须设置为模块独有的表名（如 `<模块名>_version`）
+- 如果从其他模块复制 application.properties 模板，第一时间检查 `flyway.table` 是否改了
+- 遇到 Flyway 迁移脚本"没执行"的问题，先查版本表内容（`SELECT * FROM <flyway.table>`），而不是假设 Flyway 未配置
+- LRN-20260226-012 的结论"Flyway 不会自动执行"是错误的，已被本条纠正
+
+### 元数据
+- Source: error
+- Related Files: metersphere/analytics-stat/backend/src/main/resources/application.properties
+- Tags: Flyway, 版本表, 迁移脚本, 静默跳过, analytics-stat, 项目约定
+- Supersedes: LRN-20260226-012
+- See Also: LRN-20260226-004
+
+---
+
+## [LRN-20260226-014] gotcha
+
+**Logged**: 2026-02-26T17:30:00Z
+**Priority**: high
+**Status**: active
+**Area**: backend
+
+### 摘要
+MeterSphere SDK 的 `ResultResponseBodyAdvice` 会自动将所有 `io.metersphere` 包下 Controller 的返回值包装为 `ResultHolder { success, message, data }`，新增 Controller 不要手动构造响应格式
+
+### 详情
+知识库检索接口后端返回 1 条结果且无报错，但前端弹窗"检索失败"。排查发现是响应格式被二次包装导致前端解析失败。
+
+根因链路：
+1. `ResultResponseBodyAdvice`（`@RestControllerAdvice(value = {"io.metersphere"})`）拦截所有 `io.metersphere` 包下 Controller 的返回值
+2. 如果返回值不是 `ResultHolder` 类型，自动调用 `ResultHolder.success(o)` 包装
+3. 我们的 Controller 返回 `Map<String, Object> { code: 200, message: "success", data: [...] }`
+4. 被包装后变成 `{ success: true, message: null, data: { code: 200, message: "success", data: [...] } }`
+5. 前端检查 `res.data.code === 200`，但 `res.data` 是外层 `ResultHolder`，`res.data.code` 是 `undefined`
+6. 走到 `throw new Error('检索失败')`
+
+这个问题的非显而易见之处：
+- 后端日志完全正常（"检索完成，返回 1 条结果"），HTTP 状态码 200，没有任何错误
+- 前端 Network 面板看到的响应也是 200，body 里有数据，但嵌套了两层
+- 从 PaiSmart 迁移 Controller 时，PaiSmart 没有全局响应包装，所以手动构造 `{ code, message, data }` 是正确的；但 MeterSphere 有 `ResultResponseBodyAdvice`，手动构造反而导致二次包装
+- 如果 Controller 返回的就是 `ResultHolder`，`ResultResponseBodyAdvice` 会直接透传不包装（`if (!(o instanceof ResultHolder))` 判断）
+
+正确做法：
+- Controller 直接返回业务数据（如 `List<KnowledgeSearchResult>`），让 SDK 自动包装
+- 前端统一用 `res.data.success` 判断成功，`res.data.data` 获取业务数据
+- 如果需要跳过自动包装（如返回文件流），在方法上加 `@NoResultHolder` 注解
+
+MeterSphere 标准响应格式（`ResultHolder`）：
+```json
+{
+  "success": true,       // boolean，不是 code: 200
+  "message": null,       // 错误时有值
+  "data": [...]          // 业务数据
+}
+```
+
+### 建议操作
+- 从其他项目迁移 Controller 到 MeterSphere 时，去掉手动构造的响应格式（Map/自定义 Response 类），直接返回业务对象
+- 前端 API 客户端统一用 `success` 字段判断，不要用 `code`
+- 遇到"后端正常但前端报错"的情况，先在 DevTools Network 面板检查实际响应 JSON 结构
+
+### 元数据
+- Source: error
+- Related Files: framework/sdk-parent/sdk/src/main/java/io/metersphere/controller/handler/ResultResponseBodyAdvice.java, framework/sdk-parent/sdk/src/main/java/io/metersphere/controller/handler/ResultHolder.java, metersphere/analytics-stat/backend/src/main/java/io/metersphere/knowledge/controller/KnowledgeSearchController.java, metersphere/analytics-stat/frontend/src/api/knowledge.ts
+- Tags: ResultHolder, ResultResponseBodyAdvice, 响应包装, 二次包装, Controller, 迁移陷阱, analytics-stat
+- See Also: LRN-20260226-003, LRN-20260226-009
+
+---
