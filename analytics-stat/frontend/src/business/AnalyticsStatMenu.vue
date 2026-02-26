@@ -40,7 +40,7 @@
  */
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { DataAnalysis, HomeFilled, Document, Collection } from '@element-plus/icons-vue'
+import { DataAnalysis, HomeFilled, Document, Collection, Search } from '@element-plus/icons-vue'
 import { markRaw } from 'vue'
 import type { Component } from 'vue'
 
@@ -70,6 +70,11 @@ const menus: MenuItem[] = [
     index: '/analytics/data-dictionary',
     i18nKey: 'analytics.menu.data_dictionary',
     icon: markRaw(Collection),
+  },
+  {
+    index: '/analytics/knowledge',
+    i18nKey: 'analytics.menu.knowledge',
+    icon: markRaw(Search),
   },
 ]
 </script>

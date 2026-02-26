@@ -45,7 +45,8 @@
         "list_pages",
         "select_page",
         "get_console_message",
-        "get_network_request"
+        "get_network_request",
+        "wait_for"
       ],
       "disabled": false
     },

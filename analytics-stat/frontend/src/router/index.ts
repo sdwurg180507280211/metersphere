@@ -47,6 +47,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/DataDictionary.vue'),
         meta: { title: '数据字典' },
       },
+      {
+        path: 'knowledge',
+        name: 'knowledgeBase',
+        component: () => import('@/views/KnowledgeBase.vue'),
+        meta: { title: '知识库' },
+      },
     ],
   },
 ]
