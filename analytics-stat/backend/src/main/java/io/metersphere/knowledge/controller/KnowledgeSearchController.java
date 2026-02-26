@@ -8,10 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 知识库检索 Controller
@@ -35,18 +32,23 @@ public class KnowledgeSearchController {
      *
      * URL: GET /knowledge/search/hybrid?query=xxx&topK=10
      *
-     * 响应格式:
+     * 响应格式（经 SDK ResultResponseBodyAdvice 自动包装）:
      * {
-     *   "code": 200,
-     *   "message": "success",
+     *   "success": true,
+     *   "message": null,
      *   "data": [{ fileMd5, chunkId, textContent, score, fileName, ... }]
      * }
+     *
+     * 注意：不要手动构造 { code, message, data } 格式的 Map，
+     * SDK 的 ResultResponseBodyAdvice 会自动将返回值包装为 ResultHolder。
+     * 如果返回 Map，会被二次包装成 { success: true, data: { code: 200, data: [...] } }，
+     * 导致前端解析失败。
      *
      * @param query 搜索关键词（必填）
      * @param topK  返回结果数量（默认10）
      */
     @GetMapping("/hybrid")
-    public Map<String, Object> hybridSearch(
+    public List<KnowledgeSearchResult> hybridSearch(
             @RequestParam String query,
             @RequestParam(defaultValue = "10") int topK) {
 
@@ -57,33 +59,21 @@ public class KnowledgeSearchController {
         logger.info("知识库混合检索 - 用户: {}, 工作空间: {}, 查询: {}, topK: {}",
                 userId, workspaceId, query, topK);
 
-        Map<String, Object> response = new HashMap<>(4);
+        List<KnowledgeSearchResult> results;
 
-        try {
-            List<KnowledgeSearchResult> results;
-
-            if (userId != null) {
-                // 已登录用户：带权限检索
-                results = searchService.searchWithPermission(query, userId, workspaceId, topK);
-            } else {
-                // 未登录（理论上不会走到这里，Gateway 会拦截）：无权限检索
-                logger.warn("未获取到用户信息，使用无权限检索");
-                results = searchService.search(query, topK);
-            }
-
-            response.put("code", 200);
-            response.put("message", "success");
-            response.put("data", results);
-
-            logger.info("检索完成，返回 {} 条结果", results.size());
-
-        } catch (Exception e) {
-            logger.error("知识库检索失败", e);
-            response.put("code", 500);
-            response.put("message", e.getMessage());
-            response.put("data", Collections.emptyList());
+        if (userId != null) {
+            // 已登录用户：带权限检索
+            results = searchService.searchWithPermission(query, userId, workspaceId, topK);
+        } else {
+            // 未登录（理论上不会走到这里，Gateway 会拦截）：无权限检索
+            logger.warn("未获取到用户信息，使用无权限检索");
+            results = searchService.search(query, topK);
         }
 
-        return response;
+        logger.info("检索完成，返回 {} 条结果", results.size());
+
+        // 直接返回 List，SDK 的 ResultResponseBodyAdvice 会自动包装为：
+        // { "success": true, "message": null, "data": results }
+        return results;
     }
 }
