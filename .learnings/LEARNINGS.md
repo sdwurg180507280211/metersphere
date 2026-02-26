@@ -287,3 +287,347 @@ npm install postcss-prefix-selector --save-dev
 
 ### 标签
 `micro-app` `Element Plus` `Element UI` `CSS污染` `样式隔离` `postcss-prefix-selector` `analytics-stat`
+
+## [LRN-20260225-001] best_practice
+
+**Logged**: 2026-02-25T18:00:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: config
+
+### 摘要
+Cursor/Claude Code 的 self-improving-agent 技能可以完整移植到 Kiro，通过 steering + hooks 实现等价功能
+
+### 详情
+self-improving-agent（v1.0.11）是为 Cursor/Claude Code 设计的技能，核心机制是：SKILL.md 描述行为 + hooks 自动触发 + .learnings/ 存储经验。Kiro 没有 SKILL.md 和 CLAUDE.md 的概念，但有完全对应的机制：
+
+| 原版概念 | Kiro 对应 |
+|----------|-----------|
+| SKILL.md（行为描述） | `.kiro/steering/self-improvement.md`（auto inclusion） |
+| CLAUDE.md（经验晋升目标） | `.kiro/steering/` 目录下新建 steering 文件 |
+| `.claude/settings.json` hooks | `.kiro/hooks/` 目录下的 hook JSON |
+| `UserPromptSubmit` 事件 | `promptSubmit` 事件 |
+| `PostToolUse` 事件 | `postToolUse` 事件 |
+| 无直接对应 | `agentStop` 事件（Kiro 独有，更适合做任务后评估） |
+| `.learnings/` 目录 | 直接复用，无需改动 |
+
+关键差异：Kiro 的 `agentStop` 事件比原版的 `UserPromptSubmit` 更适合做经验评估，因为它在任务完成后触发，此时上下文最完整。原版在每次 prompt 提交时触发评估，实际上大部分时候任务还没完成，评估时机不理想。
+
+### 建议操作
+后续移植其他 Cursor/Claude Code 技能时，参考此映射关系。优先使用 `agentStop` 做任务后评估，`promptSubmit` 做任务前经验回顾。
+
+### 元数据
+- Source: conversation
+- Related Files: .kiro/steering/self-improvement.md, docs/self-improving-agent-1.0.11/SKILL.md
+- Tags: kiro, cursor, 技能移植, hooks, steering
+
+---
+
+## [LRN-20260225-002] best_practice
+
+**Logged**: 2026-02-25T20:00:00Z
+**Priority**: high
+**Status**: pending
+**Area**: frontend
+
+### 摘要
+Element UI el-table 在有 fixed 列时会将整个表格 DOM 复制 3 份，列数多时导致 DOM 节点爆炸式增长，是页面渲染慢的首要原因
+
+### 详情
+在排查 MeterSphere 缺陷管理页面（`#/track/issue`）加载慢的问题时，发现以下非显而易见的性能陷阱：
+
+1. **Element UI el-table 的 fixed 列 DOM 三倍膨胀**：
+   - el-table 在有 `fixed="left"` 和 `fixed="right"` 列时，会将整个表格（包括所有列和所有行）复制 3 份：主体表格 + 左固定区域 + 右固定区域
+   - 实测：22 个可见列，仅 8 行数据，实际产生 76 个 `<th>` 元素和 3479 个 DOM 节点（占页面总 DOM 的 76%）
+   - 正式环境 50 行 × 22 列 × 3 份 = DOM 节点轻松超过 2 万，直接导致 Recalculate Style 耗时 2734ms（Self Time 占比 24.2%）
+   - 这个问题在列数少（< 8 列）时不明显，只有在自定义字段多（20+ 列）时才会爆发
+
+2. **MsTable 的 `doLayout()` 被设计为执行 3 次**：
+   ```javascript
+   doLayout() {
+     for (let i = 1; i <= 3; i++) {
+       setTimeout(this.$refs.table.doLayout, 300 * i);
+     }
+   }
+   ```
+   - 注释说是"解决表格错位问题"，但每次 doLayout 都会触发整个表格（含 3 份 DOM）的重新布局计算
+   - 在 `data` watcher 中也调用了 doLayout，意味着每次数据变化都触发 3 次重排
+   - 这是 Total Blocking Time 高达 9594ms 的重要原因之一
+
+3. **MsTableColumn 的 `render-header` 函数**：
+   - 每个 MsTableColumn 都通过 `renderHeader` 函数动态渲染表头（判断文字长度 > 7 则加 tooltip）
+   - 22 列 × 3 份 = 66 次 render-header 调用，产生 38 个 Element UI 警告
+   - Element UI 推荐使用 scoped-slot header 替代 render-header
+
+4. **切换项目时的 API 请求风暴**：
+   - `activated()` 中的初始化是串行链式调用：getUserGroupProject → getProjectMember → getIssuePartTemplateWithProject → applyUserGroupFilter → getIssues
+   - 同时还有 3 个并行请求
+   - 总共 21 个 API 请求，测试环境单个请求耗时 300-1886ms
+
+### 排查方法（推荐复用）
+```
+1. 注入 XHR 拦截器记录所有 API 请求耗时和响应大小
+2. 用 JS 统计 DOM 节点数：document.querySelectorAll('*').length 和 .el-table * 的数量
+3. 检查 el-table 的 <th> 数量是否是可见列数的 3 倍（有 fixed 列时）
+4. 查看控制台 [Element Warn][TableColumn] render-header 警告数量
+5. Performance 面板关注 Recalculate Style 的 Self Time
+```
+
+### 优化方向（按优先级）
+1. 减少默认显示列数到 8-10 个（最直接有效）
+2. 将 doLayout 的 3 次调用改为 1 次，使用 requestAnimationFrame 合并
+3. 将串行 API 调用改为 Promise.all 并行
+4. 考虑虚拟滚动（数据量大时）
+5. 缓存不变数据（所属系统列表、平台状态等）
+
+### 建议操作
+排查 MeterSphere 任何页面的渲染性能问题时，首先检查 el-table 的列数和是否有 fixed 列。列数 × 行数 × 3（fixed 倍数）是 DOM 节点的主要来源。
+
+### 元数据
+- Source: conversation
+- Related Files: test-track/frontend/src/business/issue/IssueList.vue, framework/sdk-parent/frontend/src/components/table/MsTable.vue, framework/sdk-parent/frontend/src/components/table/MsTableColumn.vue
+- Tags: 性能优化, el-table, fixed列, DOM膨胀, doLayout, render-header, 缺陷管理
+- See Also: LRN-20260225-001
+
+---
+
+## [LRN-20260225-003] best_practice
+
+**Logged**: 2026-02-25T22:00:00Z
+**Priority**: high
+**Status**: pending
+**Area**: backend
+
+### 摘要
+MeterSphere 第三方平台集成接口（Jira/禅道/Tapd）缺少容错机制，平台不可用时会导致整个页面 500 并长时间卡死
+
+### 详情
+在排查缺陷列表页 `/issues/platform/status` 返回 500 的问题时，发现以下非显而易见的设计缺陷：
+
+1. **后端 `IssuesService.getPlatformStatus()` 没有 try-catch**：
+   - 当项目绑定的是第三方平台（如 Jira），方法会调用 `platformPluginService.getPlatform(platform).getStatusList(projectConfig)`
+   - `getStatusList()` 内部发 HTTP 请求到第三方平台获取状态列表
+   - 如果第三方平台停服/网络不通，HTTP 连接超时（默认 30-60 秒）后抛出 `ConnectTimeoutException`
+   - 异常未被捕获，冒泡到 Controller 层，Spring Boot 返回 500
+   - 方法中只有 `platform == Local` 时的短路返回，没有任何对外部调用的防御性处理
+
+2. **前端重复调用加剧问题**：
+   - `IssueList.vue` 的 `activated()` 中调用一次 `getPlatformStatus()`（获取状态映射）
+   - `getPlatformStatusFiltes()` 方法中又调用一次（获取表头过滤选项）
+   - 两个请求同时卡在等第三方平台超时，页面要等两个都超时完才能恢复
+   - 且两次调用的参数完全相同，属于不必要的重复请求
+
+3. **这个模式在项目中可能是普遍的**：
+   - `getPlatformTransitions()` 也有同样的问题（无 try-catch）
+   - `syncIssues()`、`syncAllIssues()` 等同步接口也直接调用第三方平台
+   - 项目中所有 `platformPluginService.getPlatform(platform).xxx()` 的调用点都可能存在同样的风险
+
+4. **判断平台类型的关键方法**：
+   - `PlatformPluginService.isPluginPlatform(platform)` — 排除 Tapd、AzureDevops、Local，其余都是插件平台
+   - 插件平台走 `platformPluginService.getPlatform().getStatusList()` 路径
+   - 非插件平台（Tapd/AzureDevops）走 `IssueFactory.createPlatform().getTransitions()` 路径
+   - 两条路径都会请求外部 API，都没有容错
+
+### 建议操作
+1. 后端：在 `getPlatformStatus()` 中对 `getStatusList()` 调用加 try-catch，异常时返回空列表而非 500
+2. 后端：考虑加缓存（Redis/本地缓存），平台状态列表不需要每次实时获取
+3. 前端：合并两次 `getPlatformStatus` 调用为一次，结果共享给 `activated()` 和 `getPlatformStatusFiltes()`
+4. 前端：所有第三方平台相关的 API 调用都加 `.catch()` 容错（已对 `getPlatformStatus` 完成）
+5. 排查项目中所有 `platformPluginService.getPlatform(xxx).` 的调用点，统一加容错
+
+### 元数据
+- Source: conversation
+- Related Files: test-track/backend/src/main/java/io/metersphere/service/IssuesService.java, test-track/frontend/src/business/issue/IssueList.vue, test-track/backend/src/main/java/io/metersphere/service/PlatformPluginService.java
+- Tags: 第三方平台, Jira, 容错, 超时, 500错误, 缺陷管理, getPlatformStatus
+- See Also: LRN-20260225-002
+
+---
+
+## [LRN-20260225-004] best_practice
+
+**Logged**: 2026-02-25T23:00:00Z
+**Priority**: high
+**Status**: pending
+**Area**: infra
+
+### 摘要
+MeterSphere Docker 部署的容器内存分配策略和关键风险点
+
+### 详情
+通过 `docker stats` 分析正式环境 12 个容器的资源使用情况，发现以下非显而易见的部署特征：
+
+1. **各容器内存限制不一致，有明确的分级策略**：
+   - test-track: 4G（最高，其他业务模块的 2 倍）
+   - 大部分业务模块（api-test, report-stat, workstation, performance-test, system-setting, project-management, gateway）: 2G
+   - ms-node-controller, ms-data-streaming: 1G
+   - eureka: 512M（最低）
+   - ms-prometheus: 未设限制（默认 31.24G，即宿主机内存）
+
+2. **test-track 被特殊对待分配 4G**：说明团队已经意识到缺陷管理模块内存消耗大。结合 LRN-20260225-002 中发现的 el-table DOM 三倍膨胀问题，后端处理缺陷数据（自定义字段解析、平台状态映射等）确实比其他模块更吃内存。
+
+3. **eureka 512M 限制是高危隐患**：实际使用 66%（337.9M/512M），只剩 ~174M。Eureka 是所有微服务的注册中心，一旦 OOM 被 kill，所有服务间调用全部中断。建议提到 1G。
+
+4. **ms-prometheus 没有内存限制**：Docker 默认给了宿主机几乎全部内存（31.24G）。Prometheus 的内存使用与监控数据量成正比，长期运行可能逐渐增长。应显式设置限制（建议 2G）。
+
+5. **总内存使用约 10.3G**：12 个容器的总内存占用。宿主机至少需要 16G 内存才能稳定运行，32G 更理想。
+
+6. **NET I/O 可以反映服务活跃度**：
+   - test-track: 6.92G/4.5G（最高，说明缺陷管理是使用最频繁的模块）
+   - api-test: 5.04G/4.05G（第二高）
+   - gateway: 3.72G/2.78G（作为入口网关，所有流量经过）
+
+### 建议操作
+- eureka 内存限制从 512M 提升到 1G（最紧急）
+- ms-prometheus 显式设置内存限制为 2G
+- 监控 api-test 内存（64% 使用率，接口并发高时可能触顶）
+- 后续排查性能问题时，先看 docker stats 确认是否有容器内存/CPU 异常
+
+### 元数据
+- Source: conversation
+- Related Files: docker-compose.yml（部署时使用，不在仓库中）
+- Tags: Docker, 内存, 部署, eureka, prometheus, 容器资源, 运维
+- See Also: LRN-20260225-002, LRN-20260225-003
+
+---
+
+## [LRN-20260225-005] best_practice
+
+**Logged**: 2026-02-25T23:30:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: infra
+
+### 摘要
+MeterSphere 的 Eureka 配置关闭了自我保护模式，Gateway 完全依赖 Eureka 服务发现做路由，重启 Eureka 影响窗口约 30-90 秒
+
+### 详情
+分析 Eureka 重启对整体应用的影响时，发现以下项目特有的配置：
+
+1. **Eureka Server 关闭了自我保护模式**（`enable-self-preservation=false`）：
+   - 默认 Eureka 在网络分区时会保留所有注册实例（自我保护），防止误剔除
+   - 项目关闭了这个机制，意味着 Eureka 重启后，如果某个服务还没来得及重新注册，会在 10 秒内被剔除（`eviction-interval-timer-in-ms=10000`）
+   - 这个配置适合开发/测试环境（快速感知服务下线），但在生产环境有风险
+
+2. **Gateway 完全依赖 Eureka 做服务发现路由**：
+   - `spring.cloud.gateway.discovery.locator.enabled=true` — 所有路由通过 Eureka 服务列表动态生成
+   - Gateway 的 `SessionFilter` 和 `LoginController` 直接注入 `DiscoveryClient`，用于会话路由和服务列表展示
+   - 这意味着 Eureka 不可用时，Gateway 无法发现新服务，但已缓存的路由仍可用
+
+3. **Eureka Server 关闭了只读响应缓存**（`use-read-only-response-cache=false`）：
+   - 默认 Eureka 有三级缓存（registry → readWriteCache → readOnlyCache），客户端从 readOnlyCache 读取
+   - 关闭后客户端直接从 readWriteCache 读取，服务注册/下线的感知更快
+   - 但也意味着 Eureka 重启后，缓存需要重新构建，恢复时间略长
+
+4. **各微服务的 Eureka Client 使用默认配置**：
+   - 没有自定义 `registry-fetch-interval-seconds`（默认 30 秒）
+   - 没有自定义 `lease-renewal-interval-in-seconds`（默认 30 秒）
+   - 这意味着 Eureka 重启后，最多 30 秒各服务才会重新注册
+
+5. **重启影响时间线**：
+   - 0-30 秒：各服务本地缓存有效，用户无感知
+   - 30-60 秒：如果 Eureka 还没恢复，Gateway 开始打 WARN 日志但仍可路由
+   - 60-90 秒：Eureka 恢复后各服务重新注册，全部恢复
+   - 如果 Eureka 重启超过 90 秒，可能出现 503
+
+### 建议操作
+- 扩容内存用 `docker update`（热更新，不需要重启）
+- 如果必须重启 Eureka，选在用户少的时段
+- 考虑在生产环境开启自我保护模式（`enable-self-preservation=true`）
+
+### 元数据
+- Source: conversation
+- Related Files: framework/eureka/src/main/resources/application.properties, framework/gateway/src/main/resources/application.properties, framework/gateway/src/main/java/io/metersphere/gateway/filter/SessionFilter.java
+- Tags: Eureka, Gateway, 服务发现, 运维, 重启影响, 自我保护
+- See Also: LRN-20260225-004
+
+---
+
+## [LRN-20260225-006] best_practice
+
+**Logged**: 2026-02-25T23:45:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: frontend
+
+### 摘要
+MeterSphere 的 `stopFullScreenLoading` 工具函数内藏 2 秒硬编码延迟，是切换项目/工作空间时用户感知卡顿的隐藏来源之一
+
+### 详情
+排查"资源切换中"loading 遮罩为何持续过久时，发现 `framework/sdk-parent/frontend/src/utils/index.js` 中的 `stopFullScreenLoading` 函数默认 `setTimeout(close, 2000)`。这意味着即使所有 API 请求和页面渲染都已完成，用户仍需额外等待 2 秒才能操作页面。
+
+这个延迟的非显而易见之处在于：
+1. **Performance 面板不会标记它**：setTimeout 不消耗 CPU，不会出现在 Scripting/Rendering 的火焰图中，只会体现为 Idle 时间
+2. **藏在工具函数中**：调用方（`ProjectSearchList.vue`、`HeaderWs.vue` 等）只写 `stopFullScreenLoading(loading)`，看不出有延迟
+3. **被 6+ 个组件共享**：切换项目、切换工作空间、切换语言、项目列表跳转、工作台切换项目都受影响
+4. **与真实性能问题叠加**：14.1 秒的总耗时中，有 2 秒是这个人为延迟，但在 Performance 录制中它混在 Idle 时间里，容易被忽略
+
+### 建议操作
+排查 MeterSphere 前端性能问题时，除了关注 Performance 面板的 Scripting/Rendering 指标，还要检查共享工具函数中是否有人为的 setTimeout 延迟。特别是 `fullScreenLoading` / `stopFullScreenLoading` 这类 loading 管理函数。
+
+### 元数据
+- Source: conversation
+- Related Files: framework/sdk-parent/frontend/src/utils/index.js, framework/sdk-parent/frontend/src/components/head/ProjectSearchList.vue, framework/sdk-parent/frontend/src/components/head/HeaderWs.vue
+- Tags: 性能优化, loading, setTimeout, 隐藏延迟, 工具函数, 切换项目
+- See Also: LRN-20260225-002
+
+---
+
+## [LRN-20260225-007] best_practice
+
+**Logged**: 2026-02-25T23:55:00Z
+**Priority**: high
+**Status**: pending
+**Area**: frontend
+
+### 摘要
+MeterSphere 使用 MsTable + 自定义字段的页面存在"三重遍历 + resetHeader 重建 + doLayout × 3"的 Scripting 性能陷阱，用例列表页 7954ms Scripting 的完整构成链路
+
+### 详情
+在分析用例列表页（`/track/case`，1846 条数据）的 Performance 录制时，拆解出 7954ms Scripting 的完整构成：
+
+1. **API 返回后对 1846 条数据做了 3 次独立的全量遍历**：
+   ```javascript
+   // TestCaseList.vue 的 getData() 回调中，连续 3 次遍历
+   parseCustomFilesForList(this.page.data);  // 遍历 1：每条记录的 fields 数组 → JSON.parse
+   parseTag(this.page.data);                  // 遍历 2：每条记录的 tags → JSON.parse
+   this.page.data.forEach((item) => {         // 遍历 3：每条记录的 customFields → JSON.parse
+     item.customFields = JSON.parse(item.customFields);
+   });
+   ```
+   - 1846 条 × 3 次遍历 = 5538+ 次 JSON.parse（parseCustomFilesForList 内部还有嵌套 forEach）
+   - 这 3 次遍历完全可以合并为 1 次，但代码中是分开写的（可能是不同时期不同人加的）
+   - 估算耗时：~2s
+
+2. **MsTable 的 `resetHeader()` 会销毁重建整个表格**：
+   - `getTemplateField()` 的 Promise.all 完成后调用 `this.$refs.table.resetHeader()`
+   - resetHeader 内部将 `tableActive` 设为 false（v-if 销毁表格），$nextTick 后设为 true（重建表格）
+   - 重建后又触发一轮 doLayout（3 次 setTimeout）
+   - 这和 data watcher 中的 doLayout 是叠加关系：data 变化触发 3 次 doLayout + resetHeader 再触发 3 次 = 最多 6 次 doLayout
+   - 估算耗时：~1s
+
+3. **完整的 Scripting 时间线**：
+   ```
+   created() → getTemplateField() [Promise.all: 3 个 API]     ~2s（含网络等待）
+   ↓
+   initTableData() → testCaseList() API                        ~1s（网络等待）
+   ↓
+   API 返回 → 3 次全量遍历 JSON.parse                          ~2s（CPU 密集）
+   ↓
+   page.data 赋值 → MsTable data watcher → doLayout × 3       ~2s（DOM 重排）
+   ↓
+   Promise.all 完成 → resetHeader → 表格销毁重建 → doLayout × 3  ~1s（DOM 重排）
+   ```
+
+4. **这个模式不只存在于用例列表**：所有使用 MsTable + 自定义字段的页面（缺陷列表、测试计划、用例评审等）都有类似的 parseCustomFilesForList + parseTag + customFields JSON.parse 三重遍历模式，以及 resetHeader 触发的额外 doLayout。
+
+### 建议操作
+1. 将 3 次数据遍历合并为 1 次（在 `tableUtils.js` 中新增合并函数，或在 getData 回调中用单次 forEach 处理所有字段）
+2. resetHeader 中避免 tableActive 的 false→true 切换，改为直接调用 doLayout
+3. doLayout 从 3 次改为 1 次（requestAnimationFrame 合并）
+4. 排查其他使用 MsTable 的页面是否有同样的三重遍历模式
+
+### 元数据
+- Source: conversation
+- Related Files: test-track/frontend/src/business/case/components/TestCaseList.vue, framework/sdk-parent/frontend/src/components/table/MsTable.vue, framework/sdk-parent/frontend/src/utils/tableUtils.js, framework/sdk-parent/frontend/src/utils/index.js
+- Tags: 性能优化, Scripting, JSON.parse, 数据遍历, resetHeader, doLayout, MsTable, 用例列表
+- See Also: LRN-20260225-002, LRN-20260225-006
