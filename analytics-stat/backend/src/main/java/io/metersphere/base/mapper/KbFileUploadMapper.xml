@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.base.mapper.KbFileUploadMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="io.metersphere.knowledge.dto.KbFileUpload">
+        <id column="id" property="id"/>
+        <result column="file_md5" property="fileMd5"/>
+        <result column="file_name" property="fileName"/>
+        <result column="total_size" property="totalSize"/>
+        <result column="status" property="status"/>
+        <result column="user_id" property="userId"/>
+        <result column="workspace_id" property="workspaceId"/>
+        <result column="is_public" property="isPublic"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, file_md5, file_name, total_size, status, user_id, workspace_id, is_public, created_at, updated_at
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO kb_file_upload (file_md5, file_name, total_size, status, user_id, workspace_id, is_public)
+        VALUES (#{fileMd5}, #{fileName}, #{totalSize}, #{status}, #{userId}, #{workspaceId}, #{isPublic})
+    </insert>
+
+    <select id="selectByFileMd5AndUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM kb_file_upload
+        WHERE file_md5 = #{fileMd5} AND user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <select id="selectByFileMd5" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM kb_file_upload
+        WHERE file_md5 = #{fileMd5}
+        LIMIT 1
+    </select>
+
+    <select id="selectByFileMd5List" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM kb_file_upload
+        WHERE file_md5 IN
+        <foreach collection="md5List" item="md5" open="(" separator="," close=")">
+            #{md5}
+        </foreach>
+    </select>
+
+    <update id="updateStatus">
+        UPDATE kb_file_upload SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM kb_file_upload
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByWorkspaceId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM kb_file_upload
+        WHERE (workspace_id = #{workspaceId} AND is_public = 1)
+           OR user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM kb_file_upload WHERE id = #{id}
+    </delete>
+
+</mapper>

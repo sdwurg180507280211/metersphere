@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.base.mapper.KbChunkInfoMapper">
+
+    <resultMap id="BaseResultMap" type="io.metersphere.knowledge.dto.KbChunkInfo">
+        <id column="id" property="id"/>
+        <result column="file_md5" property="fileMd5"/>
+        <result column="chunk_index" property="chunkIndex"/>
+        <result column="chunk_md5" property="chunkMd5"/>
+        <result column="storage_path" property="storagePath"/>
+        <result column="user_id" property="userId"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO kb_chunk_info (file_md5, chunk_index, chunk_md5, storage_path, user_id)
+        VALUES (#{fileMd5}, #{chunkIndex}, #{chunkMd5}, #{storagePath}, #{userId})
+    </insert>
+
+    <select id="selectByFileMd5AndUserId" resultMap="BaseResultMap">
+        SELECT id, file_md5, chunk_index, chunk_md5, storage_path, user_id
+        FROM kb_chunk_info
+        WHERE file_md5 = #{fileMd5} AND user_id = #{userId}
+        ORDER BY chunk_index ASC
+    </select>
+
+    <delete id="deleteByFileMd5AndUserId">
+        DELETE FROM kb_chunk_info WHERE file_md5 = #{fileMd5} AND user_id = #{userId}
+    </delete>
+
+</mapper>

@@ -631,3 +631,273 @@ MeterSphere 使用 MsTable + 自定义字段的页面存在"三重遍历 + reset
 - Related Files: test-track/frontend/src/business/case/components/TestCaseList.vue, framework/sdk-parent/frontend/src/components/table/MsTable.vue, framework/sdk-parent/frontend/src/utils/tableUtils.js, framework/sdk-parent/frontend/src/utils/index.js
 - Tags: 性能优化, Scripting, JSON.parse, 数据遍历, resetHeader, doLayout, MsTable, 用例列表
 - See Also: LRN-20260225-002, LRN-20260225-006
+
+## [LRN-20260226-001] best_practice
+
+**Logged**: 2026-02-26T10:00:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: docs
+
+### 摘要
+跨项目功能迁移评估的系统化方法：先拆组件清单做可复用性对比，再逐项评估适配成本，最后给出分期实施路径
+
+### 详情
+将 PaiSmart 知识库检索功能迁移到 MeterSphere analytics-stat 模块时，总结出一套评估方法论：
+
+1. **组件清单对比法**：将源项目的功能拆解为独立组件（文件存储、消息队列、文件解析、向量生成、向量存储、混合检索等），逐一标注目标项目是否已有对应基础设施。这一步能快速识别"需要新增的依赖"和"可直接复用的组件"，是评估的核心。
+
+2. **技术栈差异矩阵**：列出两个项目在 ORM（JPA vs MyBatis）、认证（Spring Security vs Shiro/Gateway）、前端组件库（Naive UI vs Element Plus）、构建工具等维度的差异，每个差异点给出具体的适配方案和工时估算。
+
+3. **分期实施策略**：对于有"入库"和"检索"两个方向的功能，优先实现检索（可手动导入测试数据验证效果），再补全入库链路。这样可以最快验证核心价值，降低一次性投入的风险。
+
+4. **文件清单法**：列出需要迁移的每个源文件、目标路径、改动说明，以及需要新建的文件。这比笼统的"迁移 Service 层"更具可操作性。
+
+5. **权限模型映射**：两个项目的用户/组织模型不同时，需要明确建立映射关系（如 PaiSmart 的 orgTag → MeterSphere 的 workspace_id），而不是试图统一模型。
+
+### 建议操作
+后续做跨项目功能迁移评估时，按以下顺序执行：
+1. 源项目功能拆解 → 组件清单
+2. 目标项目现状分析 → 已有/缺失对比
+3. 技术栈差异矩阵 → 逐项适配方案
+4. 迁移文件清单 → 源文件 → 目标路径 → 改动说明
+5. 基础设施变更 → Docker/配置/依赖
+6. 风险评估 + 工时估算
+7. 分期实施路径
+
+### 元数据
+- Source: conversation
+- Related Files: metersphere/docs/知识库检索迁移评估.md, PaiSmart/src/main/java/com/yizhaoqi/smartpai/service/HybridSearchService.java
+- Tags: 迁移评估, 方法论, 跨项目, 知识库, analytics-stat
+- See Also: LRN-20260225-003
+
+---
+
+## [LRN-20260226-002] best_practice
+
+**Logged**: 2026-02-26T14:00:00Z
+**Priority**: high
+**Status**: pending
+**Area**: docs
+
+### 摘要
+编辑大型 Markdown 文档时，`fsWrite` 整体重写比 `strReplace` 大范围替换更安全可靠；`strReplace` 应仅用于小范围精确修改
+
+### 详情
+在优化 `docs/知识库检索迁移评估.md`（约 500 行）的格式时，尝试用 `strReplace` 替换从第三章到文件末尾的全部内容（约 300 行），结果出现旧内容残留 + 新内容追加的重复问题，导致文件"面目全非"。
+
+根因分析：
+1. `strReplace` 的 `oldStr` 需要精确匹配文件中的连续文本，当匹配范围过大时，可能因为空白字符、换行符等细微差异导致匹配不完整
+2. 工具报告"成功"但实际替换不完整时，后续的 `fsAppend` 会在残留内容后追加，产生重复
+3. 没有在 `strReplace` 后验证文件状态就继续操作，错过了发现问题的时机
+
+正确做法：
+- 需要修改文件 50%+ 内容时 → 用 `fsWrite` 重写整个文件（分批 write + append）
+- 需要修改几行到几十行时 → 用 `strReplace`，确保 `oldStr` 足够短且唯一
+- 任何大范围修改后 → 用 `readFile` 验证实际结果再继续
+
+### 建议操作
+建立工具选择规则：
+- 修改范围 < 30% 文件内容 → `strReplace`
+- 修改范围 >= 30% 文件内容 → `fsWrite` + `fsAppend` 重写
+- 任何替换操作后如果要继续追加 → 先 `readFile` 验证
+
+### 元数据
+- Source: error
+- Related Files: docs/知识库检索迁移评估.md
+- Tags: strReplace, fsWrite, 文件编辑, 大文件, Markdown, 工具选择
+- See Also: ERR-20260226-002
+
+---
+
+## [LRN-20260226-003] best_practice
+
+**Logged**: 2026-02-26T16:00:00Z
+**Priority**: high
+**Status**: pending
+**Area**: backend
+
+### 摘要
+跨项目 Service 层迁移时，权限模型的适配策略：用调用方传参替代 Service 内部查询用户信息，保持 Service 层无状态
+
+### 详情
+将 PaiSmart 的 `HybridSearchService` 迁移到 MeterSphere 的 `KnowledgeSearchService` 时，发现两个项目的用户信息获取方式完全不同：
+
+1. **PaiSmart 的做法（反面教材）**：Service 层内部通过 `UserRepository` 和 `OrgTagCacheService` 查询用户信息。`getUserEffectiveOrgTags()` 和 `getUserDbId()` 两个私有方法各自独立查询数据库，且 `searchWithPermission()` 的异常处理中又重复调用这两个方法（降级路径），导致一次检索请求最多触发 4 次用户查询。
+
+2. **MeterSphere 的做法（推荐）**：Controller 层通过 `SessionUtils.getUserId()` 和 `SessionUtils.getCurrentWorkspaceId()` 获取用户信息，作为参数传入 Service 方法。Service 层不依赖任何用户查询组件，保持无状态。
+
+3. **关键适配点**：
+   - PaiSmart 的 `orgTag`（组织标签，支持层级关系，一个用户可能有多个有效标签）→ MeterSphere 的 `workspaceId`（工作空间ID，单值）。这个简化是合理的，因为 MeterSphere 的工作空间是扁平结构，不存在层级关系。
+   - PaiSmart 的 `userId` 可能是 Long 类型的数据库 ID 或 String 类型的用户名 → MeterSphere 的 `userId` 统一是 String 类型的 UUID。去掉了 `NumberFormatException` 的分支处理。
+   - ES 查询中权限过滤的 `should` 子句从"多个 orgTag 的 bool should 组合"简化为"单个 workspaceId 的 term 查询"。
+
+4. **这个模式的通用价值**：跨项目迁移 Service 层时，如果两个项目的认证/授权体系不同，最佳策略是：
+   - 将用户信息获取逻辑上移到 Controller 层
+   - Service 方法签名中显式声明需要的用户信息参数（userId、workspaceId 等）
+   - Service 层不引入任何认证框架的依赖（不 import Shiro、不 import Spring Security）
+   - 这样 Service 层可以在不同认证体系间复用，也更容易写单元测试
+
+### 建议操作
+后续迁移其他 PaiSmart Service 到 MeterSphere 时（如 Phase 2 的文件解析、向量化服务），遵循同样的模式：Controller 获取用户信息 → 参数传入 Service → Service 保持无状态。
+
+### 元数据
+- Source: conversation
+- Related Files: metersphere/analytics-stat/backend/src/main/java/io/metersphere/knowledge/service/KnowledgeSearchService.java, metersphere/analytics-stat/backend/src/main/java/io/metersphere/knowledge/controller/KnowledgeSearchController.java, PaiSmart/src/main/java/com/yizhaoqi/smartpai/service/HybridSearchService.java
+- Tags: 迁移, Service层, 权限模型, 无状态, SessionUtils, 跨项目
+- See Also: LRN-20260226-001
+
+---
+
+## [LRN-20260226-004] best_practice
+
+**Logged**: 2026-02-26T18:00:00Z
+**Priority**: high
+**Status**: pending
+**Area**: backend
+
+### 摘要
+MeterSphere 所有模块的 MyBatis Mapper 扫描由 SDK 的 `CommonsDatabaseConfig` 统一配置，只扫描 `io.metersphere.base.mapper` 包，新增 Mapper 必须放在此包路径下
+
+### 详情
+在知识库模块（analytics-stat）启动时遇到 `KbFileUploadMapper` bean not found 错误，排查过程中发现以下项目特有的隐含约定：
+
+1. **Mapper 扫描的唯一配置点**：`framework/sdk-parent/sdk/src/main/java/io/metersphere/autoconfigure/CommonsDatabaseConfig.java` 中的 `@MapperScan(basePackages = {"io.metersphere.base.mapper", "io.metersphere.xpack.mapper"})` 是全项目唯一的 Mapper 扫描配置。所有业务模块（test-track、api-test、report-stat 等）都没有自己的 `@MapperScan`，完全依赖 SDK 的这个统一配置。
+
+2. **所有模块的 Mapper 都放在 `io.metersphere.base.mapper` 下**：这是项目约定，不是 MyBatis 的默认行为。test-track 有 40+ 个 Mapper 接口全部在 `io.metersphere.base.mapper/` 下，扩展 Mapper 在 `io.metersphere.base.mapper.ext/` 下。Mapper XML 文件和 Java 接口放在同一目录（不是 resources 下的独立目录）。
+
+3. **错误做法**：将 Mapper 放在自定义子包下（如 `io.metersphere.knowledge.base.mapper`），虽然包名包含 `base.mapper`，但 `@MapperScan` 的 `basePackages` 不支持通配符匹配，`io.metersphere.base.mapper` 不会扫描到 `io.metersphere.knowledge.base.mapper`。
+
+4. **正确做法**：新增模块的 Mapper 接口必须放在 `io.metersphere.base.mapper/` 包下。可以用文件名前缀区分模块（如 `KbFileUploadMapper`、`KbDocumentVectorMapper`）。其他类（Controller、Service、DTO、Config）可以放在任意 `io.metersphere.*` 子包下，因为 Spring 的 `@ComponentScan` 默认扫描启动类所在包及其所有子包。
+
+5. **test-track 的标准包结构**（供新模块参考）：
+   ```
+   io.metersphere/
+   ├── XxxApplication.java        # 启动类
+   ├── base/
+   │   ├── domain/                # 模块私有实体类
+   │   └── mapper/                # MyBatis Mapper（接口 + XML 同目录）
+   │       └── ext/               # 扩展 Mapper（自定义复杂 SQL）
+   ├── config/                    # 配置类
+   ├── constants/                 # 常量枚举
+   ├── controller/                # REST 控制器
+   ├── dto/                       # 数据传输对象
+   ├── listener/                  # 事件监听器 / Kafka 消费者
+   ├── request/                   # 请求参数对象
+   ├── service/                   # 业务逻辑
+   └── utils/                     # 工具类
+   ```
+
+### 建议操作
+- 新增 MyBatis Mapper 时，始终放在 `io.metersphere.base.mapper` 包下
+- 如果需要按功能域隔离，用文件名前缀（如 `Kb*Mapper`）而非子包
+- 遇到 Mapper bean not found 错误时，首先检查 Mapper 接口的包路径是否在 `@MapperScan` 的 basePackages 范围内
+- 不要在业务模块的 Application 类上添加额外的 `@MapperScan`，保持 SDK 统一管理
+
+### 元数据
+- Source: error
+- Related Files: framework/sdk-parent/sdk/src/main/java/io/metersphere/autoconfigure/CommonsDatabaseConfig.java, metersphere/analytics-stat/backend/src/main/java/io/metersphere/knowledge/base/mapper/KbFileUploadMapper.java, metersphere/test-track/backend/src/main/java/io/metersphere/base/mapper/
+- Tags: MyBatis, MapperScan, 包结构, SDK, 项目约定, analytics-stat, bean not found
+- See Also: LRN-20260226-003
+
+---
+
+## [LRN-20260226-005] best_practice
+
+**Logged**: 2026-02-26T20:00:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: config
+
+### 摘要
+MeterSphere 所有模块通过 `@PropertySource("file:/opt/metersphere/conf/metersphere.properties")` 加载外部配置，新增配置项可直接写入该文件而无需环境变量
+
+### 详情
+将 analytics-stat 知识库检索配置（ES、Embedding API、文件解析、Kafka Topic）从 `application.properties` 外移到 `/opt/metersphere/conf/metersphere.properties` 时，确认了以下项目约定：
+
+1. **所有 11 个微服务都配置了同一个外部文件**：`@PropertySource("file:/opt/metersphere/conf/metersphere.properties", ignoreResourceNotFound = true)`。这意味着任何模块的自定义配置都可以集中到这一个文件中管理，不需要每个模块单独维护外部配置。
+
+2. **属性覆盖优先级**：Spring 的 `@PropertySource` 加载顺序是声明顺序，后加载的覆盖先加载的。项目中的声明顺序是 `classpath:commons.properties` → `file:/opt/metersphere/conf/metersphere.properties`，所以外部文件的值会覆盖 classpath 中的同名 key。但 `application.properties` 的优先级高于 `@PropertySource`（Spring Boot 特性），所以如果 `application.properties` 中写了固定值（非 `${ENV:default}` 占位符），外部文件无法覆盖。
+
+3. **外移配置时的关键操作**：必须从 `application.properties` 中删除对应的配置行（或改为注释），否则 `application.properties` 的优先级更高，外部文件的值不会生效。原来用 `${ENV_VAR:default}` 占位符的写法虽然也能被环境变量覆盖，但如果同时存在外部文件和环境变量，环境变量优先级更高（Spring Boot: 环境变量 > application.properties > @PropertySource）。
+
+4. **该文件已有的配置项**：eureka、数据库、kafka、Redis、MinIO、CAS 等基础设施配置都在这个文件中。新增知识库配置时应加注释区分模块归属（如 `# analytics-stat 模块`），避免配置项混乱。
+
+### 建议操作
+后续为 analytics-stat 或其他模块新增需要运维调整的配置项时（特别是密码、API Key、外部服务地址），直接写入 `/opt/metersphere/conf/metersphere.properties`，同时从 `application.properties` 中移除对应行。不需要用环境变量中转。
+
+### 元数据
+- Source: conversation
+- Related Files: metersphere/analytics-stat/backend/src/main/java/io/metersphere/AnalyticsStatApplication.java, metersphere/analytics-stat/backend/src/main/resources/application.properties, /opt/metersphere/conf/metersphere.properties
+- Tags: PropertySource, 外部配置, 属性覆盖, metersphere.properties, 运维
+- See Also: LRN-20260226-003
+
+## [LRN-20260226-006] best_practice
+
+**Logged**: 2026-02-26T20:10:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: config
+
+### 摘要
+外移配置到 metersphere.properties 时，必须交叉检查该文件中已有的同类配置项，确保值一致
+
+### 详情
+将知识库 ES 配置从 `application.properties` 外移到 `/opt/metersphere/conf/metersphere.properties` 时，`elasticsearch.scheme` 写成了 `https`（沿用了 application.properties 中的默认值），但同一文件中已有的 Spring Data ES 配置是 `spring.elasticsearch.uris=http://localhost:9200`（明文 http）。两组配置指向同一个 ES 实例，scheme 不一致导致启动时报 `Unrecognized SSL message, plaintext connection?`。
+
+根因：外移时只关注了源文件（application.properties）中的默认值，没有检查目标文件（metersphere.properties）中已有的同类配置来推断实际环境。
+
+### 建议操作
+向 metersphere.properties 追加新配置时，先 grep 该文件中是否已有同一服务（ES、Redis、Kafka 等）的配置项，以已有配置的值为准，而非 application.properties 中的默认值。
+
+### 元数据
+- Source: error
+- Related Files: /opt/metersphere/conf/metersphere.properties, metersphere/analytics-stat/backend/src/main/resources/application.properties
+- Tags: 配置外移, elasticsearch, scheme, 交叉检查, metersphere.properties
+- See Also: LRN-20260226-005
+
+## [LRN-20260226-007] best_practice
+
+**Logged**: 2026-02-26T20:30:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: infra
+
+### 摘要
+在 Docker 容器内的 ES 8.x 安装 IK 分词插件的完整步骤和注意事项
+
+### 详情
+知识库检索功能的 ES mapping 使用了 `ik_max_word`（索引分词器）和 `ik_smart`（搜索分词器），需要在 ES 中安装 analysis-ik 插件。
+
+1. **IK 插件下载源**：官方 GitHub release 在国内可能较慢，使用 `https://get.infini.cloud/elasticsearch/analysis-ik/{version}` 镜像源更快。URL 格式固定，只需替换版本号，版本号必须与 ES 版本完全一致（如 8.10.4）。
+
+2. **`--batch` 参数是必须的**：`elasticsearch-plugin install` 在安装需要额外权限的插件时会弹出交互式确认（`Continue with installation? [y/N]`）。在 `docker exec` 环境下没有 TTY，会报 `unable to read from standard input; is standard input open and a tty attached?` 并回滚安装。加 `--batch` 参数跳过确认。
+
+3. **安装后必须重启 ES 容器**：`docker restart elasticsearch`。ES 8.x 重启到 healthy 状态需要约 2 分钟（在 macOS Docker Desktop 环境下），期间 curl 请求会返回 exit code 56（接收数据失败）。不要在 health: starting 阶段就认为启动失败。
+
+4. **完整命令**：
+   ```bash
+   # 查看 ES 版本
+   curl -s -u elastic:<password> http://localhost:9200/ | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['version']['number'])"
+   
+   # 安装 IK 插件（--batch 跳过交互确认）
+   docker exec elasticsearch elasticsearch-plugin install --batch https://get.infini.cloud/elasticsearch/analysis-ik/8.10.4
+   
+   # 重启 ES
+   docker restart elasticsearch
+   
+   # 等待 healthy（约 2 分钟）
+   docker ps -a --filter name=elasticsearch --format '{{.Status}}'
+   
+   # 验证插件
+   curl -s -u elastic:<password> http://localhost:9200/_cat/plugins
+   ```
+
+### 建议操作
+后续如果需要在 Docker ES 中安装其他插件（如 analysis-pinyin），遵循同样的流程：`--batch` + 重启 + 等待 healthy。
+
+### 元数据
+- Source: conversation
+- Related Files: metersphere/analytics-stat/backend/src/main/resources/es-mappings/knowledge_base.json
+- Tags: Elasticsearch, IK分词, Docker, 插件安装, analysis-ik, infini.cloud
+- See Also: LRN-20260226-006
