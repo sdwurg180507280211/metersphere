@@ -13,7 +13,7 @@ set -e  # 遇到错误立即退出
 # ============================================================================
 
 # 项目路径
-PROJECT_PATH=${PROJECT_PATH:-"/Users/edy/ideaProjects/metersphere"}
+PROJECT_PATH=${PROJECT_PATH:-"/Users/zhaozhiwei/IdeaProjects/metersphere"}
 
 # 镜像版本
 IMAGE_VERSION=${IMAGE_VERSION:-"v2.10.23.02-lts"}
@@ -22,7 +22,8 @@ IMAGE_VERSION=${IMAGE_VERSION:-"v2.10.23.02-lts"}
 REGISTRY=${REGISTRY:-"registry.fit2cloud.com/north"}
 
 # 打包输出路径
-PACKAGE_PATH=${PACKAGE_PATH:-"/Users/edy/Desktop/metersphere-$(date +%y%m%d).tar"}
+# 使用 $HOME 自动适配当前用户的桌面路径
+PACKAGE_PATH=${PACKAGE_PATH:-"$HOME/Desktop/metersphere-$(date +%y%m%d).tar"}
 
 # 是否跳过 Maven 依赖安装（如果已经安装过）
 SKIP_INIT=${SKIP_INIT:-false}
@@ -417,11 +418,21 @@ export_images() {
         return 0
     fi
     
+    # 确保输出目录存在
+    local output_dir
+    output_dir="$(dirname "$PACKAGE_PATH")"
+    if [ ! -d "$output_dir" ]; then
+        log_info "创建输出目录: $output_dir"
+        mkdir -p "$output_dir" || { log_error "无法创建输出目录: $output_dir"; return 1; }
+    fi
+
     log_info "导出 ${#BUILT_IMAGES[@]} 个镜像到: $PACKAGE_PATH"
     
     # 检查磁盘空间
     local required_space=10000000  # 10GB in KB
-    local available_space=$(df -k "$(dirname "$PACKAGE_PATH")" | tail -1 | awk '{print $4}')
+    local available_space
+    available_space=$(df -k "$output_dir" 2>/dev/null | tail -1 | awk '{print $4}')
+    available_space=${available_space:-0}
     
     if [ "$available_space" -lt "$required_space" ]; then
         log_warn "磁盘空间可能不足（可用: $((available_space/1024/1024))GB）"
