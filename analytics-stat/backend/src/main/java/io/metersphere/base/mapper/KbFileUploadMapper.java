@@ -36,4 +36,16 @@ public interface KbFileUploadMapper {
 
     /** 根据ID删除 */
     int deleteById(@Param("id") Long id);
+
+    /** 根据MD5查询（用于去重） */
+    KbFileUpload selectByMd5(@Param("fileMd5") String fileMd5);
+
+    /** 根据主键查询 */
+    KbFileUpload selectByPrimaryKey(@Param("id") Long id);
+
+    /** 根据主键删除 */
+    int deleteByPrimaryKey(@Param("id") Long id);
+
+    /** 查询用户在工作空间的文件列表 */
+    List<KbFileUpload> selectByUserAndWorkspace(@Param("userId") String userId, @Param("workspaceId") String workspaceId);
 }

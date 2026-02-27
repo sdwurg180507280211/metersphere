@@ -18,6 +18,14 @@
         VALUES (#{fileMd5}, #{chunkId}, #{textContent}, #{modelVersion}, #{userId}, #{workspaceId}, #{isPublic})
     </insert>
 
+    <insert id="insertBatch">
+        INSERT INTO kb_document_vectors (file_md5, chunk_id, text_content, model_version, user_id, workspace_id, is_public)
+        VALUES
+        <foreach collection="list" item="v" separator=",">
+            (#{v.fileMd5}, #{v.chunkId}, #{v.textContent}, #{v.modelVersion}, #{v.userId}, #{v.workspaceId}, #{v.isPublic})
+        </foreach>
+    </insert>
+
     <select id="selectByFileMd5" resultMap="BaseResultMap">
         SELECT vector_id, file_md5, chunk_id, text_content, model_version, user_id, workspace_id, is_public
         FROM kb_document_vectors

@@ -1,5 +1,6 @@
 package io.metersphere.knowledge.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -17,7 +18,15 @@ public class KbFileUpload {
     private int status;          // 0-上传中 1-已完成 2-解析中 3-已入库
     private String userId;
     private String workspaceId;  // 映射 PaiSmart 的 orgTag
+    
+    /**
+     * 是否公开
+     * 注意：@Data 生成的 getter 是 isPublic()，Jackson 默认映射为 JSON 属性 "public"
+     * 使用 @JsonProperty 显式指定为 "isPublic" 避免前后端字段名不一致
+     */
+    @JsonProperty("isPublic")
     private boolean isPublic;
+    
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -19,6 +19,9 @@ public interface KbDocumentVectorMapper {
     /** 根据 fileMd5 查询所有分块 */
     List<KbDocumentVector> selectByFileMd5(@Param("fileMd5") String fileMd5);
 
+    /** 批量插入文本分块记录 */
+    int insertBatch(@Param("list") List<KbDocumentVector> list);
+
     /** 根据 fileMd5 删除所有分块 */
     int deleteByFileMd5(@Param("fileMd5") String fileMd5);
 }

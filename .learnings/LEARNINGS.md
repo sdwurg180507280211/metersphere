@@ -1233,3 +1233,116 @@ MeterSphere 标准响应格式（`ResultHolder`）：
 - See Also: LRN-20260226-003, LRN-20260226-009
 
 ---
+
+
+## [LRN-20260226-015] best_practice
+
+**Logged**: 2026-02-26T23:30:00Z
+**Priority**: high
+**Status**: pending
+**Area**: backend
+
+### 摘要
+Lombok `@Data` 的 `boolean isXxx` Jackson 命名陷阱不仅影响 ES 反序列化，还会影响 Kafka JSON 序列化——项目中所有使用 `boolean isPublic` 的 DTO 都需要统一修复
+
+### 详情
+在评估第二期代码时发现，LRN-20260226-010 记录的 `boolean isPublic` + Lombok + Jackson 命名陷阱只在 `EsDocument.java` 上修复了（加了 `@JsonProperty("isPublic")`），但同样的字段定义还存在于以下 3 个 DTO 中：
+
+1. `KbFileUpload.java` — `private boolean isPublic`（数据库实体，参与 API 响应序列化）
+2. `KbDocumentVector.java` — `private boolean isPublic`（数据库实体）
+3. `FileProcessingTask.java` — `private boolean isPublic`（Kafka 消息体，参与 JSON 序列化/反序列化）
+
+其中 `FileProcessingTask` 的风险最高：它通过 `KafkaConfig` 配置的 `JsonSerializer` / `JsonDeserializer` 进行 Kafka 消息传递。Producer 端 Jackson 序列化时 `isPublic` 会被映射为 `"public"`，Consumer 端反序列化时期望字段名 `"public"` 也能正常工作（因为 getter/setter 一致），所以 Kafka 内部传递不会报错。但如果有外部系统消费这个 Topic，或者用 Kafka 控制台查看消息内容，会看到字段名是 `"public"` 而非 `"isPublic"`，造成混淆。
+
+`KbFileUpload` 的风险更直接：它作为 `KnowledgeFileController.listFiles()` 的返回值，经 `ResultResponseBodyAdvice` 包装后返回给前端。前端 `FileList.vue` 中用 `row.isPublic` 访问，但 Jackson 序列化后 JSON 中的字段名是 `"public"`，导致前端拿到的值始终是 `undefined`，可见性标签永远显示"私有"。
+
+### 建议操作
+在项目中建立规则：所有 Lombok `@Data` 类中，`boolean` 类型字段禁止使用 `is` 前缀。统一使用以下方案之一：
+1. 改为 `Boolean isPublic`（包装类型，getter 为 `getIsPublic()`，Jackson 映射为 `"isPublic"`）
+2. 改为 `boolean publicFlag`（避免 `is` 前缀）
+3. 加 `@JsonProperty("isPublic")` 显式指定
+
+当前需要修复的文件：`KbFileUpload.java`、`KbDocumentVector.java`、`FileProcessingTask.java`
+
+### 元数据
+- Source: conversation
+- Related Files: metersphere/analytics-stat/backend/src/main/java/io/metersphere/knowledge/dto/KbFileUpload.java, metersphere/analytics-stat/backend/src/main/java/io/metersphere/knowledge/dto/KbDocumentVector.java, metersphere/analytics-stat/backend/src/main/java/io/metersphere/knowledge/dto/FileProcessingTask.java
+- Tags: Lombok, Jackson, boolean, isPublic, Kafka, 序列化, 前端字段映射
+- See Also: LRN-20260226-010
+
+---
+
+## [LRN-20260226-016] best_practice
+
+**Logged**: 2026-02-26T23:35:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: backend
+
+### 摘要
+跨项目迁移代码审查时，"死代码"（已定义但未被引用的 Mapper/表/DTO）是常见遗留问题，应在审查清单中专门检查
+
+### 详情
+第二期代码中 `KbChunkInfoMapper`（接口 + XML）和 `kb_chunk_info` 表已经完整定义，但在整个后端代码中没有任何 Service 引用它。`KnowledgeParseService` 直接将分块写入 `kb_document_vectors` 表，`KnowledgeFileConsumer` 的处理链路也不涉及 `kb_chunk_info`。
+
+这个问题的产生原因：迁移评估文档（第五章）列出了 3 个需要新建的 Mapper（`KbFileUploadMapper`、`KbDocumentVectorMapper`、`KbChunkInfoMapper`），开发时按清单创建了所有 Mapper 和表，但实际编码时发现 `kb_chunk_info` 的功能被 `kb_document_vectors` 覆盖了（PaiSmart 原始设计中两张表有不同用途，但迁移简化后合并了），没有回头清理。
+
+这类"死代码"的危害：
+1. 增加维护成本——后续开发者会困惑这张表的用途
+2. Flyway 迁移脚本中包含了建表语句，占用数据库空间
+3. 如果未来有人误以为应该使用这个 Mapper，可能引入 Bug
+
+### 建议操作
+迁移代码审查清单中增加一项："检查所有新建的 Mapper/DTO/表是否被至少一个 Service 引用"。可以用 IDE 的 Find Usages 或 grep 快速验证。
+
+### 元数据
+- Source: conversation
+- Related Files: metersphere/analytics-stat/backend/src/main/java/io/metersphere/base/mapper/KbChunkInfoMapper.java, metersphere/analytics-stat/backend/src/main/java/io/metersphere/base/mapper/KbChunkInfoMapper.xml
+- Tags: 死代码, 迁移审查, Mapper, 代码清理
+- See Also: LRN-20260226-001
+
+---
+
+## [LRN-20260226-017] best_practice
+
+**Logged**: 2026-02-26T23:40:00Z
+**Priority**: medium
+**Status**: pending
+**Area**: backend
+
+### 摘要
+文件上传接口中 `MultipartFile.getBytes()` 计算 MD5 会将整个文件读入堆内存，大文件场景下应改用流式 `DigestInputStream`
+
+### 详情
+`KnowledgeFileService.uploadFile()` 中的 MD5 计算方式：
+```java
+String fileMd5 = calculateMD5(file.getBytes());
+```
+
+`file.getBytes()` 会将整个文件内容读入 `byte[]`。对于知识库场景，用户可能上传 50MB 的 PDF 或 Word 文档，这意味着瞬间分配 50MB+ 的堆内存。如果多个用户同时上传，内存压力会叠加。
+
+更好的做法是流式计算：
+```java
+private String calculateMD5(InputStream inputStream) throws Exception {
+    MessageDigest md = MessageDigest.getInstance("MD5");
+    try (DigestInputStream dis = new DigestInputStream(inputStream, md)) {
+        byte[] buffer = new byte[8192];
+        while (dis.read(buffer) != -1) { /* 消费流 */ }
+    }
+    byte[] digest = md.digest();
+    // ... 转 hex
+}
+```
+
+但注意：流式计算 MD5 后，`InputStream` 已经被消费完毕，后续上传到 MinIO 需要重新获取流（`file.getInputStream()` 可以多次调用，Spring 的 `MultipartFile` 会缓存到临时文件）。所以需要调用两次 `file.getInputStream()`：一次算 MD5，一次传 MinIO。
+
+### 建议操作
+将 `calculateMD5(file.getBytes())` 改为 `calculateMD5(file.getInputStream())`，并确保 MinIO 上传使用独立的 `file.getInputStream()` 调用。
+
+### 元数据
+- Source: conversation
+- Related Files: metersphere/analytics-stat/backend/src/main/java/io/metersphere/knowledge/service/KnowledgeFileService.java
+- Tags: 内存优化, 文件上传, MD5, DigestInputStream, MultipartFile
+- See Also: LRN-20260226-015
+
+---
