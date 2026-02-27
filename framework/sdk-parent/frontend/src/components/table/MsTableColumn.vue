@@ -11,8 +11,30 @@
                    :sortable="sortable"
                    :filter-method="filterMethod"
                    :filtered-value="filteredValue	"
-                   :render-header="renderHeader"
                    :show-overflow-tooltip="showOverflowTooltip">
+
+    <template v-slot:header="scope">
+      <span v-if="showHeaderTooltip">
+        <span>{{ scope.column.label }}</span>
+        <el-tooltip
+          effect="dark"
+          :content="$t(field && field.tips ? field.tips : '')"
+          placement="top"
+        >
+          <i class="el-icon-info" style="margin-left: 5px" />
+        </el-tooltip>
+      </span>
+      <el-tooltip
+        v-else-if="scope.column.label && scope.column.label.length > 7"
+        class="item"
+        effect="dark"
+        :content="scope.column.label"
+        placement="top"
+      >
+        <span>{{ scope.column.label }}</span>
+      </el-tooltip>
+      <span v-else>{{ scope.column.label }}</span>
+    </template>
 
     <template v-slot:default="scope">
       <slot :row="scope.row" :$index="scope.$index" v-if="!editable">
@@ -102,46 +124,6 @@ export default {
     displayWidth() {
       return (this.fieldsWidth && this.fieldsWidth[this.prop]) ? this.fieldsWidth[this.prop] : this.width;
     },
-  },
-  methods: {
-    renderHeader(h, data) {
-      if (this.showHeaderTooltip) {
-        // 如果表头提示开启, 则显示表头提示
-        return h(
-            'div',[
-              h('span', data.column.label),
-              h('el-tooltip',{
-                props:{
-                  effect:'dark',
-                  content: this.$t(this.field.tips),
-                  placement:'top'
-                },
-              },[
-                h('i', {
-                  class:'el-icon-info',
-                  style:'margin-left:5px;'
-                })
-              ])
-            ]
-        );
-      }
-      if (data.column.label.length > 7) {
-        return h("span", [
-          h("el-tooltip", {
-            attrs: {
-              class: "item",
-              effect: "dark",
-              content: data.column.label,
-              placement: "top"
-            }
-          }, [
-            h("span", data.column.label)
-          ])
-        ])
-      } else {
-        return h("span", data.column.label);
-      }
-    }
   }
 };
 </script>
