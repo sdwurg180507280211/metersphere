@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "自我改进提醒",
+  "description": "在 agent 执行完成后，提醒评估是否有可提取的知识（纠正、错误、最佳实践），并按格式记录到 .learnings/ 目录",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "回顾刚才的任务执行过程，评估是否有值得记录的经验：\n1. 是否发现了非显而易见的解决方案？\n2. 是否有命令/操作失败需要记录？\n3. 是否纠正了之前的错误认知？\n4. 是否发现了项目特有的模式或约定？\n5. 是否有更好的做法值得记录？\n\n如果有，按照 .kiro/steering/self-improvement.md 中的格式追加到对应的 .learnings/ 文件中。如果没有值得记录的内容，不需要做任何操作。"
+  }
+}
