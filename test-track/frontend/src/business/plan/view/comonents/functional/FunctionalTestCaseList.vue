@@ -16,7 +16,7 @@
     </ms-table-header>
 
     <ms-table
-        v-loading="result.loading"
+        v-loading="loading"
         :field-key="tableHeaderKey"
         :data="tableData"
         :condition="condition"
@@ -385,6 +385,7 @@ export default {
       screenHeight: 'calc(100vh - 275px)',
       tableLabel: [],
       result: {},
+      loading: false,
       deletePath: "/test/case/delete",
       condition: {
         components: TEST_PLAN_TEST_CASE_CONFIGS,
@@ -575,10 +576,11 @@ export default {
     this.pageCount = Math.ceil(this.total / this.pageSize);
   },
   mounted() {
-    this.getTemplateField();
+    this.getTemplateField(() => {
+      this.refreshTableAndPlan();
+    });
     this.$emit('setCondition', this.condition);
     this.$EventBus.$on("openFailureTestCase", this.handleOpenFailureTestCase);
-    this.refreshTableAndPlan();
     this.hasEditPermission = hasPermission('PROJECT_TRACK_PLAN:READ+EDIT');
     this.getMaintainerOptions();
     this.getVersionOptions();
@@ -614,8 +616,8 @@ export default {
         this.$refs.testPlanTestCaseEdit.openTestCaseEdit(this.tableData[this.tableData.length - 1], this.tableData);
       });
     },
-    getTemplateField() {
-      this.result.loading = true;
+    getTemplateField(callback) {
+      this.loading = true;
       let p1 = getProjectMember()
           .then((response) => {
             this.members = response.data;
@@ -646,8 +648,14 @@ export default {
           if (this.$refs.table) {
             this.$refs.table.resetHeader();
           }
-          this.result.loading = false;
+          if (typeof callback === 'function') {
+            callback();
+          } else {
+            this.loading = false;
+          }
         });
+      }).catch(() => {
+        this.loading = false;
       });
     },
     getCustomFieldFilter(field) {
@@ -687,7 +695,8 @@ export default {
       }
       this.condition.projectId = getCurrentProjectID();
       if (this.planId) {
-        this.result = getTestPlanTestCase(this.currentPage, this.pageSize, this.condition)
+        this.loading = true;
+        getTestPlanTestCase(this.currentPage, this.pageSize, this.condition)
             .then((r) => {
               this.total = r.data.itemCount;
               this.pageCount = Math.ceil(this.total / this.pageSize);
@@ -712,8 +721,13 @@ export default {
               if (typeof callback === "function") {
                 callback();
               }
+            })
+            .finally(() => {
+              this.loading = false;
             });
         this.getNexPageData();
+      } else {
+        this.loading = false;
       }
     },
     getNexPageData() {
