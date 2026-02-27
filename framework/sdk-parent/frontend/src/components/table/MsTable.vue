@@ -484,10 +484,19 @@ export default {
     },
     doLayout() {
       if (this.$refs.table) {
-        // 表格错位问题，执行三次
-        for (let i = 1; i <= 3; i++) {
-          setTimeout(this.$refs.table.doLayout, 300 * i);
+        const doTableLayout = () => {
+          if (this.$refs.table) {
+            this.$refs.table.doLayout();
+          }
+        };
+        if (typeof requestAnimationFrame === "function") {
+          requestAnimationFrame(() => {
+            doTableLayout();
+          });
+        } else {
+          setTimeout(doTableLayout, 16);
         }
+        setTimeout(doTableLayout, 350);
       }
     },
     showPopover(row, column, cell) {
@@ -587,18 +596,21 @@ export default {
     openCustomHeader() {
       this.$refs.customTableHeader.open(this.fields);
     },
-    resetHeader() {
+    resetHeader(callback) {
       this.$emit(
         "update:fields",
         getCustomTableHeader(this.fieldKey, this.customFields)
       );
-      this.tableActive = false;
       this.$nextTick(() => {
-        this.doLayout();
-        this.tableActive = true;
+        this.$nextTick(() => {
+          this.doLayout();
+          this.listenRowDrop();
+          this.$emit("headChange");
+          if (typeof callback === "function") {
+            callback();
+          }
+        });
       });
-      this.listenRowDrop();
-      this.$emit("headChange");
     },
     toggleRowSelection() {
       this.$refs.table.toggleRowSelection();

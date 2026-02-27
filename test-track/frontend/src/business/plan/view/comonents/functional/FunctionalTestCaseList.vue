@@ -672,11 +672,30 @@ export default {
       }
       return value ? value : defaultVal;
     },
+    normalizeTableData(list) {
+      const rows = Array.isArray(list) ? list : [];
+      parseTag(rows);
+      parseCustomFilesForList(rows);
+      return rows.map((item) => {
+        const row = item ? { ...item } : {};
+        if (row.customFields && typeof row.customFields === 'string') {
+          try {
+            row.customFields = JSON.parse(row.customFields);
+          } catch (e) {
+            row.customFields = [];
+          }
+        }
+        row.showTags = row.tags;
+        row.issuesSize = row.issuesCount;
+        row.hasLoadIssue = false;
+        row.issuesContent = [];
+        return row;
+      });
+    },
     initTableData(callback) {
       initCondition(this.condition, this.condition.selectAll);
       this.enableOrderDrag = this.condition.orders.length > 0 ? false : true;
 
-      this.autoCheckStatus();
       if (this.planId) {
         // param.planId = this.planId;
         this.condition.planId = this.planId;
@@ -700,20 +719,7 @@ export default {
             .then((r) => {
               this.total = r.data.itemCount;
               this.pageCount = Math.ceil(this.total / this.pageSize);
-              this.tableData = r.data.listObject;
-              parseTag(this.tableData);
-              parseCustomFilesForList(this.tableData);
-              for (let i = 0; i < this.tableData.length; i++) {
-                if (this.tableData[i]) {
-                  if (this.tableData[i].customFields) {
-                    this.tableData[i].customFields = JSON.parse(this.tableData[i].customFields);
-                  }
-                  this.$set(this.tableData[i], "showTags", this.tableData[i].tags);
-                  this.$set(this.tableData[i], "issuesSize", this.tableData[i].issuesCount);
-                  this.$set(this.tableData[i], "hasLoadIssue", false);
-                  this.$set(this.tableData[i], "issuesContent", []);
-                }
-              }
+              this.tableData = this.normalizeTableData(r.data.listObject);
 
               // 需要判断tableData数据，放回调里面
               this.getPreData();
@@ -777,6 +783,7 @@ export default {
         this.$refs.tableHeader.resetSearchData();
       }
       this.getTestPlanById();
+      this.autoCheckStatus();
       this.initTableData();
     },
     search() {
