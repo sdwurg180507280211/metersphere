@@ -1,5 +1,6 @@
 package io.metersphere.knowledge.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 /**
@@ -15,5 +16,11 @@ public class KbDocumentVector {
     private String modelVersion;
     private String userId;
     private String workspaceId;
+    
+    /**
+     * 是否公开
+     * 使用 @JsonProperty 显式指定 JSON 属性名，避免 Lombok + Jackson 命名陷阱
+     */
+    @JsonProperty("isPublic")
     private boolean isPublic;
 }

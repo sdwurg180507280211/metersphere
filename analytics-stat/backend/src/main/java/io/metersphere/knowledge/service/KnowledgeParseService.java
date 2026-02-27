@@ -136,6 +136,9 @@ public class KnowledgeParseService {
         private void processParentChunk() {
             String parentText = buffer.toString();
             List<String> childChunks = splitTextIntoChunksWithSemantics(parentText, chunkSize);
+            
+            // 批量插入，减少数据库往返
+            List<KbDocumentVector> vectors = new ArrayList<>(childChunks.size());
             for (String chunk : childChunks) {
                 savedChunkCount++;
                 KbDocumentVector vector = new KbDocumentVector();
@@ -145,9 +148,13 @@ public class KnowledgeParseService {
                 vector.setUserId(userId);
                 vector.setWorkspaceId(workspaceId);
                 vector.setPublic(isPublic);
-                documentVectorMapper.insert(vector);
+                vectors.add(vector);
             }
-            logger.debug("保存 {} 个子切片，累计: {}", childChunks.size(), savedChunkCount);
+            
+            if (!vectors.isEmpty()) {
+                documentVectorMapper.insertBatch(vectors);
+                logger.debug("批量保存 {} 个子切片，累计: {}", vectors.size(), savedChunkCount);
+            }
             buffer.setLength(0);
         }
     }

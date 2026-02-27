@@ -137,10 +137,61 @@ export async function hybridSearch(query: string, topK = 10): Promise<SearchResu
   const res = await http.get<ApiResponse<SearchResult[]>>('/knowledge/search/hybrid', {
     params: { query, topK },
   })
-  // MeterSphere 统一响应格式：{ success: true/false, message: "...", data: [...] }
-  // SDK 的 ResultResponseBodyAdvice 自动将 Controller 返回值包装为 ResultHolder
   if (res.data.success) {
     return res.data.data
   }
   throw new Error(res.data.message || '检索失败')
+}
+
+/** 文件记录类型 */
+export interface KbFileUpload {
+  id: number
+  fileMd5: string
+  fileName: string
+  totalSize: number
+  status: number
+  userId: string
+  workspaceId: string
+  isPublic: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * 上传文件到知识库
+ * @param file     文件对象
+ * @param isPublic 是否公开
+ */
+export async function uploadFile(file: File, isPublic = false): Promise<void> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('isPublic', String(isPublic))
+  const res = await http.post<ApiResponse<void>>('/knowledge/file/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  if (!res.data.success) {
+    throw new Error(res.data.message || '上传失败')
+  }
+}
+
+/**
+ * 获取文件列表
+ */
+export async function getFileList(): Promise<KbFileUpload[]> {
+  const res = await http.get<ApiResponse<KbFileUpload[]>>('/knowledge/file/list')
+  if (res.data.success) {
+    return res.data.data
+  }
+  throw new Error(res.data.message || '获取文件列表失败')
+}
+
+/**
+ * 删除文件
+ * @param fileId 文件ID
+ */
+export async function deleteFile(fileId: number): Promise<void> {
+  const res = await http.delete<ApiResponse<void>>(`/knowledge/file/${fileId}`)
+  if (!res.data.success) {
+    throw new Error(res.data.message || '删除失败')
+  }
 }

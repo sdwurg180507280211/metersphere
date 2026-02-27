@@ -5,6 +5,9 @@
     <div class="page-header">
       <h3 class="page-title">{{ t('analytics.knowledge.title') }}</h3>
       <div class="header-actions">
+        <el-button type="primary" :icon="Upload" @click="showUpload = true">
+          {{ t('analytics.knowledge.upload_file') }}
+        </el-button>
         <el-button type="primary" :icon="Search" @click="showSearch = true">
           {{ t('analytics.knowledge.search') }}
         </el-button>
@@ -48,25 +51,39 @@
       </el-col>
     </el-row>
 
+    <!-- 文件列表 -->
+    <el-card class="file-list-card">
+      <template #header>
+        <div class="card-header">
+          <span>{{ t('analytics.knowledge.my_files') }}</span>
+          <el-button size="small" :icon="Refresh" @click="fileListRef?.loadFileList()">
+            {{ t('commons.refresh') }}
+          </el-button>
+        </div>
+      </template>
+      <FileList ref="fileListRef" />
+    </el-card>
+
     <!-- 检索对话框 -->
     <SearchDialog v-model="showSearch" />
+
+    <!-- 上传对话框 -->
+    <UploadDialog v-model="showUpload" @success="fileListRef?.loadFileList()" />
   </div>
 </template>
 
 <script setup lang="ts">
-/**
- * 知识库主页面
- *
- * Phase 1: 提供检索入口，通过 SearchDialog 执行混合检索
- * Phase 2: 将增加文件上传、文档管理等功能
- */
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Search, Document, Lock } from '@element-plus/icons-vue'
+import { Search, Document, Lock, Upload, Refresh } from '@element-plus/icons-vue'
 import SearchDialog from './knowledge/SearchDialog.vue'
+import UploadDialog from './knowledge/UploadDialog.vue'
+import FileList from './knowledge/FileList.vue'
 
 const { t } = useI18n()
 const showSearch = ref(false)
+const showUpload = ref(false)
+const fileListRef = ref<InstanceType<typeof FileList>>()
 </script>
 
 <style scoped>
@@ -87,6 +104,11 @@ const showSearch = ref(false)
   color: #303133;
 }
 
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
 .feature-cards {
   margin-top: 16px;
 }
@@ -95,10 +117,14 @@ const showSearch = ref(false)
   height: 160px;
 }
 
+.file-list-card {
+  margin-top: 20px;
+}
+
 .card-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
   font-weight: 500;
 }
 

@@ -71,4 +71,28 @@
         DELETE FROM kb_file_upload WHERE id = #{id}
     </delete>
 
+    <select id="selectByMd5" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM kb_file_upload
+        WHERE file_md5 = #{fileMd5}
+        LIMIT 1
+    </select>
+
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM kb_file_upload
+        WHERE id = #{id}
+    </select>
+
+    <delete id="deleteByPrimaryKey">
+        DELETE FROM kb_file_upload WHERE id = #{id}
+    </delete>
+
+    <select id="selectByUserAndWorkspace" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM kb_file_upload
+        WHERE user_id = #{userId} AND workspace_id = #{workspaceId}
+        ORDER BY created_at DESC
+    </select>
+
 </mapper>
