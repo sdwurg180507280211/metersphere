@@ -232,6 +232,103 @@ WHERE
 ORDER BY
     p.name;
 
+-- SQL 6:从项目维度分别统计缺陷的严重级别，要带起止时间条件【缺陷的创建时间】
+-- 说明：按“严重级别”字段统计；时间按 issues.create_time（毫秒时间戳）过滤
+SELECT
+    w.name AS '工作空间名称',
+    p.name AS '项目名称',
+    COUNT(s.issue_id) AS '缺陷总数',
+    COUNT(CASE WHEN s.severity = '阻断' THEN 1 END) AS '阻断',
+    COUNT(CASE WHEN s.severity = '严重' THEN 1 END) AS '严重',
+    COUNT(CASE WHEN s.severity = '一般' THEN 1 END) AS '一般',
+    CONCAT(
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-01-01 00:00:00')),
+        ' ~ ',
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-02-06 23:59:59'))
+    ) AS '统计时间范围(创建时间)'
+FROM
+    workspace w
+    INNER JOIN project p ON w.id = p.workspace_id
+    LEFT JOIN (
+        SELECT
+            i.id AS issue_id,
+            i.project_id,
+            COALESCE(
+                MAX(NULLIF(TRIM(BOTH '"' FROM cfi.text_value), '')),
+                MAX(NULLIF(TRIM(BOTH '"' FROM cfi.value), '')),
+                '未设置'
+            ) AS severity
+        FROM issues i
+        LEFT JOIN custom_field_issues cfi
+            ON cfi.resource_id = i.id
+           AND cfi.field_id IN (
+               SELECT id
+               FROM custom_field
+               WHERE scene = 'ISSUE'
+                 AND name = '严重级别'
+           )
+        WHERE i.create_time >= UNIX_TIMESTAMP('2026-01-01 00:00:00') * 1000  -- 开始时间（毫秒时间戳）
+          AND i.create_time <= UNIX_TIMESTAMP('2026-02-06 23:59:59') * 1000  -- 结束时间（毫秒时间戳）
+        GROUP BY i.id, i.project_id
+    ) s ON p.id = s.project_id
+WHERE
+    w.name = '功能测试工作空间'  -- 替换为实际工作空间名称
+GROUP BY
+    w.name, p.name
+ORDER BY
+    p.name;
+
+
+-- SQL7：从项目维度统计平均复测次数，要带起止时间条件【缺陷的创建时间】
+-- 说明：复测次数来自系统字段“复测次数”；兼容 value 为 1、"1"、空值等格式
+SELECT
+    w.name AS '工作空间名称',
+    p.name AS '项目名称',
+    COUNT(r.issue_id) AS '缺陷总数',
+    COALESCE(SUM(r.retest_count), 0) AS '复测总次数',
+    COALESCE(ROUND(AVG(r.retest_count), 2), 0) AS '平均复测次数',
+    CONCAT(
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-01-01 00:00:00')),
+        ' ~ ',
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-02-06 23:59:59'))
+    ) AS '统计时间范围(创建时间)'
+FROM
+    workspace w
+    INNER JOIN project p ON w.id = p.workspace_id
+    LEFT JOIN (
+        SELECT
+            i.id AS issue_id,
+            i.project_id,
+            COALESCE(
+                MAX(
+                    CASE
+                        WHEN TRIM(BOTH '"' FROM COALESCE(NULLIF(cfi.value, ''), NULLIF(cfi.text_value, ''))) REGEXP '^[0-9]+$'
+                            THEN CAST(TRIM(BOTH '"' FROM COALESCE(NULLIF(cfi.value, ''), NULLIF(cfi.text_value, ''))) AS UNSIGNED)
+                        ELSE NULL
+                    END
+                ),
+                0
+            ) AS retest_count
+        FROM issues i
+        LEFT JOIN custom_field_issues cfi
+            ON cfi.resource_id = i.id
+           AND cfi.field_id IN (
+               SELECT id
+               FROM custom_field
+               WHERE scene = 'ISSUE'
+                 AND name = '复测次数'
+           )
+        WHERE i.create_time >= UNIX_TIMESTAMP('2026-01-01 00:00:00') * 1000  -- 开始时间（毫秒时间戳）
+          AND i.create_time <= UNIX_TIMESTAMP('2026-02-06 23:59:59') * 1000  -- 结束时间（毫秒时间戳）
+        GROUP BY i.id, i.project_id
+    ) r ON p.id = r.project_id
+WHERE
+    w.name = '功能测试工作空间'  -- 替换为实际工作空间名称
+GROUP BY
+    w.name, p.name
+ORDER BY
+    p.name;
+
 
 -- ==========================================
 -- 说明：

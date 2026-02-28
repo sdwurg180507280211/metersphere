@@ -17,6 +17,7 @@ export default {
     knowledge: {
       title: 'Knowledge Base',
       search: 'Search',
+      status: 'Status',
       hybrid_search: 'Hybrid Search',
       hybrid_search_desc: 'Two-stage retrieval combining semantic vectors and keyword matching for both semantic understanding and precise matching',
       doc_manage: 'Document Management',

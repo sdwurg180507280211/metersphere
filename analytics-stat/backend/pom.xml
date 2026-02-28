@@ -27,6 +27,20 @@
                     <groupId>org.apache.shiro</groupId>
                     <artifactId>shiro-spring-boot-starter</artifactId>
                 </exclusion>
+                <!-- 排除JMeter链路传入的Tika 1.x，避免与Tika 2.x冲突 -->
+                <exclusion>
+                    <groupId>org.apache.tika</groupId>
+                    <artifactId>tika-parsers</artifactId>
+                </exclusion>
+                <!-- 避免与 Tika 2.x 引入的 POI 5.x 发生冲突 -->
+                <exclusion>
+                    <groupId>org.apache.poi</groupId>
+                    <artifactId>poi-ooxml-schemas</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.xmlbeans</groupId>
+                    <artifactId>xmlbeans</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
