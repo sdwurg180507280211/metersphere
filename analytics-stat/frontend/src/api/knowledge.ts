@@ -40,7 +40,7 @@ const PROJECT_ID_KEY = 'project_id'
  * - Gateway 通过服务发现路由，URL 第一段路径必须是服务名
  * - 不加前缀，Gateway 无法识别该请求应转发给哪个微服务
  */
-const http = axios.create({
+export const knowledgeHttp = axios.create({
   baseURL: '/analytics',
   withCredentials: true,
 })
@@ -55,7 +55,7 @@ const http = axios.create({
  *
  * 如果不注入这些 header，Gateway 的 SessionFilter 找不到 session，返回 401
  */
-http.interceptors.request.use((config) => {
+knowledgeHttp.interceptors.request.use((config) => {
   // 从 localStorage 读取用户认证信息（登录时由主应用写入）
   const tokenStr = localStorage.getItem(TOKEN_KEY)
   if (tokenStr) {
@@ -93,7 +93,7 @@ http.interceptors.request.use((config) => {
  * 当 Gateway 返回 401 或 authentication-status: invalid 时，
  * 清除本地存储并跳转到登录页，与 SDK 行为一致
  */
-http.interceptors.response.use(
+knowledgeHttp.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
@@ -105,7 +105,7 @@ http.interceptors.response.use(
         window.location.href = '/'
       }
     }
-    return Promise.reject(error)
+    return Promise.reject(normalizeKnowledgeError(error, '请求失败'))
   }
 )
 
@@ -128,20 +128,106 @@ interface ApiResponse<T> {
   data: T
 }
 
+export const KNOWLEDGE_ERROR_CODE = {
+  AUTH_INVALID: 'AUTH_INVALID',
+  FORBIDDEN: 'FORBIDDEN',
+  NETWORK: 'NETWORK',
+  SERVER: 'SERVER',
+  BUSINESS: 'BUSINESS',
+  UNKNOWN: 'UNKNOWN',
+} as const
+
+export type KnowledgeErrorCode = typeof KNOWLEDGE_ERROR_CODE[keyof typeof KNOWLEDGE_ERROR_CODE]
+
+export class KnowledgeApiError extends Error {
+  code: KnowledgeErrorCode
+  status?: number
+
+  constructor(code: KnowledgeErrorCode, message: string, status?: number) {
+    super(message)
+    this.name = 'KnowledgeApiError'
+    this.code = code
+    this.status = status
+  }
+}
+
+function getResponseMessage(error: unknown): string | null {
+  if (!axios.isAxiosError(error)) {
+    return null
+  }
+  const message = error.response?.data?.message
+  return typeof message === 'string' ? message : null
+}
+
+export function normalizeKnowledgeError(error: unknown, fallbackMessage: string): KnowledgeApiError {
+  if (error instanceof KnowledgeApiError) {
+    return error
+  }
+
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status
+    const responseMessage = getResponseMessage(error)
+
+    if (status === 401) {
+      return new KnowledgeApiError(KNOWLEDGE_ERROR_CODE.AUTH_INVALID, responseMessage || fallbackMessage, status)
+    }
+
+    if (status === 403) {
+      return new KnowledgeApiError(KNOWLEDGE_ERROR_CODE.FORBIDDEN, responseMessage || fallbackMessage, status)
+    }
+
+    if (typeof status === 'number' && status >= 500) {
+      return new KnowledgeApiError(KNOWLEDGE_ERROR_CODE.SERVER, responseMessage || fallbackMessage, status)
+    }
+
+    if (typeof status === 'number' && status >= 400) {
+      return new KnowledgeApiError(KNOWLEDGE_ERROR_CODE.BUSINESS, responseMessage || fallbackMessage, status)
+    }
+
+    if (!error.response) {
+      return new KnowledgeApiError(KNOWLEDGE_ERROR_CODE.NETWORK, fallbackMessage)
+    }
+  }
+
+  if (error instanceof Error) {
+    return new KnowledgeApiError(KNOWLEDGE_ERROR_CODE.UNKNOWN, error.message || fallbackMessage)
+  }
+
+  return new KnowledgeApiError(KNOWLEDGE_ERROR_CODE.UNKNOWN, fallbackMessage)
+}
+
+function unwrapResponse<T>(response: ApiResponse<T>, fallbackMessage: string): T {
+  if (response.success) {
+    return response.data
+  }
+  throw new KnowledgeApiError(KNOWLEDGE_ERROR_CODE.BUSINESS, response.message || fallbackMessage)
+}
+
 /**
  * 混合检索
  * @param query 搜索关键词
  * @param topK  返回结果数量，默认10
  */
 export async function hybridSearch(query: string, topK = 10): Promise<SearchResult[]> {
-  const res = await http.get<ApiResponse<SearchResult[]>>('/knowledge/search/hybrid', {
-    params: { query, topK },
-  })
-  if (res.data.success) {
-    return res.data.data
+  try {
+    const res = await knowledgeHttp.get<ApiResponse<SearchResult[]>>('/knowledge/search/hybrid', {
+      params: { query, topK },
+    })
+    return unwrapResponse(res.data, '检索失败')
+  } catch (error) {
+    throw normalizeKnowledgeError(error, '检索失败')
   }
-  throw new Error(res.data.message || '检索失败')
 }
+
+export const KNOWLEDGE_FILE_STATUS = {
+  UPLOADING: 0,
+  UPLOADED: 1,
+  PROCESSING: 2,
+  INDEXED: 3,
+  FAILED: -1,
+} as const
+
+export type KnowledgeFileStatus = typeof KNOWLEDGE_FILE_STATUS[keyof typeof KNOWLEDGE_FILE_STATUS]
 
 /** 文件记录类型 */
 export interface KbFileUpload {
@@ -149,7 +235,7 @@ export interface KbFileUpload {
   fileMd5: string
   fileName: string
   totalSize: number
-  status: number
+  status: KnowledgeFileStatus
   userId: string
   workspaceId: string
   isPublic: boolean
@@ -163,14 +249,16 @@ export interface KbFileUpload {
  * @param isPublic 是否公开
  */
 export async function uploadFile(file: File, isPublic = false): Promise<void> {
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('isPublic', String(isPublic))
-  const res = await http.post<ApiResponse<void>>('/knowledge/file/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
-  if (!res.data.success) {
-    throw new Error(res.data.message || '上传失败')
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('isPublic', String(isPublic))
+    const res = await knowledgeHttp.post<ApiResponse<void>>('/knowledge/file/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    unwrapResponse(res.data, '上传失败')
+  } catch (error) {
+    throw normalizeKnowledgeError(error, '上传失败')
   }
 }
 
@@ -178,11 +266,12 @@ export async function uploadFile(file: File, isPublic = false): Promise<void> {
  * 获取文件列表
  */
 export async function getFileList(): Promise<KbFileUpload[]> {
-  const res = await http.get<ApiResponse<KbFileUpload[]>>('/knowledge/file/list')
-  if (res.data.success) {
-    return res.data.data
+  try {
+    const res = await knowledgeHttp.get<ApiResponse<KbFileUpload[]>>('/knowledge/file/list')
+    return unwrapResponse(res.data, '获取文件列表失败')
+  } catch (error) {
+    throw normalizeKnowledgeError(error, '获取文件列表失败')
   }
-  throw new Error(res.data.message || '获取文件列表失败')
 }
 
 /**
@@ -190,8 +279,10 @@ export async function getFileList(): Promise<KbFileUpload[]> {
  * @param fileId 文件ID
  */
 export async function deleteFile(fileId: number): Promise<void> {
-  const res = await http.delete<ApiResponse<void>>(`/knowledge/file/${fileId}`)
-  if (!res.data.success) {
-    throw new Error(res.data.message || '删除失败')
+  try {
+    const res = await knowledgeHttp.delete<ApiResponse<void>>(`/knowledge/file/${fileId}`)
+    unwrapResponse(res.data, '删除失败')
+  } catch (error) {
+    throw normalizeKnowledgeError(error, '删除失败')
   }
 }
