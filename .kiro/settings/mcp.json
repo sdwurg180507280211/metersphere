@@ -8,7 +8,7 @@
         "--autoConnect",
         "--channel=stable"
       ],
-      "env": {
+      "env": { 
         "PATH": "/Users/edy/.nvm/versions/node/v20.19.6/bin:/usr/local/bin:/usr/bin:/bin",
         "NODE_PATH": "/Users/edy/.nvm/versions/node/v20.19.6/lib/node_modules"
       },
