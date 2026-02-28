@@ -18,4 +18,35 @@
         <module>frontend</module>
     </modules>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>ban-conflicting-poi-deps</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <searchTransitive>true</searchTransitive>
+                                    <excludes>
+                                        <exclude>org.apache.poi:poi-ooxml-schemas</exclude>
+                                        <exclude>org.apache.xmlbeans:xmlbeans:(,5.0)</exclude>
+                                    </excludes>
+                                    <message>Detected incompatible POI/XmlBeans dependencies. Keep Tika's POI 5.x stack and do not introduce poi-ooxml-schemas or xmlbeans below 5.0.</message>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

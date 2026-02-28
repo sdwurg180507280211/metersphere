@@ -44,6 +44,7 @@ export default {
       public_tip: '公开后工作空间内所有成员可见',
       file_name: '文件名',
       file_size: '文件大小',
+      status: '状态',
       visibility: '可见性',
       public: '公开',
       private: '私有',

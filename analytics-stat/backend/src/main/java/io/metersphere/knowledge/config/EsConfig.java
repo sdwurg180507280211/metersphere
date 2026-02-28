@@ -41,10 +41,23 @@ public class EsConfig {
     @Value("${elasticsearch.password:changeme}")
     private String password;
 
+    @Value("${elasticsearch.connect-timeout-ms:10000}")
+    private int connectTimeoutMs;
+
+    @Value("${elasticsearch.socket-timeout-ms:120000}")
+    private int socketTimeoutMs;
+
+    @Value("${elasticsearch.connection-request-timeout-ms:10000}")
+    private int connectionRequestTimeoutMs;
+
     @Bean
     public ElasticsearchClient elasticsearchClient() {
         // 创建低级 REST 客户端
         RestClientBuilder builder = RestClient.builder(new HttpHost(host, port, scheme));
+        builder.setRequestConfigCallback(requestConfigBuilder -> requestConfigBuilder
+                .setConnectTimeout(connectTimeoutMs)
+                .setSocketTimeout(socketTimeoutMs)
+                .setConnectionRequestTimeout(connectionRequestTimeoutMs));
 
         // 设置基本认证和 TLS（开发环境忽略证书验证）
         if (username != null && !username.isEmpty()) {

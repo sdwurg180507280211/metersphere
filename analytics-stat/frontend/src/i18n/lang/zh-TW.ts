@@ -17,6 +17,7 @@ export default {
     knowledge: {
       title: '知識庫',
       search: '檢索',
+      status: '狀態',
       hybrid_search: '混合檢索',
       hybrid_search_desc: '結合語義向量和關鍵詞匹配的兩階段檢索，兼顧語義理解和精確匹配',
       doc_manage: '文檔管理',

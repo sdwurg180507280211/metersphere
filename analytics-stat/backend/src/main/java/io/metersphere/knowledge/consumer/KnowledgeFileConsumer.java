@@ -88,8 +88,8 @@ public class KnowledgeFileConsumer {
 
             LogUtil.info("文件处理完成: fileId={}, fileMd5={}", task.getFileId(), task.getFileMd5());
 
-        } catch (Exception e) {
-            LogUtil.error("文件处理失败: fileId=" + task.getFileId(), e);
+        } catch (Throwable t) {
+            LogUtil.error("文件处理失败: fileId=" + task.getFileId(), t);
 
             // 更新状态为"失败"（可以定义状态码 -1 表示失败）
             try {
