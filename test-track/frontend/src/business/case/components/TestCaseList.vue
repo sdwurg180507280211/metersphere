@@ -728,6 +728,11 @@ export default {
       }
     },
     selectNodeIds() {
+      // headerInited 为 false 说明模板字段还未加载完，此时 selectNodeIds 的变化
+      // 来自 TestCaseNodeTree mounted() 的初始化重置，不是用户操作，跳过避免重复加载
+      if (!this.headerInited) {
+        return;
+      }
       this.clearTableSelect();
       this.page.currentPage = 1;
       initCondition(this.condition, false);
