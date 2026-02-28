@@ -12,6 +12,7 @@
 - 完成账号登录或 API Key 配置
 - 把命令加入 PATH（终端里直接调用）
 - 在本地项目里完成第一次 AI 协作
+- 接入 Chrome DevTools，让 AI 直接读取浏览器里的报错和请求
 
 ## 二、准备环境（新手直接复制）
 
@@ -130,7 +131,51 @@ claude
 - "把某个报错的根因分析出来"
 - "按现有风格补一个单元测试"
 
-## 五、常见坑位提醒（帮你省时间）
+## 五、接入 Chrome DevTools（进阶）
+
+Claude Code 支持 MCP（Model Context Protocol），可以通过 `chrome-devtools-mcp` 让 AI 直接读取浏览器的控制台日志、网络请求、DOM 结构，不需要手动复制粘贴。
+
+### 5.1 正常打开 Chrome 即可
+
+**不需要**用特殊命令启动 Chrome，日常双击图标打开就行。`chrome-devtools-mcp` 带有 `--autoConnect` 参数，会自动检测并连接到已运行的 Chrome 实例。
+
+### 5.2 配置 MCP
+
+在项目目录下运行：
+
+```bash
+# 添加到当前项目（推荐，进项目就生效）
+claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest --autoConnect --channel=stable
+
+# 验证是否连接成功
+claude mcp list
+```
+
+如果想对所有项目都生效，加 `--scope global`：
+
+```bash
+claude mcp add --scope global chrome-devtools -- npx -y chrome-devtools-mcp@latest --autoConnect --channel=stable
+```
+
+配置完成后，进入 `claude` 会话，MCP 服务会自动启动并连接 Chrome。
+
+> **为什么用命令而不是手动改 JSON？** `claude mcp add` 会写入正确的配置文件，手动编辑 `settings.json` 中的 `mcpServers` 字段有时不会被 `claude mcp list` 识别。
+
+### 5.3 接入后能做什么
+
+配置完成后，在 Claude Code 对话里可以直接说：
+
+- "帮我看一下当前页面有没有控制台报错"
+- "抓一下 /api/login 这个接口的请求和响应"
+- "截图告诉我页面哪里布局乱了"
+- "在当前页面执行这段 JS：`document.title`"
+- "查一下有没有失败的网络请求（4xx/5xx）"
+
+AI 会主动调用工具去取数据，不需要你手动打开 DevTools 再复制过来。
+
+---
+
+## 六、常见坑位提醒（帮你省时间）
 
 | 问题 | 解决方式 |
 |------|----------|
@@ -139,7 +184,10 @@ claude
 | API Key 无效 | 检查 Key 是否正确、是否过期、是否有可用额度 |
 | Node 版本太低 | 升级到 22+ 再重试 |
 | 修改配置后不生效 | 确保完全重启了命令行窗口 |
+| MCP 启动失败 | 用 `claude mcp add` 命令添加，不要手动改 JSON |
+| AI 说无法连接 Chrome | 确认 Chrome 已打开，`--autoConnect` 会自动连接 |
+| 连上了但工具没响应 | 在 Chrome 里打开目标页面后再操作 |
 
-## 六、写在最后
+## 七、写在最后
 
-如果你是第一次接触 AI 编程终端，不用紧张。先跑通安装和登录，再在真实项目里让它帮你做"小任务"，很快就能形成自己的高效工作流。
+如果你是第一次接触 AI 编程终端，不用紧张。先跑通安装和登录，再在真实项目里让它帮你做"小任务"。接入 Chrome DevTools 之后，调试 Web 问题的方式会有明显变化——AI 能直接"看到"浏览器里发生了什么，不再需要你在 DevTools 和对话框之间来回搬运信息。
