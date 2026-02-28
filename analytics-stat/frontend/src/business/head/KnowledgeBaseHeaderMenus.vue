@@ -1,8 +1,7 @@
 <template>
-  <!-- 顶部导航栏：左侧二级菜单 + 右侧用户信息 -->
   <div class="menu-bar">
     <el-row type="flex" justify="space-between" align="middle">
-      <!-- 左侧：二级导航菜单（分析统计为全局视角，不需要项目切换） -->
+      <!-- 左侧：二级导航菜单 -->
       <el-col :span="14">
         <el-menu
           class="header-menu"
@@ -21,7 +20,7 @@
           </el-menu-item>
         </el-menu>
       </el-col>
-      <!-- 右侧：模块标题（Vue 3 版本不再依赖 SDK 的 HeaderRightMenus） -->
+      <!-- 右侧：模块标题 -->
       <el-col :span="10" class="right-section">
         <span class="module-title">{{ t('analytics.title') }}</span>
       </el-col>
@@ -30,45 +29,26 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 分析统计顶部导航菜单组件
- *
- * 功能：
- * 1. 左侧：二级导航菜单（工作台、SQL查询台、数据字典）
- * 2. 右侧：模块标题
- *
- * 与 Vue 2 版本的差异：
- * - 不再依赖 metersphere-frontend 的 MsHeaderRightMenus 组件
- *   （Vue 3 版本无法使用 Vue 2 SDK 组件，且分析统计为独立模块，
- *    不需要工作空间切换、任务中心等全局功能）
- * - 使用 computed 替代 watch + data 实现路径匹配
- * - 使用 useRoute / useI18n 替代 Options API
- */
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { KNOWLEDGE_ROUTE_BASE, KNOWLEDGE_ROUTE_PATHS } from '@/config/knowledge-route'
 
 const route = useRoute()
 const { t } = useI18n()
 
-/** 二级导航菜单配置 */
 const menus = [
-  { path: '/analytics/home', i18nKey: 'analytics.menu.home' },
-  { path: '/analytics/sql-console', i18nKey: 'analytics.menu.sql_console' },
-  { path: '/analytics/data-dictionary', i18nKey: 'analytics.menu.data_dictionary' },
+  { path: KNOWLEDGE_ROUTE_PATHS.knowledge, i18nKey: 'analytics.menu.knowledge' },
+  { path: KNOWLEDGE_ROUTE_PATHS.knowledgeChat, i18nKey: 'analytics.menu.knowledge_chat' },
 ]
 
-/**
- * 根据当前路由路径计算激活的菜单项
- * 使用 computed 替代 Vue 2 版本的 watch + updateActivePath 方法
- */
 const activePath = computed(() => {
   const path = route.path
   // 匹配菜单路径前缀，支持子路径高亮
   const matched = menus.find((m) => path.startsWith(m.path))
   if (matched) return matched.path
-  // 根路径默认高亮工作台
-  if (path === '/analytics') return '/analytics/home'
+  // 根路径默认高亮知识库
+  if (path === KNOWLEDGE_ROUTE_BASE) return KNOWLEDGE_ROUTE_PATHS.knowledge
   return path
 })
 </script>

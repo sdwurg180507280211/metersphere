@@ -5,7 +5,7 @@
     width="600px"
     @close="handleClose"
   >
-    <el-form :model="form" label-width="100px">
+    <el-form label-width="100px">
       <el-form-item :label="t('analytics.knowledge.select_file')">
         <el-upload
           ref="uploadRef"
@@ -27,7 +27,7 @@
       </el-form-item>
 
       <el-form-item :label="t('analytics.knowledge.is_public')">
-        <el-switch v-model="form.isPublic" />
+        <el-switch v-model="isPublic" />
         <span class="form-tip">{{ t('analytics.knowledge.public_tip') }}</span>
       </el-form-item>
 
@@ -61,7 +61,12 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, type UploadFile, type UploadInstance } from 'element-plus'
-import { uploadFile } from '@/api/knowledge'
+import {
+  EMPTY_UPLOAD_FILE_ERROR,
+  formatFileSize,
+  useKnowledgeUpload,
+} from '@/composables/useKnowledgeUpload'
+import { resolveKnowledgeErrorMessage } from '@/composables/useKnowledgeErrorMessage'
 
 const props = defineProps<{
   modelValue: boolean
@@ -80,51 +85,33 @@ const visible = computed({
 })
 
 const uploadRef = ref<UploadInstance>()
-const selectedFile = ref<File | null>(null)
-const uploading = ref(false)
-
-const form = ref({
-  isPublic: false
-})
+const { selectedFile, isPublic, uploading, setSelectedFile, upload, reset } = useKnowledgeUpload()
 
 const handleFileChange = (file: UploadFile) => {
-  selectedFile.value = file.raw || null
+  setSelectedFile(file.raw || null)
 }
 
 const handleExceed = () => {
   ElMessage.warning(t('analytics.knowledge.upload_limit'))
 }
 
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
-}
-
 const handleUpload = async () => {
-  if (!selectedFile.value) {
-    ElMessage.warning(t('analytics.knowledge.select_file_first'))
-    return
-  }
-
-  uploading.value = true
   try {
-    await uploadFile(selectedFile.value, form.value.isPublic)
+    await upload()
     ElMessage.success(t('analytics.knowledge.upload_success'))
     emit('success')
     handleClose()
   } catch (error: any) {
-    ElMessage.error(error.message || t('analytics.knowledge.upload_failed'))
-  } finally {
-    uploading.value = false
+    if (error?.message === EMPTY_UPLOAD_FILE_ERROR) {
+      ElMessage.warning(t('analytics.knowledge.select_file_first'))
+      return
+    }
+    ElMessage.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.upload_failed'))
   }
 }
 
 const handleClose = () => {
-  selectedFile.value = null
-  form.value.isPublic = false
+  reset()
   uploadRef.value?.clearFiles()
   visible.value = false
 }

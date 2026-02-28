@@ -1,8 +1,25 @@
 <template>
   <div class="file-list">
+    <div class="toolbar">
+      <el-input
+        v-model="searchKeyword"
+        clearable
+        class="toolbar-item search-input"
+        :placeholder="t('analytics.knowledge.file_name_search_placeholder')"
+      />
+      <el-select v-model="statusFilter" class="toolbar-item status-select">
+        <el-option
+          v-for="option in statusOptions"
+          :key="option.value"
+          :label="option.label"
+          :value="option.value"
+        />
+      </el-select>
+    </div>
+
     <el-table
       v-loading="loading"
-      :data="fileList"
+      :data="pagedFileList"
       style="width: 100%"
       :empty-text="t('analytics.knowledge.no_files')"
     >
@@ -78,42 +95,47 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <div class="pagination-wrapper">
+      <el-pagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :total="filteredFileList.length"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document } from '@element-plus/icons-vue'
-import { getFileList, deleteFile } from '@/api/knowledge'
+import { deleteFile } from '@/api/knowledge'
+import type { KbFileUpload } from '@/api/knowledge'
+import { KNOWLEDGE_FILE_STATUS } from '@/api/knowledge'
+import { useKnowledgeFiles } from '@/composables/useKnowledgeFiles'
+import { resolveKnowledgeErrorMessage } from '@/composables/useKnowledgeErrorMessage'
+import { useKnowledgeFileFilters } from '@/composables/useKnowledgeFileFilters'
 
-interface FileItem {
-  id: number
-  fileName: string
-  fileMd5: string
-  totalSize: number
-  status: number
-  isPublic: boolean
-  createdAt: string
-}
-
-const { t } = useI18n()
-
-const loading = ref(false)
-const fileList = ref<FileItem[]>([])
-
-const loadFileList = async () => {
-  loading.value = true
-  try {
-    const data = await getFileList()
-    fileList.value = data
-  } catch (error: any) {
-    ElMessage.error(error.message || t('analytics.knowledge.load_failed'))
-  } finally {
-    loading.value = false
-  }
-}
+const { t, locale } = useI18n()
+const { loading, fileList, loadFileList } = useKnowledgeFiles({
+  onLoadError: (error: any) => {
+    ElMessage.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.load_failed'))
+  },
+})
+const {
+  searchKeyword,
+  statusFilter,
+  currentPage,
+  pageSize,
+  statusOptions,
+  filteredFileList,
+  pagedFileList,
+  initFromRoute,
+} = useKnowledgeFileFilters(fileList, t)
 
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 B'
@@ -126,7 +148,7 @@ const formatFileSize = (bytes: number): string => {
 const formatDate = (dateStr: string): string => {
   if (!dateStr) return '-'
   const date = new Date(dateStr)
-  return date.toLocaleString('zh-CN', {
+  return date.toLocaleString(locale.value, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -137,27 +159,27 @@ const formatDate = (dateStr: string): string => {
 
 const getStatusType = (status: number): string => {
   const statusMap: Record<number, string> = {
-    0: 'info',      // 上传中
-    1: 'info',      // 已上传
-    2: 'warning',   // 解析中
-    3: 'success',   // 已入库
-    [-1]: 'danger'  // 失败
+    [KNOWLEDGE_FILE_STATUS.UPLOADING]: 'info',
+    [KNOWLEDGE_FILE_STATUS.UPLOADED]: 'info',
+    [KNOWLEDGE_FILE_STATUS.PROCESSING]: 'warning',
+    [KNOWLEDGE_FILE_STATUS.INDEXED]: 'success',
+    [KNOWLEDGE_FILE_STATUS.FAILED]: 'danger',
   }
   return statusMap[status] || 'info'
 }
 
 const getStatusText = (status: number): string => {
   const statusMap: Record<number, string> = {
-    0: t('analytics.knowledge.status_uploading'),
-    1: t('analytics.knowledge.status_uploaded'),
-    2: t('analytics.knowledge.status_processing'),
-    3: t('analytics.knowledge.status_indexed'),
-    [-1]: t('analytics.knowledge.status_failed')
+    [KNOWLEDGE_FILE_STATUS.UPLOADING]: t('analytics.knowledge.status_uploading'),
+    [KNOWLEDGE_FILE_STATUS.UPLOADED]: t('analytics.knowledge.status_uploaded'),
+    [KNOWLEDGE_FILE_STATUS.PROCESSING]: t('analytics.knowledge.status_processing'),
+    [KNOWLEDGE_FILE_STATUS.INDEXED]: t('analytics.knowledge.status_indexed'),
+    [KNOWLEDGE_FILE_STATUS.FAILED]: t('analytics.knowledge.status_failed'),
   }
   return statusMap[status] || t('analytics.knowledge.status_unknown')
 }
 
-const handleDelete = async (row: FileItem) => {
+const handleDelete = async (row: KbFileUpload) => {
   try {
     await ElMessageBox.confirm(
       t('analytics.knowledge.delete_confirm', { name: row.fileName }),
@@ -174,7 +196,7 @@ const handleDelete = async (row: FileItem) => {
     await loadFileList()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || t('commons.delete_failed'))
+      ElMessage.error(resolveKnowledgeErrorMessage(error, t, 'commons.delete_failed'))
     }
   }
 }
@@ -184,6 +206,7 @@ defineExpose({
 })
 
 onMounted(() => {
+  initFromRoute()
   loadFileList()
 })
 </script>
@@ -191,5 +214,29 @@ onMounted(() => {
 <style scoped>
 .file-list {
   margin-top: 20px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.toolbar-item {
+  width: 240px;
+}
+
+.search-input {
+  max-width: 320px;
+}
+
+.status-select {
+  width: 180px;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
 </style>
