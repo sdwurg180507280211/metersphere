@@ -25,6 +25,9 @@
               <el-button text class="session-title" @click="handleSelectSession(item.id)">
                 {{ item.title }}
               </el-button>
+              <el-tag v-if="getSessionNegativeCount(item.id) > 0" type="danger" size="small" effect="plain">
+                {{ t('analytics.knowledge.session_feedback_negative') }} {{ getSessionNegativeCount(item.id) }}
+              </el-tag>
               <el-button text class="session-rename" @click="handleRenameSession(item.id, item.title)">
                 {{ t('analytics.knowledge.rename_session') }}
               </el-button>
@@ -80,17 +83,32 @@
             <div class="card-header">
               <span>{{ t('analytics.knowledge.chat_title') }}</span>
               <div class="chat-header-actions">
+                <el-tag
+                  size="small"
+                  effect="plain"
+                  :type="llmEnabled ? 'success' : 'info'"
+                >
+                  {{ t('analytics.knowledge.llm_status_label') }}: {{ llmStatusText }}
+                </el-tag>
+                <div class="feedback-filter">
+                  <span class="feedback-filter-label">{{ t('analytics.knowledge.feedback_filter_label') }}</span>
+                  <el-select v-model="feedbackFilter" size="small" style="width: 160px">
+                    <el-option :label="t('analytics.knowledge.feedback_filter_all')" value="all" />
+                    <el-option :label="t('analytics.knowledge.feedback_filter_negative')" value="down" />
+                  </el-select>
+                </div>
                 <el-button text @click="handleExportSession">{{ t('analytics.knowledge.export_chat') }}</el-button>
                 <el-button text @click="clearMessages">{{ t('analytics.knowledge.clear_chat') }}</el-button>
               </div>
             </div>
           </template>
           <ChatPanel
-            :messages="messages"
+            :messages="visibleMessages"
             :loading="loading"
             @send="handleAskPayload"
             @stop="stopGenerating"
             @retry="handleRetry"
+            @feedback="handleFeedback"
           />
         </el-card>
       </el-col>
@@ -99,15 +117,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ChatPanel from './knowledge/ChatPanel.vue'
+import { getChatBackendStatus } from '@/api/knowledge-chat'
 import { useKnowledgeChat } from '@/composables/useKnowledgeChat'
 import { useChatHistory } from '@/composables/useChatHistory'
 import { useChatSessionStore } from '@/composables/useChatSessionStore'
 import { resolveKnowledgeErrorMessage } from '@/composables/useKnowledgeErrorMessage'
-import type { ChatMessage } from '@/composables/useKnowledgeChat'
+import type { ChatFeedback, ChatMessage } from '@/composables/useKnowledgeChat'
 
 const { t } = useI18n()
 const { history, addQuestion, clearHistory } = useChatHistory()
@@ -123,7 +142,7 @@ const {
 } = useChatSessionStore()
 
 const messagesRef = ref<ChatMessage[]>([])
-const { messages, loading, sendQuestion, clearMessages, stopGenerating } = useKnowledgeChat({
+const { messages, loading, sendQuestion, clearMessages, stopGenerating, setMessageFeedback } = useKnowledgeChat({
   messages: messagesRef,
 })
 
@@ -162,6 +181,25 @@ const filteredSessions = computed(() => {
   }
   return sessions.value.filter((item) => item.title.toLowerCase().includes(keyword))
 })
+
+const feedbackFilter = ref<'all' | 'down'>('all')
+const llmStatusLoading = ref(true)
+const llmEnabled = ref(false)
+
+const visibleMessages = computed(() => {
+  if (feedbackFilter.value === 'all') {
+    return messages.value
+  }
+  return messages.value.filter((item) => item.role === 'user' || item.feedback?.rating === 'down')
+})
+
+const getSessionNegativeCount = (sessionId: string) => {
+  const session = sessions.value.find((item) => item.id === sessionId)
+  if (!session) {
+    return 0
+  }
+  return session.messages.filter((message) => message.feedback?.rating === 'down').length
+}
 
 const handleAsk = async (question: string) => {
   try {
@@ -241,6 +279,39 @@ const handleExportSession = () => {
   URL.revokeObjectURL(url)
   ElMessage.success(t('analytics.knowledge.export_chat_success'))
 }
+
+const handleFeedback = (payload: { messageId: string; rating: 'up' | 'down'; reason?: string }) => {
+  const feedback: ChatFeedback = {
+    rating: payload.rating,
+    reason: payload.reason,
+  }
+  setMessageFeedback(payload.messageId, feedback)
+}
+
+const loadLlmStatus = async () => {
+  llmStatusLoading.value = true
+  try {
+    const status = await getChatBackendStatus()
+    llmEnabled.value = status.llmEnabled
+  } catch {
+    llmEnabled.value = false
+  } finally {
+    llmStatusLoading.value = false
+  }
+}
+
+const llmStatusText = computed(() => {
+  if (llmStatusLoading.value) {
+    return t('analytics.knowledge.llm_status_checking')
+  }
+  return llmEnabled.value
+    ? t('analytics.knowledge.llm_status_on')
+    : t('analytics.knowledge.llm_status_off')
+})
+
+onMounted(() => {
+  loadLlmStatus()
+})
 </script>
 
 <style scoped>
@@ -303,7 +374,19 @@ const handleExportSession = () => {
 
 .chat-header-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.feedback-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feedback-filter-label {
+  font-size: 12px;
+  color: #909399;
 }
 
 .history-list {

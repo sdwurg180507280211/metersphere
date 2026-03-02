@@ -21,6 +21,30 @@
           <el-button text size="small" @click="retryMessage(index)">
             {{ t('analytics.knowledge.chat_retry') }}
           </el-button>
+          <el-button
+            text
+            size="small"
+            :type="message.feedback?.rating === 'up' ? 'primary' : undefined"
+            @click="emitFeedback(message.id, 'up')"
+          >
+            {{ t('analytics.knowledge.feedback_up') }}
+          </el-button>
+          <el-dropdown @command="(reason) => emitFeedback(message.id, 'down', String(reason))">
+            <el-button
+              text
+              size="small"
+              :type="message.feedback?.rating === 'down' ? 'danger' : undefined"
+            >
+              {{ t('analytics.knowledge.feedback_down') }}
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-for="reason in downReasons" :key="reason" :command="reason">
+                  {{ t(reason) }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
     </div>
@@ -65,12 +89,18 @@ const emit = defineEmits<{
   send: [{ question: string; topK: number }]
   stop: []
   retry: [question: string]
+  feedback: [{ messageId: string; rating: 'up' | 'down'; reason?: string }]
 }>()
 
 const { t } = useI18n()
 const draft = ref('')
 const topK = ref(5)
 const messageListRef = ref<HTMLElement>()
+const downReasons = [
+  'analytics.knowledge.feedback_reason_inaccurate',
+  'analytics.knowledge.feedback_reason_irrelevant',
+  'analytics.knowledge.feedback_reason_incomplete',
+]
 
 const submit = () => {
   const question = draft.value.trim()
@@ -98,6 +128,11 @@ const retryMessage = (assistantIndex: number) => {
       return
     }
   }
+}
+
+const emitFeedback = (messageId: string, rating: 'up' | 'down', reason?: string) => {
+  emit('feedback', { messageId, rating, reason })
+  ElMessage.success(t('analytics.knowledge.feedback_submitted'))
 }
 
 watch(
