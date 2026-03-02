@@ -286,7 +286,10 @@ public class IssueStatusTransitionService {
 
     /**
      * 获取缺陷的状态流转历史
+     * @deprecated 该方法已废弃，历史记录由 Controller 直接调用 IssueChangeLogService.getHistory() 获取，
+     *             本方法未被任何地方调用，保留仅作说明。
      */
+    @Deprecated
     public List getTransitionHistory(String issueId) {
         return new ArrayList<>();
     }

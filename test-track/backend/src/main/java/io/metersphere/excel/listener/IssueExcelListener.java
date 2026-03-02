@@ -486,6 +486,9 @@ public class IssueExcelListener extends AnalysisEventListener<Map<Integer, Strin
                                 CustomFieldType.RICH_TEXT.getValue(), CustomFieldType.TEXTAREA.getValue())) {
                             customFieldItemDTO.setValue(v.toString());
                             customFieldResourceDTO.setTextValue(v.toString());
+                        } else if (StringUtils.equalsAnyIgnoreCase(type, CustomFieldType.INT.getValue())) {
+                            customFieldItemDTO.setValue(Integer.parseInt(v.toString()));
+                            customFieldResourceDTO.setValue(v.toString());
                         } else if (StringUtils.equalsAnyIgnoreCase(type, CustomFieldType.FLOAT.getValue())) {
                             customFieldItemDTO.setValue(Float.parseFloat(v.toString()));
                             customFieldResourceDTO.setValue(v.toString());
