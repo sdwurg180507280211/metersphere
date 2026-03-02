@@ -1,10 +1,14 @@
 package io.metersphere.knowledge.client;
 
 import com.anthropic.client.AnthropicClient;
+import com.anthropic.core.http.StreamResponse;
 import com.anthropic.models.messages.ContentBlock;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.Model;
+import com.anthropic.models.messages.RawContentBlockDelta;
+import com.anthropic.models.messages.RawContentBlockDeltaEvent;
+import com.anthropic.models.messages.RawMessageStreamEvent;
 import io.metersphere.knowledge.dto.KnowledgeChatSource;
 import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
@@ -14,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 知识问答大模型客户端（Claude Java SDK）
@@ -41,6 +46,12 @@ public class KnowledgeChatLlmClient {
     @Value("${chat.api.max-tokens:600}")
     private int maxTokens;
 
+    @Value("${chat.api.top-p:0.9}")
+    private double topP;
+
+    @Value("${chat.api.prompt-rules:}")
+    private String promptRules;
+
     private final AnthropicClient anthropicClient;
 
     public KnowledgeChatLlmClient(AnthropicClient anthropicClient) {
@@ -67,18 +78,13 @@ public class KnowledgeChatLlmClient {
                 && StringUtils.isNotBlank(model);
     }
 
-    public String generateAnswer(String question, List<KnowledgeChatSource> sources) {
+    public String generateAnswer(String question, List<KnowledgeChatSource> sources, List<HistoryTurn> history) {
         if (!available()) {
             return null;
         }
 
         try {
-            MessageCreateParams params = MessageCreateParams.builder()
-                    .model(Model.of(model))
-                    .temperature(temperature)
-                    .maxTokens((long) maxTokens)
-                    .addUserMessage(buildUserPrompt(question, sources))
-                    .build();
+            MessageCreateParams params = buildParams(question, sources, history);
 
             Message message = anthropicClient.messages().create(params);
             return parseAnswer(message);
@@ -88,9 +94,67 @@ public class KnowledgeChatLlmClient {
         }
     }
 
+    public String streamAnswer(String question, List<KnowledgeChatSource> sources, List<HistoryTurn> history, Consumer<String> onDelta) {
+        if (!available()) {
+            return null;
+        }
+
+        try {
+            MessageCreateParams params = buildParams(question, sources, history);
+            StringBuilder answer = new StringBuilder();
+            try (StreamResponse<RawMessageStreamEvent> stream = anthropicClient.messages().createStreaming(params)) {
+                stream.stream().forEach(event -> {
+                    String delta = extractDelta(event);
+                    if (StringUtils.isNotBlank(delta)) {
+                        answer.append(delta);
+                        onDelta.accept(delta);
+                    }
+                });
+            }
+            return answer.isEmpty() ? null : answer.toString();
+        } catch (Exception e) {
+            logger.warn("LLM 流式调用失败，降级为模板回答: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private MessageCreateParams buildParams(String question, List<KnowledgeChatSource> sources, List<HistoryTurn> history) {
+        MessageCreateParams.Builder builder = MessageCreateParams.builder()
+                .model(Model.of(model))
+                .system(buildSystemPrompt())
+                .temperature(temperature)
+                .maxTokens((long) maxTokens)
+                .topP(topP);
+
+        if (history != null && !history.isEmpty()) {
+            for (HistoryTurn turn : history) {
+                if (turn == null) {
+                    continue;
+                }
+                if (StringUtils.isNotBlank(turn.userQuestion())) {
+                    builder.addUserMessage(turn.userQuestion());
+                }
+                if (StringUtils.isNotBlank(turn.assistantAnswer())) {
+                    builder.addAssistantMessage(turn.assistantAnswer());
+                }
+            }
+        }
+
+        builder.addUserMessage(buildUserPrompt(question, sources));
+        return builder.build();
+    }
+
+    private String buildSystemPrompt() {
+        if (StringUtils.isNotBlank(promptRules)) {
+            return promptRules.trim();
+        }
+        return "你是企业知识库助手。你必须仅基于提供的引用来源回答。" +
+                "输出要求：先给结论，再给依据；每个关键结论都在句末标注(来源#编号: 文件名)；" +
+                "若证据不足，明确回答“暂无相关信息”并说明缺失的上下文。";
+    }
+
     private String buildUserPrompt(String question, List<KnowledgeChatSource> sources) {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是企业知识库助手。请仅基于给定引用来源回答，并保持简洁。\n\n");
         sb.append("问题:\n").append(question).append("\n\n");
         sb.append("引用来源:\n");
         for (int i = 0; i < sources.size(); i++) {
@@ -104,8 +168,20 @@ public class KnowledgeChatLlmClient {
                     .append(source.getSnippet())
                     .append("\n");
         }
-        sb.append("\n请基于以上来源回答，并在结尾提示“如需更精确答案，请补充更多上下文”。");
+        sb.append("\n请严格只基于以上来源回答，且按“(来源#编号: 文件名)”标注引用。\n");
         return sb.toString();
+    }
+
+    private String extractDelta(RawMessageStreamEvent event) {
+        if (event == null || !event.contentBlockDelta().isPresent()) {
+            return null;
+        }
+        RawContentBlockDeltaEvent deltaEvent = event.contentBlockDelta().get();
+        RawContentBlockDelta delta = deltaEvent.delta();
+        if (delta == null || !delta.text().isPresent()) {
+            return null;
+        }
+        return delta.text().get().text();
     }
 
     private String parseAnswer(Message message) {
@@ -124,5 +200,8 @@ public class KnowledgeChatLlmClient {
         }
 
         return answer.isEmpty() ? null : answer.toString();
+    }
+
+    public record HistoryTurn(String userQuestion, String assistantAnswer) {
     }
 }

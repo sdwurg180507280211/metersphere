@@ -155,7 +155,7 @@ function buildAuthHeaders(): Record<string, string> {
 }
 
 function parseSseEvents(rawEvent: string): { event: string; data: string } {
-  const lines = rawEvent.split('\n')
+  const lines = rawEvent.split(/\r?\n/)
   let event = 'message'
   const dataLines: string[] = []
 
@@ -172,6 +172,32 @@ function parseSseEvents(rawEvent: string): { event: string; data: string } {
   return {
     event,
     data: dataLines.join('\n'),
+  }
+}
+
+function handleSseEventText(eventText: string, options: AskQuestionStreamOptions): 'done' | void {
+  if (!eventText.trim()) {
+    return
+  }
+  const { event, data } = parseSseEvents(eventText)
+  if (event === 'delta') {
+    options.onChunk(data)
+    return
+  }
+  if (event === 'sources') {
+    try {
+      const parsed = JSON.parse(data)
+      options.onSources(Array.isArray(parsed) ? parsed : [])
+    } catch {
+      options.onSources([])
+    }
+    return
+  }
+  if (event === 'error') {
+    throw new Error(data || '知识流式问答请求失败')
+  }
+  if (event === 'done') {
+    return 'done'
   }
 }
 
@@ -209,33 +235,21 @@ async function askQuestionStreamByApi(
     }
 
     buffer += decoder.decode(value, { stream: true })
-    const events = buffer.split('\n\n')
+    const events = buffer.split(/\r?\n\r?\n/)
     buffer = events.pop() || ''
 
     for (const eventText of events) {
-      if (!eventText.trim()) {
-        continue
-      }
-      const { event, data } = parseSseEvents(eventText)
-      if (event === 'delta') {
-        options.onChunk(data)
-        continue
-      }
-      if (event === 'sources') {
-        try {
-          const parsed = JSON.parse(data)
-          options.onSources(Array.isArray(parsed) ? parsed : [])
-        } catch {
-          options.onSources([])
-        }
-        continue
-      }
-      if (event === 'error') {
-        throw new Error(data || '知识流式问答请求失败')
-      }
-      if (event === 'done') {
+      const status = handleSseEventText(eventText, options)
+      if (status === 'done') {
         return
       }
+    }
+  }
+
+  if (buffer.trim()) {
+    const status = handleSseEventText(buffer, options)
+    if (status === 'done') {
+      return
     }
   }
 }
