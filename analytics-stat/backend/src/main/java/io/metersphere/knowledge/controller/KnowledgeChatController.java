@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 /**
  * 知识问答 Controller
  */
@@ -52,10 +54,14 @@ public class KnowledgeChatController {
      * URL: POST /knowledge/chat/stream
      */
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream(@RequestBody KnowledgeChatAskRequest request) {
+    public SseEmitter stream(@RequestBody KnowledgeChatAskRequest request, HttpServletResponse response) {
         String userId = SessionUtils.getUserId();
         String workspaceId = SessionUtils.getCurrentWorkspaceId();
         String question = validateQuestion(request);
+
+        response.setHeader("Cache-Control", "no-cache, no-transform");
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Connection", "keep-alive");
 
         logger.info("知识流式问答请求 - 用户: {}, 工作空间: {}, questionLength: {}, topK: {}",
                 userId, workspaceId, question.length(), request.getTopK());

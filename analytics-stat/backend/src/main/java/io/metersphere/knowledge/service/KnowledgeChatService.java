@@ -6,12 +6,16 @@ import io.metersphere.knowledge.dto.KnowledgeChatSource;
 import io.metersphere.knowledge.dto.KnowledgeSearchResult;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -25,6 +29,10 @@ public class KnowledgeChatService {
     private static final int DEFAULT_TOP_K = 5;
     private static final int MAX_TOP_K = 10;
     private static final int MAX_SNIPPET_LENGTH = 200;
+    private static final int MAX_HISTORY_TURNS_LIMIT = 20;
+
+    @Value("${chat.api.history-turns:5}")
+    private int historyTurns;
 
     @Autowired
     private KnowledgeSearchService searchService;
@@ -32,12 +40,20 @@ public class KnowledgeChatService {
     @Autowired
     private KnowledgeChatLlmClient knowledgeChatLlmClient;
 
+    private final ConcurrentHashMap<String, Deque<KnowledgeChatLlmClient.HistoryTurn>> conversationHistory = new ConcurrentHashMap<>();
+
     public boolean isLlmAvailable() {
         return knowledgeChatLlmClient.available();
     }
 
     public KnowledgeChatAskResponse ask(String question, Integer topK, String userId, String workspaceId) {
-        return generateResponse(question, topK, userId, workspaceId);
+        int safeTopK = normalizeTopK(topK);
+        List<KnowledgeChatSource> sources = loadSources(question, userId, workspaceId, safeTopK);
+        String historyKey = buildHistoryKey(userId, workspaceId);
+        List<KnowledgeChatLlmClient.HistoryTurn> history = getHistorySnapshot(historyKey);
+        String answer = buildAnswer(question, sources, history);
+        appendHistory(historyKey, question, answer);
+        return new KnowledgeChatAskResponse(answer, sources);
     }
 
     public SseEmitter askStream(String question, Integer topK, String userId, String workspaceId) {
@@ -45,16 +61,32 @@ public class KnowledgeChatService {
 
         CompletableFuture.runAsync(() -> {
             try {
-                KnowledgeChatAskResponse response = generateResponse(question, topK, userId, workspaceId);
+                int safeTopK = normalizeTopK(topK);
+                List<KnowledgeChatSource> sources = loadSources(question, userId, workspaceId, safeTopK);
+                emitter.send(SseEmitter.event().name("sources").data(sources));
 
-                emitter.send(SseEmitter.event()
-                        .name("sources")
-                        .data(response.getSources()));
+                String answer;
+                if (sources.isEmpty()) {
+                    answer = "未检索到与问题相关的知识内容，请尝试缩短关键词或更换提问方式。";
+                    emitter.send(SseEmitter.event().name("delta").data(answer));
+                } else {
+                    String historyKey = buildHistoryKey(userId, workspaceId);
+                    List<KnowledgeChatLlmClient.HistoryTurn> history = getHistorySnapshot(historyKey);
+                    String llmAnswer = knowledgeChatLlmClient.streamAnswer(question, sources, history,
+                            delta -> safeSendDelta(emitter, delta));
 
-                for (String chunk : splitTextToChunks(response.getAnswer(), 20)) {
-                    emitter.send(SseEmitter.event().name("delta").data(chunk));
-                    Thread.sleep(20L);
+                    if (StringUtils.isNotBlank(llmAnswer)) {
+                        answer = llmAnswer;
+                    } else {
+                        answer = buildTemplateAnswer(question, sources);
+                        for (String chunk : splitTextToChunks(answer, 20)) {
+                            emitter.send(SseEmitter.event().name("delta").data(chunk));
+                            Thread.sleep(20L);
+                        }
+                    }
+                    appendHistory(historyKey, question, answer);
                 }
+
 
                 emitter.send(SseEmitter.event().name("done").data("ok"));
                 emitter.complete();
@@ -70,16 +102,19 @@ public class KnowledgeChatService {
         return emitter;
     }
 
-    private KnowledgeChatAskResponse generateResponse(String question, Integer topK, String userId, String workspaceId) {
-        int safeTopK = normalizeTopK(topK);
+    private List<KnowledgeChatSource> loadSources(String question, String userId, String workspaceId, int safeTopK) {
         List<KnowledgeSearchResult> searchResults = searchService.searchWithPermission(
                 question, userId, workspaceId, safeTopK
         );
+        return toSources(searchResults);
+    }
 
-        List<KnowledgeChatSource> sources = toSources(searchResults);
-        String answer = buildAnswer(question, sources);
-
-        return new KnowledgeChatAskResponse(answer, sources);
+    private void safeSendDelta(SseEmitter emitter, String delta) {
+        try {
+            emitter.send(SseEmitter.event().name("delta").data(delta));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private List<String> splitTextToChunks(String text, int chunkSize) {
@@ -118,15 +153,20 @@ public class KnowledgeChatService {
         }).collect(Collectors.toList());
     }
 
-    private String buildAnswer(String question, List<KnowledgeChatSource> sources) {
+    private String buildAnswer(String question, List<KnowledgeChatSource> sources, List<KnowledgeChatLlmClient.HistoryTurn> history) {
         if (sources == null || sources.isEmpty()) {
             return "未检索到与问题相关的知识内容，请尝试缩短关键词或更换提问方式。";
         }
 
-        String llmAnswer = knowledgeChatLlmClient.generateAnswer(question, sources);
+        String llmAnswer = knowledgeChatLlmClient.generateAnswer(question, sources, history);
         if (StringUtils.isNotBlank(llmAnswer)) {
             return llmAnswer;
         }
+
+        return buildTemplateAnswer(question, sources);
+    }
+
+    private String buildTemplateAnswer(String question, List<KnowledgeChatSource> sources) {
 
         List<String> bullets = sources.stream()
                 .limit(3)
@@ -141,5 +181,33 @@ public class KnowledgeChatService {
                 question,
                 String.join("\n", bullets)
         );
+    }
+
+    private String buildHistoryKey(String userId, String workspaceId) {
+        return String.format("%s:%s", StringUtils.defaultString(userId, "unknown"), StringUtils.defaultString(workspaceId, "default"));
+    }
+
+    private List<KnowledgeChatLlmClient.HistoryTurn> getHistorySnapshot(String historyKey) {
+        Deque<KnowledgeChatLlmClient.HistoryTurn> queue = conversationHistory.get(historyKey);
+        if (queue == null || queue.isEmpty()) {
+            return new ArrayList<>();
+        }
+        synchronized (queue) {
+            return new ArrayList<>(queue);
+        }
+    }
+
+    private void appendHistory(String historyKey, String question, String answer) {
+        if (StringUtils.isBlank(question) || StringUtils.isBlank(answer)) {
+            return;
+        }
+        Deque<KnowledgeChatLlmClient.HistoryTurn> queue = conversationHistory.computeIfAbsent(historyKey, key -> new ArrayDeque<>());
+        int keepTurns = Math.max(1, Math.min(historyTurns, MAX_HISTORY_TURNS_LIMIT));
+        synchronized (queue) {
+            queue.addLast(new KnowledgeChatLlmClient.HistoryTurn(question, answer));
+            while (queue.size() > keepTurns) {
+                queue.removeFirst();
+            }
+        }
     }
 }
