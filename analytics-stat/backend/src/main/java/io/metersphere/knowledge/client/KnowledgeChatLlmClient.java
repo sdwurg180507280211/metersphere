@@ -1,23 +1,22 @@
 package io.metersphere.knowledge.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.models.messages.ContentBlock;
+import com.anthropic.models.messages.Message;
+import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.models.messages.Model;
 import io.metersphere.knowledge.dto.KnowledgeChatSource;
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
 
-import jakarta.annotation.PostConstruct;
-import java.time.Duration;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * 知识问答大模型客户端（OpenAI 兼容协议）
+ * 知识问答大模型客户端（Claude Java SDK）
  */
 @Component
 public class KnowledgeChatLlmClient {
@@ -29,9 +28,6 @@ public class KnowledgeChatLlmClient {
 
     @Value("${chat.api.url:}")
     private String apiUrl;
-
-    @Value("${chat.api.path:/chat/completions}")
-    private String apiPath;
 
     @Value("${chat.api.key:}")
     private String apiKey;
@@ -45,15 +41,10 @@ public class KnowledgeChatLlmClient {
     @Value("${chat.api.max-tokens:600}")
     private int maxTokens;
 
-    @Value("${chat.api.timeout-seconds:30}")
-    private int timeoutSeconds;
+    private final AnthropicClient anthropicClient;
 
-    private final WebClient knowledgeChatWebClient;
-    private final ObjectMapper objectMapper;
-
-    public KnowledgeChatLlmClient(WebClient knowledgeChatWebClient, ObjectMapper objectMapper) {
-        this.knowledgeChatWebClient = knowledgeChatWebClient;
-        this.objectMapper = objectMapper;
+    public KnowledgeChatLlmClient(AnthropicClient anthropicClient) {
+        this.anthropicClient = anthropicClient;
     }
 
     @PostConstruct
@@ -82,23 +73,15 @@ public class KnowledgeChatLlmClient {
         }
 
         try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("model", model);
-            payload.put("temperature", temperature);
-            payload.put("max_tokens", maxTokens);
-            payload.put("messages", List.of(
-                    Map.of("role", "system", "content", "你是企业知识库助手。请仅基于给定引用来源回答，并保持简洁。"),
-                    Map.of("role", "user", "content", buildUserPrompt(question, sources))
-            ));
+            MessageCreateParams params = MessageCreateParams.builder()
+                    .model(Model.of(model))
+                    .temperature(temperature)
+                    .maxTokens((long) maxTokens)
+                    .addUserMessage(buildUserPrompt(question, sources))
+                    .build();
 
-            String raw = knowledgeChatWebClient.post()
-                    .uri(apiPath)
-                    .bodyValue(payload)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block(Duration.ofSeconds(timeoutSeconds));
-
-            return parseAnswer(raw);
+            Message message = anthropicClient.messages().create(params);
+            return parseAnswer(message);
         } catch (Exception e) {
             logger.warn("LLM 调用失败，降级为模板回答: {}", e.getMessage());
             return null;
@@ -107,6 +90,7 @@ public class KnowledgeChatLlmClient {
 
     private String buildUserPrompt(String question, List<KnowledgeChatSource> sources) {
         StringBuilder sb = new StringBuilder();
+        sb.append("你是企业知识库助手。请仅基于给定引用来源回答，并保持简洁。\n\n");
         sb.append("问题:\n").append(question).append("\n\n");
         sb.append("引用来源:\n");
         for (int i = 0; i < sources.size(); i++) {
@@ -124,25 +108,21 @@ public class KnowledgeChatLlmClient {
         return sb.toString();
     }
 
-    private String parseAnswer(String raw) throws Exception {
-        if (StringUtils.isBlank(raw)) {
+    private String parseAnswer(Message message) {
+        if (message == null || message.content() == null || message.content().isEmpty()) {
             return null;
         }
-        JsonNode root = objectMapper.readTree(raw);
 
-        JsonNode choices = root.path("choices");
-        if (choices.isArray() && !choices.isEmpty()) {
-            JsonNode content = choices.get(0).path("message").path("content");
-            if (!content.isMissingNode() && !content.isNull()) {
-                return content.asText();
+        StringBuilder answer = new StringBuilder();
+        for (ContentBlock block : message.content()) {
+            if (block != null && block.text().isPresent()) {
+                String text = block.text().get().text();
+                if (StringUtils.isNotBlank(text)) {
+                    answer.append(text);
+                }
             }
         }
 
-        JsonNode outputText = root.path("output").path("text");
-        if (!outputText.isMissingNode() && !outputText.isNull()) {
-            return outputText.asText();
-        }
-
-        return null;
+        return answer.isEmpty() ? null : answer.toString();
     }
 }
