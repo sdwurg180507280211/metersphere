@@ -2,12 +2,18 @@ import { ref, type Ref } from 'vue'
 import { askQuestionStream } from '@/api/knowledge-chat'
 import type { ChatSource } from '@/api/knowledge-chat'
 
+export interface ChatFeedback {
+  rating: 'up' | 'down'
+  reason?: string
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   createdAt: number
   sources?: ChatSource[]
+  feedback?: ChatFeedback
 }
 
 interface SendQuestionOptions {
@@ -96,11 +102,24 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
     messages.value = []
   }
 
+  const setMessageFeedback = (messageId: string, feedback: ChatFeedback) => {
+    messages.value = messages.value.map((item) => {
+      if (item.id !== messageId) {
+        return item
+      }
+      return {
+        ...item,
+        feedback,
+      }
+    })
+  }
+
   return {
     messages,
     loading,
     sendQuestion,
     clearMessages,
     stopGenerating,
+    setMessageFeedback,
   }
 }
