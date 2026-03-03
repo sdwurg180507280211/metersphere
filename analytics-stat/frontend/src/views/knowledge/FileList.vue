@@ -1,46 +1,118 @@
 <template>
   <div class="file-list">
     <div class="toolbar">
-      <n-input v-model:value="searchKeyword" clearable class="toolbar-item search-input" :placeholder="t('analytics.knowledge.file_name_search_placeholder')" />
-      <n-select v-model:value="statusFilter" class="toolbar-item status-select" :options="statusOptions" />
+      <el-input
+        v-model="searchKeyword"
+        clearable
+        class="toolbar-item search-input"
+        :placeholder="t('analytics.knowledge.file_name_search_placeholder')"
+      />
+      <el-select v-model="statusFilter" class="toolbar-item status-select">
+        <el-option
+          v-for="option in statusOptions"
+          :key="option.value"
+          :label="option.label"
+          :value="option.value"
+        />
+      </el-select>
     </div>
 
-    <n-data-table
-      remote
-      :loading="loading"
+    <el-table
+      v-loading="loading"
       :data="pagedFileList"
-      :columns="columns"
-      :pagination="false"
-      :bordered="false"
-      :row-key="(row) => row.id"
-    />
+      style="width: 100%"
+      :empty-text="t('analytics.knowledge.no_files')"
+    >
+      <el-table-column
+        prop="fileName"
+        :label="t('analytics.knowledge.file_name')"
+        min-width="200"
+      >
+        <template #default="{ row }">
+          <el-icon style="margin-right: 8px"><Document /></el-icon>
+          {{ row.fileName }}
+        </template>
+      </el-table-column>
+
+      <el-table-column
+        prop="totalSize"
+        :label="t('analytics.knowledge.file_size')"
+        width="120"
+      >
+        <template #default="{ row }">
+          {{ formatFileSize(row.totalSize) }}
+        </template>
+      </el-table-column>
+
+      <el-table-column
+        prop="status"
+        :label="t('analytics.knowledge.status')"
+        width="120"
+      >
+        <template #default="{ row }">
+          <el-tag :type="getStatusType(row.status)">
+            {{ getStatusText(row.status) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+
+      <el-table-column
+        prop="isPublic"
+        :label="t('analytics.knowledge.visibility')"
+        width="100"
+      >
+        <template #default="{ row }">
+          <el-tag :type="row.isPublic ? 'success' : 'info'" size="small">
+            {{ row.isPublic ? t('analytics.knowledge.public') : t('analytics.knowledge.private') }}
+          </el-tag>
+        </template>
+      </el-table-column>
+
+      <el-table-column
+        prop="createdAt"
+        :label="t('analytics.knowledge.upload_time')"
+        width="180"
+      >
+        <template #default="{ row }">
+          {{ formatDate(row.createdAt) }}
+        </template>
+      </el-table-column>
+
+      <el-table-column
+        :label="t('commons.operating')"
+        width="100"
+        fixed="right"
+      >
+        <template #default="{ row }">
+          <el-button
+            type="danger"
+            size="small"
+            link
+            @click="handleDelete(row)"
+          >
+            {{ t('commons.delete') }}
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
 
     <div class="pagination-wrapper">
-      <n-pagination
-        v-model:page="currentPage"
+      <el-pagination
+        v-model:current-page="currentPage"
         v-model:page-size="pageSize"
-        :item-count="filteredFileList.length"
+        :total="filteredFileList.length"
         :page-sizes="[10, 20, 50]"
-        show-size-picker
+        layout="total, sizes, prev, pager, next"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  NInput,
-  NSelect,
-  NDataTable,
-  NTag,
-  NButton,
-  NPagination,
-  useMessage,
-  useDialog,
-  type DataTableColumns,
-} from 'naive-ui'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Document } from '@element-plus/icons-vue'
 import { deleteFile } from '@/api/knowledge'
 import type { KbFileUpload } from '@/api/knowledge'
 import { KNOWLEDGE_FILE_STATUS } from '@/api/knowledge'
@@ -49,15 +121,11 @@ import { resolveKnowledgeErrorMessage } from '@/composables/useKnowledgeErrorMes
 import { useKnowledgeFileFilters } from '@/composables/useKnowledgeFileFilters'
 
 const { t, locale } = useI18n()
-const message = useMessage()
-const dialog = useDialog()
-
 const { loading, fileList, loadFileList } = useKnowledgeFiles({
   onLoadError: (error: any) => {
-    message.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.load_failed'))
+    ElMessage.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.load_failed'))
   },
 })
-
 const {
   searchKeyword,
   statusFilter,
@@ -74,7 +142,7 @@ const formatFileSize = (bytes: number): string => {
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
 
 const formatDate = (dateStr: string): string => {
@@ -85,17 +153,17 @@ const formatDate = (dateStr: string): string => {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit',
+    minute: '2-digit'
   })
 }
 
-const getStatusType = (status: number): 'success' | 'warning' | 'error' | 'default' | 'info' => {
-  const statusMap: Record<number, 'success' | 'warning' | 'error' | 'default' | 'info'> = {
+const getStatusType = (status: number): string => {
+  const statusMap: Record<number, string> = {
     [KNOWLEDGE_FILE_STATUS.UPLOADING]: 'info',
     [KNOWLEDGE_FILE_STATUS.UPLOADED]: 'info',
     [KNOWLEDGE_FILE_STATUS.PROCESSING]: 'warning',
     [KNOWLEDGE_FILE_STATUS.INDEXED]: 'success',
-    [KNOWLEDGE_FILE_STATUS.FAILED]: 'error',
+    [KNOWLEDGE_FILE_STATUS.FAILED]: 'danger',
   }
   return statusMap[status] || 'info'
 }
@@ -111,85 +179,30 @@ const getStatusText = (status: number): string => {
   return statusMap[status] || t('analytics.knowledge.status_unknown')
 }
 
-const confirmDelete = (row: KbFileUpload) =>
-  new Promise<boolean>((resolve) => {
-    dialog.warning({
-      title: t('commons.prompt'),
-      content: t('analytics.knowledge.delete_confirm', { name: row.fileName }),
-      positiveText: t('commons.confirm'),
-      negativeText: t('commons.cancel'),
-      onPositiveClick: () => resolve(true),
-      onNegativeClick: () => resolve(false),
-      onClose: () => resolve(false),
-    })
-  })
-
 const handleDelete = async (row: KbFileUpload) => {
-  const confirmed = await confirmDelete(row)
-  if (!confirmed) {
-    return
-  }
-
   try {
+    await ElMessageBox.confirm(
+      t('analytics.knowledge.delete_confirm', { name: row.fileName }),
+      t('commons.prompt'),
+      {
+        confirmButtonText: t('commons.confirm'),
+        cancelButtonText: t('commons.cancel'),
+        type: 'warning'
+      }
+    )
+
     await deleteFile(row.id)
-    message.success(t('commons.delete_success'))
+    ElMessage.success(t('commons.delete_success'))
     await loadFileList()
   } catch (error: any) {
-    message.error(resolveKnowledgeErrorMessage(error, t, 'commons.delete_failed'))
+    if (error !== 'cancel') {
+      ElMessage.error(resolveKnowledgeErrorMessage(error, t, 'commons.delete_failed'))
+    }
   }
 }
 
-const columns = computed<DataTableColumns<KbFileUpload>>(() => [
-  {
-    key: 'fileName',
-    title: t('analytics.knowledge.file_name'),
-    minWidth: 220,
-    render: (row) => h('span', null, row.fileName),
-  },
-  {
-    key: 'totalSize',
-    title: t('analytics.knowledge.file_size'),
-    width: 120,
-    render: (row) => formatFileSize(row.totalSize),
-  },
-  {
-    key: 'status',
-    title: t('analytics.knowledge.status'),
-    width: 120,
-    render: (row) => h(NTag, { type: getStatusType(row.status) }, { default: () => getStatusText(row.status) }),
-  },
-  {
-    key: 'isPublic',
-    title: t('analytics.knowledge.visibility'),
-    width: 100,
-    render: (row) => h(NTag, { type: row.isPublic ? 'success' : 'info', size: 'small' }, { default: () => (row.isPublic ? t('analytics.knowledge.public') : t('analytics.knowledge.private')) }),
-  },
-  {
-    key: 'createdAt',
-    title: t('analytics.knowledge.upload_time'),
-    width: 180,
-    render: (row) => formatDate(row.createdAt),
-  },
-  {
-    key: 'actions',
-    title: t('commons.operating'),
-    width: 100,
-    render: (row) =>
-      h(
-        NButton,
-        {
-          size: 'small',
-          tertiary: true,
-          type: 'error',
-          onClick: () => handleDelete(row),
-        },
-        { default: () => t('commons.delete') },
-      ),
-  },
-])
-
 defineExpose({
-  loadFileList,
+  loadFileList
 })
 
 onMounted(() => {

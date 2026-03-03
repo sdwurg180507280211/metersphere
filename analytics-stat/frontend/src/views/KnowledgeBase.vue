@@ -1,79 +1,115 @@
 <template>
+  <!-- 知识库主页面 -->
   <div class="knowledge-base-page">
+    <!-- 页面头部 -->
     <div class="page-header">
       <h3 class="page-title">{{ t('analytics.knowledge.title') }}</h3>
       <div class="header-actions">
-        <n-button type="primary" @click="openUploadDialog">{{ t('analytics.knowledge.upload_file') }}</n-button>
-        <n-button type="primary" @click="openSearchDialog">{{ t('analytics.knowledge.search') }}</n-button>
-        <n-button @click="goToChat">{{ t('analytics.menu.knowledge_chat') }}</n-button>
+        <el-button type="primary" :icon="Upload" @click="openUploadDialog">
+          {{ t('analytics.knowledge.upload_file') }}
+        </el-button>
+        <el-button type="primary" :icon="Search" @click="openSearchDialog">
+          {{ t('analytics.knowledge.search') }}
+        </el-button>
+        <el-button :icon="ChatDotRound" @click="goToChat">
+          {{ t('analytics.menu.knowledge_chat') }}
+        </el-button>
       </div>
     </div>
 
-    <n-alert class="intro-alert" type="info" :title="t('analytics.knowledge.module_intro_title')">
-      {{ t('analytics.knowledge.module_intro_desc') }}
-    </n-alert>
+    <el-alert
+      class="intro-alert"
+      type="info"
+      :closable="false"
+      :title="t('analytics.knowledge.module_intro_title')"
+      :description="t('analytics.knowledge.module_intro_desc')"
+    />
 
-    <n-grid :x-gap="16" :y-gap="16" :cols="3" class="feature-cards">
-      <n-grid-item>
-        <n-card hoverable class="feature-card" :bordered="false">
+    <!-- 功能说明卡片 -->
+    <el-row :gutter="16" class="feature-cards">
+      <el-col :span="8">
+        <el-card shadow="hover" class="feature-card">
           <template #header>
-            <div class="card-header"><span>{{ t('analytics.knowledge.hybrid_search') }}</span></div>
+            <div class="card-header">
+              <el-icon size="20"><Search /></el-icon>
+              <span>{{ t('analytics.knowledge.hybrid_search') }}</span>
+            </div>
           </template>
           <p class="card-desc">{{ t('analytics.knowledge.hybrid_search_desc') }}</p>
-        </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card hoverable class="feature-card" :bordered="false">
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover" class="feature-card">
           <template #header>
-            <div class="card-header"><span>{{ t('analytics.knowledge.doc_manage') }}</span></div>
+            <div class="card-header">
+              <el-icon size="20"><Document /></el-icon>
+              <span>{{ t('analytics.knowledge.doc_manage') }}</span>
+            </div>
           </template>
           <p class="card-desc">{{ t('analytics.knowledge.doc_manage_desc') }}</p>
-        </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card hoverable class="feature-card" :bordered="false">
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover" class="feature-card">
           <template #header>
-            <div class="card-header"><span>{{ t('analytics.knowledge.permission') }}</span></div>
+            <div class="card-header">
+              <el-icon size="20"><Lock /></el-icon>
+              <span>{{ t('analytics.knowledge.permission') }}</span>
+            </div>
           </template>
           <p class="card-desc">{{ t('analytics.knowledge.permission_desc') }}</p>
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <n-grid :x-gap="16" :y-gap="16" :cols="2" class="guide-cards">
-      <n-grid-item>
-        <n-card class="guide-card" :bordered="false">
+    <el-row :gutter="16" class="guide-cards">
+      <el-col :span="12">
+        <el-card shadow="never" class="guide-card">
           <template #header>
-            <div class="card-header"><span>{{ t('analytics.knowledge.workflow_title') }}</span></div>
+            <div class="card-header">
+              <span>{{ t('analytics.knowledge.workflow_title') }}</span>
+            </div>
           </template>
           <ol class="workflow-list">
-            <li v-for="step in workflowSteps" :key="step" class="workflow-step">{{ t(step) }}</li>
+            <li v-for="step in workflowSteps" :key="step" class="workflow-step">
+              {{ t(step) }}
+            </li>
           </ol>
-        </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card class="guide-card" :bordered="false">
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card shadow="never" class="guide-card">
           <template #header>
-            <div class="card-header"><span>{{ t('analytics.knowledge.best_practice_title') }}</span></div>
+            <div class="card-header">
+              <span>{{ t('analytics.knowledge.best_practice_title') }}</span>
+            </div>
           </template>
           <ul class="practice-list">
-            <li v-for="item in bestPracticeItems" :key="item" class="practice-item">{{ t(item) }}</li>
+            <li v-for="item in bestPracticeItems" :key="item" class="practice-item">
+              {{ t(item) }}
+            </li>
           </ul>
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <n-card class="file-list-card" :bordered="false">
+    <!-- 文件列表 -->
+    <el-card class="file-list-card">
       <template #header>
         <div class="card-header">
           <span>{{ t('analytics.knowledge.my_files') }}</span>
-          <n-button size="small" tertiary @click="refreshFileList">{{ t('commons.refresh') }}</n-button>
+          <el-button size="small" :icon="Refresh" @click="refreshFileList">
+            {{ t('commons.refresh') }}
+          </el-button>
         </div>
       </template>
       <FileList ref="fileListRef" />
-    </n-card>
+    </el-card>
 
+    <!-- 检索对话框 -->
     <SearchDialog v-model="showSearch" />
+
+    <!-- 上传对话框 -->
     <UploadDialog v-model="showUpload" @success="handleUploadSuccess" />
   </div>
 </template>
@@ -81,7 +117,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { NButton, NAlert, NGrid, NGridItem, NCard } from 'naive-ui'
+import { Search, Document, Lock, Upload, Refresh, ChatDotRound } from '@element-plus/icons-vue'
 import SearchDialog from './knowledge/SearchDialog.vue'
 import UploadDialog from './knowledge/UploadDialog.vue'
 import FileList from './knowledge/FileList.vue'
