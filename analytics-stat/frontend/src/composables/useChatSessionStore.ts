@@ -112,6 +112,12 @@ export function useChatSessionStore() {
     persist()
   }
 
+  const clearAllSessions = () => {
+    sessions.value = []
+    ensureSession()
+    persist()
+  }
+
   ensureSession()
   persist()
 
@@ -128,5 +134,6 @@ export function useChatSessionStore() {
     deleteSession,
     renameSession,
     touchSession,
+    clearAllSessions,
   }
 }
