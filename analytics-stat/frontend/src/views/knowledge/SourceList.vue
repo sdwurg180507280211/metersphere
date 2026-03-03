@@ -7,9 +7,9 @@
         <span class="source-score" v-if="typeof item.score === 'number'">{{ t('analytics.knowledge.score_label') }} {{ item.score.toFixed(3) }}</span>
       </div>
       <div class="source-snippet">{{ getSnippet(item, index) }}</div>
-      <el-button text size="small" @click="toggleExpand(index)">
+      <n-button text size="small" @click="toggleExpand(index)">
         {{ expandedMap[index] ? t('analytics.knowledge.collapse') : t('analytics.knowledge.expand') }}
-      </el-button>
+      </n-button>
     </div>
   </div>
 </template>
@@ -17,6 +17,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton } from 'naive-ui'
 import type { ChatSource } from '@/api/knowledge-chat'
 
 const props = defineProps<{
@@ -45,44 +46,47 @@ const toggleExpand = (index: number) => {
 .source-list {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed var(--chat-border-color, #e5e5e5);
+  border-top: 1px dashed var(--chat-border-color, #e0e0e6);
 }
 
 .source-header {
-  font-size: 11px;
-  font-weight: 600;
-  color: #8e8ea0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--chat-text-tertiary, #999);
   margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
 }
 
 .source-item {
   padding: 8px 10px;
-  border: 1px solid var(--chat-border-color, #ebeef5);
-  border-radius: 8px;
+  border: 1px solid var(--chat-border-color, #e0e0e6);
+  border-radius: var(--chat-border-radius, 3px);
   margin-bottom: 6px;
-  background: var(--chat-main-bg, #f7f7f8);
+  background: var(--chat-main-bg, #fafafc);
+  transition: border-color 0.3s;
+}
+
+.source-item:hover {
+  border-color: var(--chat-accent, #18a058);
 }
 
 .source-meta {
   display: flex;
   justify-content: space-between;
   margin-bottom: 4px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .source-file {
-  font-weight: 600;
-  color: #303133;
+  font-weight: 500;
+  color: var(--chat-text-primary, #333639);
 }
 
 .source-score {
-  color: #8e8ea0;
+  color: var(--chat-text-tertiary, #999);
 }
 
 .source-snippet {
-  color: #606266;
+  color: var(--chat-text-secondary, #666e7a);
   line-height: 1.5;
   font-size: 12px;
 }
