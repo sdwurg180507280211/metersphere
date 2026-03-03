@@ -43,29 +43,33 @@ const toggleExpand = (index: number) => {
 
 <style scoped>
 .source-list {
-  margin-top: 10px;
-  border-top: 1px dashed #dcdfe6;
+  margin-top: 8px;
   padding-top: 8px;
+  border-top: 1px dashed var(--chat-border-color, #e5e5e5);
 }
 
 .source-header {
-  font-size: 12px;
-  color: #909399;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8e8ea0;
   margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .source-item {
-  padding: 8px;
-  border: 1px solid #ebeef5;
-  border-radius: 6px;
-  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--chat-border-color, #ebeef5);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  background: var(--chat-main-bg, #f7f7f8);
 }
 
 .source-meta {
   display: flex;
   justify-content: space-between;
   margin-bottom: 4px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .source-file {
@@ -74,12 +78,12 @@ const toggleExpand = (index: number) => {
 }
 
 .source-score {
-  color: #909399;
+  color: #8e8ea0;
 }
 
 .source-snippet {
   color: #606266;
-  line-height: 1.6;
-  font-size: 13px;
+  line-height: 1.5;
+  font-size: 12px;
 }
 </style>

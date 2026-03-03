@@ -1,126 +1,82 @@
 <template>
-  <div class="knowledge-chat-page">
-    <el-row :gutter="16">
-      <el-col :span="7">
-        <el-card class="session-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span>{{ t('analytics.knowledge.chat_sessions') }}</span>
-              <el-button text @click="handleNewSession">{{ t('analytics.knowledge.new_chat') }}</el-button>
-            </div>
-          </template>
-          <el-input
-            v-model="sessionKeyword"
-            clearable
-            class="session-search"
-            :placeholder="t('analytics.knowledge.chat_session_search')"
-          />
-          <div class="session-list">
-            <div
-              v-for="item in filteredSessions"
-              :key="item.id"
-              class="session-item"
-              :class="{ active: item.id === currentSessionId }"
-            >
-              <el-button text class="session-title" @click="handleSelectSession(item.id)">
-                {{ item.title }}
-              </el-button>
-              <el-tag v-if="getSessionNegativeCount(item.id) > 0" type="danger" size="small" effect="plain">
-                {{ t('analytics.knowledge.session_feedback_negative') }} {{ getSessionNegativeCount(item.id) }}
-              </el-tag>
-              <el-button text class="session-rename" @click="handleRenameSession(item.id, item.title)">
-                {{ t('analytics.knowledge.rename_session') }}
-              </el-button>
-              <el-button text class="session-delete" @click="handleDeleteSession(item.id)">
-                {{ t('commons.delete') }}
-              </el-button>
-            </div>
-            <el-empty v-if="filteredSessions.length === 0" :description="t('analytics.knowledge.chat_session_empty')" />
-          </div>
-        </el-card>
+  <div ref="chatLayoutRef" class="chat-layout">
+    <!-- Sidebar -->
+    <ChatSidebar
+      v-show="sidebarVisible"
+      :sessions="filteredSessions"
+      :current-session-id="currentSessionId"
+      :session-keyword="sessionKeyword"
+      :llm-enabled="llmEnabled"
+      :llm-status-text="llmStatusText"
+      @new-session="handleNewSession"
+      @select-session="handleSelectSession"
+      @delete-session="handleDeleteSession"
+      @rename-session="handleRenameSession"
+      @clear-all="handleClearAllSessions"
+      @update:session-keyword="sessionKeyword = $event"
+      @toggle-sidebar="sidebarVisible = false"
+    />
 
-        <el-card class="history-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span>{{ t('analytics.knowledge.chat_history') }}</span>
-              <el-button text @click="clearHistory">{{ t('analytics.knowledge.clear_history') }}</el-button>
-            </div>
-          </template>
-          <el-empty v-if="history.length === 0" :description="t('analytics.knowledge.chat_history_empty')" />
-          <div v-else class="history-list">
-            <el-button
-              v-for="item in history"
-              :key="item"
-              text
-              class="history-item"
-              @click="handleAsk(item)"
-            >
-              {{ item }}
-            </el-button>
+    <!-- Main area -->
+    <div class="chat-main" :class="{ 'sidebar-collapsed': !sidebarVisible }">
+      <!-- Header -->
+      <div class="chat-main-header">
+        <div class="header-left">
+          <button v-if="!sidebarVisible" class="sidebar-toggle-btn" @click="sidebarVisible = true" :title="t('analytics.knowledge.chat_sidebar_toggle')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+          </button>
+          <span class="header-title">{{ t('analytics.knowledge.chat_title') }}</span>
+        </div>
+        <div class="header-right">
+          <div class="feedback-filter">
+            <el-select v-model="feedbackFilter" size="small" style="width: 130px">
+              <el-option :label="t('analytics.knowledge.feedback_filter_all')" value="all" />
+              <el-option :label="t('analytics.knowledge.feedback_filter_negative')" value="down" />
+            </el-select>
           </div>
-        </el-card>
+          <button class="header-action-btn" @click="handleExportSession" :title="t('analytics.knowledge.export_chat')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+          <button class="header-action-btn" @click="clearMessages" :title="t('analytics.knowledge.clear_chat')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+        </div>
+      </div>
 
-        <el-card class="keyword-card" shadow="never">
-          <template #header>
-            <span>{{ t('analytics.knowledge.hot_keywords') }}</span>
-          </template>
-          <div class="keyword-list">
-            <el-tag
-              v-for="item in hotKeywords"
-              :key="item"
-              class="keyword-tag"
-              @click="handleAsk(t(item))"
-            >
-              {{ t(item) }}
-            </el-tag>
-          </div>
-        </el-card>
-      </el-col>
+      <!-- Welcome or Conversation -->
+      <ChatWelcome v-if="messages.length === 0" @ask="handleAsk" />
+      <ChatConversation
+        v-else
+        :messages="visibleMessages"
+        :loading="loading"
+        @retry="handleRetry"
+        @feedback="handleFeedback"
+      />
 
-      <el-col :span="17">
-        <el-card shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span>{{ t('analytics.knowledge.chat_title') }}</span>
-              <div class="chat-header-actions">
-                <el-tag
-                  size="small"
-                  effect="plain"
-                  :type="llmEnabled ? 'success' : 'info'"
-                >
-                  {{ t('analytics.knowledge.llm_status_label') }}: {{ llmStatusText }}
-                </el-tag>
-                <div class="feedback-filter">
-                  <span class="feedback-filter-label">{{ t('analytics.knowledge.feedback_filter_label') }}</span>
-                  <el-select v-model="feedbackFilter" size="small" style="width: 160px">
-                    <el-option :label="t('analytics.knowledge.feedback_filter_all')" value="all" />
-                    <el-option :label="t('analytics.knowledge.feedback_filter_negative')" value="down" />
-                  </el-select>
-                </div>
-                <el-button text @click="handleExportSession">{{ t('analytics.knowledge.export_chat') }}</el-button>
-                <el-button text @click="clearMessages">{{ t('analytics.knowledge.clear_chat') }}</el-button>
-              </div>
-            </div>
-          </template>
-          <ChatPanel
-            :messages="visibleMessages"
-            :loading="loading"
-            @send="handleAskPayload"
-            @stop="stopGenerating"
-            @retry="handleRetry"
-            @feedback="handleFeedback"
-          />
-        </el-card>
-      </el-col>
-    </el-row>
+      <!-- Input bar -->
+      <ChatInputBar :loading="loading" @send="handleAskPayload" @stop="stopGenerating" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import ChatPanel from './knowledge/ChatPanel.vue'
+import ChatSidebar from './knowledge/ChatSidebar.vue'
+import ChatWelcome from './knowledge/ChatWelcome.vue'
+import ChatConversation from './knowledge/ChatConversation.vue'
+import ChatInputBar from './knowledge/ChatInputBar.vue'
 import { getChatBackendStatus } from '@/api/knowledge-chat'
 import { useKnowledgeChat } from '@/composables/useKnowledgeChat'
 import { useChatHistory } from '@/composables/useChatHistory'
@@ -139,6 +95,7 @@ const {
   deleteSession,
   renameSession,
   touchSession,
+  clearAllSessions,
 } = useChatSessionStore()
 
 const messagesRef = ref<ChatMessage[]>([])
@@ -158,27 +115,19 @@ watch(
 watch(
   messagesRef,
   (value) => {
-    if (!currentSession.value) {
-      return
-    }
+    if (!currentSession.value) return
     touchSession(currentSession.value.id, value)
   },
   { deep: true },
 )
 
-const hotKeywords = [
-  'analytics.knowledge.keyword_onboarding',
-  'analytics.knowledge.keyword_permission',
-  'analytics.knowledge.keyword_upload',
-]
-
 const sessionKeyword = ref('')
+const sidebarVisible = ref(true)
+const chatLayoutRef = ref<HTMLElement>()
 
 const filteredSessions = computed(() => {
   const keyword = sessionKeyword.value.trim().toLowerCase()
-  if (!keyword) {
-    return sessions.value
-  }
+  if (!keyword) return sessions.value
   return sessions.value.filter((item) => item.title.toLowerCase().includes(keyword))
 })
 
@@ -187,19 +136,9 @@ const llmStatusLoading = ref(true)
 const llmEnabled = ref(false)
 
 const visibleMessages = computed(() => {
-  if (feedbackFilter.value === 'all') {
-    return messages.value
-  }
+  if (feedbackFilter.value === 'all') return messages.value
   return messages.value.filter((item) => item.role === 'user' || item.feedback?.rating === 'down')
 })
-
-const getSessionNegativeCount = (sessionId: string) => {
-  const session = sessions.value.find((item) => item.id === sessionId)
-  if (!session) {
-    return 0
-  }
-  return session.messages.filter((message) => message.feedback?.rating === 'down').length
-}
 
 const handleAsk = async (question: string) => {
   try {
@@ -254,10 +193,12 @@ const handleRenameSession = async (id: string, currentTitle: string) => {
   }
 }
 
+const handleClearAllSessions = () => {
+  clearAllSessions()
+}
+
 const handleExportSession = () => {
-  if (!currentSession.value) {
-    return
-  }
+  if (!currentSession.value) return
 
   const lines: string[] = [
     `# ${currentSession.value.title}`,
@@ -301,116 +242,132 @@ const loadLlmStatus = async () => {
 }
 
 const llmStatusText = computed(() => {
-  if (llmStatusLoading.value) {
-    return t('analytics.knowledge.llm_status_checking')
-  }
-  return llmEnabled.value
-    ? t('analytics.knowledge.llm_status_on')
-    : t('analytics.knowledge.llm_status_off')
+  if (llmStatusLoading.value) return t('analytics.knowledge.llm_status_checking')
+  return llmEnabled.value ? t('analytics.knowledge.llm_status_on') : t('analytics.knowledge.llm_status_off')
 })
 
+// Auto-collapse sidebar on narrow container
+let resizeObserver: ResizeObserver | null = null
 onMounted(() => {
   loadLlmStatus()
+  if (chatLayoutRef.value) {
+    resizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width || 0
+      if (width < 600 && sidebarVisible.value) {
+        sidebarVisible.value = false
+      }
+    })
+    resizeObserver.observe(chatLayoutRef.value)
+  }
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
 })
 </script>
 
 <style scoped>
-.knowledge-chat-page {
-  padding: 20px;
+.chat-layout {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+
+  /* Design tokens */
+  --chat-sidebar-width: 260px;
+  --chat-accent: #6366f1;
+  --chat-accent-hover: #4f46e5;
+  --chat-main-bg: #f7f7f8;
+  --chat-sidebar-bg: #ffffff;
+  --chat-user-bubble-bg: #f0f0f0;
+  --chat-user-bubble-text: #303133;
+  --chat-bot-bubble-bg: #ffffff;
+  --chat-bot-bubble-text: #303133;
+  --chat-dark-card-bg: #202123;
+  --chat-dark-card-text: #ffffff;
+  --chat-light-card-bg: #ffffff;
+  --chat-light-card-text: #303133;
+  --chat-border-color: #e5e5e5;
+  --chat-session-active-bg: #ececf1;
 }
 
-.session-card,
-.history-card,
-.keyword-card {
-  margin-bottom: 16px;
-}
-
-.session-list {
+.chat-main {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.session-search {
-  margin-bottom: 10px;
-}
-
-.session-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border: 1px solid #ebeef5;
-  border-radius: 6px;
-  padding: 4px 6px;
-}
-
-.session-item.active {
-  border-color: #409eff;
-  background: #ecf5ff;
-}
-
-.session-title {
-  flex: 1;
-  justify-content: flex-start;
-  text-align: left;
-  white-space: nowrap;
+  background: var(--chat-main-bg);
+  min-width: 0;
+  height: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.session-delete {
-  flex-shrink: 0;
-}
-
-.session-rename {
-  flex-shrink: 0;
-}
-
-.card-header {
+.chat-main-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--chat-border-color);
+  flex-shrink: 0;
 }
 
-.chat-header-actions {
+.header-left {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #8e8ea0;
+  padding: 0;
+}
+
+.sidebar-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #303133;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #8e8ea0;
+  padding: 0;
+}
+
+.header-action-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #303133;
 }
 
 .feedback-filter {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.feedback-filter-label {
-  font-size: 12px;
-  color: #909399;
-}
-
-.history-list {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-
-.history-item {
-  width: 100%;
-  justify-content: flex-start;
-  white-space: normal;
-  text-align: left;
-  line-height: 1.5;
-}
-
-.keyword-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.keyword-tag {
-  cursor: pointer;
 }
 </style>
