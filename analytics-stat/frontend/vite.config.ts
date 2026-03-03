@@ -71,19 +71,17 @@ export default defineConfig({
     },
   },
   /**
-   * 【关键】PostCSS 配置：给 Element Plus 样式加 #analytics-app 作用域前缀
+   * 【关键】PostCSS 配置：给子应用样式加 #analytics-app 作用域前缀
    *
-   * 原因：analytics-stat 使用 Element Plus（Vue 3），主应用使用 Element UI（Vue 2）。
-   * 两者有大量同名 CSS 选择器（如 .el-menu-item *、.el-button 等）。
-   * micro-app 默认不隔离样式，子应用的 CSS 会注入到主应用 <head> 中，
-   * 导致 Element Plus 的规则覆盖 Element UI 的规则（后加载的优先级更高）。
+   * 原因：micro-app 默认不隔离样式，子应用 CSS 会注入到主应用 <head>。
+   * 为避免子应用样式影响主应用，统一给选择器加容器前缀。
    *
    * 解决方案：使用 postcss-prefix-selector 给所有 CSS 规则加上 #analytics-app 前缀，
    * 使子应用样式只在 #analytics-app 容器内生效，不影响主应用。
    *
-   * 例如：.el-menu-item * { vertical-align: bottom }
-   * 变为：#analytics-app .el-menu-item * { vertical-align: bottom }
-   * 这样就不会影响主应用侧边栏的 .el-menu-item
+   * 例如：.n-button { ... }
+   * 变为：#analytics-app .n-button { ... }
+   * 从而保证样式仅在 analytics-stat 容器内生效
    */
   css: {
     postcss: {

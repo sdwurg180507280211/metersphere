@@ -1,16 +1,17 @@
 <template>
-  <div id="analytics-app">
-    <router-view />
-  </div>
+  <n-config-provider :locale="zhCN" :date-locale="dateZhCN">
+    <n-dialog-provider>
+      <n-message-provider>
+        <div id="analytics-app">
+          <router-view />
+        </div>
+      </n-message-provider>
+    </n-dialog-provider>
+  </n-config-provider>
 </template>
 
 <script setup lang="ts">
-/**
- * 分析统计微服务根组件
- *
- * 作用：作为应用的根容器，承载 router-view
- * 所有页面内容都通过 router-view 渲染
- */
+import { NConfigProvider, NDialogProvider, NMessageProvider, zhCN, dateZhCN } from 'naive-ui'
 </script>
 
 <style>

@@ -1,66 +1,63 @@
 <template>
-  <el-menu
-    :default-active="route.path"
-    :default-openeds="['knowledge-group']"
-    router
-    class="knowledge-menu"
-  >
-    <el-sub-menu index="knowledge-group">
-      <template #title>
-        <el-icon><DataAnalysis /></el-icon>
-        <span>{{ t('commons.analytics_stat') }}</span>
-      </template>
-      <el-menu-item
-        v-for="menu in menus"
-        :key="menu.index"
-        :index="menu.index"
-        class="menu-item"
-      >
-        <el-icon><component :is="menu.icon" /></el-icon>
-        <span>{{ t(menu.i18nKey) }}</span>
-      </el-menu-item>
-    </el-sub-menu>
-  </el-menu>
+  <n-menu :value="activePath" :options="menuOptions" class="knowledge-menu" @update:value="handleMenuChange" />
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
+import { computed, h } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { DataAnalysis, Search, ChatDotRound } from '@element-plus/icons-vue'
-import { markRaw } from 'vue'
-import type { Component } from 'vue'
+import { NMenu, NIcon, type MenuOption } from 'naive-ui'
 import { KNOWLEDGE_ROUTE_PATHS } from '@/config/knowledge-route'
 
 const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
 
-interface MenuItem {
-  index: string
-  i18nKey: string
-  icon: Component
-}
+const iconSvg = (d: string) =>
+  h(
+    NIcon,
+    null,
+    {
+      default: () =>
+        h(
+          'svg',
+          { viewBox: '0 0 24 24', width: '16', height: '16', fill: 'none', stroke: 'currentColor', 'stroke-width': '2' },
+          [h('path', { d })],
+        ),
+    },
+  )
 
-const menus: MenuItem[] = [
+const menuOptions = computed<MenuOption[]>(() => [
   {
-    index: KNOWLEDGE_ROUTE_PATHS.knowledge,
-    i18nKey: 'analytics.menu.knowledge',
-    icon: markRaw(Search),
+    key: 'knowledge-group',
+    label: t('commons.analytics_stat'),
+    children: [
+      {
+        key: KNOWLEDGE_ROUTE_PATHS.knowledge,
+        label: t('analytics.menu.knowledge'),
+        icon: () => iconSvg('M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8'),
+      },
+      {
+        key: KNOWLEDGE_ROUTE_PATHS.knowledgeChat,
+        label: t('analytics.menu.knowledge_chat'),
+        icon: () => iconSvg('M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'),
+      },
+    ],
   },
-  {
-    index: KNOWLEDGE_ROUTE_PATHS.knowledgeChat,
-    i18nKey: 'analytics.menu.knowledge_chat',
-    icon: markRaw(ChatDotRound),
-  },
-]
+])
+
+const activePath = computed(() => route.path)
+
+const handleMenuChange = (key: string) => {
+  if (key.startsWith('/')) {
+    router.push(key)
+  }
+}
 </script>
 
 <style scoped>
 .knowledge-menu {
-  border-right: 0;
-}
-
-.menu-item {
-  height: 40px;
-  line-height: 40px;
+  height: 100%;
+  padding-top: 8px;
 }
 </style>
