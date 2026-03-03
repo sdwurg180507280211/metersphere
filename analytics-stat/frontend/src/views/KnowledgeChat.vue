@@ -1,5 +1,6 @@
 <template>
   <div ref="chatLayoutRef" class="chat-layout">
+    <!-- Sidebar -->
     <ChatSidebar
       v-show="sidebarVisible"
       :sessions="filteredSessions"
@@ -16,23 +17,43 @@
       @toggle-sidebar="sidebarVisible = false"
     />
 
+    <!-- Main area -->
     <div class="chat-main" :class="{ 'sidebar-collapsed': !sidebarVisible }">
+      <!-- Header -->
       <div class="chat-main-header">
         <div class="header-left">
-          <n-button v-if="!sidebarVisible" text size="small" class="sidebar-toggle-btn" @click="sidebarVisible = true">
-            {{ t('analytics.knowledge.chat_sidebar_toggle') }}
-          </n-button>
+          <button v-if="!sidebarVisible" class="sidebar-toggle-btn" @click="sidebarVisible = true" :title="t('analytics.knowledge.chat_sidebar_toggle')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+          </button>
           <span class="header-title">{{ t('analytics.knowledge.chat_title') }}</span>
         </div>
         <div class="header-right">
           <div class="feedback-filter">
-            <n-select v-model:value="feedbackFilter" size="small" style="width: 140px" :options="feedbackOptions" />
+            <el-select v-model="feedbackFilter" size="small" style="width: 130px">
+              <el-option :label="t('analytics.knowledge.feedback_filter_all')" value="all" />
+              <el-option :label="t('analytics.knowledge.feedback_filter_negative')" value="down" />
+            </el-select>
           </div>
-          <n-button text @click="handleExportSession">{{ t('analytics.knowledge.export_chat') }}</n-button>
-          <n-button text @click="clearMessages">{{ t('analytics.knowledge.clear_chat') }}</n-button>
+          <button class="header-action-btn" @click="handleExportSession" :title="t('analytics.knowledge.export_chat')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+          <button class="header-action-btn" @click="clearMessages" :title="t('analytics.knowledge.clear_chat')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
         </div>
       </div>
 
+      <!-- Welcome or Conversation -->
       <ChatWelcome v-if="messages.length === 0" @ask="handleAsk" />
       <ChatConversation
         v-else
@@ -42,15 +63,16 @@
         @feedback="handleFeedback"
       />
 
+      <!-- Input bar -->
       <ChatInputBar :loading="loading" @send="handleAskPayload" @stop="stopGenerating" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NButton, NSelect, NInput, useMessage, useDialog } from 'naive-ui'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import ChatSidebar from './knowledge/ChatSidebar.vue'
 import ChatWelcome from './knowledge/ChatWelcome.vue'
 import ChatConversation from './knowledge/ChatConversation.vue'
@@ -63,9 +85,7 @@ import { resolveKnowledgeErrorMessage } from '@/composables/useKnowledgeErrorMes
 import type { ChatFeedback, ChatMessage } from '@/composables/useKnowledgeChat'
 
 const { t } = useI18n()
-const message = useMessage()
-const dialog = useDialog()
-const { addQuestion } = useChatHistory()
+const { history, addQuestion, clearHistory } = useChatHistory()
 const {
   sessions,
   currentSession,
@@ -112,11 +132,6 @@ const filteredSessions = computed(() => {
 })
 
 const feedbackFilter = ref<'all' | 'down'>('all')
-const feedbackOptions = computed(() => [
-  { label: t('analytics.knowledge.feedback_filter_all'), value: 'all' },
-  { label: t('analytics.knowledge.feedback_filter_negative'), value: 'down' },
-])
-
 const llmStatusLoading = ref(true)
 const llmEnabled = ref(false)
 
@@ -130,7 +145,7 @@ const handleAsk = async (question: string) => {
     await sendQuestion(question)
     addQuestion(question)
   } catch (error) {
-    message.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.chat_failed'))
+    ElMessage.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.chat_failed'))
   }
 }
 
@@ -139,7 +154,7 @@ const handleAskPayload = async (payload: { question: string; topK: number }) => 
     await sendQuestion(payload.question, { topK: payload.topK })
     addQuestion(payload.question)
   } catch (error) {
-    message.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.chat_failed'))
+    ElMessage.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.chat_failed'))
   }
 }
 
@@ -161,37 +176,21 @@ const handleDeleteSession = (id: string) => {
   deleteSession(id)
 }
 
-const promptRename = (currentTitle: string) =>
-  new Promise<string | null>((resolve) => {
-    const inputValue = ref(currentTitle)
-    let resolved = false
-    const done = (value: string | null) => {
-      if (resolved) return
-      resolved = true
-      resolve(value)
-    }
-    dialog.create({
-      title: t('analytics.knowledge.rename_session'),
-      content: () =>
-        h(NInput, {
-          value: inputValue.value,
-          placeholder: t('analytics.knowledge.rename_session_placeholder'),
-          'onUpdate:value': (value: string) => {
-            inputValue.value = value
-          },
-        }),
-      positiveText: t('commons.confirm'),
-      negativeText: t('commons.cancel'),
-      onPositiveClick: () => done(inputValue.value),
-      onNegativeClick: () => done(null),
-      onClose: () => done(null),
-    })
-  })
-
 const handleRenameSession = async (id: string, currentTitle: string) => {
-  const value = await promptRename(currentTitle)
-  if (value === null) return
-  renameSession(id, value || currentTitle)
+  try {
+    const { value } = await ElMessageBox.prompt(
+      t('analytics.knowledge.rename_session_prompt'),
+      t('analytics.knowledge.rename_session'),
+      {
+        inputValue: currentTitle,
+        inputPlaceholder: t('analytics.knowledge.rename_session_placeholder'),
+        confirmButtonText: t('commons.confirm'),
+        cancelButtonText: t('commons.cancel'),
+      },
+    )
+    renameSession(id, value || currentTitle)
+  } catch {
+  }
 }
 
 const handleClearAllSessions = () => {
@@ -204,10 +203,10 @@ const handleExportSession = () => {
   const lines: string[] = [
     `# ${currentSession.value.title}`,
     '',
-    ...currentSession.value.messages.flatMap((item) => [
-      `## ${item.role === 'user' ? t('analytics.knowledge.chat_user') : t('analytics.knowledge.chat_assistant')}`,
+    ...currentSession.value.messages.flatMap((message) => [
+      `## ${message.role === 'user' ? t('analytics.knowledge.chat_user') : t('analytics.knowledge.chat_assistant')}`,
       '',
-      item.content,
+      message.content,
       '',
     ]),
   ]
@@ -219,7 +218,7 @@ const handleExportSession = () => {
   anchor.download = `${currentSession.value.title.replace(/\s+/g, '-') || 'chat'}.md`
   anchor.click()
   URL.revokeObjectURL(url)
-  message.success(t('analytics.knowledge.export_chat_success'))
+  ElMessage.success(t('analytics.knowledge.export_chat_success'))
 }
 
 const handleFeedback = (payload: { messageId: string; rating: 'up' | 'down'; reason?: string }) => {
@@ -247,6 +246,7 @@ const llmStatusText = computed(() => {
   return llmEnabled.value ? t('analytics.knowledge.llm_status_on') : t('analytics.knowledge.llm_status_off')
 })
 
+// Auto-collapse sidebar on narrow container
 let resizeObserver: ResizeObserver | null = null
 onMounted(() => {
   loadLlmStatus()
@@ -272,22 +272,22 @@ onUnmounted(() => {
   height: 100%;
   overflow: hidden;
 
+  /* Design tokens */
   --chat-sidebar-width: 260px;
-  --chat-accent: #18a058;
-  --chat-accent-hover: #0c7a43;
-  --chat-accent-suppl: #36ad6a;
-  --chat-main-bg: #fafafc;
+  --chat-accent: #6366f1;
+  --chat-accent-hover: #4f46e5;
+  --chat-main-bg: #f7f7f8;
   --chat-sidebar-bg: #ffffff;
-  --chat-user-bubble-bg: #18a058;
-  --chat-user-bubble-text: #ffffff;
+  --chat-user-bubble-bg: #f0f0f0;
+  --chat-user-bubble-text: #303133;
   --chat-bot-bubble-bg: #ffffff;
-  --chat-bot-bubble-text: #333639;
-  --chat-border-color: #e0e0e6;
-  --chat-border-radius: 3px;
-  --chat-session-active-bg: #f0f9eb;
-  --chat-text-primary: #333639;
-  --chat-text-secondary: #666e7a;
-  --chat-text-tertiary: #999;
+  --chat-bot-bubble-text: #303133;
+  --chat-dark-card-bg: #202123;
+  --chat-dark-card-text: #ffffff;
+  --chat-light-card-bg: #ffffff;
+  --chat-light-card-text: #303133;
+  --chat-border-color: #e5e5e5;
+  --chat-session-active-bg: #ececf1;
 }
 
 .chat-main {
@@ -304,8 +304,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 48px;
+  padding: 10px 20px;
   background: #ffffff;
   border-bottom: 1px solid var(--chat-border-color);
   flex-shrink: 0;
@@ -318,15 +317,53 @@ onUnmounted(() => {
 }
 
 .header-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--chat-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #8e8ea0;
+  padding: 0;
+}
+
+.sidebar-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #303133;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+}
+
+.header-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #8e8ea0;
+  padding: 0;
+}
+
+.header-action-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #303133;
 }
 
 .feedback-filter {

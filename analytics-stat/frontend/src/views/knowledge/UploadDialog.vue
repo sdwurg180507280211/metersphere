@@ -1,56 +1,66 @@
 <template>
-  <n-modal v-model:show="visible" preset="card" :title="t('analytics.knowledge.upload_file')" style="width: 600px" @after-leave="handleClose">
-    <n-form label-placement="left" label-width="100">
-      <n-form-item :label="t('analytics.knowledge.select_file')">
-        <n-upload
-          :default-upload="false"
-          :max="1"
-          :accept="'.pdf,.doc,.docx,.txt,.md'"
-          :file-list="fileList"
-          @update:file-list="handleFileListChange"
+  <el-dialog
+    v-model="visible"
+    :title="t('analytics.knowledge.upload_file')"
+    width="600px"
+    @close="handleClose"
+  >
+    <el-form label-width="100px">
+      <el-form-item :label="t('analytics.knowledge.select_file')">
+        <el-upload
+          ref="uploadRef"
+          :auto-upload="false"
+          :limit="1"
+          :on-change="handleFileChange"
+          :on-exceed="handleExceed"
+          accept=".pdf,.doc,.docx,.txt,.md"
         >
-          <n-button type="primary">{{ t('analytics.knowledge.choose_file') }}</n-button>
-        </n-upload>
-        <div class="upload-tip">{{ t('analytics.knowledge.upload_tip') }}</div>
-      </n-form-item>
+          <template #trigger>
+            <el-button type="primary">{{ t('analytics.knowledge.choose_file') }}</el-button>
+          </template>
+          <template #tip>
+            <div class="el-upload__tip">
+              {{ t('analytics.knowledge.upload_tip') }}
+            </div>
+          </template>
+        </el-upload>
+      </el-form-item>
 
-      <n-form-item :label="t('analytics.knowledge.is_public')">
-        <n-switch v-model:value="isPublic" />
+      <el-form-item :label="t('analytics.knowledge.is_public')">
+        <el-switch v-model="isPublic" />
         <span class="form-tip">{{ t('analytics.knowledge.public_tip') }}</span>
-      </n-form-item>
+      </el-form-item>
 
-      <n-form-item v-if="selectedFile">
-        <n-descriptions bordered :column="1" size="small">
-          <n-descriptions-item :label="t('analytics.knowledge.file_name')">{{ selectedFile.name }}</n-descriptions-item>
-          <n-descriptions-item :label="t('analytics.knowledge.file_size')">{{ formatFileSize(selectedFile.size) }}</n-descriptions-item>
-        </n-descriptions>
-      </n-form-item>
-    </n-form>
+      <el-form-item v-if="selectedFile">
+        <el-descriptions :column="1" border size="small">
+          <el-descriptions-item :label="t('analytics.knowledge.file_name')">
+            {{ selectedFile.name }}
+          </el-descriptions-item>
+          <el-descriptions-item :label="t('analytics.knowledge.file_size')">
+            {{ formatFileSize(selectedFile.size) }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </el-form-item>
+    </el-form>
 
     <template #footer>
-      <div class="modal-footer">
-        <n-button @click="handleClose">{{ t('commons.cancel') }}</n-button>
-        <n-button type="primary" :loading="uploading" :disabled="!selectedFile" @click="handleUpload">{{ t('commons.confirm') }}</n-button>
-      </div>
+      <el-button @click="handleClose">{{ t('commons.cancel') }}</el-button>
+      <el-button
+        type="primary"
+        :loading="uploading"
+        :disabled="!selectedFile"
+        @click="handleUpload"
+      >
+        {{ t('commons.confirm') }}
+      </el-button>
     </template>
-  </n-modal>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  NModal,
-  NForm,
-  NFormItem,
-  NUpload,
-  NButton,
-  NSwitch,
-  NDescriptions,
-  NDescriptionsItem,
-  useMessage,
-  type UploadFileInfo,
-} from 'naive-ui'
+import { ElMessage, type UploadFile, type UploadInstance } from 'element-plus'
 import {
   EMPTY_UPLOAD_FILE_ERROR,
   formatFileSize,
@@ -64,47 +74,45 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  success: []
+  'success': []
 }>()
 
 const { t } = useI18n()
-const message = useMessage()
 
 const visible = computed({
   get: () => props.modelValue,
-  set: (val) => emit('update:modelValue', val),
+  set: (val) => emit('update:modelValue', val)
 })
 
-const fileList = ref<UploadFileInfo[]>([])
+const uploadRef = ref<UploadInstance>()
 const { selectedFile, isPublic, uploading, setSelectedFile, upload, reset } = useKnowledgeUpload()
 
-const handleFileListChange = (list: UploadFileInfo[]) => {
-  if (list.length > 1) {
-    message.warning(t('analytics.knowledge.upload_limit'))
-  }
-  const nextList = list.slice(-1)
-  fileList.value = nextList
-  setSelectedFile(nextList[0]?.file || null)
+const handleFileChange = (file: UploadFile) => {
+  setSelectedFile(file.raw || null)
+}
+
+const handleExceed = () => {
+  ElMessage.warning(t('analytics.knowledge.upload_limit'))
 }
 
 const handleUpload = async () => {
   try {
     await upload()
-    message.success(t('analytics.knowledge.upload_success'))
+    ElMessage.success(t('analytics.knowledge.upload_success'))
     emit('success')
     handleClose()
   } catch (error: any) {
     if (error?.message === EMPTY_UPLOAD_FILE_ERROR) {
-      message.warning(t('analytics.knowledge.select_file_first'))
+      ElMessage.warning(t('analytics.knowledge.select_file_first'))
       return
     }
-    message.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.upload_failed'))
+    ElMessage.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.upload_failed'))
   }
 }
 
 const handleClose = () => {
   reset()
-  fileList.value = []
+  uploadRef.value?.clearFiles()
   visible.value = false
 }
 </script>
@@ -116,15 +124,9 @@ const handleClose = () => {
   color: #909399;
 }
 
-.upload-tip {
+.el-upload__tip {
   font-size: 12px;
   color: #909399;
   margin-top: 8px;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
 }
 </style>

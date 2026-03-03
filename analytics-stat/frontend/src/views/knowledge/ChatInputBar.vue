@@ -1,18 +1,26 @@
 <template>
   <div class="chat-input-bar">
     <div class="input-container">
-      <n-popover trigger="click" placement="top-start" :width="220">
-        <template #trigger>
-          <n-button quaternary class="input-icon-btn">{{ t('analytics.knowledge.chat_topk_label') }}</n-button>
+      <!-- TopK setting -->
+      <el-popover trigger="click" :width="200" placement="top-start">
+        <template #reference>
+          <button class="input-icon-btn" :title="t('analytics.knowledge.chat_topk_label')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
         </template>
         <div class="topk-popover">
           <span class="topk-label">{{ t('analytics.knowledge.chat_topk_label') }}</span>
-          <n-input-number v-model:value="topK" :min="1" :max="10" size="small" />
+          <el-input-number v-model="topK" :min="1" :max="10" size="small" />
         </div>
-      </n-popover>
+      </el-popover>
 
-      <n-input
-        v-model:value="draft"
+      <!-- Text input -->
+      <el-input
+        ref="inputRef"
+        v-model="draft"
         type="textarea"
         :autosize="{ minRows: 1, maxRows: 5 }"
         :placeholder="t('analytics.knowledge.chat_input_placeholder')"
@@ -20,8 +28,23 @@
         @keydown.enter.exact.prevent="submit"
       />
 
-      <n-button v-if="!loading" type="primary" :disabled="!draft.trim()" class="send-btn" @click="submit">{{ t('analytics.knowledge.search') }}</n-button>
-      <n-button v-else class="stop-btn" @click="emit('stop')">Stop</n-button>
+      <!-- Send / Stop button -->
+      <button
+        v-if="!loading"
+        class="send-btn"
+        :class="{ disabled: !draft.trim() }"
+        :disabled="!draft.trim()"
+        @click="submit"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+        </svg>
+      </button>
+      <button v-else class="stop-btn" @click="emit('stop')">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+          <rect x="6" y="6" width="12" height="12" rx="2" />
+        </svg>
+      </button>
     </div>
   </div>
 </template>
@@ -29,7 +52,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NPopover, NInputNumber, NInput, NButton } from 'naive-ui'
 
 defineProps<{
   loading: boolean
@@ -50,12 +72,18 @@ const submit = () => {
   emit('send', { question, topK: topK.value })
   draft.value = ''
 }
+
+const focus = () => {
+  // exposed for parent to call
+}
+
+defineExpose({ focus })
 </script>
 
 <style scoped>
 .chat-input-bar {
-  padding: 12px 24px 20px;
-  background: var(--chat-main-bg, #fafafc);
+  padding: 16px 24px 24px;
+  background: var(--chat-main-bg, #f7f7f8);
 }
 
 .input-container {
@@ -65,13 +93,36 @@ const submit = () => {
   max-width: 768px;
   margin: 0 auto;
   background: #ffffff;
-  border: 1px solid var(--chat-border-color, #e0e0e6);
-  border-radius: var(--chat-border-radius, 3px);
-  padding: 6px 10px;
+  border: 1px solid var(--chat-border-color, #e5e5e5);
+  border-radius: 24px;
+  padding: 8px 12px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-container:focus-within {
+  border-color: var(--chat-accent, #6366f1);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 .input-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #8e8ea0;
   flex-shrink: 0;
+  padding: 0;
+}
+
+.input-icon-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #303133;
 }
 
 .chat-textarea {
@@ -79,9 +130,58 @@ const submit = () => {
   min-width: 0;
 }
 
-.send-btn,
-.stop-btn {
+.chat-textarea :deep(.el-textarea__inner) {
+  border: none !important;
+  box-shadow: none !important;
+  padding: 6px 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  background: transparent;
+}
+
+.send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: var(--chat-accent, #6366f1);
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
   flex-shrink: 0;
+  padding: 0;
+  transition: background-color 0.15s;
+}
+
+.send-btn:hover:not(.disabled) {
+  background: var(--chat-accent-hover, #4f46e5);
+}
+
+.send-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stop-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--chat-border-color, #e5e5e5);
+  background: #fff;
+  color: #303133;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.stop-btn:hover {
+  background: #f5f5f5;
 }
 
 .topk-popover {
@@ -92,7 +192,7 @@ const submit = () => {
 
 .topk-label {
   font-size: 13px;
-  color: var(--chat-text-secondary, #666e7a);
+  color: #606266;
   white-space: nowrap;
 }
 </style>

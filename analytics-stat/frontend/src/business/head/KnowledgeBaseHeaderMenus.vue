@@ -1,58 +1,85 @@
 <template>
   <div class="menu-bar">
-    <n-menu mode="horizontal" :value="activePath" :options="menuOptions" @update:value="handleMenuChange" />
-    <span class="module-title">{{ t('analytics.title') }}</span>
+    <el-row type="flex" justify="space-between" align="middle">
+      <!-- 左侧：二级导航菜单 -->
+      <el-col :span="14">
+        <el-menu
+          class="header-menu"
+          :unique-opened="true"
+          mode="horizontal"
+          router
+          :default-active="activePath"
+          :ellipsis="false"
+        >
+          <el-menu-item
+            v-for="menu in menus"
+            :key="menu.path"
+            :index="menu.path"
+          >
+            {{ t(menu.i18nKey) }}
+          </el-menu-item>
+        </el-menu>
+      </el-col>
+      <!-- 右侧：模块标题 -->
+      <el-col :span="10" class="right-section">
+        <span class="module-title">{{ t('analytics.title') }}</span>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { NMenu, type MenuOption } from 'naive-ui'
 import { KNOWLEDGE_ROUTE_BASE, KNOWLEDGE_ROUTE_PATHS } from '@/config/knowledge-route'
 
 const route = useRoute()
-const router = useRouter()
 const { t } = useI18n()
 
-const menuOptions = computed<MenuOption[]>(() => [
-  { label: t('analytics.menu.knowledge'), key: KNOWLEDGE_ROUTE_PATHS.knowledge },
-  { label: t('analytics.menu.knowledge_chat'), key: KNOWLEDGE_ROUTE_PATHS.knowledgeChat },
-])
+const menus = [
+  { path: KNOWLEDGE_ROUTE_PATHS.knowledge, i18nKey: 'analytics.menu.knowledge' },
+  { path: KNOWLEDGE_ROUTE_PATHS.knowledgeChat, i18nKey: 'analytics.menu.knowledge_chat' },
+]
 
 const activePath = computed(() => {
   const path = route.path
-  const matched = menuOptions.value.find((item) => path.startsWith(String(item.key)))
-  if (matched) return String(matched.key)
+  // 匹配菜单路径前缀，支持子路径高亮
+  const matched = menus.find((m) => path.startsWith(m.path))
+  if (matched) return matched.path
+  // 根路径默认高亮知识库
   if (path === KNOWLEDGE_ROUTE_BASE) return KNOWLEDGE_ROUTE_PATHS.knowledge
   return path
 })
-
-const handleMenuChange = (key: string) => {
-  router.push(key)
-}
 </script>
 
 <style scoped>
 .menu-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   border-bottom: 1px solid #e6e6e6;
   background-color: #fff;
   height: 50px;
-  padding: 0 20px 0 12px;
+  line-height: 50px;
 }
 
-.menu-bar :deep(.n-menu) {
-  flex: 1;
+.header-menu {
+  border-bottom: none;
+  height: 50px;
+}
+
+/* Element Plus 的 el-menu-item 样式覆盖 */
+.header-menu .el-menu-item {
+  padding: 0 10px;
+  height: 50px;
+  line-height: 50px;
+}
+
+.right-section {
+  text-align: right;
+  padding-right: 20px;
 }
 
 .module-title {
   font-size: 14px;
   color: #606266;
-  margin-left: 20px;
-  white-space: nowrap;
 }
 </style>

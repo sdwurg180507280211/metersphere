@@ -11,9 +11,10 @@
     "lint": "eslint . --ext .vue,.js,.ts,.tsx --fix"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
     "axios": "^1.6.5",
     "dayjs": "^1.11.10",
-    "naive-ui": "^2.40.1",
+    "element-plus": "^2.5.4",
     "pinia": "^2.1.7",
     "vue": "^3.4.15",
     "vue-i18n": "^9.9.0",

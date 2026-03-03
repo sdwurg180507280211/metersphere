@@ -1,25 +1,26 @@
 <template>
-  <n-layout class="knowledge-layout" has-sider>
-    <n-layout-header class="layout-header">
-      <knowledge-base-header-menus />
-    </n-layout-header>
-    <n-layout has-sider class="layout-body">
-      <n-layout-sider bordered collapse-mode="width" :collapsed-width="64" :width="220" class="aside-container">
+  <el-container direction="vertical" class="knowledge-layout">
+    <!-- 顶部导航栏 -->
+    <knowledge-base-header-menus />
+    <!-- 左右布局 -->
+    <el-container>
+      <!-- 左侧菜单 -->
+      <el-aside width="200px" class="aside-container">
         <knowledge-base-menu />
-      </n-layout-sider>
-      <n-layout-content class="main-container">
+      </el-aside>
+      <!-- 右侧内容区域 -->
+      <el-main class="main-container">
         <router-view v-slot="{ Component }">
           <keep-alive>
             <component :is="Component" />
           </keep-alive>
         </router-view>
-      </n-layout-content>
-    </n-layout>
-  </n-layout>
+      </el-main>
+    </el-container>
+  </el-container>
 </template>
 
 <script setup lang="ts">
-import { NLayout, NLayoutHeader, NLayoutSider, NLayoutContent } from 'naive-ui'
 import KnowledgeBaseHeaderMenus from './head/KnowledgeBaseHeaderMenus.vue'
 import KnowledgeBaseMenu from './KnowledgeBaseMenu.vue'
 </script>
@@ -29,23 +30,16 @@ import KnowledgeBaseMenu from './KnowledgeBaseMenu.vue'
   height: 100vh;
 }
 
-.layout-header {
-  height: 50px;
-}
-
-.layout-body {
-  height: calc(100vh - 50px);
-}
-
 .aside-container {
-  height: 100%;
+  height: calc(100vh - 50px);
   overflow-y: auto;
+  border-right: 1px solid #e6e6e6;
   padding: 0;
   background-color: #fff;
 }
 
 .main-container {
-  height: 100%;
+  height: calc(100vh - 50px);
   overflow-y: auto;
   padding: 0;
   background-color: #f5f6f7;
