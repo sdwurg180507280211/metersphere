@@ -1,6 +1,9 @@
 <template>
-  <!-- 知识库主页面 -->
-  <div class="knowledge-base-page">
+  <n-config-provider>
+    <n-message-provider>
+      <n-dialog-provider>
+        <!-- 知识库主页面 -->
+        <div class="knowledge-base-page">
     <!-- 页面头部 -->
     <div class="page-header">
       <h3 class="page-title">{{ t('analytics.knowledge.title') }}</h3>
@@ -112,11 +115,15 @@
     <!-- 上传对话框 -->
     <UploadDialog v-model="showUpload" @success="handleUploadSuccess" />
   </div>
+      </n-dialog-provider>
+    </n-message-provider>
+  </n-config-provider>
 </template>
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
 import { Search, Document, Lock, Upload, Refresh, ChatDotRound } from '@element-plus/icons-vue'
 import SearchDialog from './knowledge/SearchDialog.vue'
 import UploadDialog from './knowledge/UploadDialog.vue'

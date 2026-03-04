@@ -2,8 +2,8 @@
   <div class="chat-input-bar">
     <div class="input-container">
       <!-- TopK setting -->
-      <el-popover trigger="click" :width="200" placement="top-start">
-        <template #reference>
+      <n-popover trigger="click" placement="top-start">
+        <template #trigger>
           <button class="input-icon-btn" :title="t('analytics.knowledge.chat_topk_label')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
               <circle cx="12" cy="12" r="3" />
@@ -13,14 +13,14 @@
         </template>
         <div class="topk-popover">
           <span class="topk-label">{{ t('analytics.knowledge.chat_topk_label') }}</span>
-          <el-input-number v-model="topK" :min="1" :max="10" size="small" />
+          <n-input-number v-model:value="topK" :min="1" :max="10" size="small" />
         </div>
-      </el-popover>
+      </n-popover>
 
       <!-- Text input -->
-      <el-input
+      <n-input
         ref="inputRef"
-        v-model="draft"
+        v-model:value="draft"
         type="textarea"
         :autosize="{ minRows: 1, maxRows: 5 }"
         :placeholder="t('analytics.knowledge.chat_input_placeholder')"
@@ -52,6 +52,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NInput, NInputNumber, NPopover } from 'naive-ui'
 
 defineProps<{
   loading: boolean
@@ -130,7 +131,7 @@ defineExpose({ focus })
   min-width: 0;
 }
 
-.chat-textarea :deep(.el-textarea__inner) {
+.chat-textarea :deep(.n-input__textarea-el) {
   border: none !important;
   box-shadow: none !important;
   padding: 6px 4px;
@@ -138,6 +139,11 @@ defineExpose({ focus })
   line-height: 1.5;
   resize: none;
   background: transparent;
+}
+
+.chat-textarea :deep(.n-input__border),
+.chat-textarea :deep(.n-input__state-border) {
+  display: none !important;
 }
 
 .send-btn {

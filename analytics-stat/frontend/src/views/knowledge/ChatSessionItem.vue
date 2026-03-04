@@ -8,9 +8,9 @@
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
     <span class="session-title">{{ session.title }}</span>
-    <el-tag v-if="negativeCount > 0" type="danger" size="small" class="neg-badge">
+    <n-tag v-if="negativeCount > 0" type="error" size="small" class="neg-badge" :bordered="false">
       {{ negativeCount }}
-    </el-tag>
+    </n-tag>
     <div class="session-actions">
       <button class="action-btn" @click.stop="emit('rename')" :title="t('analytics.knowledge.rename_session')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
@@ -30,6 +30,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { NTag } from 'naive-ui'
 import type { ChatSession } from '@/composables/useChatSessionStore'
 
 defineProps<{

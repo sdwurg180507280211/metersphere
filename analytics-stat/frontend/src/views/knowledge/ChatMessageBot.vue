@@ -77,7 +77,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
+import { useMessage } from 'naive-ui'
 import SourceList from './SourceList.vue'
 import type { ChatMessage } from '@/composables/useKnowledgeChat'
 
@@ -94,6 +94,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const message = useMessage()
 const showDownReasons = ref(false)
 
 const downReasons = [
@@ -104,7 +105,7 @@ const downReasons = [
 
 const emitFeedback = (rating: 'up' | 'down', reason?: string) => {
   emit('feedback', { rating, reason })
-  ElMessage.success(t('analytics.knowledge.feedback_submitted'))
+  message.success(t('analytics.knowledge.feedback_submitted'))
 }
 
 const handleDownReason = (reason: string) => {

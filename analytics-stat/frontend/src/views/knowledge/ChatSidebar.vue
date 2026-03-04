@@ -31,12 +31,12 @@
 
     <!-- Search -->
     <div v-if="showSearch" class="sidebar-search">
-      <el-input
-        v-model="localKeyword"
+      <n-input
+        v-model:value="localKeyword"
         clearable
         size="small"
         :placeholder="t('analytics.knowledge.chat_session_search')"
-        @update:model-value="emit('update:session-keyword', $event)"
+        @update:value="emit('update:session-keyword', $event)"
       />
     </div>
 
@@ -85,9 +85,9 @@
 
     <!-- Footer -->
     <div class="sidebar-footer">
-      <el-tag size="small" :type="llmEnabled ? 'success' : 'info'" effect="plain">
+      <n-tag size="small" :type="llmEnabled ? 'success' : 'default'" :bordered="false">
         {{ t('analytics.knowledge.llm_status_label') }}: {{ llmStatusText }}
-      </el-tag>
+      </n-tag>
     </div>
   </aside>
 </template>
@@ -95,7 +95,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessageBox } from 'element-plus'
+import { NInput, NTag, useDialog } from 'naive-ui'
 import ChatSessionItem from './ChatSessionItem.vue'
 import type { ChatSession } from '@/composables/useChatSessionStore'
 
@@ -118,6 +118,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const dialog = useDialog()
 const showSearch = ref(false)
 const localKeyword = ref(props.sessionKeyword)
 
@@ -137,17 +138,16 @@ const getSessionNegativeCount = (sessionId: string) => {
   return session.messages.filter((msg) => msg.feedback?.rating === 'down').length
 }
 
-const handleClearAll = async () => {
-  try {
-    await ElMessageBox.confirm(
-      t('analytics.knowledge.chat_clear_all') + '?',
-      t('commons.prompt'),
-      { confirmButtonText: t('commons.confirm'), cancelButtonText: t('commons.cancel'), type: 'warning' },
-    )
-    emit('clear-all')
-  } catch {
-    // cancelled
-  }
+const handleClearAll = () => {
+  dialog.warning({
+    title: t('commons.prompt'),
+    content: t('analytics.knowledge.chat_clear_all') + '?',
+    positiveText: t('commons.confirm'),
+    negativeText: t('commons.cancel'),
+    onPositiveClick: () => {
+      emit('clear-all')
+    },
+  })
 }
 </script>
 
@@ -159,7 +159,6 @@ const handleClearAll = async () => {
   border-right: 1px solid var(--chat-border-color, #e5e5e5);
   display: flex;
   flex-direction: column;
-  height: 100%;
   overflow: hidden;
 }
 

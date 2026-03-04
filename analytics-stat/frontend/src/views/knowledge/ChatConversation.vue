@@ -22,7 +22,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
+import { useMessage } from 'naive-ui'
 import ChatMessageUser from './ChatMessageUser.vue'
 import ChatMessageBot from './ChatMessageBot.vue'
 import type { ChatMessage } from '@/composables/useKnowledgeChat'
@@ -38,14 +38,15 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const message = useMessage()
 const conversationRef = ref<HTMLElement>()
 
 const copyMessage = async (content: string) => {
   try {
     await navigator.clipboard.writeText(content)
-    ElMessage.success(t('analytics.knowledge.chat_copied'))
+    message.success(t('analytics.knowledge.chat_copied'))
   } catch {
-    ElMessage.warning(t('analytics.knowledge.chat_copy_failed'))
+    message.warning(t('analytics.knowledge.chat_copy_failed'))
   }
 }
 
