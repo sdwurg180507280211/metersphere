@@ -74,13 +74,13 @@
         @handleRowClick="openRowEditor"
         ref="variableTable"
       >
-        <ms-table-column prop="num" sortable label="ID" min-width="50" />
+        <ms-table-column prop="num" sortable label="ID" min-width="60" />
         <ms-table-column
           prop="scope"
           sortable
           :label="$t('commons.scope')"
           :filters="scopeTypeFilters"
-          min-width="100"
+          min-width="120"
         >
           <template slot-scope="scope">
             <el-select
@@ -102,7 +102,7 @@
         <ms-table-column
           prop="name"
           :label="$t('api_test.variable_name')"
-          min-width="120"
+          min-width="200"
           sortable
         >
           <template slot-scope="scope">
@@ -118,7 +118,7 @@
         <ms-table-column
           prop="type"
           :label="$t('test_track.case.type')"
-          min-width="100"
+          min-width="140"
           sortable
         >
           <template slot-scope="scope">
@@ -157,7 +157,7 @@
         <ms-table-column
           prop="value"
           :label="$t('api_test.value')"
-          min-width="140px"
+          min-width="200px"
           sortable
           show-overflow-tooltip
         >
@@ -176,6 +176,20 @@
             <csv-file-upload
               :parameter="scope.row"
               v-if="scope.row.type === 'CSV'"
+            />
+          </template>
+        </ms-table-column>
+        <ms-table-column
+          prop="description"
+          :label="$t('commons.remark')"
+          min-width="160"
+          sortable
+        >
+          <template slot-scope="scope">
+            <el-input
+              v-model="scope.row.description"
+              @change="descriptionChange(scope.row)"
+              size="mini"
             />
           </template>
         </ms-table-column>
@@ -256,7 +270,7 @@
           <el-input
             v-model="rowEditorForm.description"
             type="textarea"
-            :rows="8"
+            :rows="16"
           />
         </el-form-item>
       </el-form>
