@@ -3,8 +3,25 @@
     <n-message-provider>
       <n-dialog-provider>
         <div ref="chatLayoutRef" class="chat-layout">
+        <!-- Sidebar -->
+        <ChatSidebar
+          v-show="sidebarVisible"
+          :sessions="filteredSessions"
+          :current-session-id="currentSessionId"
+          :session-keyword="sessionKeyword"
+          :llm-enabled="llmEnabled"
+          :llm-status-text="llmStatusText"
+          @new-session="handleNewSession"
+          @select-session="handleSelectSession"
+          @delete-session="handleDeleteSession"
+          @rename-session="handleRenameSession"
+          @clear-all="handleClearAllSessions"
+          @update:session-keyword="sessionKeyword = $event"
+          @toggle-sidebar="sidebarVisible = false"
+        />
+
         <!-- Main area -->
-        <div class="chat-main">
+        <div class="chat-main" :class="{ 'sidebar-collapsed': !sidebarVisible }">
           <!-- Header -->
           <div class="chat-main-header">
             <div class="header-left">
