@@ -1,28 +1,29 @@
 <template>
-  <el-dialog
-    v-model="visible"
+  <n-modal
+    v-model:show="visible"
+    preset="dialog"
     :title="t('analytics.knowledge.search_dialog_title')"
-    width="720px"
-    :close-on-click-modal="false"
-    @close="handleClose"
+    style="width: 720px"
+    :mask-closable="false"
+    @after-leave="handleClose"
   >
     <div class="search-bar">
-      <el-input
-        v-model="query"
+      <n-input
+        v-model:value="query"
         :placeholder="t('analytics.knowledge.search_placeholder')"
         clearable
         size="large"
         @keyup.enter="doSearch"
       >
-        <template #append>
-          <el-button :icon="Search" :loading="loading" @click="doSearch">
+        <template #suffix>
+          <n-button :loading="loading" @click="doSearch" type="primary" size="small">
             {{ t('analytics.knowledge.search') }}
-          </el-button>
+          </n-button>
         </template>
-      </el-input>
+      </n-input>
       <div class="search-options">
         <span class="option-label">{{ t('analytics.knowledge.result_count_label') }}</span>
-        <el-input-number v-model="topK" :min="1" :max="50" size="small" />
+        <n-input-number v-model:value="topK" :min="1" :max="50" size="small" />
       </div>
     </div>
 
@@ -35,29 +36,29 @@
         <div class="result-header">
           <span class="result-index">#{{ index + 1 }}</span>
           <span class="result-filename">{{ item.fileName || item.fileMd5 }}</span>
-          <el-tag v-if="item.isPublic" size="small" type="success">{{ t('analytics.knowledge.public') }}</el-tag>
+          <n-tag v-if="item.isPublic" size="small" type="success" :bordered="false">{{ t('analytics.knowledge.public') }}</n-tag>
           <span class="result-score">{{ t('analytics.knowledge.score_label') }}: {{ item.score?.toFixed(4) }}</span>
         </div>
         <div class="result-content">{{ item.textContent }}</div>
       </div>
     </div>
 
-    <el-empty
+    <n-empty
       v-else-if="searched && !loading"
       :description="t('analytics.knowledge.no_result')"
     />
-  </el-dialog>
+  </n-modal>
 </template>
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Search } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { NModal, NInput, NButton, NInputNumber, NTag, NEmpty, useMessage } from 'naive-ui'
 import { EMPTY_QUERY_ERROR, useKnowledgeSearch } from '@/composables/useKnowledgeSearch'
 import { resolveKnowledgeErrorMessage } from '@/composables/useKnowledgeErrorMessage'
 
 const visible = defineModel<boolean>({ default: false })
 const { t } = useI18n()
+const message = useMessage()
 
 const { query, topK, loading, searched, results, search, reset } = useKnowledgeSearch()
 
@@ -65,14 +66,14 @@ async function doSearch() {
   try {
     const searchResult = await search()
     if (searchResult.length === 0) {
-      ElMessage.info(t('analytics.knowledge.no_result'))
+      message.info(t('analytics.knowledge.no_result'))
     }
   } catch (e: any) {
     if (e?.message === EMPTY_QUERY_ERROR) {
-      ElMessage.warning(t('analytics.knowledge.input_required'))
+      message.warning(t('analytics.knowledge.input_required'))
       return
     }
-    ElMessage.error(resolveKnowledgeErrorMessage(e, t, 'analytics.knowledge.search_failed'))
+    message.error(resolveKnowledgeErrorMessage(e, t, 'analytics.knowledge.search_failed'))
   }
 }
 

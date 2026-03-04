@@ -1,7 +1,7 @@
 /**
  * analytics-stat 微服务入口文件
  *
- * 技术栈：Vue 3.4 + Vue Router 4 + Pinia + Element Plus + TypeScript
+ * 技术栈：Vue 3.4 + Vue Router 4 + Pinia + Naive UI + Element Plus + TypeScript
  *
  * 生命周期模式：micro-app UMD 生命周期
  * - window.mount(): 每次进入子应用时调用
@@ -9,7 +9,7 @@
  *
  * 与 Vue 2 版本的关键差异：
  * - 不再依赖 metersphere-frontend（Vue 2 SDK），所有组件独立实现
- * - 使用 Element Plus 替代 Element UI
+ * - 使用 Naive UI（聊天模块）+ Element Plus（其他模块）
  * - 使用 Composition API + <script setup> 替代 Options API
  * - 使用 vue-i18n 9.x 替代 8.x
  */
