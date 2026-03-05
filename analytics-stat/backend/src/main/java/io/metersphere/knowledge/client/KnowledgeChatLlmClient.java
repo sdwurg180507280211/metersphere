@@ -40,7 +40,7 @@ public class KnowledgeChatLlmClient {
     @Value("${chat.api.model:}")
     private String model;
 
-    @Value("${chat.api.temperature:0.2}")
+    @Value("${chat.api.temperature:0.8}")
     private double temperature;
 
     @Value("${chat.api.max-tokens:600}")

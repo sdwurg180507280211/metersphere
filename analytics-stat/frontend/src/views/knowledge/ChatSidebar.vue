@@ -4,55 +4,48 @@
     <div class="sidebar-brand">
       <div class="brand-logo">
         <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+          <rect x="4" y="4" width="6" height="6" rx="1" />
+          <rect x="14" y="4" width="6" height="6" rx="1" />
+          <rect x="4" y="14" width="6" height="6" rx="1" />
+          <rect x="14" y="14" width="6" height="6" rx="1" />
         </svg>
       </div>
-      <span class="brand-text">MeterSphere AI</span>
-      <button class="sidebar-close-btn" @click="emit('toggle-sidebar')" :title="t('analytics.knowledge.chat_sidebar_toggle')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <line x1="9" y1="3" x2="9" y2="21" />
-        </svg>
-      </button>
-    </div>
-
-    <!-- New Chat + Search -->
-    <div class="sidebar-actions">
+      <span class="brand-text">slothGPT</span>
       <button class="new-chat-btn" @click="emit('new-session')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
           <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        <span>{{ t('analytics.knowledge.new_chat') }}</span>
       </button>
-      <button class="search-toggle-btn" @click="showSearch = !showSearch">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <div class="action-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+          <rect x="4" y="4" width="6" height="6" rx="1" />
+          <rect x="14" y="4" width="6" height="6" rx="1" />
+          <rect x="4" y="14" width="6" height="6" rx="1" />
+          <rect x="14" y="14" width="6" height="6" rx="1" />
         </svg>
-      </button>
-    </div>
-
-    <!-- Search -->
-    <div v-if="showSearch" class="sidebar-search">
-      <n-input
-        v-model:value="localKeyword"
-        clearable
-        size="small"
-        :placeholder="t('analytics.knowledge.chat_session_search')"
-        @update:value="emit('update:session-keyword', $event)"
-      />
-    </div>
-
-    <!-- Conversation header -->
-    <div class="conversations-header">
-      <span>{{ t('analytics.knowledge.chat_your_conversations') }}</span>
-      <button class="clear-all-btn" @click="handleClearAll">{{ t('analytics.knowledge.chat_clear_all') }}</button>
+        <span>Explore GPTs</span>
+      </div>
+      <div class="action-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+          <circle cx="9" cy="21" r="1" />
+          <circle cx="20" cy="21" r="1" />
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        </svg>
+        <span>GPT Store</span>
+      </div>
     </div>
 
     <!-- Session list -->
     <div class="sidebar-conversations">
-      <!-- Recent group -->
       <template v-if="recentSessions.length">
-        <div class="group-label">{{ t('analytics.knowledge.chat_last_7_days') }}</div>
+        <div class="group-header">
+          <span class="group-title">Today</span>
+          <span class="group-count">{{ recentSessions.length }} Total</span>
+        </div>
         <ChatSessionItem
           v-for="session in recentSessions"
           :key="session.id"
@@ -65,9 +58,11 @@
         />
       </template>
 
-      <!-- Older group -->
       <template v-if="olderSessions.length">
-        <div class="group-label" style="margin-top: 12px">{{ t('analytics.knowledge.chat_older') }}</div>
+        <div class="group-header">
+          <span class="group-title">Previous 7 Days</span>
+          <span class="group-count">{{ olderSessions.length }}</span>
+        </div>
         <ChatSessionItem
           v-for="session in olderSessions"
           :key="session.id"
@@ -84,20 +79,13 @@
         {{ t('analytics.knowledge.chat_session_empty') }}
       </div>
     </div>
-
-    <!-- Footer -->
-    <div class="sidebar-footer">
-      <n-tag size="small" :type="llmEnabled ? 'success' : 'default'" :bordered="false">
-        {{ t('analytics.knowledge.llm_status_label') }}: {{ llmStatusText }}
-      </n-tag>
-    </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NInput, NTag, useDialog } from 'naive-ui'
+import { useDialog } from 'naive-ui'
 import ChatSessionItem from './ChatSessionItem.vue'
 import type { ChatSession } from '@/composables/useChatSessionStore'
 
@@ -121,8 +109,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const dialog = useDialog()
-const showSearch = ref(false)
-const localKeyword = ref(props.sessionKeyword)
 
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000
 
@@ -139,26 +125,14 @@ const getSessionNegativeCount = (sessionId: string) => {
   if (!session) return 0
   return session.messages.filter((msg) => msg.feedback?.rating === 'down').length
 }
-
-const handleClearAll = () => {
-  dialog.warning({
-    title: t('commons.prompt'),
-    content: t('analytics.knowledge.chat_clear_all') + '?',
-    positiveText: t('commons.confirm'),
-    negativeText: t('commons.cancel'),
-    onPositiveClick: () => {
-      emit('clear-all')
-    },
-  })
-}
 </script>
 
 <style scoped>
 .chat-sidebar {
-  width: var(--chat-sidebar-width, 260px);
-  min-width: var(--chat-sidebar-width, 260px);
-  background: var(--chat-sidebar-bg, #ffffff);
-  border-right: 1px solid var(--chat-border-color, #e5e5e5);
+  width: 360px;
+  min-width: 360px;
+  background: #f8fafc;
+  border-right: 1px solid #cbd5e1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -168,7 +142,8 @@ const handleClearAll = () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 16px 16px 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #cbd5e1;
 }
 
 .brand-logo {
@@ -177,144 +152,98 @@ const handleClearAll = () => {
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #4f46e5;
   border-radius: 8px;
-  color: #ffffff;
+  color: white;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .brand-text {
-  font-size: 15px;
-  font-weight: 700;
-  color: #303133;
+  font-size: 30px;
+  font-weight: 800;
+  color: #1e293b;
   flex: 1;
-  letter-spacing: 0.3px;
-}
-
-.sidebar-close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #8e8ea0;
-  padding: 0;
-}
-
-.sidebar-close-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: #303133;
-}
-
-.sidebar-actions {
-  display: flex;
-  gap: 8px;
-  padding: 0 16px 12px;
+  letter-spacing: -0.39px;
+  line-height: 38px;
 }
 
 .new-chat-btn {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 36px;
-  border: 1px solid var(--chat-border-color, #e5e5e5);
-  background: #ffffff;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  border-radius: 50%;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: #303133;
-  transition: background-color 0.15s, border-color 0.15s;
+  color: #475569;
+  padding: 0;
+  transition: background 0.2s;
 }
 
 .new-chat-btn:hover {
-  background: var(--chat-session-active-bg, #ececf1);
-  border-color: #d0d0d0;
+  background: #f1f5f9;
 }
 
-.search-toggle-btn {
+.quick-actions {
+  padding: 20px 24px;
+  border-bottom: 1px solid #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.action-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--chat-border-color, #e5e5e5);
-  background: #ffffff;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 20px 0;
   cursor: pointer;
-  color: #8e8ea0;
-  flex-shrink: 0;
-  padding: 0;
+  color: #1e293b;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+  letter-spacing: -0.144px;
 }
 
-.search-toggle-btn:hover {
-  background: var(--chat-session-active-bg, #ececf1);
-  color: #303133;
-}
-
-.sidebar-search {
-  padding: 0 16px 8px;
-}
-
-.conversations-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 16px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #8e8ea0;
-}
-
-.clear-all-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 11px;
-  color: #8e8ea0;
-  padding: 0;
-  text-transform: none;
-  letter-spacing: normal;
-  font-weight: 400;
-}
-
-.clear-all-btn:hover {
-  color: #f56c6c;
+.action-item:hover {
+  color: #4f46e5;
 }
 
 .sidebar-conversations {
   flex: 1;
   overflow-y: auto;
-  padding: 0 8px;
+  padding: 8px 0;
 }
 
-.group-label {
-  padding: 8px 8px 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #8e8ea0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px 12px;
+}
+
+.group-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 24px;
+  letter-spacing: -0.144px;
+}
+
+.group-count {
+  font-size: 16px;
+  font-weight: 500;
+  color: #475569;
+  line-height: 22px;
+  letter-spacing: -0.112px;
 }
 
 .session-empty {
-  padding: 24px 16px;
+  padding: 24px;
   text-align: center;
-  font-size: 13px;
-  color: #8e8ea0;
-}
-
-.sidebar-footer {
-  padding: 12px 16px;
-  border-top: 1px solid var(--chat-border-color, #e5e5e5);
+  font-size: 14px;
+  color: #94a3b8;
 }
 </style>
