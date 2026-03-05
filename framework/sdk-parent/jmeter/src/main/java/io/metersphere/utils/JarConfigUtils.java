@@ -94,10 +94,12 @@ public class JarConfigUtils {
         }
         List<String> fileNames = new ArrayList<>();
         File fa[] = f.listFiles();
-        for (int i = 0; i < fa.length; i++) {
-            File fs = fa[i];
-            if (fs.exists() && !StringUtils.equals(fs.getName(), ".DS_Store")) {
-                fileNames.add(fs.getName());
+        if (fa != null) {
+            for (int i = 0; i < fa.length; i++) {
+                File fs = fa[i];
+                if (fs.exists() && !StringUtils.equals(fs.getName(), ".DS_Store")) {
+                    fileNames.add(fs.getName());
+                }
             }
         }
         return fileNames;
