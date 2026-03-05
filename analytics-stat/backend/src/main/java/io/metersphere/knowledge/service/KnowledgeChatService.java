@@ -26,10 +26,12 @@ import java.util.stream.Collectors;
 @Service
 public class KnowledgeChatService {
 
-    private static final int DEFAULT_TOP_K = 5;
     private static final int MAX_TOP_K = 10;
     private static final int MAX_SNIPPET_LENGTH = 200;
     private static final int MAX_HISTORY_TURNS_LIMIT = 20;
+
+    @Value("${chat.api.top-k:5}")
+    private int defaultTopK;
 
     @Value("${chat.api.history-turns:5}")
     private int historyTurns;
@@ -166,7 +168,7 @@ public class KnowledgeChatService {
 
     private int normalizeTopK(Integer topK) {
         if (topK == null || topK <= 0) {
-            return DEFAULT_TOP_K;
+            return defaultTopK;
         }
         return Math.min(topK, MAX_TOP_K);
     }

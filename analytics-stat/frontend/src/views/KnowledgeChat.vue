@@ -121,7 +121,7 @@ const themeOverrides = {
 }
 
 const messagesRef = ref<ChatMessage[]>([])
-const chatMode = ref<'knowledge' | 'normal'>('knowledge')
+const chatMode = ref<'knowledge' | 'normal'>('normal')
 const { messages, loading, sendQuestion, clearMessages, stopGenerating, setMessageFeedback } = useKnowledgeChat({
   messages: messagesRef,
   mode: chatMode,

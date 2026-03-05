@@ -1,6 +1,7 @@
 import { ref, watch, type Ref } from 'vue'
 import { useWebSocket } from '@vueuse/core'
 import type { ChatSource } from '@/api/knowledge-chat'
+import { KNOWLEDGE_CONFIG } from '@/config/knowledge-config'
 
 export interface ChatFeedback {
   rating: 'up' | 'down'
@@ -42,7 +43,6 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
   const messages = options.messages ?? ref<ChatMessage[]>([])
   const mode = options.mode ?? ref<'knowledge' | 'normal'>('knowledge')
   const loading = ref(false)
-  let currentAssistantMessage: ChatMessage | null = null
 
   const token = getToken()
   const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/analytics/ws/${token}`
@@ -73,28 +73,28 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
       return
     }
 
-    if (type === 'delta' && currentAssistantMessage) {
-      currentAssistantMessage.content += data
+    const lastMessage = messages.value[messages.value.length - 1]
+
+    if (type === 'delta' && lastMessage?.role === 'assistant') {
+      lastMessage.content += data
       return
     }
 
-    if (type === 'sources' && currentAssistantMessage) {
-      currentAssistantMessage.sources = data
+    if (type === 'sources' && lastMessage?.role === 'assistant') {
+      lastMessage.sources = data
       return
     }
 
     if (type === 'done') {
       loading.value = false
-      currentAssistantMessage = null
       return
     }
 
     if (type === 'error') {
       loading.value = false
-      if (currentAssistantMessage) {
-        messages.value = messages.value.filter((item) => item.id !== currentAssistantMessage!.id)
+      if (lastMessage?.role === 'assistant' && !lastMessage.content) {
+        messages.value.pop()
       }
-      currentAssistantMessage = null
       console.error('WebSocket错误:', message.message)
       return
     }
@@ -112,31 +112,30 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
       timestamp: now,
     })
 
-    currentAssistantMessage = {
+    messages.value.push({
       id: `a-${Date.now()}`,
       role: 'assistant',
       content: '',
       timestamp: Date.now(),
       sources: [],
-    }
-    messages.value.push(currentAssistantMessage)
+    })
 
     loading.value = true
 
     wsSend(JSON.stringify({
       question: normalized,
       mode: mode.value,
-      topK: options.topK ?? 5,
+      topK: options.topK ?? KNOWLEDGE_CONFIG.DEFAULT_TOP_K,
     }))
   }
 
   const stopGenerating = () => {
     if (loading.value) {
       loading.value = false
-      if (currentAssistantMessage && !currentAssistantMessage.content.trim()) {
-        messages.value = messages.value.filter((item) => item.id !== currentAssistantMessage!.id)
+      const lastMessage = messages.value[messages.value.length - 1]
+      if (lastMessage?.role === 'assistant' && !lastMessage.content.trim()) {
+        messages.value.pop()
       }
-      currentAssistantMessage = null
     }
   }
 

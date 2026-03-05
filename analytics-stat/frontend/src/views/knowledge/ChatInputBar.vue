@@ -1,37 +1,21 @@
 <template>
   <div class="chat-input-bar">
     <div class="input-container">
-      <!-- Settings button (mode + topK) -->
-      <n-popover trigger="click" placement="top-start">
-        <template #trigger>
-          <button class="input-icon-btn" :title="t('analytics.knowledge.chat_mode_settings')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </button>
-        </template>
-        <div class="settings-popover">
-          <!-- Chat mode selection -->
-          <div class="setting-item">
-            <span class="setting-label">{{ t('analytics.knowledge.chat_mode_label') }}</span>
-            <n-select
-              v-model:value="localChatMode"
-              size="small"
-              :options="chatModeOptions"
-              style="width: 160px"
-              @update:value="handleModeChange"
-            />
-          </div>
-
-          <!-- TopK setting (only for knowledge mode) -->
-          <div v-if="localChatMode === 'knowledge'" class="setting-item">
-            <span class="setting-label">{{ t('analytics.knowledge.chat_topk_label') }}</span>
-            <n-input-number v-model:value="topK" :min="1" :max="10" size="small" style="width: 100px" />
-            <span class="setting-hint">{{ t('analytics.knowledge.chat_topk_hint') }}</span>
-          </div>
-        </div>
-      </n-popover>
+      <!-- Mode toggle button -->
+      <button
+        class="mode-toggle-btn"
+        :class="{ 'knowledge-mode': localChatMode === 'knowledge' }"
+        :title="localChatMode === 'knowledge' ? t('analytics.knowledge.chat_mode_knowledge') : t('analytics.knowledge.chat_mode_normal')"
+        @click="toggleMode"
+      >
+        <svg v-if="localChatMode === 'knowledge'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      </button>
 
       <!-- Text input -->
       <n-input
@@ -66,9 +50,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NInput, NInputNumber, NPopover, NSelect } from 'naive-ui'
+import { NInput } from 'naive-ui'
 
 const props = defineProps<{
   loading: boolean
@@ -91,13 +75,10 @@ watch(() => props.chatMode, (newMode) => {
   localChatMode.value = newMode
 })
 
-const chatModeOptions = computed(() => [
-  { label: t('analytics.knowledge.chat_mode_knowledge'), value: 'knowledge' },
-  { label: t('analytics.knowledge.chat_mode_normal'), value: 'normal' },
-])
-
-const handleModeChange = (value: 'knowledge' | 'normal') => {
-  emit('update:chatMode', value)
+const toggleMode = () => {
+  const newMode = localChatMode.value === 'knowledge' ? 'normal' : 'knowledge'
+  localChatMode.value = newMode
+  emit('update:chatMode', newMode)
 }
 
 const submit = () => {
@@ -127,37 +108,74 @@ defineExpose({ focus })
   gap: 8px;
   max-width: 768px;
   margin: 0 auto;
-  background: #ffffff;
-  border: 1px solid var(--chat-border-color, #e5e5e5);
-  border-radius: 24px;
-  padding: 8px 12px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.06);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  background: linear-gradient(to bottom, #ffffff, #fafafa);
+  border: 1.5px solid #e0e0e0;
+  border-radius: 28px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
 }
 
 .input-container:focus-within {
-  border-color: var(--chat-accent, #6366f1);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+  border-color: #667eea;
+  box-shadow: 0 6px 24px rgba(102, 126, 234, 0.15), 0 0 0 3px rgba(102, 126, 234, 0.08);
+  background: #ffffff;
+  transform: translateY(-1px);
+}
+
+.mode-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #6b7280;
+  flex-shrink: 0;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.mode-toggle-btn:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+  color: #667eea;
+  transform: scale(1.05);
+}
+
+.mode-toggle-btn.knowledge-mode {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.mode-toggle-btn.knowledge-mode:hover {
+  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .input-icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border: none;
   background: none;
   border-radius: 50%;
   cursor: pointer;
-  color: #8e8ea0;
+  color: #9ca3af;
   flex-shrink: 0;
   padding: 0;
+  transition: all 0.2s ease;
 }
 
 .input-icon-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: #303133;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+  color: #667eea;
+  transform: rotate(90deg);
 }
 
 .chat-textarea {
@@ -184,25 +202,29 @@ defineExpose({ focus })
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border: none;
-  background: var(--chat-accent, #6366f1);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 50%;
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
-  transition: background-color 0.15s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .send-btn:hover:not(.disabled) {
-  background: var(--chat-accent-hover, #4f46e5);
+  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .send-btn.disabled {
   opacity: 0.4;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .stop-btn {
@@ -222,42 +244,5 @@ defineExpose({ focus })
 
 .stop-btn:hover {
   background: #f5f5f5;
-}
-
-.settings-popover {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 240px;
-}
-
-.setting-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.setting-label {
-  font-size: 13px;
-  color: #303133;
-  font-weight: 500;
-}
-
-.setting-hint {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 4px;
-}
-
-.topk-popover {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.topk-label {
-  font-size: 13px;
-  color: #606266;
-  white-space: nowrap;
 }
 </style>
