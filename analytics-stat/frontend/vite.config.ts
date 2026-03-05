@@ -62,6 +62,18 @@ export default defineConfig({
     headers: {
       'Access-Control-Allow-Origin': '*',
     },
+    // HMR 配置，解决 micro-app 环境下热更新问题
+    hmr: {
+      protocol: 'ws',
+      host: '127.0.0.1',
+      port: 4009,
+      overlay: true,
+    },
+    // 文件监听配置
+    watch: {
+      usePolling: true,
+      interval: 100,
+    },
     proxy: {
       // 排除登录和文档路径，其他请求代理到后端
       '^(?!/login)(?!/document)': {

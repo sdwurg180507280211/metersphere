@@ -78,6 +78,7 @@ export default {
       practice_file_naming: 'Use domain + version naming, for example: billing-faq-v2.md.',
       practice_content_split: 'Split long documents by chapter to avoid mixed topics in one file.',
       practice_permission: 'Keep sensitive files private and reserve public files for shared team knowledge.',
+      knowledge_base: 'Knowledge Base',
       chat_title: 'Knowledge Chat',
       chat_send: 'Send',
       chat_stop: 'Stop',
@@ -142,6 +143,7 @@ export default {
       chat_older: 'Older',
       chat_regenerate: 'Regenerate',
       chat_sidebar_toggle: 'Toggle sidebar',
+      go_to_knowledge_base: 'Knowledge Base',
     },
   },
 }

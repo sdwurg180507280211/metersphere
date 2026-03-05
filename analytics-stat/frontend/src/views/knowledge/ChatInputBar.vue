@@ -85,6 +85,7 @@ defineExpose({ focus })
 .chat-input-bar {
   padding: 16px 24px 24px;
   background: var(--chat-main-bg, #f7f7f8);
+  flex-shrink: 0;
 }
 
 .input-container {

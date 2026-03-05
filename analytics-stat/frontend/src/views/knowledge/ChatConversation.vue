@@ -72,7 +72,8 @@ watch(
 
 <style scoped>
 .chat-conversation {
-  flex: 1;
+  height: 0;
+  flex: 1 1 auto;
   overflow-y: auto;
   padding: 24px 24px 8px;
 }
