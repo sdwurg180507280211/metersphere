@@ -144,6 +144,13 @@ export default {
       chat_regenerate: '重新生成',
       chat_sidebar_toggle: '切换侧边栏',
       go_to_knowledge_base: '知识库',
+      chat_mode_settings: '聊天模式设置',
+      chat_mode_label: '聊天模式',
+      chat_mode_knowledge: '知识库模式',
+      chat_mode_normal: '普通对话模式',
+      chat_mode_switched_knowledge: '已切换到知识库模式',
+      chat_mode_switched_normal: '已切换到普通对话模式',
+      chat_topk_hint: '从知识库检索的文档片段数量',
     },
   },
 }

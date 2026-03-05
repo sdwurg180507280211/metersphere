@@ -102,6 +102,39 @@ public class KnowledgeChatService {
         return emitter;
     }
 
+    /**
+     * 普通对话流式接口（不使用 RAG）
+     */
+    public SseEmitter askNormalStream(String question, String userId, String workspaceId) {
+        SseEmitter emitter = new SseEmitter(60_000L);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                String historyKey = buildHistoryKey(userId, workspaceId);
+                List<KnowledgeChatLlmClient.HistoryTurn> history = getHistorySnapshot(historyKey);
+                String answer = knowledgeChatLlmClient.streamNormalChat(question, history,
+                        delta -> safeSendDelta(emitter, delta));
+
+                if (StringUtils.isBlank(answer)) {
+                    answer = "抱歉，AI 服务暂时不可用，请稍后重试。";
+                    emitter.send(SseEmitter.event().name("delta").data(answer));
+                }
+
+                appendHistory(historyKey, question, answer);
+                emitter.send(SseEmitter.event().name("done").data("ok"));
+                emitter.complete();
+            } catch (Exception e) {
+                try {
+                    emitter.send(SseEmitter.event().name("error").data(e.getMessage()));
+                } catch (Exception ignored) {
+                }
+                emitter.completeWithError(e);
+            }
+        });
+
+        return emitter;
+    }
+
     private List<KnowledgeChatSource> loadSources(String question, String userId, String workspaceId, int safeTopK) {
         List<KnowledgeSearchResult> searchResults = searchService.searchWithPermission(
                 question, userId, workspaceId, safeTopK

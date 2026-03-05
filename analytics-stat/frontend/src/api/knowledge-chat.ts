@@ -18,6 +18,10 @@ export interface AskQuestionParams {
   topK?: number
 }
 
+export interface AskNormalChatParams {
+  question: string
+}
+
 export interface ChatBackendStatus {
   llmEnabled: boolean
 }
@@ -26,6 +30,11 @@ interface AskQuestionStreamOptions {
   signal?: AbortSignal
   onChunk: (chunk: string) => void
   onSources: (sources: ChatSource[]) => void
+}
+
+interface AskNormalChatStreamOptions {
+  signal?: AbortSignal
+  onChunk: (chunk: string) => void
 }
 
 interface ApiResponse<T> {
@@ -303,5 +312,80 @@ export async function getChatBackendStatus(): Promise<ChatBackendStatus> {
     }
   } catch (error) {
     throw normalizeKnowledgeError(error, '获取问答状态失败')
+  }
+}
+
+/**
+ * 普通 AI 对话流式接口（不使用 RAG）
+ */
+async function askNormalChatStreamByApi(
+  params: AskNormalChatParams,
+  options: AskNormalChatStreamOptions,
+): Promise<void> {
+  const response = await fetch('/analytics/knowledge/chat/normal-stream', {
+    method: 'POST',
+    headers: buildAuthHeaders(),
+    credentials: 'include',
+    signal: options.signal,
+    body: JSON.stringify({
+      question: params.question,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`普通对话请求失败: ${response.status}`)
+  }
+
+  if (!response.body) {
+    throw new Error('未获取到流式响应体')
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder('utf-8')
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) {
+      break
+    }
+
+    buffer += decoder.decode(value, { stream: true })
+    const events = buffer.split(/\r?\n\r?\n/)
+    buffer = events.pop() || ''
+
+    for (const eventText of events) {
+      if (!eventText.trim()) {
+        continue
+      }
+      const { event, data } = parseSseEvents(eventText)
+      if (event === 'delta') {
+        options.onChunk(data)
+      } else if (event === 'error') {
+        throw new Error(data || '普通对话请求失败')
+      } else if (event === 'done') {
+        return
+      }
+    }
+  }
+
+  if (buffer.trim()) {
+    const { event, data } = parseSseEvents(buffer)
+    if (event === 'delta') {
+      options.onChunk(data)
+    } else if (event === 'done') {
+      return
+    }
+  }
+}
+
+export async function askNormalChatStream(
+  params: AskNormalChatParams,
+  options: AskNormalChatStreamOptions,
+): Promise<void> {
+  try {
+    await askNormalChatStreamByApi(params, options)
+  } catch (error) {
+    throw normalizeKnowledgeError(error, '普通对话请求失败')
   }
 }

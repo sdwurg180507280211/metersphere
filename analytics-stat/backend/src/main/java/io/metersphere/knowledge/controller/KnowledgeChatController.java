@@ -70,6 +70,27 @@ public class KnowledgeChatController {
     }
 
     /**
+     * 普通对话流式接口（不使用 RAG）
+     *
+     * URL: POST /knowledge/chat/normal-stream
+     */
+    @PostMapping(value = "/normal-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter normalStream(@RequestBody KnowledgeChatAskRequest request, HttpServletResponse response) {
+        String userId = SessionUtils.getUserId();
+        String workspaceId = SessionUtils.getCurrentWorkspaceId();
+        String question = validateQuestion(request);
+
+        response.setHeader("Cache-Control", "no-cache, no-transform");
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Connection", "keep-alive");
+
+        logger.info("普通对话流式请求 - 用户: {}, 工作空间: {}, questionLength: {}",
+                userId, workspaceId, question.length());
+
+        return knowledgeChatService.askNormalStream(question.trim(), userId, workspaceId);
+    }
+
+    /**
      * 问答状态接口
      *
      * URL: GET /knowledge/chat/status

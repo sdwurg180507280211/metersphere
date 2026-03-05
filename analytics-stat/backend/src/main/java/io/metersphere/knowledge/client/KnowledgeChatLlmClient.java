@@ -118,6 +118,33 @@ public class KnowledgeChatLlmClient {
         }
     }
 
+    /**
+     * 普通对话流式接口（不使用 RAG）
+     */
+    public String streamNormalChat(String question, List<HistoryTurn> history, Consumer<String> onDelta) {
+        if (!available()) {
+            return null;
+        }
+
+        try {
+            MessageCreateParams params = buildNormalChatParams(question, history);
+            StringBuilder answer = new StringBuilder();
+            try (StreamResponse<RawMessageStreamEvent> stream = anthropicClient.messages().createStreaming(params)) {
+                stream.stream().forEach(event -> {
+                    String delta = extractDelta(event);
+                    if (StringUtils.isNotBlank(delta)) {
+                        answer.append(delta);
+                        onDelta.accept(delta);
+                    }
+                });
+            }
+            return answer.isEmpty() ? null : answer.toString();
+        } catch (Exception e) {
+            logger.warn("LLM 普通对话流式调用失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
     private MessageCreateParams buildParams(String question, List<KnowledgeChatSource> sources, List<HistoryTurn> history) {
         MessageCreateParams.Builder builder = MessageCreateParams.builder()
                 .model(Model.of(model))
@@ -141,6 +168,35 @@ public class KnowledgeChatLlmClient {
         }
 
         builder.addUserMessage(buildUserPrompt(question, sources));
+        return builder.build();
+    }
+
+    /**
+     * 构建普通对话参数（不使用知识库上下文）
+     */
+    private MessageCreateParams buildNormalChatParams(String question, List<HistoryTurn> history) {
+        MessageCreateParams.Builder builder = MessageCreateParams.builder()
+                .model(Model.of(model))
+                .system("你是一个有帮助的AI助手。请直接回答用户的问题。")
+                .temperature(temperature)
+                .maxTokens((long) maxTokens)
+                .topP(topP);
+
+        if (history != null && !history.isEmpty()) {
+            for (HistoryTurn turn : history) {
+                if (turn == null) {
+                    continue;
+                }
+                if (StringUtils.isNotBlank(turn.userQuestion())) {
+                    builder.addUserMessage(turn.userQuestion());
+                }
+                if (StringUtils.isNotBlank(turn.assistantAnswer())) {
+                    builder.addAssistantMessage(turn.assistantAnswer());
+                }
+            }
+        }
+
+        builder.addUserMessage(question);
         return builder.build();
     }
 

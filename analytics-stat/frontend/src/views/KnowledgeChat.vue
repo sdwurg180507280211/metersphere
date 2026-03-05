@@ -70,7 +70,7 @@
           />
 
           <!-- Input bar -->
-          <ChatInputBar :loading="loading" @send="handleAskPayload" @stop="stopGenerating" />
+          <ChatInputBar :loading="loading" :chat-mode="chatMode" @send="handleAskPayload" @stop="stopGenerating" @update:chat-mode="chatMode = $event" />
         </div>
       </div>
       </n-dialog-provider>
@@ -121,8 +121,10 @@ const themeOverrides = {
 }
 
 const messagesRef = ref<ChatMessage[]>([])
+const chatMode = ref<'knowledge' | 'normal'>('knowledge')
 const { messages, loading, sendQuestion, clearMessages, stopGenerating, setMessageFeedback } = useKnowledgeChat({
   messages: messagesRef,
+  mode: chatMode,
 })
 
 watch(
