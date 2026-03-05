@@ -2,12 +2,12 @@
  * Vue Router 4 配置
  *
  * 路由结构：
- * - / → 重定向到 知识库首页
+ * - / → 重定向到 知识问答页面
  * - <base> → 二级布局（KnowledgeBaseLayout.vue）
- *   - <base>/knowledge → 知识库
- *   - <base>/knowledge/chat → 知识问答
+ *   - <base>/knowledge/chat → 知识问答（主页面）
+ *   - <base>/knowledge → 知识库管理
  *   - <base>/home | <base>/sql-console | <base>/data-dictionary
- *     兼容历史入口，统一重定向到知识库（可通过 VITE_ENABLE_ANALYTICS_LEGACY_ROUTES=false 关闭）
+ *     兼容历史入口，统一重定向到知识问答（可通过 VITE_ENABLE_ANALYTICS_LEGACY_ROUTES=false 关闭）
  * - <base> 默认是 /analytics，可通过 VITE_KNOWLEDGE_ROUTE_BASE 配置
  *
  * 与 Vue 2 版本的差异：
@@ -25,44 +25,44 @@ const legacyRedirectRoutes: RouteRecordRaw[] = enableLegacyRedirectRoutes
   ? [
       {
         path: 'home',
-        redirect: KNOWLEDGE_ROUTE_PATHS.knowledge,
+        redirect: KNOWLEDGE_ROUTE_PATHS.knowledgeChat,
       },
       {
         path: 'sql-console',
-        redirect: KNOWLEDGE_ROUTE_PATHS.knowledge,
+        redirect: KNOWLEDGE_ROUTE_PATHS.knowledgeChat,
       },
       {
         path: 'data-dictionary',
-        redirect: KNOWLEDGE_ROUTE_PATHS.knowledge,
+        redirect: KNOWLEDGE_ROUTE_PATHS.knowledgeChat,
       },
     ]
   : []
 
 /** 路由配置 */
 const routes: RouteRecordRaw[] = [
-  // 根路径重定向到知识库
-  { path: '/', redirect: KNOWLEDGE_ROUTE_PATHS.knowledge },
+  // 根路径重定向到知识问答
+  { path: '/', redirect: KNOWLEDGE_ROUTE_PATHS.knowledgeChat },
 
   // 分析统计模块路由
   {
     path: KNOWLEDGE_ROUTE_BASE,
     name: 'analytics',
-    redirect: KNOWLEDGE_ROUTE_PATHS.knowledge,
-    // 二级布局组件：顶部导航 + 左侧菜单 + 右侧内容
+    redirect: KNOWLEDGE_ROUTE_PATHS.knowledgeChat,
+    // 二级布局组件
     component: () => import('@/business/KnowledgeBaseLayout.vue'),
     children: [
       ...legacyRedirectRoutes,
-      {
-        path: 'knowledge',
-        name: 'knowledgeBase',
-        component: () => import('@/views/KnowledgeBase.vue'),
-        meta: { title: '知识库' },
-      },
       {
         path: 'knowledge/chat',
         name: 'knowledgeChat',
         component: () => import('@/views/KnowledgeChat.vue'),
         meta: { title: '知识问答' },
+      },
+      {
+        path: 'knowledge',
+        name: 'knowledgeBase',
+        component: () => import('@/views/KnowledgeBase.vue'),
+        meta: { title: '知识库' },
       },
     ],
   },

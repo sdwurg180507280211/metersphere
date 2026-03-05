@@ -78,6 +78,7 @@ export default {
       practice_file_naming: '文件名建議包含業務域與版本，例如：billing-faq-v2.md。',
       practice_content_split: '長文件建議按章節拆分，避免單個文件主題過於分散。',
       practice_permission: '敏感文件請使用私有權限，公開文件用於團隊共識知識。',
+      knowledge_base: '知識庫',
       chat_title: '知識問答',
       chat_send: '發送',
       chat_stop: '停止生成',
@@ -142,6 +143,7 @@ export default {
       chat_older: '更早',
       chat_regenerate: '重新生成',
       chat_sidebar_toggle: '切換側邊欄',
+      go_to_knowledge_base: '知識庫',
     },
   },
 }

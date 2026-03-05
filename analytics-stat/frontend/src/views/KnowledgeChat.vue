@@ -3,8 +3,25 @@
     <n-message-provider>
       <n-dialog-provider>
         <div ref="chatLayoutRef" class="chat-layout">
+        <!-- Sidebar -->
+        <ChatSidebar
+          v-show="sidebarVisible"
+          :sessions="filteredSessions"
+          :current-session-id="currentSessionId"
+          :session-keyword="sessionKeyword"
+          :llm-enabled="llmEnabled"
+          :llm-status-text="llmStatusText"
+          @new-session="handleNewSession"
+          @select-session="handleSelectSession"
+          @delete-session="handleDeleteSession"
+          @rename-session="handleRenameSession"
+          @clear-all="handleClearAllSessions"
+          @update:session-keyword="sessionKeyword = $event"
+          @toggle-sidebar="sidebarVisible = false"
+        />
+
         <!-- Main area -->
-        <div class="chat-main">
+        <div class="chat-main" :class="{ 'sidebar-collapsed': !sidebarVisible }">
           <!-- Header -->
           <div class="chat-main-header">
             <div class="header-left">
@@ -20,6 +37,12 @@
               <div class="feedback-filter">
                 <n-select v-model:value="feedbackFilter" size="small" style="width: 130px" :options="feedbackOptions" />
               </div>
+              <button class="header-action-btn" @click="goToKnowledgeBase" :title="t('analytics.knowledge.go_to_knowledge_base')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+              </button>
               <button class="header-action-btn" @click="handleExportSession" :title="t('analytics.knowledge.export_chat')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -58,6 +81,7 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { NConfigProvider, NMessageProvider, NDialogProvider, NSelect, NInput, createDiscreteApi } from 'naive-ui'
 import ChatSidebar from './knowledge/ChatSidebar.vue'
 import ChatWelcome from './knowledge/ChatWelcome.vue'
@@ -68,9 +92,11 @@ import { useKnowledgeChat } from '@/composables/useKnowledgeChat'
 import { useChatHistory } from '@/composables/useChatHistory'
 import { useChatSessionStore } from '@/composables/useChatSessionStore'
 import { resolveKnowledgeErrorMessage } from '@/composables/useKnowledgeErrorMessage'
+import { KNOWLEDGE_ROUTE_PATHS } from '@/config/knowledge-route'
 import type { ChatFeedback, ChatMessage } from '@/composables/useKnowledgeChat'
 
 const { t } = useI18n()
+const router = useRouter()
 const { message, dialog } = createDiscreteApi(['message', 'dialog'])
 const { history, addQuestion, clearHistory } = useChatHistory()
 const {
@@ -234,6 +260,10 @@ const handleFeedback = (payload: { messageId: string; rating: 'up' | 'down'; rea
   setMessageFeedback(payload.messageId, feedback)
 }
 
+const goToKnowledgeBase = () => {
+  router.push(KNOWLEDGE_ROUTE_PATHS.knowledge)
+}
+
 const loadLlmStatus = async () => {
   llmStatusLoading.value = true
   try {
@@ -258,8 +288,11 @@ onMounted(() => {
   if (chatLayoutRef.value) {
     resizeObserver = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width || 0
-      if (width < 600 && sidebarVisible.value) {
+      if (width === 0) return // Ignore initial layout
+      if (width < 600) {
         sidebarVisible.value = false
+      } else if (width >= 800) {
+        sidebarVisible.value = true
       }
     })
     resizeObserver.observe(chatLayoutRef.value)
@@ -274,7 +307,8 @@ onUnmounted(() => {
 <style scoped>
 .chat-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100%;
   overflow: hidden;
 
   /* Design tokens */
@@ -301,7 +335,6 @@ onUnmounted(() => {
   flex-direction: column;
   background: var(--chat-main-bg);
   min-width: 0;
-  height: 100%;
   overflow: hidden;
 }
 

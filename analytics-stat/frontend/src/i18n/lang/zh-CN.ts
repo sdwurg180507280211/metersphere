@@ -78,6 +78,7 @@ export default {
       practice_file_naming: '文件名建议包含业务域和版本，例如：billing-faq-v2.md。',
       practice_content_split: '长文档建议按章节拆分，避免单个文件主题过于分散。',
       practice_permission: '敏感文档请使用私有权限，公开文档用于团队共识知识。',
+      knowledge_base: '知识库',
       chat_title: '知识问答',
       chat_send: '发送',
       chat_stop: '停止生成',
@@ -142,6 +143,7 @@ export default {
       chat_older: '更早',
       chat_regenerate: '重新生成',
       chat_sidebar_toggle: '切换侧边栏',
+      go_to_knowledge_base: '知识库',
     },
   },
 }
