@@ -25,37 +25,56 @@
           <!-- Header -->
           <div class="chat-main-header">
             <div class="header-left">
-              <button v-if="!sidebarVisible" class="sidebar-toggle-btn" @click="sidebarVisible = true" :title="t('analytics.knowledge.chat_sidebar_toggle')">
+              <button class="model-selector">
+                <span>sloth GPT 7.0</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <line x1="9" y1="3" x2="9" y2="21" />
+                  <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
-              <span class="header-title">{{ t('analytics.knowledge.chat_title') }}</span>
             </div>
-            <div class="header-right">
-              <div class="feedback-filter">
-                <n-select v-model:value="feedbackFilter" size="small" style="width: 130px" :options="feedbackOptions" />
-              </div>
-              <button class="header-action-btn" @click="goToKnowledgeBase" :title="t('analytics.knowledge.go_to_knowledge_base')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            <div class="header-center">
+              <button class="header-icon-btn" title="Share">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
                 </svg>
               </button>
-              <button class="header-action-btn" @click="handleExportSession" :title="t('analytics.knowledge.export_chat')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-              </button>
-              <button class="header-action-btn" @click="clearMessages" :title="t('analytics.knowledge.clear_chat')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <button class="header-icon-btn" @click="clearMessages" title="Clear">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                 </svg>
               </button>
+            </div>
+            <div class="header-right">
+              <button class="header-icon-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <line x1="4" y1="21" x2="4" y2="14" />
+                  <line x1="4" y1="10" x2="4" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12" y2="3" />
+                  <line x1="20" y1="21" x2="20" y2="16" />
+                  <line x1="20" y1="12" x2="20" y2="3" />
+                  <line x1="1" y1="14" x2="7" y2="14" />
+                  <line x1="9" y1="8" x2="15" y2="8" />
+                  <line x1="17" y1="16" x2="23" y2="16" />
+                </svg>
+              </button>
+              <button class="header-icon-btn" @click="goToKnowledgeBase">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+              </button>
+              <div class="user-avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
             </div>
           </div>
 
@@ -312,30 +331,14 @@ onUnmounted(() => {
   height: 100vh;
   width: 100%;
   overflow: hidden;
-
-  /* Design tokens */
-  --chat-sidebar-width: 260px;
-  --chat-accent: #6366f1;
-  --chat-accent-hover: #4f46e5;
-  --chat-main-bg: #f7f7f8;
-  --chat-sidebar-bg: #ffffff;
-  --chat-user-bubble-bg: #f0f0f0;
-  --chat-user-bubble-text: #303133;
-  --chat-bot-bubble-bg: #ffffff;
-  --chat-bot-bubble-text: #303133;
-  --chat-dark-card-bg: #202123;
-  --chat-dark-card-text: #ffffff;
-  --chat-light-card-bg: #ffffff;
-  --chat-light-card-text: #303133;
-  --chat-border-color: #e5e5e5;
-  --chat-session-active-bg: #ececf1;
+  background: white;
 }
 
 .chat-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--chat-main-bg);
+  background: white;
   min-width: 0;
   overflow: hidden;
 }
@@ -344,70 +347,88 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
-  background: #ffffff;
-  border-bottom: 1px solid var(--chat-border-color);
+  padding: 20px 32px;
+  background: white;
+  border-bottom: 1px solid #cbd5e1;
   flex-shrink: 0;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.header-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.sidebar-toggle-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #8e8ea0;
-  padding: 0;
-}
-
-.sidebar-toggle-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: #303133;
-}
-
+.header-left,
+.header-center,
 .header-right {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
 }
 
-.header-action-btn {
+.header-center {
+  justify-content: center;
+}
+
+.header-right {
+  justify-content: flex-end;
+}
+
+.model-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+  color: #475569;
+  line-height: 24px;
+  letter-spacing: -0.144px;
+}
+
+.model-selector:hover {
+  color: #1e293b;
+}
+
+.header-icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: none;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  border-radius: 50%;
   cursor: pointer;
-  color: #8e8ea0;
+  color: #475569;
   padding: 0;
+  transition: background 0.2s;
 }
 
-.header-action-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: #303133;
+.header-icon-btn:hover {
+  background: #f8fafc;
 }
 
-.feedback-filter {
+.user-avatar {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: white;
+  position: relative;
+}
+
+.user-avatar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border: 1.5px solid white;
+  border-radius: 50%;
 }
 </style>

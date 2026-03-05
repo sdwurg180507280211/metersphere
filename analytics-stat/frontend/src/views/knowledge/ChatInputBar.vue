@@ -1,23 +1,12 @@
 <template>
   <div class="chat-input-bar">
     <div class="input-container">
-      <!-- Mode toggle button -->
-      <button
-        class="mode-toggle-btn"
-        :class="{ 'knowledge-mode': localChatMode === 'knowledge' }"
-        :title="localChatMode === 'knowledge' ? t('analytics.knowledge.chat_mode_knowledge') : t('analytics.knowledge.chat_mode_normal')"
-        @click="toggleMode"
-      >
-        <svg v-if="localChatMode === 'knowledge'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        </svg>
-        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <button class="icon-btn" title="Attach file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
         </svg>
       </button>
 
-      <!-- Text input -->
       <n-input
         ref="inputRef"
         v-model:value="draft"
@@ -28,7 +17,6 @@
         @keydown.enter.exact.prevent="submit"
       />
 
-      <!-- Send / Stop button -->
       <button
         v-if="!loading"
         class="send-btn"
@@ -36,16 +24,17 @@
         :disabled="!draft.trim()"
         @click="submit"
       >
-        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+          <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" />
         </svg>
       </button>
       <button v-else class="stop-btn" @click="emit('stop')">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
           <rect x="6" y="6" width="12" height="12" rx="2" />
         </svg>
       </button>
     </div>
+    <p class="disclaimer">{{ t('analytics.knowledge.chat_assistant') }} can make mistakes. Check our Terms & Conditions.</p>
   </div>
 </template>
 
@@ -68,18 +57,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const draft = ref('')
 const topK = ref(5)
-const localChatMode = ref(props.chatMode)
-
-// 同步 props.chatMode 到 localChatMode
-watch(() => props.chatMode, (newMode) => {
-  localChatMode.value = newMode
-})
-
-const toggleMode = () => {
-  const newMode = localChatMode.value === 'knowledge' ? 'normal' : 'knowledge'
-  localChatMode.value = newMode
-  emit('update:chatMode', newMode)
-}
 
 const submit = () => {
   const question = draft.value.trim()
@@ -97,85 +74,51 @@ defineExpose({ focus })
 
 <style scoped>
 .chat-input-bar {
-  padding: 16px 24px 24px;
-  background: var(--chat-main-bg, #f7f7f8);
+  padding: 24px 96px;
+  background: white;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
 }
 
 .input-container {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  max-width: 768px;
-  margin: 0 auto;
-  background: linear-gradient(to bottom, #ffffff, #fafafa);
-  border: 1.5px solid #e0e0e0;
-  border-radius: 28px;
-  padding: 10px 14px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  gap: 4px;
+  max-width: 100%;
+  width: 100%;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  padding: 12px;
+  box-shadow: 0 4px 8px -2px rgba(23, 23, 23, 0.1), 0 2px 4px -2px rgba(23, 23, 23, 0.06);
 }
 
 .input-container:focus-within {
-  border-color: #667eea;
-  box-shadow: 0 6px 24px rgba(102, 126, 234, 0.15), 0 0 0 3px rgba(102, 126, 234, 0.08);
-  background: #ffffff;
-  transform: translateY(-1px);
+  border-color: #4f46e5;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
 }
 
-.mode-toggle-btn {
+.icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: #f3f4f6;
-  border-radius: 50%;
-  cursor: pointer;
-  color: #6b7280;
-  flex-shrink: 0;
-  padding: 0;
-  transition: all 0.2s ease;
-}
-
-.mode-toggle-btn:hover {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
-  color: #667eea;
-  transform: scale(1.05);
-}
-
-.mode-toggle-btn.knowledge-mode {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-.mode-toggle-btn.knowledge-mode:hover {
-  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.input-icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: none;
   background: none;
   border-radius: 50%;
   cursor: pointer;
-  color: #9ca3af;
+  color: #475569;
   flex-shrink: 0;
   padding: 0;
-  transition: all 0.2s ease;
+  transition: background 0.2s;
 }
 
-.input-icon-btn:hover {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-  color: #667eea;
-  transform: rotate(90deg);
+.icon-btn:hover {
+  background: #f8fafc;
 }
 
 .chat-textarea {
@@ -186,9 +129,9 @@ defineExpose({ focus })
 .chat-textarea :deep(.n-input__textarea-el) {
   border: none !important;
   box-shadow: none !important;
-  padding: 6px 4px;
-  font-size: 14px;
-  line-height: 1.5;
+  padding: 8px 4px;
+  font-size: 16px;
+  line-height: 1.375;
   resize: none;
   background: transparent;
 }
@@ -202,40 +145,36 @@ defineExpose({ focus })
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #4f46e5;
   color: white;
   border-radius: 50%;
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  transition: all 0.2s;
 }
 
 .send-btn:hover:not(.disabled) {
-  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  background: #4338ca;
 }
 
 .send-btn.disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 .stop-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--chat-border-color, #e5e5e5);
-  background: #fff;
-  color: #303133;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #1e293b;
   border-radius: 50%;
   cursor: pointer;
   flex-shrink: 0;
@@ -243,6 +182,14 @@ defineExpose({ focus })
 }
 
 .stop-btn:hover {
-  background: #f5f5f5;
+  background: #f8fafc;
+}
+
+.disclaimer {
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-align: center;
+  margin: 0;
 }
 </style>

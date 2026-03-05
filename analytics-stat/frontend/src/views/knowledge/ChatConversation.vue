@@ -78,11 +78,12 @@ watch(
   height: 0;
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 24px 24px 8px;
+  padding: 32px 96px;
+  background: white;
 }
 
 .chat-conversation > .message-row {
-  max-width: 768px;
-  margin: 0 auto 16px;
+  max-width: 100%;
+  margin: 0 0 24px;
 }
 </style>
