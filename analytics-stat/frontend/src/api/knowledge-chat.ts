@@ -1,4 +1,5 @@
 import { knowledgeHttp, normalizeKnowledgeError } from './knowledge'
+import { KNOWLEDGE_CONFIG } from '@/config/knowledge-config'
 
 export interface ChatSource {
   fileId?: number
@@ -117,7 +118,7 @@ async function askQuestionByMock(params: AskQuestionParams): Promise<ChatRespons
 async function askQuestionByApi(params: AskQuestionParams): Promise<ChatResponse> {
   const response = await knowledgeHttp.post<ApiResponse<ChatApiData>>('/knowledge/chat/ask', {
       question: params.question,
-      topK: params.topK ?? 5,
+      topK: params.topK ?? KNOWLEDGE_CONFIG.DEFAULT_TOP_K,
   })
 
   if (!response.data.success) {
@@ -221,7 +222,7 @@ async function askQuestionStreamByApi(
     signal: options.signal,
     body: JSON.stringify({
       question: params.question,
-      topK: params.topK ?? 5,
+      topK: params.topK ?? KNOWLEDGE_CONFIG.DEFAULT_TOP_K,
     }),
   })
 
