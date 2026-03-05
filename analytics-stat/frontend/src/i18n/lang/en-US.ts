@@ -144,6 +144,13 @@ export default {
       chat_regenerate: 'Regenerate',
       chat_sidebar_toggle: 'Toggle sidebar',
       go_to_knowledge_base: 'Knowledge Base',
+      chat_mode_settings: 'Chat Mode Settings',
+      chat_mode_label: 'Chat Mode',
+      chat_mode_knowledge: 'Knowledge Base Mode',
+      chat_mode_normal: 'Normal Chat Mode',
+      chat_mode_switched_knowledge: 'Switched to Knowledge Base Mode',
+      chat_mode_switched_normal: 'Switched to Normal Chat Mode',
+      chat_topk_hint: 'Number of document chunks to retrieve from knowledge base',
     },
   },
 }

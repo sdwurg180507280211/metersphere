@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue'
-import { askQuestionStream } from '@/api/knowledge-chat'
+import { askQuestionStream, askNormalChatStream } from '@/api/knowledge-chat'
 import type { ChatSource } from '@/api/knowledge-chat'
 
 export interface ChatFeedback {
@@ -22,10 +22,12 @@ interface SendQuestionOptions {
 
 interface UseKnowledgeChatOptions {
   messages?: Ref<ChatMessage[]>
+  mode?: Ref<'knowledge' | 'normal'>
 }
 
 export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
   const messages = options.messages ?? ref<ChatMessage[]>([])
+  const mode = options.mode ?? ref<'knowledge' | 'normal'>('knowledge')
   const loading = ref(false)
   let currentAbortController: AbortController | null = null
 
@@ -57,18 +59,32 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
     loading.value = true
 
     try {
-      await askQuestionStream(
-        { question: normalized, topK: options.topK },
-        {
-          signal: currentAbortController.signal,
-          onChunk: (chunk) => {
-            assistantMessage.content += chunk
+      if (mode.value === 'knowledge') {
+        // 知识库模式：使用 RAG
+        await askQuestionStream(
+          { question: normalized, topK: options.topK },
+          {
+            signal: currentAbortController.signal,
+            onChunk: (chunk) => {
+              assistantMessage.content += chunk
+            },
+            onSources: (sources) => {
+              assistantMessage.sources = sources
+            },
           },
-          onSources: (sources) => {
-            assistantMessage.sources = sources
+        )
+      } else {
+        // 普通对话模式：不使用 RAG
+        await askNormalChatStream(
+          { question: normalized },
+          {
+            signal: currentAbortController.signal,
+            onChunk: (chunk) => {
+              assistantMessage.content += chunk
+            },
           },
-        },
-      )
+        )
+      }
     } catch (error) {
       if ((error as Error)?.name === 'AbortError') {
         return

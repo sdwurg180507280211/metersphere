@@ -1,19 +1,35 @@
 <template>
   <div class="chat-input-bar">
     <div class="input-container">
-      <!-- TopK setting -->
+      <!-- Settings button (mode + topK) -->
       <n-popover trigger="click" placement="top-start">
         <template #trigger>
-          <button class="input-icon-btn" :title="t('analytics.knowledge.chat_topk_label')">
+          <button class="input-icon-btn" :title="t('analytics.knowledge.chat_mode_settings')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </button>
         </template>
-        <div class="topk-popover">
-          <span class="topk-label">{{ t('analytics.knowledge.chat_topk_label') }}</span>
-          <n-input-number v-model:value="topK" :min="1" :max="10" size="small" />
+        <div class="settings-popover">
+          <!-- Chat mode selection -->
+          <div class="setting-item">
+            <span class="setting-label">{{ t('analytics.knowledge.chat_mode_label') }}</span>
+            <n-select
+              v-model:value="localChatMode"
+              size="small"
+              :options="chatModeOptions"
+              style="width: 160px"
+              @update:value="handleModeChange"
+            />
+          </div>
+
+          <!-- TopK setting (only for knowledge mode) -->
+          <div v-if="localChatMode === 'knowledge'" class="setting-item">
+            <span class="setting-label">{{ t('analytics.knowledge.chat_topk_label') }}</span>
+            <n-input-number v-model:value="topK" :min="1" :max="10" size="small" style="width: 100px" />
+            <span class="setting-hint">{{ t('analytics.knowledge.chat_topk_hint') }}</span>
+          </div>
         </div>
       </n-popover>
 
@@ -50,22 +66,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NInput, NInputNumber, NPopover } from 'naive-ui'
+import { NInput, NInputNumber, NPopover, NSelect } from 'naive-ui'
 
-defineProps<{
+const props = defineProps<{
   loading: boolean
+  chatMode: 'knowledge' | 'normal'
 }>()
 
 const emit = defineEmits<{
   send: [{ question: string; topK: number }]
   stop: []
+  'update:chatMode': ['knowledge' | 'normal']
 }>()
 
 const { t } = useI18n()
 const draft = ref('')
 const topK = ref(5)
+const localChatMode = ref(props.chatMode)
+
+// 同步 props.chatMode 到 localChatMode
+watch(() => props.chatMode, (newMode) => {
+  localChatMode.value = newMode
+})
+
+const chatModeOptions = computed(() => [
+  { label: t('analytics.knowledge.chat_mode_knowledge'), value: 'knowledge' },
+  { label: t('analytics.knowledge.chat_mode_normal'), value: 'normal' },
+])
+
+const handleModeChange = (value: 'knowledge' | 'normal') => {
+  emit('update:chatMode', value)
+}
 
 const submit = () => {
   const question = draft.value.trim()
@@ -189,6 +222,31 @@ defineExpose({ focus })
 
 .stop-btn:hover {
   background: #f5f5f5;
+}
+
+.settings-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 240px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-label {
+  font-size: 13px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.setting-hint {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
 }
 
 .topk-popover {

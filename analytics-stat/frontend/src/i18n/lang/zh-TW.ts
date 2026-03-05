@@ -144,6 +144,13 @@ export default {
       chat_regenerate: '重新生成',
       chat_sidebar_toggle: '切換側邊欄',
       go_to_knowledge_base: '知識庫',
+      chat_mode_settings: '聊天模式設置',
+      chat_mode_label: '聊天模式',
+      chat_mode_knowledge: '知識庫模式',
+      chat_mode_normal: '普通對話模式',
+      chat_mode_switched_knowledge: '已切換到知識庫模式',
+      chat_mode_switched_normal: '已切換到普通對話模式',
+      chat_topk_hint: '從知識庫檢索的文件片段數量',
     },
   },
 }
