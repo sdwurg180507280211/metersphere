@@ -1,5 +1,5 @@
-import { ref, type Ref } from 'vue'
-import { askQuestionStream, askNormalChatStream } from '@/api/knowledge-chat'
+import { ref, watch, type Ref } from 'vue'
+import { useWebSocket } from '@vueuse/core'
 import type { ChatSource } from '@/api/knowledge-chat'
 
 export interface ChatFeedback {
@@ -11,7 +11,7 @@ export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
-  createdAt: number
+  timestamp: number
   sources?: ChatSource[]
   feedback?: ChatFeedback
 }
@@ -25,91 +25,118 @@ interface UseKnowledgeChatOptions {
   mode?: Ref<'knowledge' | 'normal'>
 }
 
+function getToken(): string {
+  const tokenStr = localStorage.getItem('Admin-Token')
+  if (tokenStr) {
+    try {
+      const user = JSON.parse(tokenStr)
+      return user?.sessionId || 'anonymous'
+    } catch {
+      return 'anonymous'
+    }
+  }
+  return 'anonymous'
+}
+
 export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
   const messages = options.messages ?? ref<ChatMessage[]>([])
   const mode = options.mode ?? ref<'knowledge' | 'normal'>('knowledge')
   const loading = ref(false)
-  let currentAbortController: AbortController | null = null
+  let currentAssistantMessage: ChatMessage | null = null
+
+  const token = getToken()
+  const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/analytics/ws/${token}`
+
+  const { status, data: wsData, send: wsSend, open: wsOpen, close: wsClose } = useWebSocket(wsUrl, {
+    autoReconnect: true,
+    heartbeat: {
+      message: 'ping',
+      interval: 30000,
+    },
+  })
+
+  watch(wsData, (val) => {
+    if (!val) return
+    try {
+      const message = JSON.parse(val)
+      handleWebSocketMessage(message)
+    } catch (e) {
+      console.error('解析WebSocket消息失败:', e)
+    }
+  })
+
+  function handleWebSocketMessage(message: any) {
+    const { type, data, sessionId } = message
+
+    if (type === 'connection') {
+      console.log('WebSocket连接成功, sessionId:', sessionId)
+      return
+    }
+
+    if (type === 'delta' && currentAssistantMessage) {
+      currentAssistantMessage.content += data
+      return
+    }
+
+    if (type === 'sources' && currentAssistantMessage) {
+      currentAssistantMessage.sources = data
+      return
+    }
+
+    if (type === 'done') {
+      loading.value = false
+      currentAssistantMessage = null
+      return
+    }
+
+    if (type === 'error') {
+      loading.value = false
+      if (currentAssistantMessage) {
+        messages.value = messages.value.filter((item) => item.id !== currentAssistantMessage!.id)
+      }
+      currentAssistantMessage = null
+      console.error('WebSocket错误:', message.message)
+      return
+    }
+  }
 
   const sendQuestion = async (question: string, options: SendQuestionOptions = {}) => {
     const normalized = question.trim()
-    if (!normalized) {
-      return
-    }
+    if (!normalized) return
 
     const now = Date.now()
     messages.value.push({
       id: `u-${now}`,
       role: 'user',
       content: normalized,
-      createdAt: now,
+      timestamp: now,
     })
 
-    const assistantMessage: ChatMessage = {
+    currentAssistantMessage = {
       id: `a-${Date.now()}`,
       role: 'assistant',
       content: '',
-      createdAt: Date.now(),
+      timestamp: Date.now(),
       sources: [],
     }
-    messages.value.push(assistantMessage)
+    messages.value.push(currentAssistantMessage)
 
-    currentAbortController?.abort()
-    currentAbortController = new AbortController()
     loading.value = true
 
-    try {
-      if (mode.value === 'knowledge') {
-        // 知识库模式：使用 RAG
-        await askQuestionStream(
-          { question: normalized, topK: options.topK },
-          {
-            signal: currentAbortController.signal,
-            onChunk: (chunk) => {
-              assistantMessage.content += chunk
-            },
-            onSources: (sources) => {
-              assistantMessage.sources = sources
-            },
-          },
-        )
-      } else {
-        // 普通对话模式：不使用 RAG
-        await askNormalChatStream(
-          { question: normalized },
-          {
-            signal: currentAbortController.signal,
-            onChunk: (chunk) => {
-              assistantMessage.content += chunk
-            },
-          },
-        )
-      }
-    } catch (error) {
-      if ((error as Error)?.name === 'AbortError') {
-        return
-      }
-      messages.value = messages.value.filter((item) => item.id !== assistantMessage.id)
-      throw error
-    } finally {
-      if (currentAbortController?.signal.aborted) {
-        currentAbortController = null
-      } else {
-        currentAbortController = null
-      }
-      loading.value = false
-    }
+    wsSend(JSON.stringify({
+      question: normalized,
+      mode: mode.value,
+      topK: options.topK ?? 5,
+    }))
   }
 
   const stopGenerating = () => {
     if (loading.value) {
-      currentAbortController?.abort()
       loading.value = false
-      currentAbortController = null
-      const lastMessage = messages.value[messages.value.length - 1]
-      if (lastMessage && lastMessage.role === 'assistant' && !lastMessage.content.trim()) {
-        messages.value = messages.value.slice(0, -1)
+      if (currentAssistantMessage && !currentAssistantMessage.content.trim()) {
+        messages.value = messages.value.filter((item) => item.id !== currentAssistantMessage!.id)
       }
+      currentAssistantMessage = null
     }
   }
 
@@ -120,13 +147,8 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
 
   const setMessageFeedback = (messageId: string, feedback: ChatFeedback) => {
     messages.value = messages.value.map((item) => {
-      if (item.id !== messageId) {
-        return item
-      }
-      return {
-        ...item,
-        feedback,
-      }
+      if (item.id !== messageId) return item
+      return { ...item, feedback }
     })
   }
 
