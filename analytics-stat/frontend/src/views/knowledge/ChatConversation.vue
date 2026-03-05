@@ -1,21 +1,23 @@
 <template>
   <div ref="conversationRef" class="chat-conversation">
-    <div
-      v-for="(message, index) in messages"
-      :key="message.id"
-      class="message-row"
-    >
-      <ChatMessageUser v-if="message.role === 'user'" :message="message" />
-      <ChatMessageBot
-        v-else
-        :message="message"
-        :is-last="index === messages.length - 1"
-        :is-loading="loading && index === messages.length - 1"
-        @copy="copyMessage(message.content)"
-        @retry="retryFromMessage(index)"
-        @feedback="(payload) => emit('feedback', { messageId: message.id, ...payload })"
-      />
-    </div>
+    <VueMarkdownItProvider>
+      <div
+        v-for="(message, index) in messages"
+        :key="message.id"
+        class="message-row"
+      >
+        <ChatMessageUser v-if="message.role === 'user'" :message="message" />
+        <ChatMessageBot
+          v-else
+          :message="message"
+          :is-last="index === messages.length - 1"
+          :is-loading="loading && index === messages.length - 1"
+          @copy="copyMessage(message.content)"
+          @retry="retryFromMessage(index)"
+          @feedback="(payload) => emit('feedback', { messageId: message.id, ...payload })"
+        />
+      </div>
+    </VueMarkdownItProvider>
   </div>
 </template>
 
@@ -23,6 +25,7 @@
 import { ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
+import { VueMarkdownItProvider } from 'vue-markdown-shiki'
 import ChatMessageUser from './ChatMessageUser.vue'
 import ChatMessageBot from './ChatMessageBot.vue'
 import type { ChatMessage } from '@/composables/useKnowledgeChat'
