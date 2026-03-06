@@ -498,7 +498,16 @@ export default {
         }
         // 恢复搜索值（可能是字符串、数组等多种类型）
         if (saved.value !== undefined) {
-          target.value = saved.value;
+          // 检查是否是需要从 API 加载选项的字段（如创建人、处理人等）
+          if (target.options && target.options.url) {
+            // 延迟恢复，给 API 一些时间加载
+            setTimeout(() => {
+              target.value = saved.value;
+            }, 800);
+          } else {
+            // 直接恢复值
+            target.value = saved.value;
+          }
         }
       });
     },
