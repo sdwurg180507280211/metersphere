@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
+import { useBuildStore } from '../store/useAppStore'
 import LogViewer from './LogViewer'
+import BuildProgress from './BuildProgress'
 import './BuildTab.css'
 
 const MODULES = [
@@ -16,75 +18,61 @@ const MODULES = [
 ]
 
 function BuildTab() {
-  const [logs, setLogs] = useState('')
-  const [building, setBuilding] = useState(null)
-  const logViewerRef = useRef(null)
+  const { activeBuilds, fetchActiveBuilds, addActiveBuild } = useBuildStore()
 
-  // 连接 SSE 日志流
   useEffect(() => {
-    const eventSource = new EventSource('/api/logs/stream')
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (data.type === 'build' || data.type === 'system') {
-          setLogs(prev => {
-            const newLogs = prev + data.message
-            // 限制日志行数
-            const lines = newLogs.split('\n')
-            if (lines.length > 1000) {
-              return lines.slice(-1000).join('\n')
-            }
-            return newLogs
-          })
-        }
-      } catch (e) {
-        console.error('Parse error:', e)
-      }
-    }
+    fetchActiveBuilds()
+  }, [fetchActiveBuilds])
 
-    eventSource.onerror = () => {
-      console.log('SSE connection error')
-    }
-
-    return () => {
-      eventSource.close()
-    }
-  }, [])
+  const isBuilding = activeBuilds.some(b => b.status === 'running')
 
   const handleBuild = useCallback(async (moduleId) => {
-    if (building) {
-      toast.error('已有构建任务进行中')
+    if (isBuilding) {
+      toast.error('已有构建任务进行中，请等待完成')
       return
     }
 
     const module = MODULES.find(m => m.id === moduleId)
-    toast.promise(
-      fetch('/api/build/frontend', {
+    
+    try {
+      const res = await fetch('/api/build/frontend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ module: moduleId })
-      }),
-      {
-        loading: `正在启动 ${module.name} 的构建...`,
-        success: '构建任务已启动',
-        error: '启动构建失败'
+      })
+      
+      const data = await res.json()
+      
+      if (data.success) {
+        toast.success(`已启动 ${module.name} 的构建`)
+        // 临时添加到活跃构建列表，等待 WebSocket 更新
+        if (data.buildId) {
+          addActiveBuild({
+            id: data.buildId,
+            module: module.name,
+            status: 'running',
+            currentStep: 0,
+            totalSteps: 5,
+            overallProgress: 0,
+            stepName: '准备环境'
+          })
+        }
+      } else {
+        toast.error(data.error || '启动构建失败')
       }
-    )
-
-    setBuilding(moduleId)
-    setTimeout(() => setBuilding(null), 5000)
-  }, [building])
-
-  const clearLogs = useCallback(() => {
-    setLogs('')
-  }, [])
+    } catch (error) {
+      toast.error(`网络错误: ${error.message}`)
+    }
+  }, [isBuilding, addActiveBuild])
 
   return (
     <div className="tab-content">
+      <BuildProgress />
+      
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">前端构建</h2>
+          {isBuilding && <span className="building-badge">构建中...</span>}
         </div>
         <div className="btn-grid">
           {MODULES.map(module => (
@@ -92,13 +80,9 @@ function BuildTab() {
               key={module.id}
               className="btn-build"
               onClick={() => handleBuild(module.id)}
-              disabled={building === module.id}
+              disabled={isBuilding}
             >
-              {building === module.id ? (
-                <><span className="loading"></span> 构建中...</>
-              ) : (
-                module.name
-              )}
+              {module.name}
             </button>
           ))}
         </div>
@@ -107,11 +91,8 @@ function BuildTab() {
       <div className="card" style={{ flex: 1, minHeight: 0 }}>
         <div className="card-header">
           <h2 className="card-title">构建日志</h2>
-          <button className="btn-secondary btn-small" onClick={clearLogs}>
-            清空
-          </button>
         </div>
-        <LogViewer logs={logs} type="build" />
+        <LogViewer type="build" />
       </div>
     </div>
   )

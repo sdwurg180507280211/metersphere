@@ -20,25 +20,31 @@ const buildController = {
 
       const modulePath = validator.getValidModulePath(module);
       
-      // 立即返回，构建在后台进行
-      res.json({ success: true, message: '构建任务已开始' });
-
-      // 执行构建
-      const result = await processManager.buildFrontend(module, modulePath);
+      // 先启动构建任务获取 buildId
+      const buildId = await processManager.initBuild(module, modulePath);
       
-      if (result.success) {
-        // 构建成功，重启对应服务
-        const isGateway = module === 'sdk-parent';
-        const serviceId = isGateway ? 'gateway' : module;
-        const service = config.services[serviceId];
+      // 立即返回，构建在后台进行
+      res.json({ success: true, message: '构建任务已开始', buildId });
 
-        if (service) {
-          logger.broadcast(`\n========== 重启 ${service.name} 服务 ==========`, 'build');
-          await processManager.restart(serviceId, service, 2000);
+      // 在后台执行构建（不阻塞响应）
+      processManager.executeBuild(module, modulePath, buildId).then(async (result) => {
+        if (result.success) {
+          // 构建成功，重启对应服务
+          const isGateway = module === 'sdk-parent';
+          const serviceId = isGateway ? 'gateway' : module;
+          const service = config.services[serviceId];
+
+          if (service) {
+            logger.broadcast(`\n========== 重启 ${service.name} 服务 ==========`, 'build');
+            await processManager.restart(serviceId, service, 2000);
+          }
         }
-      }
+      }).catch(error => {
+        logger.broadcast(`构建失败: ${error.message}`, 'build');
+      });
     } catch (error) {
       logger.broadcast(`构建失败: ${error.message}`, 'build');
+      res.status(500).json({ success: false, error: error.message });
     }
   },
 

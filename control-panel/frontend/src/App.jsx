@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
+import { useWebSocket } from './hooks/useWebSocket'
 import Sidebar from './components/Sidebar'
 import BuildTab from './components/BuildTab'
 import ServicesTab from './components/ServicesTab'
@@ -7,6 +8,9 @@ import './styles/App.css'
 
 function App() {
   const [activeTab, setActiveTab] = useState('build')
+  
+  // 初始化 WebSocket 连接
+  useWebSocket()
 
   return (
     <div className="app">

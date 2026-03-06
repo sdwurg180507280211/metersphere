@@ -7,6 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../config');
 const logger = require('../utils/logger');
+const buildProgressService = require('./buildProgressService');
+const websocketService = require('./websocketService');
 
 const PID_DIR = path.join(__dirname, '../../.pids');
 const LOG_DIR = path.join(__dirname, '../../logs');
@@ -239,29 +241,146 @@ class ProcessManager {
   }
 
   /**
-   * 构建前端模块
+   * 初始化构建任务（返回 buildId）
    */
-  async buildFrontend(module, modulePath) {
+  async initBuild(module, modulePath) {
+    const buildId = await buildProgressService.startBuild(module);
+    return buildId;
+  }
+
+  /**
+   * 执行构建（后台执行）
+   */
+  async executeBuild(module, modulePath, buildId) {
     const isGateway = module === 'sdk-parent';
     const targetPath = isGateway 
       ? '../../gateway/src/main/resources/static' 
       : '../backend/src/main/resources/static';
-
+    
     logger.broadcast(`\n========== 构建 ${module} 前端 ==========`, 'build');
-    logger.broadcast(`cd ${modulePath}/frontend`, 'build');
-    logger.broadcast(`npm run build`, 'build');
+    logger.broadcast(`构建ID: ${buildId}`, 'build');
 
-    return new Promise((resolve) => {
-      const buildCmd = `cd ${modulePath}/frontend && npm run build`;
-      const child = spawn('sh', ['-c', buildCmd], { cwd: this.projectRoot });
+    try {
+      // 步骤1: 准备环境
+      await buildProgressService.updateStep(buildId, 0, 'running', 50, '准备构建环境...');
+      await new Promise(r => setTimeout(r, 500));
+      await buildProgressService.updateStep(buildId, 0, 'completed', 100, '环境准备完成');
 
+      // 步骤2: 安装依赖
+      await buildProgressService.updateStep(buildId, 1, 'running', 0, '安装依赖...');
+      const npmInstallCmd = `cd ${modulePath}/frontend && npm install`;
+      await this._execWithProgress(npmInstallCmd, buildId, 1, '安装依赖');
+
+      // 步骤3: 编译构建
+      await buildProgressService.updateStep(buildId, 2, 'running', 0, '开始编译...');
+      logger.broadcast(`cd ${modulePath}/frontend`, 'build');
+      logger.broadcast(`npm run build`, 'build');
+
+      const buildResult = await this._execBuildWithProgress(
+        `cd ${modulePath}/frontend && npm run build`,
+        buildId,
+        modulePath,
+        targetPath
+      );
+
+      if (!buildResult.success) {
+        throw new Error(buildResult.error);
+      }
+
+      // 步骤4: 复制资源
+      await buildProgressService.updateStep(buildId, 3, 'running', 50, '复制构建文件...');
+      await this._copyBuildFiles(modulePath, targetPath);
+      await buildProgressService.updateStep(buildId, 3, 'completed', 100, '文件复制完成');
+
+      // 步骤5: 完成
+      await buildProgressService.updateStep(buildId, 4, 'completed', 100, '构建流程完成');
+
+      await buildProgressService.completeBuild(buildId, true);
+      
+      return { success: true, buildId };
+    } catch (error) {
+      await buildProgressService.completeBuild(buildId, false, error.message);
+      logger.broadcast(`\n✗ 构建失败: ${error.message}`, 'build');
+      return { success: false, error: error.message, buildId };
+    }
+  }
+
+  /**
+   * 构建前端模块（兼容旧版，一次性执行）
+   */
+  async buildFrontend(module, modulePath) {
+    const buildId = await this.initBuild(module, modulePath);
+    return await this.executeBuild(module, modulePath, buildId);
+  }
+
+  /**
+   * 执行命令并报告进度
+   */
+  _execWithProgress(cmd, buildId, stepIndex, stepName) {
+    return new Promise((resolve, reject) => {
+      const child = spawn('sh', ['-c', cmd], { cwd: this.projectRoot });
+      
       let output = '';
       let errorOutput = '';
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress = Math.min(progress + 10, 90);
+        buildProgressService.updateStep(buildId, stepIndex, 'running', progress, `${stepName}进行中...`);
+      }, 2000);
+
+      child.stdout.on('data', (data) => {
+        output += data.toString();
+        websocketService.broadcastLog('build', data.toString());
+      });
+
+      child.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+        websocketService.broadcastLog('build', data.toString());
+      });
+
+      child.on('close', (code) => {
+        clearInterval(progressInterval);
+        if (code === 0) {
+          buildProgressService.updateStep(buildId, stepIndex, 'completed', 100, `${stepName}完成`);
+          resolve({ success: true, output });
+        } else {
+          buildProgressService.updateStep(buildId, stepIndex, 'failed', progress, `${stepName}失败`);
+          reject(new Error(errorOutput || `${stepName}失败`));
+        }
+      });
+    });
+  }
+
+  /**
+   * 带进度追踪的构建执行
+   */
+  _execBuildWithProgress(cmd, buildId, modulePath, targetPath) {
+    return new Promise((resolve) => {
+      const child = spawn('sh', ['-c', cmd], { cwd: this.projectRoot });
+      
+      let output = '';
+      let errorOutput = '';
+      let progress = 0;
+      
+      // 模拟构建进度（因为 npm run build 没有实时进度）
+      const progressInterval = setInterval(() => {
+        if (progress < 90) {
+          progress += Math.random() * 5;
+          buildProgressService.updateStep(buildId, 2, 'running', Math.round(progress), '编译中...');
+        }
+      }, 3000);
 
       child.stdout.on('data', (data) => {
         const str = data.toString();
         output += str;
         logger.broadcast(str, 'build');
+        
+        // 检测关键进度节点
+        if (str.includes('building')) {
+          buildProgressService.updateStep(buildId, 2, 'running', 30, '正在编译...');
+        } else if (str.includes('optimizing')) {
+          buildProgressService.updateStep(buildId, 2, 'running', 70, '优化中...');
+        }
       });
 
       child.stderr.on('data', (data) => {
@@ -271,13 +390,13 @@ class ProcessManager {
       });
 
       child.on('close', (code) => {
+        clearInterval(progressInterval);
         if (code === 0) {
-          logger.broadcast(`\n构建成功，复制文件到 ${targetPath}`, 'build');
-          this._copyBuildFiles(modulePath, targetPath)
-            .then(() => resolve({ success: true, output }))
-            .catch(err => resolve({ success: false, error: err.message }));
+          buildProgressService.updateStep(buildId, 2, 'completed', 100, '编译完成');
+          resolve({ success: true, output });
         } else {
-          resolve({ success: false, error: errorOutput || '构建失败', code });
+          buildProgressService.updateStep(buildId, 2, 'failed', progress, '编译失败');
+          resolve({ success: false, error: errorOutput || '构建失败' });
         }
       });
     });
