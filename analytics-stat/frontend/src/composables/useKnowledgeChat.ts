@@ -19,6 +19,7 @@ export interface ChatMessage {
 
 interface SendQuestionOptions {
   topK?: number
+  modelId?: string
 }
 
 interface UseKnowledgeChatOptions {
@@ -126,6 +127,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
       question: normalized,
       mode: mode.value,
       topK: options.topK ?? KNOWLEDGE_CONFIG.DEFAULT_TOP_K,
+      modelId: options.modelId,
     }))
   }
 

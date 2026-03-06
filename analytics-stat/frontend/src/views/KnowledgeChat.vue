@@ -25,10 +25,21 @@
           <!-- Header -->
           <div class="chat-main-header">
             <div class="header-left">
-              <n-dropdown :options="modelOptions" @select="handleModelSelect">
-                <button class="model-selector">
+              <n-dropdown
+                :options="modelOptions"
+                @select="handleModelSelect"
+                :disabled="llmStatusLoading || models.length === 0"
+              >
+                <button class="model-selector" :class="{ 'loading': llmStatusLoading, 'disabled': models.length === 0 }">
+                  <svg v-if="llmStatusLoading" class="loading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+                  </svg>
                   <span>{{ selectedModelName }}</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </button>
@@ -188,6 +199,8 @@ const models = ref<ModelInfo[]>([])
 const selectedModel = ref<string>('')
 
 const selectedModelName = computed(() => {
+  if (llmStatusLoading.value) return t('analytics.knowledge.loading_models')
+  if (models.value.length === 0) return t('analytics.knowledge.no_models')
   if (!selectedModel.value) return 'sloth GPT 7.0'
   const model = models.value.find(m => m.id === selectedModel.value)
   return model?.name || 'sloth GPT 7.0'
@@ -208,7 +221,7 @@ const visibleMessages = computed(() => {
 
 const handleAsk = async (question: string) => {
   try {
-    await sendQuestion(question)
+    await sendQuestion(question, { modelId: selectedModel.value })
     addQuestion(question)
   } catch (error) {
     message.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.chat_failed'))
@@ -217,7 +230,7 @@ const handleAsk = async (question: string) => {
 
 const handleAskPayload = async (payload: { question: string; topK: number }) => {
   try {
-    await sendQuestion(payload.question, { topK: payload.topK })
+    await sendQuestion(payload.question, { topK: payload.topK, modelId: selectedModel.value })
     addQuestion(payload.question)
   } catch (error) {
     message.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.chat_failed'))
@@ -402,19 +415,40 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0;
-  border: none;
-  background: none;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
   cursor: pointer;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: #475569;
   line-height: 24px;
-  letter-spacing: -0.144px;
+  transition: all 0.2s;
 }
 
-.model-selector:hover {
+.model-selector:hover:not(.disabled) {
   color: #1e293b;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.model-selector.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.model-selector.loading {
+  cursor: wait;
+}
+
+.loading-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .header-icon-btn {
