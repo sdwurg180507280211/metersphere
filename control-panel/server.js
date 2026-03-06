@@ -2,11 +2,16 @@ const express = require('express');
 const { exec, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
 
 const app = express();
-const PORT = 3000;
-const PROJECT_ROOT = path.join(__dirname, '..');
+
+// 读取配置文件
+const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+const PORT = config.port;
+const PROJECT_ROOT = path.join(__dirname, config.projectRoot);
 const PID_DIR = path.join(__dirname, '.pids');
+const services = config.services;
 
 // 确保 PID 目录存在
 if (!fs.existsSync(PID_DIR)) {
@@ -18,20 +23,6 @@ const serviceProcesses = {};
 
 app.use(express.static('public'));
 app.use(express.json());
-
-const services = {
-  'eureka': { name: 'Eureka', pom: 'framework/eureka/pom.xml', port: 8761 },
-  'gateway': { name: 'Gateway', pom: 'framework/gateway/pom.xml', port: 8080 },
-  'system-setting': { name: 'System Setting', pom: 'system-setting/backend/pom.xml', port: 8800 },
-  'project-management': { name: 'Project Management', pom: 'project-management/backend/pom.xml', port: 8801 },
-  'test-track': { name: 'Test Track', pom: 'test-track/backend/pom.xml', port: 8802 },
-  'api-test': { name: 'API Test', pom: 'api-test/backend/pom.xml', port: 8803 },
-  'performance-test': { name: 'Performance Test', pom: 'performance-test/backend/pom.xml', port: 8804 },
-  'report-stat': { name: 'Report Stat', pom: 'report-stat/backend/pom.xml', port: 8805 },
-  'workstation': { name: 'Workstation', pom: 'workstation/backend/pom.xml', port: 8806 },
-  'workflow-service': { name: 'Workflow Service', pom: 'workflow-service/backend/pom.xml', port: 8807 },
-  'analytics-stat': { name: 'Analytics Stat', pom: 'analytics-stat/backend/pom.xml', port: 8808 }
-};
 
 let logClients = [];
 
@@ -63,6 +54,32 @@ app.get('/api/services/status', (req, res) => {
       running[key] = stdout.includes(services[key].pom);
     });
     res.json(running);
+  });
+});
+
+// 健康检查
+app.get('/api/services/:id/health', (req, res) => {
+  const service = services[req.params.id];
+  if (!service) return res.json({ healthy: false, error: '服务不存在' });
+
+  const options = {
+    host: 'localhost',
+    port: service.port,
+    path: service.healthCheck || '/',
+    timeout: 2000
+  };
+
+  const healthReq = http.get(options, (healthRes) => {
+    res.json({ healthy: healthRes.statusCode === 200 });
+  });
+
+  healthReq.on('error', () => {
+    res.json({ healthy: false });
+  });
+
+  healthReq.on('timeout', () => {
+    healthReq.destroy();
+    res.json({ healthy: false });
   });
 });
 
