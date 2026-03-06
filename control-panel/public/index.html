@@ -68,7 +68,7 @@
             </div>
           </div>
           <div class="section">
-            <h2>构建日志</h2>
+            <h2>构建日志 <button onclick="clearLog('build-log')" style="float: right; padding: 6px 12px; font-size: 12px;">清空</button></h2>
             <div id="build-log" class="log"></div>
           </div>
         </div>
@@ -79,7 +79,7 @@
             <div class="btn-grid" id="services-grid"></div>
           </div>
           <div class="section">
-            <h2>服务日志</h2>
+            <h2>服务日志 <button onclick="clearLog('service-log')" style="float: right; padding: 6px 12px; font-size: 12px;">清空</button></h2>
             <div id="service-log" class="log"></div>
           </div>
         </div>
@@ -112,6 +112,7 @@
         const btn = document.createElement('button');
         btn.id = `service-${svc.id}`;
         btn.className = 'stopped';
+        btn.style.background = '';
         btn.textContent = svc.name;
         btn.onclick = () => toggleService(svc.id);
         grid.appendChild(btn);
@@ -167,9 +168,16 @@
       services.forEach(svc => {
         const btn = document.getElementById(`service-${svc.id}`);
         const isRunning = serviceStatus[svc.id];
+
         btn.className = isRunning ? 'running' : 'stopped';
+        btn.style.background = '';
         btn.textContent = `${svc.name} ${isRunning ? '●' : '○'}`;
       });
+    }
+
+    // 清空日志
+    function clearLog(logId) {
+      document.getElementById(logId).textContent = '';
     }
 
     // 切换服务状态
@@ -182,11 +190,12 @@
 
       try {
         if (isRunning) {
+          // 停止服务
           await fetch(`/api/services/${id}/stop`, { method: 'POST' });
-          await new Promise(r => setTimeout(r, 1000));
+        } else {
+          // 启动服务
+          await fetch(`/api/services/${id}/start`, { method: 'POST' });
         }
-
-        await fetch(`/api/services/${id}/start`, { method: 'POST' });
 
         setTimeout(() => {
           btn.disabled = false;
