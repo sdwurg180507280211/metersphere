@@ -40,8 +40,16 @@ app.get('/api/logs/stream', (req, res) => {
 });
 
 function sendLog(message, type = 'service') {
+  const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const lines = message.split('\n');
+  const timestampedMessage = lines.map(line => {
+    if (line.trim() === '') return line;
+    if (line.startsWith('=====')) return line;
+    return `[${timestamp}] ${line}`;
+  }).join('\n');
+
   logClients.forEach(client => {
-    client.write(`data: ${JSON.stringify({ message, type })}\n\n`);
+    client.write(`data: ${JSON.stringify({ message: timestampedMessage, type })}\n\n`);
   });
 }
 
@@ -62,6 +70,8 @@ app.get('/api/services/:id/health', (req, res) => {
   const service = services[req.params.id];
   if (!service) return res.json({ healthy: false, error: '服务不存在' });
 
+  let responded = false;
+
   const options = {
     host: 'localhost',
     port: service.port,
@@ -70,16 +80,25 @@ app.get('/api/services/:id/health', (req, res) => {
   };
 
   const healthReq = http.get(options, (healthRes) => {
-    res.json({ healthy: healthRes.statusCode === 200 });
+    if (!responded) {
+      responded = true;
+      res.json({ healthy: healthRes.statusCode === 200 });
+    }
   });
 
   healthReq.on('error', () => {
-    res.json({ healthy: false });
+    if (!responded) {
+      responded = true;
+      res.json({ healthy: false });
+    }
   });
 
   healthReq.on('timeout', () => {
     healthReq.destroy();
-    res.json({ healthy: false });
+    if (!responded) {
+      responded = true;
+      res.json({ healthy: false });
+    }
   });
 });
 
