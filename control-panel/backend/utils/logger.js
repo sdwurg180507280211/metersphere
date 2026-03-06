@@ -4,6 +4,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const websocketService = require('../services/websocketService');
 
 class Logger {
   constructor(options = {}) {
@@ -39,7 +40,7 @@ class Logger {
       return `[${timestamp}] ${line}`;
     }).join('\n');
 
-    // 发送到 SSE 客户端
+    // 发送到 SSE 客户端（兼容旧版）
     this.logClients.forEach(client => {
       try {
         client.write(`data: ${JSON.stringify({ message: timestampedMessage, type })}\n\n`);
@@ -47,6 +48,15 @@ class Logger {
         // 客户端已断开，忽略错误
       }
     });
+
+    // 发送到 WebSocket 客户端（如果已初始化）
+    if (websocketService && websocketService.broadcastLog) {
+      try {
+        websocketService.broadcastLog(type, timestampedMessage);
+      } catch (e) {
+        // WebSocket 可能未初始化，忽略错误
+      }
+    }
 
     // 同时写入文件
     this.writeToFile(timestampedMessage, type);
