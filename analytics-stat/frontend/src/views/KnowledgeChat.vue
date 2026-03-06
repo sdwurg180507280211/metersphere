@@ -312,10 +312,12 @@ const loadLlmStatus = async () => {
     ])
     llmEnabled.value = status.llmEnabled
     models.value = modelList
+    console.log('获取到的模型列表:', modelList)
     if (modelList.length > 0 && !selectedModel.value) {
       selectedModel.value = modelList[0].id
     }
-  } catch {
+  } catch (error) {
+    console.error('加载状态失败:', error)
     llmEnabled.value = false
     models.value = []
   } finally {

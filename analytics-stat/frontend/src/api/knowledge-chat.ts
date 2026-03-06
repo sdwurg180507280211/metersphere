@@ -398,9 +398,16 @@ export interface ModelInfo {
 
 export async function listModels(): Promise<ModelInfo[]> {
   try {
-    const response = await knowledgeHttp.get<ModelInfo[]>('/knowledge/chat/models')
-    return Array.isArray(response.data) ? response.data : []
+    const response = await knowledgeHttp.get<ApiResponse<ModelInfo[]>>('/knowledge/chat/models')
+    console.log('API响应:', response)
+    console.log('response.data:', response.data)
+    console.log('response.data.data:', response.data.data)
+    if (!response.data.success) {
+      throw new Error(response.data.message || '获取模型列表失败')
+    }
+    return Array.isArray(response.data.data) ? response.data.data : []
   } catch (error) {
+    console.error('listModels错误:', error)
     throw normalizeKnowledgeError(error, '获取模型列表失败')
   }
 }

@@ -268,7 +268,15 @@ public class KnowledgeChatLlmClient {
                 .map(m -> {
                     Map<String, String> modelMap = new java.util.HashMap<>();
                     modelMap.put("id", m.id());
-                    modelMap.put("name", m.displayName() != null ? m.displayName() : m.id());
+                    String name = m.id();
+                    try {
+                        String displayName = m.displayName();
+                        if (displayName != null && !displayName.isEmpty()) {
+                            name = displayName;
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    modelMap.put("name", name);
                     return modelMap;
                 })
                 .collect(java.util.stream.Collectors.toList());
