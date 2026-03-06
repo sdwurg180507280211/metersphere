@@ -151,6 +151,8 @@ export default {
       chat_mode_switched_knowledge: '已切换到知识库模式',
       chat_mode_switched_normal: '已切换到普通对话模式',
       chat_topk_hint: '从知识库检索的文档片段数量',
+      loading_models: '加载模型中...',
+      no_models: '暂无可用模型',
     },
   },
 }

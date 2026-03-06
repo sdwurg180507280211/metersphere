@@ -151,6 +151,8 @@ export default {
       chat_mode_switched_knowledge: 'Switched to Knowledge Base Mode',
       chat_mode_switched_normal: 'Switched to Normal Chat Mode',
       chat_topk_hint: 'Number of document chunks to retrieve from knowledge base',
+        loading_models: 'Loading models...',
+       no_models: 'No models available',
     },
   },
 }
