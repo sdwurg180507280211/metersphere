@@ -1,10 +1,20 @@
 const express = require('express');
 const { exec, spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = 3000;
 const PROJECT_ROOT = path.join(__dirname, '..');
+const PID_DIR = path.join(__dirname, '.pids');
+
+// 确保 PID 目录存在
+if (!fs.existsSync(PID_DIR)) {
+  fs.mkdirSync(PID_DIR);
+}
+
+// 追踪服务进程
+const serviceProcesses = {};
 
 app.use(express.static('public'));
 app.use(express.json());
@@ -67,6 +77,11 @@ app.post('/api/services/:id/start', (req, res) => {
   const cmd = `./mvnw spring-boot:run -f ${service.pom}`;
   const child = spawn('sh', ['-c', cmd], { cwd: PROJECT_ROOT });
 
+  // 保存进程 PID
+  serviceProcesses[req.params.id] = child.pid;
+  const pidFile = path.join(PID_DIR, `${req.params.id}.pid`);
+  fs.writeFileSync(pidFile, child.pid.toString());
+
   child.stdout.on('data', (data) => {
     sendLog(data.toString());
   });
@@ -77,9 +92,12 @@ app.post('/api/services/:id/start', (req, res) => {
 
   child.on('close', (code) => {
     sendLog(`\n${service.name} 进程退出，代码: ${code}`);
+    delete serviceProcesses[req.params.id];
+    if (fs.existsSync(pidFile)) {
+      fs.unlinkSync(pidFile);
+    }
   });
 
-  child.unref();
   res.json({ success: true });
 });
 
@@ -88,8 +106,36 @@ app.post('/api/services/:id/stop', (req, res) => {
   const service = services[req.params.id];
   if (!service) return res.json({ success: false, error: '服务不存在' });
 
-  const cmd = `pkill -f "${service.pom}"`;
-  exec(cmd, () => res.json({ success: true }));
+  const pidFile = path.join(PID_DIR, `${req.params.id}.pid`);
+
+  // 优先使用内存中的 PID
+  if (serviceProcesses[req.params.id]) {
+    try {
+      process.kill(serviceProcesses[req.params.id], 'SIGTERM');
+      delete serviceProcesses[req.params.id];
+      if (fs.existsSync(pidFile)) {
+        fs.unlinkSync(pidFile);
+      }
+      return res.json({ success: true });
+    } catch (e) {
+      // 进程不存在，继续尝试从文件读取
+    }
+  }
+
+  // 从 PID 文件读取
+  if (fs.existsSync(pidFile)) {
+    const pid = parseInt(fs.readFileSync(pidFile, 'utf8'));
+    try {
+      process.kill(pid, 'SIGTERM');
+      fs.unlinkSync(pidFile);
+      return res.json({ success: true });
+    } catch (e) {
+      fs.unlinkSync(pidFile);
+      return res.json({ success: false, error: '进程不存在' });
+    }
+  }
+
+  res.json({ success: false, error: '服务未运行' });
 });
 
 // 执行命令的辅助函数
@@ -145,8 +191,71 @@ app.post('/api/build-frontend', (req, res) => {
         if (err) {
           sendLog(`\n✗ 复制文件失败: ${err.message}`, 'build');
         } else {
-          sendLog(`cd /Users/edy/ideaProjects/metersphere`, 'build');
           sendLog(`\n✓ ${module} 构建完成`, 'build');
+
+          // 重启对应的后端服务
+          const serviceId = isGateway ? 'gateway' : module;
+          const service = services[serviceId];
+
+          if (service) {
+            sendLog(`\n========== 重启 ${service.name} 服务 ==========`, 'build');
+
+            // 停止服务
+            const pidFile = path.join(PID_DIR, `${serviceId}.pid`);
+            let stopped = false;
+
+            // 优先使用内存中的 PID
+            if (serviceProcesses[serviceId]) {
+              try {
+                process.kill(serviceProcesses[serviceId], 'SIGTERM');
+                delete serviceProcesses[serviceId];
+                if (fs.existsSync(pidFile)) {
+                  fs.unlinkSync(pidFile);
+                }
+                stopped = true;
+              } catch (e) {
+                // 进程不存在
+              }
+            }
+
+            // 从 PID 文件读取
+            if (!stopped && fs.existsSync(pidFile)) {
+              const pid = parseInt(fs.readFileSync(pidFile, 'utf8'));
+              try {
+                process.kill(pid, 'SIGTERM');
+                fs.unlinkSync(pidFile);
+                stopped = true;
+              } catch (e) {
+                fs.unlinkSync(pidFile);
+              }
+            }
+
+            if (stopped) {
+              sendLog(`已停止 ${service.name}`, 'build');
+            }
+
+            // 等待 2 秒后启动
+            setTimeout(() => {
+              sendLog(`启动 ${service.name}...`, 'build');
+              const startCmd = `./mvnw spring-boot:run -f ${service.pom}`;
+              const restartChild = spawn('sh', ['-c', startCmd], { cwd: PROJECT_ROOT });
+
+              // 保存进程 PID
+              serviceProcesses[serviceId] = restartChild.pid;
+              const newPidFile = path.join(PID_DIR, `${serviceId}.pid`);
+              fs.writeFileSync(newPidFile, restartChild.pid.toString());
+
+              restartChild.stdout.on('data', (data) => sendLog(data.toString()));
+              restartChild.stderr.on('data', (data) => sendLog(data.toString()));
+              restartChild.on('close', (code) => {
+                sendLog(`\n${service.name} 进程退出，代码: ${code}`);
+                delete serviceProcesses[serviceId];
+                if (fs.existsSync(newPidFile)) {
+                  fs.unlinkSync(newPidFile);
+                }
+              });
+            }, 2000);
+          }
         }
       });
     } else {
