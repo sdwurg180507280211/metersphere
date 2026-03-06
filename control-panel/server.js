@@ -38,9 +38,9 @@ app.get('/api/logs/stream', (req, res) => {
   });
 });
 
-function sendLog(message) {
+function sendLog(message, type = 'service') {
   logClients.forEach(client => {
-    client.write(`data: ${JSON.stringify({ message })}\n\n`);
+    client.write(`data: ${JSON.stringify({ message, type })}\n\n`);
   });
 }
 
@@ -125,32 +125,32 @@ app.post('/api/build-frontend', (req, res) => {
   const isGateway = module === 'sdk-parent';
   const targetPath = isGateway ? '../../gateway/src/main/resources/static' : '../backend/src/main/resources/static';
 
-  sendLog(`\n========== 构建 ${module} 前端 ==========`);
-  sendLog(`cd ${modulePath}/frontend`);
-  sendLog(`npm run build`);
+  sendLog(`\n========== 构建 ${module} 前端 ==========`, 'build');
+  sendLog(`cd ${modulePath}/frontend`, 'build');
+  sendLog(`npm run build`, 'build');
 
   const buildCmd = `cd ${modulePath}/frontend && npm run build`;
   const child = spawn('sh', ['-c', buildCmd], { cwd: PROJECT_ROOT });
 
-  child.stdout.on('data', (data) => sendLog(data.toString()));
-  child.stderr.on('data', (data) => sendLog(data.toString()));
+  child.stdout.on('data', (data) => sendLog(data.toString(), 'build'));
+  child.stderr.on('data', (data) => sendLog(data.toString(), 'build'));
 
   child.on('close', (code) => {
     if (code === 0) {
-      sendLog(`rm -rf ${targetPath}/*`);
-      sendLog(`cp -r dist/* ${targetPath}/`);
+      sendLog(`rm -rf ${targetPath}/*`, 'build');
+      sendLog(`cp -r dist/* ${targetPath}/`, 'build');
 
       const copyCmd = `cd ${modulePath}/frontend && rm -rf ${targetPath}/* && cp -r dist/* ${targetPath}/`;
       exec(copyCmd, { cwd: PROJECT_ROOT }, (err) => {
         if (err) {
-          sendLog(`\n✗ 复制文件失败: ${err.message}`);
+          sendLog(`\n✗ 复制文件失败: ${err.message}`, 'build');
         } else {
-          sendLog(`cd /Users/edy/ideaProjects/metersphere`);
-          sendLog(`\n✓ ${module} 构建完成`);
+          sendLog(`cd /Users/edy/ideaProjects/metersphere`, 'build');
+          sendLog(`\n✓ ${module} 构建完成`, 'build');
         }
       });
     } else {
-      sendLog(`\n✗ ${module} 构建失败，退出码: ${code}`);
+      sendLog(`\n✗ ${module} 构建失败，退出码: ${code}`, 'build');
     }
   });
 
