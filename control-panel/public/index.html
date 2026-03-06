@@ -131,8 +131,32 @@
         const log = document.getElementById(logId);
 
         log.textContent += data.message;
+
+        // 限制日志行数（最多1000行）
+        const lines = log.textContent.split('\n');
+        if (lines.length > 1000) {
+          log.textContent = lines.slice(-1000).join('\n');
+        }
+
         log.scrollTop = log.scrollHeight;
+
+        // 检测错误并通知
+        if (data.message.includes('✗') || data.message.includes('失败') || data.message.includes('ERROR')) {
+          showNotification('操作失败', data.message.substring(0, 100));
+        }
       };
+    }
+
+    // 显示浏览器通知
+    function showNotification(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '/favicon.ico' });
+      }
+    }
+
+    // 请求通知权限
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
     }
 
     // 更新服务状态
@@ -156,17 +180,23 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="loading"></span>';
 
-      if (isRunning) {
-        await fetch(`/api/services/${id}/stop`, { method: 'POST' });
-        await new Promise(r => setTimeout(r, 1000));
-      }
+      try {
+        if (isRunning) {
+          await fetch(`/api/services/${id}/stop`, { method: 'POST' });
+          await new Promise(r => setTimeout(r, 1000));
+        }
 
-      await fetch(`/api/services/${id}/start`, { method: 'POST' });
+        await fetch(`/api/services/${id}/start`, { method: 'POST' });
 
-      setTimeout(() => {
+        setTimeout(() => {
+          btn.disabled = false;
+          updateServiceStatus();
+        }, 2000);
+      } catch (error) {
+        showNotification('操作失败', `无法启动/停止服务: ${error.message}`);
         btn.disabled = false;
         updateServiceStatus();
-      }, 2000);
+      }
     }
 
     async function buildModule(module) {
