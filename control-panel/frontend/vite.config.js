@@ -10,6 +10,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true
+      },
+      '/ws': {
+        target: 'ws://localhost:3000',
+        ws: true,  // 启用 WebSocket 代理
+        changeOrigin: true
       }
     }
   },

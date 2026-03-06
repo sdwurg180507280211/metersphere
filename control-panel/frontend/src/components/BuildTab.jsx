@@ -88,7 +88,7 @@ function BuildTab() {
         </div>
       </div>
 
-      <div className="card" style={{ flex: 1, minHeight: 0 }}>
+      <div className="card log-card">
         <div className="card-header">
           <h2 className="card-title">构建日志</h2>
         </div>
