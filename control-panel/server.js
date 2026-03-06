@@ -23,6 +23,27 @@ const services = {
   'analytics-stat': { name: 'Analytics Stat', pom: 'analytics-stat/backend/pom.xml', port: 8808 }
 };
 
+let logClients = [];
+
+// SSE 日志流
+app.get('/api/logs/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  logClients.push(res);
+
+  req.on('close', () => {
+    logClients = logClients.filter(client => client !== res);
+  });
+});
+
+function sendLog(message) {
+  logClients.forEach(client => {
+    client.write(`data: ${JSON.stringify({ message })}\n\n`);
+  });
+}
+
 // 获取所有服务状态
 app.get('/api/services/status', (req, res) => {
   const cmd = 'ps aux | grep "spring-boot:run" | grep -v grep';
@@ -40,10 +61,26 @@ app.post('/api/services/:id/start', (req, res) => {
   const service = services[req.params.id];
   if (!service) return res.json({ success: false, error: '服务不存在' });
 
-  const cmd = `./mvnw spring-boot:run -f ${service.pom}`;
-  spawn('sh', ['-c', cmd], { cwd: PROJECT_ROOT, detached: true, stdio: 'ignore' }).unref();
+  sendLog(`\n========== 启动 ${service.name} ==========`);
+  sendLog(`执行命令: ./mvnw spring-boot:run -f ${service.pom}`);
 
-  setTimeout(() => res.json({ success: true }), 1000);
+  const cmd = `./mvnw spring-boot:run -f ${service.pom}`;
+  const child = spawn('sh', ['-c', cmd], { cwd: PROJECT_ROOT });
+
+  child.stdout.on('data', (data) => {
+    sendLog(data.toString());
+  });
+
+  child.stderr.on('data', (data) => {
+    sendLog(data.toString());
+  });
+
+  child.on('close', (code) => {
+    sendLog(`\n${service.name} 进程退出，代码: ${code}`);
+  });
+
+  child.unref();
+  res.json({ success: true });
 });
 
 // 停止服务
@@ -88,8 +125,36 @@ app.post('/api/build-frontend', (req, res) => {
   const isGateway = module === 'sdk-parent';
   const targetPath = isGateway ? '../../gateway/src/main/resources/static' : '../backend/src/main/resources/static';
 
-  const command = `cd ${modulePath}/frontend && npm run build && rm -rf ${targetPath}/* && cp -r dist/* ${targetPath}/`;
-  runCommand(command, res);
+  sendLog(`\n========== 构建 ${module} 前端 ==========`);
+  sendLog(`cd ${modulePath}/frontend`);
+  sendLog(`npm run build`);
+
+  const buildCmd = `cd ${modulePath}/frontend && npm run build`;
+  const child = spawn('sh', ['-c', buildCmd], { cwd: PROJECT_ROOT });
+
+  child.stdout.on('data', (data) => sendLog(data.toString()));
+  child.stderr.on('data', (data) => sendLog(data.toString()));
+
+  child.on('close', (code) => {
+    if (code === 0) {
+      sendLog(`rm -rf ${targetPath}/*`);
+      sendLog(`cp -r dist/* ${targetPath}/`);
+
+      const copyCmd = `cd ${modulePath}/frontend && rm -rf ${targetPath}/* && cp -r dist/* ${targetPath}/`;
+      exec(copyCmd, { cwd: PROJECT_ROOT }, (err) => {
+        if (err) {
+          sendLog(`\n✗ 复制文件失败: ${err.message}`);
+        } else {
+          sendLog(`cd /Users/edy/ideaProjects/metersphere`);
+          sendLog(`\n✓ ${module} 构建完成`);
+        }
+      });
+    } else {
+      sendLog(`\n✗ ${module} 构建失败，退出码: ${code}`);
+    }
+  });
+
+  res.json({ success: true });
 });
 
 app.listen(PORT, () => {

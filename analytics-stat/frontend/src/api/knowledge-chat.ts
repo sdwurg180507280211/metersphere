@@ -390,3 +390,17 @@ export async function askNormalChatStream(
     throw normalizeKnowledgeError(error, '普通对话请求失败')
   }
 }
+
+export interface ModelInfo {
+  id: string
+  name: string
+}
+
+export async function listModels(): Promise<ModelInfo[]> {
+  try {
+    const response = await knowledgeHttp.get<ModelInfo[]>('/knowledge/chat/models')
+    return Array.isArray(response.data) ? response.data : []
+  } catch (error) {
+    throw normalizeKnowledgeError(error, '获取模型列表失败')
+  }
+}
