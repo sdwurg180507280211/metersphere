@@ -25,12 +25,14 @@
           <!-- Header -->
           <div class="chat-main-header">
             <div class="header-left">
-              <button class="model-selector">
-                <span>sloth GPT 7.0</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </button>
+              <n-dropdown :options="modelOptions" @select="handleModelSelect">
+                <button class="model-selector">
+                  <span>{{ selectedModelName }}</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+              </n-dropdown>
             </div>
             <div class="header-center">
               <button class="header-icon-btn" title="Share">
@@ -101,12 +103,12 @@
 import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { NConfigProvider, NMessageProvider, NDialogProvider, NSelect, NInput, createDiscreteApi } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NDialogProvider, NSelect, NInput, NDropdown, createDiscreteApi } from 'naive-ui'
 import ChatSidebar from './knowledge/ChatSidebar.vue'
 import ChatWelcome from './knowledge/ChatWelcome.vue'
 import ChatConversation from './knowledge/ChatConversation.vue'
 import ChatInputBar from './knowledge/ChatInputBar.vue'
-import { getChatBackendStatus } from '@/api/knowledge-chat'
+import { getChatBackendStatus, listModels, type ModelInfo } from '@/api/knowledge-chat'
 import { useKnowledgeChat } from '@/composables/useKnowledgeChat'
 import { useChatHistory } from '@/composables/useChatHistory'
 import { useChatSessionStore } from '@/composables/useChatSessionStore'
@@ -182,6 +184,22 @@ const feedbackOptions = computed(() => [
 
 const llmStatusLoading = ref(true)
 const llmEnabled = ref(false)
+const models = ref<ModelInfo[]>([])
+const selectedModel = ref<string>('')
+
+const selectedModelName = computed(() => {
+  if (!selectedModel.value) return 'sloth GPT 7.0'
+  const model = models.value.find(m => m.id === selectedModel.value)
+  return model?.name || 'sloth GPT 7.0'
+})
+
+const modelOptions = computed(() =>
+  models.value.map(m => ({ label: m.name, key: m.id }))
+)
+
+const handleModelSelect = (key: string) => {
+  selectedModel.value = key
+}
 
 const visibleMessages = computed(() => {
   if (feedbackFilter.value === 'all') return messages.value
@@ -288,10 +306,18 @@ const goToKnowledgeBase = () => {
 const loadLlmStatus = async () => {
   llmStatusLoading.value = true
   try {
-    const status = await getChatBackendStatus()
+    const [status, modelList] = await Promise.all([
+      getChatBackendStatus(),
+      listModels()
+    ])
     llmEnabled.value = status.llmEnabled
+    models.value = modelList
+    if (modelList.length > 0 && !selectedModel.value) {
+      selectedModel.value = modelList[0].id
+    }
   } catch {
     llmEnabled.value = false
+    models.value = []
   } finally {
     llmStatusLoading.value = false
   }

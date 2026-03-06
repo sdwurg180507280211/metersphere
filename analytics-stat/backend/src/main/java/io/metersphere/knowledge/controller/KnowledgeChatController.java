@@ -2,6 +2,7 @@ package io.metersphere.knowledge.controller;
 
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.SessionUtils;
+import io.metersphere.knowledge.client.KnowledgeChatLlmClient;
 import io.metersphere.knowledge.dto.KnowledgeChatAskRequest;
 import io.metersphere.knowledge.dto.KnowledgeChatAskResponse;
 import io.metersphere.knowledge.dto.KnowledgeChatStatusResponse;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 知识问答 Controller
@@ -30,6 +33,9 @@ public class KnowledgeChatController {
 
     @Autowired
     private KnowledgeChatService knowledgeChatService;
+
+    @Autowired
+    private KnowledgeChatLlmClient llmClient;
 
     /**
      * 问答接口（P0）
@@ -98,6 +104,16 @@ public class KnowledgeChatController {
     @GetMapping("/status")
     public KnowledgeChatStatusResponse status() {
         return new KnowledgeChatStatusResponse(knowledgeChatService.isLlmAvailable());
+    }
+
+    /**
+     * 获取可用模型列表
+     *
+     * URL: GET /knowledge/chat/models
+     */
+    @GetMapping("/models")
+    public List<Map<String, String>> listModels() {
+        return llmClient.listModels();
     }
 
     private String validateQuestion(KnowledgeChatAskRequest request) {

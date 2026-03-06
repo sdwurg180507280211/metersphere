@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -256,6 +257,29 @@ public class KnowledgeChatLlmClient {
         }
 
         return answer.isEmpty() ? null : answer.toString();
+    }
+
+    public List<Map<String, String>> listModels() {
+        if (!available()) {
+            return List.of();
+        }
+        try {
+            List<Map<String, String>> models = anthropicClient.models().list().data().stream()
+                .map(m -> {
+                    Map<String, String> modelMap = new java.util.HashMap<>();
+                    modelMap.put("id", m.id());
+                    modelMap.put("name", m.displayName() != null ? m.displayName() : m.id());
+                    return modelMap;
+                })
+                .collect(java.util.stream.Collectors.toList());
+            return models;
+        } catch (Exception e) {
+            logger.warn("获取模型列表失败，返回默认列表: {}", e.getMessage());
+            Map<String, String> defaultModel = new java.util.HashMap<>();
+            defaultModel.put("id", model);
+            defaultModel.put("name", model);
+            return List.of(defaultModel);
+        }
     }
 
     public record HistoryTurn(String userQuestion, String assistantAnswer) {
