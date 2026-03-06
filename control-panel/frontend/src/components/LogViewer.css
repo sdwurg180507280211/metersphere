@@ -1,0 +1,62 @@
+.log-container {
+  flex: 1;
+  min-height: 0;
+  background: #1e1e1e;
+  border-radius: 12px;
+  padding: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.log {
+  flex: 1;
+  overflow-y: auto;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.log-placeholder {
+  color: #6e7681;
+  font-style: italic;
+}
+
+/* 日志高亮 */
+.log :global(.error) {
+  color: #f85149;
+}
+
+.log :global(.success) {
+  color: #3fb950;
+}
+
+.log :global(.warning) {
+  color: #d29922;
+}
+
+.log :global(.info) {
+  color: #58a6ff;
+}
+
+/* 滚动条 */
+.log::-webkit-scrollbar {
+  width: 8px;
+}
+
+.log::-webkit-scrollbar-track {
+  background: #21262d;
+  border-radius: 4px;
+}
+
+.log::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 4px;
+}
+
+.log::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
