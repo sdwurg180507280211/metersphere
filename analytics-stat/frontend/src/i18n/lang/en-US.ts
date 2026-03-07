@@ -153,6 +153,9 @@ export default {
       chat_topk_hint: 'Number of document chunks to retrieve from knowledge base',
         loading_models: 'Loading models...',
        no_models: 'No models available',
+      chat_model_loading: 'Models are still loading. Please try again shortly.',
+      chat_model_required: 'Select an available model before sending.',
+      chat_llm_unavailable: 'LLM is unavailable right now, so chat cannot start.',
     },
   },
 }

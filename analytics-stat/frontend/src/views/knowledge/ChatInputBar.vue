@@ -12,10 +12,10 @@
       />
 
       <button
-        v-if="!loading"
+        v-if="!props.loading"
         class="send-btn"
-        :class="{ disabled: !draft.trim() }"
-        :disabled="!draft.trim()"
+        :class="{ disabled: !draft.trim() || props.disabled }"
+        :disabled="!draft.trim() || props.disabled"
         @click="submit"
       >
         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -37,9 +37,10 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NInput } from 'naive-ui'
 
-defineProps<{
+const props = defineProps<{
   loading: boolean
   chatMode: 'knowledge' | 'normal'
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -55,7 +56,7 @@ const topK = ref(5)
 
 const submit = () => {
   const question = draft.value.trim()
-  if (!question) return
+  if (!question || props.loading || props.disabled) return
   emit('send', { question, topK: topK.value })
   draft.value = ''
 }
@@ -64,7 +65,12 @@ const focus = () => {
   inputRef.value?.focus?.()
 }
 
-defineExpose({ focus })
+const restoreDraft = (value: string) => {
+  draft.value = value
+  focus()
+}
+
+defineExpose({ focus, restoreDraft })
 </script>
 
 <style scoped>

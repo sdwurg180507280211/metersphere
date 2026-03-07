@@ -59,22 +59,36 @@ export function useChatSessionStore() {
     }
   }
 
+  let lastPersistAt = 0
+
+  const writeSessionsToStorage = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.value))
+    lastPersistAt = Date.now()
+  }
+
   const persistNow = () => {
     if (persistTimer !== null) {
       window.clearTimeout(persistTimer)
       persistTimer = null
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.value))
+    writeSessionsToStorage()
   }
 
   const persistDeferred = () => {
-    if (persistTimer !== null) {
-      window.clearTimeout(persistTimer)
+    const elapsed = Date.now() - lastPersistAt
+    if (persistTimer === null && elapsed >= PERSIST_DELAY) {
+      writeSessionsToStorage()
+      return
     }
+
+    if (persistTimer !== null) {
+      return
+    }
+
     persistTimer = window.setTimeout(() => {
       persistTimer = null
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.value))
-    }, PERSIST_DELAY)
+      writeSessionsToStorage()
+    }, Math.max(PERSIST_DELAY - elapsed, 0))
   }
 
   const touchSession = (id: string, messages: ChatMessage[], options: TouchSessionOptions = {}) => {

@@ -153,6 +153,9 @@ export default {
       chat_topk_hint: '从知识库检索的文档片段数量',
       loading_models: '加载模型中...',
       no_models: '暂无可用模型',
+      chat_model_loading: '模型列表加载中，请稍后再试',
+      chat_model_required: '请选择可用模型后再发送',
+      chat_llm_unavailable: 'LLM 未启用，暂时无法发起问答',
     },
   },
 }
