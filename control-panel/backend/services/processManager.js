@@ -2,24 +2,22 @@
  * 进程管理服务
  * 统一管理服务的启动、停止和状态追踪
  */
-const { spawn, exec } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const fs = require('fs');
+const fsp = require('fs/promises');
 const path = require('path');
 const config = require('../config');
 const logger = require('../utils/logger');
 const buildProgressService = require('./buildProgressService');
-const websocketService = require('./websocketService');
 
 const PID_DIR = path.join(__dirname, '../../.pids');
-const LOG_DIR = path.join(__dirname, '../../logs');
 
-// 确保 PID 目录存在
 if (!fs.existsSync(PID_DIR)) {
   fs.mkdirSync(PID_DIR, { recursive: true });
 }
 
-// 内存中的进程映射
-const serviceProcesses = {};
+const serviceProcesses = new Map();
+const buildProcesses = new Map();
 
 class ProcessManager {
   constructor() {
@@ -27,395 +25,459 @@ class ProcessManager {
     this.projectRoot = config.projectRoot;
   }
 
-  /**
-   * 获取 PID 文件路径
-   */
   _getPidFile(serviceId) {
     return path.join(this.pidDir, `${serviceId}.pid`);
   }
 
-  /**
-   * 保存进程 ID
-   */
   _savePid(serviceId, pid) {
-    serviceProcesses[serviceId] = pid;
-    fs.writeFileSync(this._getPidFile(serviceId), pid.toString());
+    fs.writeFileSync(this._getPidFile(serviceId), String(pid));
   }
 
-  /**
-   * 清除进程 ID
-   */
-  _clearPid(serviceId) {
-    delete serviceProcesses[serviceId];
+  _clearPid(serviceId, expectedPid = null) {
+    const tracked = serviceProcesses.get(serviceId);
+    if (expectedPid && tracked?.pid && tracked.pid !== expectedPid) {
+      return;
+    }
+
+    serviceProcesses.delete(serviceId);
     const pidFile = this._getPidFile(serviceId);
     if (fs.existsSync(pidFile)) {
       fs.unlinkSync(pidFile);
     }
   }
 
-  /**
-   * 获取进程 ID
-   */
   _getPid(serviceId) {
-    // 优先从内存获取
-    if (serviceProcesses[serviceId]) {
-      return serviceProcesses[serviceId];
+    const tracked = serviceProcesses.get(serviceId);
+    if (tracked?.pid) {
+      return tracked.pid;
     }
-    // 从文件读取
+
     const pidFile = this._getPidFile(serviceId);
-    if (fs.existsSync(pidFile)) {
-      return parseInt(fs.readFileSync(pidFile, 'utf8'), 10);
+    if (!fs.existsSync(pidFile)) {
+      return null;
     }
-    return null;
+
+    const pid = parseInt(fs.readFileSync(pidFile, 'utf8'), 10);
+    return Number.isNaN(pid) ? null : pid;
   }
 
-  /**
-   * 检查进程是否运行中
-   */
   _isProcessRunning(pid) {
     try {
       process.kill(pid, 0);
       return true;
-    } catch (e) {
+    } catch (error) {
       return false;
     }
   }
 
-  /**
-   * 启动服务
-   */
-  async start(serviceId, serviceConfig) {
-    const { pom, name } = serviceConfig;
-
-    logger.broadcast(`\n========== 启动 ${name} ==========`, 'service');
-    logger.broadcast(`执行命令: ./mvnw spring-boot:run -f ${pom}`, 'service');
-
-    const cmd = `./mvnw spring-boot:run -f ${pom}`;
-    const child = spawn('sh', ['-c', cmd], { 
-      cwd: this.projectRoot,
-      detached: false
+  _attachServiceProcess(serviceId, serviceConfig, child) {
+    serviceProcesses.set(serviceId, {
+      pid: child.pid,
+      pom: serviceConfig.pom,
+      port: serviceConfig.port,
+      child
     });
-
-    // 保存进程 ID
     this._savePid(serviceId, child.pid);
 
-    // 处理输出
-    child.stdout.on('data', (data) => {
+    child.stdout?.on('data', (data) => {
       logger.broadcast(data.toString(), 'service');
     });
 
-    child.stderr.on('data', (data) => {
+    child.stderr?.on('data', (data) => {
       logger.broadcast(data.toString(), 'service');
     });
 
-    child.on('close', (code) => {
-      logger.broadcast(`\n${name} 进程退出，代码: ${code}`, 'service');
-      this._clearPid(serviceId);
+    child.on('close', (code, signal) => {
+      logger.broadcast(`\n${serviceConfig.name} 进程退出，代码: ${code ?? 'null'}${signal ? `，信号: ${signal}` : ''}`, 'service');
+      this._clearPid(serviceId, child.pid);
     });
 
     child.on('error', (err) => {
-      logger.broadcast(`\n${name} 进程错误: ${err.message}`, 'service');
-      this._clearPid(serviceId);
+      logger.broadcast(`\n${serviceConfig.name} 进程错误: ${err.message}`, 'service');
+      this._clearPid(serviceId, child.pid);
+    });
+  }
+
+  async _execFileSafe(command, args) {
+    return new Promise((resolve) => {
+      execFile(command, args, (error, stdout = '') => {
+        if (error) {
+          resolve('');
+          return;
+        }
+
+        resolve(stdout);
+      });
+    });
+  }
+
+  async _findPidsByPom(pom) {
+    const stdout = await this._execFileSafe('pgrep', ['-f', pom]);
+    return stdout
+      .split(/\s+/)
+      .map((value) => parseInt(value, 10))
+      .filter((pid) => !Number.isNaN(pid) && pid !== process.pid);
+  }
+
+  async _findPidsByPort(port) {
+    if (!port) return [];
+
+    const stdout = await this._execFileSafe('lsof', ['-ti', `tcp:${port}`]);
+    return stdout
+      .split(/\s+/)
+      .map((value) => parseInt(value, 10))
+      .filter((pid) => !Number.isNaN(pid) && pid !== process.pid);
+  }
+
+  async _terminateProcess(pid) {
+    if (!pid || !this._isProcessRunning(pid)) {
+      return;
+    }
+
+    const killOne = (targetPid, signal) => {
+      try {
+        process.kill(targetPid, signal);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    };
+
+    if (process.platform === 'win32') {
+      await this._execFileSafe('taskkill', ['/PID', String(pid), '/T', '/F']);
+      return;
+    }
+
+    killOne(-pid, 'SIGTERM') || killOne(pid, 'SIGTERM');
+
+    const deadline = Date.now() + 5000;
+    while (this._isProcessRunning(pid) && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+
+    if (this._isProcessRunning(pid)) {
+      killOne(-pid, 'SIGKILL') || killOne(pid, 'SIGKILL');
+    }
+  }
+
+  _registerBuildProcess(buildId, child, description) {
+    buildProcesses.set(buildId, { pid: child.pid, child, description });
+  }
+
+  _clearBuildProcess(buildId, child = null) {
+    const current = buildProcesses.get(buildId);
+    if (!current) return;
+    if (child && current.child !== child) return;
+
+    buildProcesses.delete(buildId);
+  }
+
+  _throwIfCancelled(buildId) {
+    if (buildProgressService.isBuildCancelled(buildId)) {
+      const error = new Error('构建已取消');
+      error.code = 'BUILD_CANCELLED';
+      throw error;
+    }
+  }
+
+  async start(serviceId, serviceConfig) {
+    const status = await this.getStatus(serviceId);
+    if (status.running) {
+      return { pid: status.pid, alreadyRunning: true };
+    }
+
+    logger.broadcast(`\n========== 启动 ${serviceConfig.name} ==========`, 'service');
+    logger.broadcast(`执行命令: ./mvnw -f ${serviceConfig.pom} spring-boot:run`, 'service');
+
+    const child = spawn('./mvnw', ['-f', serviceConfig.pom, 'spring-boot:run'], {
+      cwd: this.projectRoot,
+      detached: process.platform !== 'win32',
+      env: process.env
     });
 
+    this._attachServiceProcess(serviceId, serviceConfig, child);
     return { pid: child.pid };
   }
 
-  /**
-   * 停止服务
-   */
   async stop(serviceId, serviceConfig) {
-    const { pom, name } = serviceConfig;
-    const pid = this._getPid(serviceId);
-
-    // 优先使用内存中的 PID
-    if (pid && this._isProcessRunning(pid)) {
-      try {
-        process.kill(pid, 'SIGTERM');
-        this._clearPid(serviceId);
-        logger.broadcast(`${name} 已停止 (PID: ${pid})`, 'service');
-        return { success: true, method: 'pid' };
-      } catch (e) {
-        // 进程不存在，继续尝试其他方式
-      }
+    const pidCandidates = new Set();
+    const trackedPid = this._getPid(serviceId);
+    if (trackedPid) {
+      pidCandidates.add(trackedPid);
     }
 
-    // 清除可能遗留的 PID 文件
-    this._clearPid(serviceId);
+    for (const pid of await this._findPidsByPom(serviceConfig.pom)) {
+      pidCandidates.add(pid);
+    }
 
-    // 回退方案：通过进程名称停止
-    return new Promise((resolve) => {
-      const cmd = `pkill -f "${pom}"`;
-      exec(cmd, (error) => {
-        if (error) {
-          resolve({ success: false, error: '服务未运行或停止失败' });
-        } else {
-          logger.broadcast(`${name} 已通过进程名停止`, 'service');
-          resolve({ success: true, method: 'pkill' });
-        }
-      });
-    });
+    for (const pid of await this._findPidsByPort(serviceConfig.port)) {
+      pidCandidates.add(pid);
+    }
+
+    if (pidCandidates.size === 0) {
+      this._clearPid(serviceId);
+      return { success: false, error: '服务未运行或停止失败' };
+    }
+
+    for (const pid of pidCandidates) {
+      await this._terminateProcess(pid);
+    }
+
+    this._clearPid(serviceId);
+    logger.broadcast(`${serviceConfig.name} 已停止`, 'service');
+    return { success: true, method: 'pid' };
   }
 
-  /**
-   * 重启服务
-   */
   async restart(serviceId, serviceConfig, delay = 2000) {
     await this.stop(serviceId, serviceConfig);
-    
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        this.start(serviceId, serviceConfig)
-          .then(result => resolve({ ...result, restarted: true }))
-          .catch(err => resolve({ success: false, error: err.message }));
-      }, delay);
-    });
+    await new Promise((resolve) => setTimeout(resolve, delay));
+
+    const result = await this.start(serviceId, serviceConfig);
+    return { ...result, restarted: true };
   }
 
-  /**
-   * 获取所有服务状态
-   */
   async getAllStatus() {
-    return new Promise((resolve) => {
-      const cmd = 'ps aux | grep "spring-boot:run" | grep -v grep';
-      exec(cmd, (error, stdout) => {
-        const running = {};
-        Object.entries(config.services).forEach(([key, svc]) => {
-          running[key] = stdout.includes(svc.pom);
-        });
-        resolve(running);
-      });
-    });
+    const entries = await Promise.all(
+      Object.keys(config.services).map(async (serviceId) => {
+        const status = await this.getStatus(serviceId);
+        return [serviceId, status.running];
+      })
+    );
+
+    return Object.fromEntries(entries);
   }
 
-  /**
-   * 获取单个服务状态
-   */
   async getStatus(serviceId) {
-    const pid = this._getPid(serviceId);
-    if (pid) {
-      return { running: this._isProcessRunning(pid), pid };
+    const serviceConfig = config.services[serviceId];
+    const trackedPid = this._getPid(serviceId);
+    if (trackedPid && this._isProcessRunning(trackedPid)) {
+      return { running: true, pid: trackedPid };
     }
-    
-    // 通过 ps 命令检查
-    const { pom } = config.services[serviceId];
-    return new Promise((resolve) => {
-      const cmd = `ps aux | grep "${pom}" | grep -v grep`;
-      exec(cmd, (error, stdout) => {
-        resolve({ running: stdout.length > 0, pid: null });
+
+    const pidsByPom = await this._findPidsByPom(serviceConfig.pom);
+    const pid = pidsByPom[0] || (await this._findPidsByPort(serviceConfig.port))[0] || null;
+    if (pid) {
+      this._savePid(serviceId, pid);
+      serviceProcesses.set(serviceId, {
+        pid,
+        pom: serviceConfig.pom,
+        port: serviceConfig.port,
+        child: null
       });
-    });
+    }
+
+    return { running: Boolean(pid), pid };
   }
 
-  /**
-   * 停止所有服务
-   */
   async stopAll() {
     const results = [];
-    for (const [serviceId, serviceConfig] of Object.entries(config.services)) {
-      const result = await this.stop(serviceId, serviceConfig);
-      results.push({ serviceId, ...result });
+    const services = [...config.serviceCatalog].sort((a, b) => b.startOrder - a.startOrder);
+
+    for (const item of services) {
+      const result = await this.stop(item.id, config.services[item.id]);
+      results.push({ serviceId: item.id, ...result });
     }
+
     return results;
   }
 
-  /**
-   * 按依赖顺序启动所有服务
-   */
   async startAll() {
-    // 按 startOrder 排序
-    const sortedServices = Object.entries(config.services)
-      .sort((a, b) => (a[1].startOrder || 99) - (b[1].startOrder || 99));
-
     const results = [];
-    for (const [serviceId, serviceConfig] of sortedServices) {
-      const status = await this.getStatus(serviceId);
-      if (!status.running) {
-        const result = await this.start(serviceId, serviceConfig);
-        results.push({ serviceId, ...result });
-        // 等待服务启动
-        await new Promise(r => setTimeout(r, 3000));
+
+    for (const item of config.serviceCatalog) {
+      const status = await this.getStatus(item.id);
+      if (status.running) {
+        continue;
       }
+
+      const result = await this.start(item.id, config.services[item.id]);
+      results.push({ serviceId: item.id, ...result });
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
+
     return results;
   }
 
-  /**
-   * 初始化构建任务（返回 buildId）
-   */
-  async initBuild(module, modulePath) {
-    const buildId = await buildProgressService.startBuild(module);
-    return buildId;
+  async initBuild(moduleConfig) {
+    return buildProgressService.startBuild(moduleConfig);
   }
 
-  /**
-   * 执行构建（后台执行）
-   */
-  async executeBuild(module, modulePath, buildId) {
-    const isGateway = module === 'sdk-parent';
-    const targetPath = isGateway 
-      ? '../../gateway/src/main/resources/static' 
-      : '../backend/src/main/resources/static';
-    
-    logger.broadcast(`\n========== 构建 ${module} 前端 ==========`, 'build');
+  _shouldInstallDependencies(frontendDir, forceInstall = false) {
+    if (forceInstall) {
+      return true;
+    }
+
+    return !fs.existsSync(path.join(frontendDir, 'node_modules'));
+  }
+
+  async executeBuild(moduleConfig, buildId, options = {}) {
+    const frontendDir = path.join(this.projectRoot, moduleConfig.frontendPath);
+    const targetDir = path.join(this.projectRoot, moduleConfig.targetPath);
+
+    logger.broadcast(`\n========== 构建 ${moduleConfig.name} 前端 ==========`, 'build');
     logger.broadcast(`构建ID: ${buildId}`, 'build');
 
     try {
-      // 步骤1: 准备环境
       await buildProgressService.updateStep(buildId, 0, 'running', 50, '准备构建环境...');
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      this._throwIfCancelled(buildId);
       await buildProgressService.updateStep(buildId, 0, 'completed', 100, '环境准备完成');
 
-      // 步骤2: 安装依赖
-      await buildProgressService.updateStep(buildId, 1, 'running', 0, '安装依赖...');
-      const npmInstallCmd = `cd ${modulePath}/frontend && npm install`;
-      await this._execWithProgress(npmInstallCmd, buildId, 1, '安装依赖');
-
-      // 步骤3: 编译构建
-      await buildProgressService.updateStep(buildId, 2, 'running', 0, '开始编译...');
-      logger.broadcast(`cd ${modulePath}/frontend`, 'build');
-      logger.broadcast(`npm run build`, 'build');
-
-      const buildResult = await this._execBuildWithProgress(
-        `cd ${modulePath}/frontend && npm run build`,
-        buildId,
-        modulePath,
-        targetPath
-      );
-
-      if (!buildResult.success) {
-        throw new Error(buildResult.error);
+      await buildProgressService.updateStep(buildId, 1, 'running', 0, '检查依赖...');
+      if (this._shouldInstallDependencies(frontendDir, options.forceInstall)) {
+        const installCommand = fs.existsSync(path.join(frontendDir, 'package-lock.json')) ? 'ci' : 'install';
+        await this._runCommandWithProgress({
+          command: 'npm',
+          args: [installCommand],
+          cwd: frontendDir,
+          buildId,
+          stepIndex: 1,
+          stepName: '安装依赖',
+          logType: 'build'
+        });
+      } else {
+        await buildProgressService.updateStep(buildId, 1, 'completed', 100, '检测到 node_modules，跳过依赖安装');
       }
 
-      // 步骤4: 复制资源
+      this._throwIfCancelled(buildId);
+      await buildProgressService.updateStep(buildId, 2, 'running', 0, '开始编译...');
+      logger.broadcast(`cd ${moduleConfig.frontendPath}`, 'build');
+      logger.broadcast('npm run build', 'build');
+
+      await this._runCommandWithProgress({
+        command: 'npm',
+        args: ['run', 'build'],
+        cwd: frontendDir,
+        buildId,
+        stepIndex: 2,
+        stepName: '编译构建',
+        logType: 'build',
+        detectMilestones: true
+      });
+
+      this._throwIfCancelled(buildId);
       await buildProgressService.updateStep(buildId, 3, 'running', 50, '复制构建文件...');
-      await this._copyBuildFiles(modulePath, targetPath);
+      await this._copyBuildFiles(frontendDir, targetDir);
       await buildProgressService.updateStep(buildId, 3, 'completed', 100, '文件复制完成');
 
-      // 步骤5: 完成
+      this._throwIfCancelled(buildId);
       await buildProgressService.updateStep(buildId, 4, 'completed', 100, '构建流程完成');
-
       await buildProgressService.completeBuild(buildId, true);
-      
+
       return { success: true, buildId };
     } catch (error) {
+      if (error.code === 'BUILD_CANCELLED' || buildProgressService.isBuildCancelled(buildId)) {
+        logger.broadcast(`\n⚪ 构建已取消: ${moduleConfig.name}`, 'build');
+        return { success: false, cancelled: true, error: '构建已取消', buildId };
+      }
+
       await buildProgressService.completeBuild(buildId, false, error.message);
       logger.broadcast(`\n✗ 构建失败: ${error.message}`, 'build');
       return { success: false, error: error.message, buildId };
     }
   }
 
-  /**
-   * 构建前端模块（兼容旧版，一次性执行）
-   */
-  async buildFrontend(module, modulePath) {
-    const buildId = await this.initBuild(module, modulePath);
-    return await this.executeBuild(module, modulePath, buildId);
+  async buildFrontend(moduleConfig, options = {}) {
+    const buildId = await this.initBuild(moduleConfig);
+    return this.executeBuild(moduleConfig, buildId, options);
   }
 
-  /**
-   * 执行命令并报告进度
-   */
-  _execWithProgress(cmd, buildId, stepIndex, stepName) {
+  _runCommandWithProgress({ command, args, cwd, buildId, stepIndex, stepName, logType, detectMilestones = false }) {
     return new Promise((resolve, reject) => {
-      const child = spawn('sh', ['-c', cmd], { cwd: this.projectRoot });
-      
-      let output = '';
-      let errorOutput = '';
+      const child = spawn(command, args, {
+        cwd,
+        detached: process.platform !== 'win32',
+        env: process.env
+      });
+
+      this._registerBuildProcess(buildId, child, `${command} ${args.join(' ')}`);
+
+      let stderrOutput = '';
       let progress = 0;
       const progressInterval = setInterval(() => {
+        if (buildProgressService.isBuildCancelled(buildId)) {
+          return;
+        }
+
         progress = Math.min(progress + 10, 90);
         buildProgressService.updateStep(buildId, stepIndex, 'running', progress, `${stepName}进行中...`);
       }, 2000);
 
-      child.stdout.on('data', (data) => {
-        output += data.toString();
-        websocketService.broadcastLog('build', data.toString());
-      });
-
-      child.stderr.on('data', (data) => {
-        errorOutput += data.toString();
-        websocketService.broadcastLog('build', data.toString());
-      });
-
-      child.on('close', (code) => {
+      const cleanup = () => {
         clearInterval(progressInterval);
-        if (code === 0) {
-          buildProgressService.updateStep(buildId, stepIndex, 'completed', 100, `${stepName}完成`);
-          resolve({ success: true, output });
-        } else {
-          buildProgressService.updateStep(buildId, stepIndex, 'failed', progress, `${stepName}失败`);
-          reject(new Error(errorOutput || `${stepName}失败`));
+        this._clearBuildProcess(buildId, child);
+      };
+
+      const handleOutput = (raw) => {
+        const message = raw.toString();
+        logger.broadcast(message, logType);
+
+        if (!detectMilestones) {
+          return;
         }
+
+        const normalized = message.toLowerCase();
+        if (normalized.includes('building')) {
+          buildProgressService.updateStep(buildId, stepIndex, 'running', 30, '正在编译...');
+        } else if (normalized.includes('optimizing')) {
+          buildProgressService.updateStep(buildId, stepIndex, 'running', 70, '优化中...');
+        }
+      };
+
+      child.stdout?.on('data', handleOutput);
+      child.stderr?.on('data', (raw) => {
+        stderrOutput += raw.toString();
+        handleOutput(raw);
+      });
+
+      child.on('error', (error) => {
+        cleanup();
+        reject(error);
+      });
+
+      child.on('close', async (code) => {
+        cleanup();
+
+        if (buildProgressService.isBuildCancelled(buildId)) {
+          resolve({ success: false, cancelled: true });
+          return;
+        }
+
+        if (code === 0) {
+          await buildProgressService.updateStep(buildId, stepIndex, 'completed', 100, `${stepName}完成`);
+          resolve({ success: true });
+          return;
+        }
+
+        await buildProgressService.updateStep(buildId, stepIndex, 'failed', progress, `${stepName}失败`);
+        reject(new Error(stderrOutput || `${stepName}失败`));
       });
     });
   }
 
-  /**
-   * 带进度追踪的构建执行
-   */
-  _execBuildWithProgress(cmd, buildId, modulePath, targetPath) {
-    return new Promise((resolve) => {
-      const child = spawn('sh', ['-c', cmd], { cwd: this.projectRoot });
-      
-      let output = '';
-      let errorOutput = '';
-      let progress = 0;
-      
-      // 模拟构建进度（因为 npm run build 没有实时进度）
-      const progressInterval = setInterval(() => {
-        if (progress < 90) {
-          progress += Math.random() * 5;
-          buildProgressService.updateStep(buildId, 2, 'running', Math.round(progress), '编译中...');
-        }
-      }, 3000);
+  async cancelBuild(buildId) {
+    const current = buildProcesses.get(buildId);
+    if (!current && !buildProgressService.isBuildCancelled(buildId)) {
+      return buildProgressService.cancelBuild(buildId);
+    }
 
-      child.stdout.on('data', (data) => {
-        const str = data.toString();
-        output += str;
-        logger.broadcast(str, 'build');
-        
-        // 检测关键进度节点
-        if (str.includes('building')) {
-          buildProgressService.updateStep(buildId, 2, 'running', 30, '正在编译...');
-        } else if (str.includes('optimizing')) {
-          buildProgressService.updateStep(buildId, 2, 'running', 70, '优化中...');
-        }
-      });
+    if (current?.pid) {
+      await this._terminateProcess(current.pid);
+      this._clearBuildProcess(buildId);
+    }
 
-      child.stderr.on('data', (data) => {
-        const str = data.toString();
-        errorOutput += str;
-        logger.broadcast(str, 'build');
-      });
+    const cancelled = await buildProgressService.cancelBuild(buildId);
+    if (cancelled) {
+      logger.broadcast(`取消构建任务: ${buildId}`, 'build');
+    }
 
-      child.on('close', (code) => {
-        clearInterval(progressInterval);
-        if (code === 0) {
-          buildProgressService.updateStep(buildId, 2, 'completed', 100, '编译完成');
-          resolve({ success: true, output });
-        } else {
-          buildProgressService.updateStep(buildId, 2, 'failed', progress, '编译失败');
-          resolve({ success: false, error: errorOutput || '构建失败' });
-        }
-      });
-    });
+    return cancelled;
   }
 
-  /**
-   * 复制构建文件
-   */
-  async _copyBuildFiles(modulePath, targetPath) {
-    return new Promise((resolve, reject) => {
-      const copyCmd = `cd ${modulePath}/frontend && rm -rf ${targetPath}/* && cp -r dist/* ${targetPath}/`;
-      exec(copyCmd, { cwd: this.projectRoot }, (err) => {
-        if (err) {
-          reject(new Error(`复制文件失败: ${err.message}`));
-        } else {
-          resolve();
-        }
-      });
-    });
+  async _copyBuildFiles(frontendDir, targetDir) {
+    await fsp.rm(targetDir, { recursive: true, force: true });
+    await fsp.mkdir(targetDir, { recursive: true });
+    await fsp.cp(path.join(frontendDir, 'dist'), targetDir, { recursive: true });
   }
 }
 

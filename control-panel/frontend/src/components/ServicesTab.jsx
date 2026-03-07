@@ -4,40 +4,28 @@ import { useServiceStore } from '../store/useAppStore'
 import LogViewer from './LogViewer'
 import './ServicesTab.css'
 
-const SERVICES = [
-  { id: 'eureka', name: 'Eureka' },
-  { id: 'gateway', name: 'Gateway' },
-  { id: 'system-setting', name: 'System Setting' },
-  { id: 'project-management', name: 'Project Management' },
-  { id: 'test-track', name: 'Test Track' },
-  { id: 'api-test', name: 'API Test' },
-  { id: 'performance-test', name: 'Performance Test' },
-  { id: 'report-stat', name: 'Report Stat' },
-  { id: 'workstation', name: 'Workstation' },
-  { id: 'workflow-service', name: 'Workflow Service' },
-  { id: 'analytics-stat', name: 'Analytics Stat' }
-]
-
 function ServicesTab() {
-  const { 
-    services, 
-    loading, 
-    fetchServices, 
+  const {
+    catalog,
+    services,
+    loading,
+    fetchCatalog,
+    fetchServices,
     setLoading,
-    updateServiceStatus 
+    updateServiceStatus
   } = useServiceStore()
 
-  // 初始加载和定时刷新
   useEffect(() => {
+    fetchCatalog()
     fetchServices()
     const interval = setInterval(fetchServices, 5000)
     return () => clearInterval(interval)
-  }, [fetchServices])
+  }, [fetchCatalog, fetchServices])
 
   const toggleService = useCallback(async (serviceId) => {
     const isRunning = services[serviceId]
     const action = isRunning ? '停止' : '启动'
-    
+
     setLoading(serviceId, true)
 
     try {
@@ -47,9 +35,7 @@ function ServicesTab() {
 
       if (data.success) {
         toast.success(`${action}命令已发送`)
-        // 乐观更新
         updateServiceStatus(serviceId, !isRunning)
-        // 延迟刷新获取真实状态
         setTimeout(fetchServices, 2000)
       } else {
         toast.error(data.error || `${action}失败`)
@@ -63,20 +49,20 @@ function ServicesTab() {
 
   const handleBatchAction = useCallback(async (action) => {
     const endpoint = action === 'start' ? '/api/services/start-all' : '/api/services/stop-all'
-    
+
     toast.promise(
-      fetch(endpoint, { method: 'POST' }).then(r => r.json()),
+      fetch(endpoint, { method: 'POST' }).then((response) => response.json()),
       {
         loading: `正在${action === 'start' ? '启动' : '停止'}所有服务...`,
         success: '命令已发送',
         error: '操作失败'
       }
     )
-    
+
     setTimeout(fetchServices, 5000)
   }, [fetchServices])
 
-  const runningCount = Object.values(services).filter(Boolean).length
+  const runningCount = catalog.filter((service) => services[service.id]).length
 
   return (
     <div className="tab-content">
@@ -84,9 +70,7 @@ function ServicesTab() {
         <div className="card-header">
           <h2 className="card-title">
             服务管理
-            <span className="service-count">
-              ({runningCount}/{SERVICES.length} 运行中)
-            </span>
+            <span className="service-count">({runningCount}/{catalog.length} 运行中)</span>
           </h2>
           <div className="batch-actions">
             <button className="btn-batch btn-start" onClick={() => handleBatchAction('start')}>
@@ -98,10 +82,10 @@ function ServicesTab() {
           </div>
         </div>
         <div className="btn-grid">
-          {SERVICES.map(service => {
+          {catalog.map((service) => {
             const isRunning = services[service.id]
             const isLoading = loading[service.id]
-            
+
             return (
               <button
                 key={service.id}

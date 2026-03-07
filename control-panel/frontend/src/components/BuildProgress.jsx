@@ -1,11 +1,10 @@
 import { useEffect } from 'react'
+import { toast } from 'react-hot-toast'
 import { useBuildStore } from '../store/useAppStore'
-import { useCancelBuild } from '../hooks/useWebSocket'
 import './BuildProgress.css'
 
 function BuildProgress() {
-  const { activeBuilds, fetchActiveBuilds, removeActiveBuild } = useBuildStore()
-  const cancelBuild = useCancelBuild()
+  const { activeBuilds, fetchActiveBuilds, cancelBuild, removeActiveBuild } = useBuildStore()
 
   useEffect(() => {
     fetchActiveBuilds()
@@ -13,9 +12,16 @@ function BuildProgress() {
     return () => clearInterval(interval)
   }, [fetchActiveBuilds])
 
-  const handleCancel = (buildId) => {
-    if (window.confirm('确定要取消这个构建任务吗？')) {
-      cancelBuild(buildId)
+  const handleCancel = async (buildId) => {
+    if (!window.confirm('确定要取消这个构建任务吗？')) {
+      return
+    }
+
+    const success = await cancelBuild(buildId)
+    if (success) {
+      toast.success('已发送取消请求')
+    } else {
+      toast.error('取消失败，任务可能已结束')
     }
   }
 
@@ -27,10 +33,10 @@ function BuildProgress() {
 
   return (
     <div className="build-progress-container">
-      {activeBuilds.map(build => (
-        <BuildCard 
-          key={build.id} 
-          build={build} 
+      {activeBuilds.map((build) => (
+        <BuildCard
+          key={build.id}
+          build={build}
           onCancel={() => handleCancel(build.id)}
           onDismiss={() => handleDismiss(build.id)}
         />
@@ -63,8 +69,7 @@ function BuildCard({ build, onCancel, onDismiss }) {
             {isRunning && '🔄'}
             {isSuccess && '✅'}
             {isFailed && '❌'}
-            {isCancelled && '🚫'}
-            {' '}
+            {isCancelled && '🚫'}{' '}
             {getStatusText(build.status)}
           </span>
         </div>
@@ -83,7 +88,7 @@ function BuildCard({ build, onCancel, onDismiss }) {
       </div>
 
       <div className="build-progress-bar">
-        <div 
+        <div
           className="build-progress-fill"
           style={{ width: `${build.overallProgress || 0}%` }}
         />
@@ -91,14 +96,10 @@ function BuildCard({ build, onCancel, onDismiss }) {
 
       <div className="build-details">
         <div className="build-step">
-          <span className="step-name">
-            {build.stepName || '准备中...'}
-          </span>
-          <span className="step-progress">
-            步骤 {build.currentStep + 1} / {build.totalSteps}
-          </span>
+          <span className="step-name">{build.stepName || '准备中...'}</span>
+          <span className="step-progress">步骤 {build.currentStep + 1} / {build.totalSteps}</span>
         </div>
-        
+
         {build.duration && (
           <div className="build-duration">
             耗时: {formatDuration(build.duration)}

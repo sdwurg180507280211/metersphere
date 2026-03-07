@@ -5,7 +5,8 @@ const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/serviceController');
 
-// 获取所有服务状态
+// 服务目录与状态
+router.get('/catalog', serviceController.getCatalog);
 router.get('/status', serviceController.getAllStatus);
 
 // 批量操作

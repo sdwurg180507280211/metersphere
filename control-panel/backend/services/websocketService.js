@@ -85,10 +85,26 @@ class WebSocketService {
         this.sendToClient(clientId, { type: 'pong' });
         break;
 
-      case 'cancelBuild':
-        // 取消构建任务
-        this.broadcast('build:cancelled', { buildId: message.buildId });
+      case 'cancelBuild': {
+        const processManager = require('./processManager');
+        processManager.cancelBuild(message.buildId)
+          .then((cancelled) => {
+            this.sendToClient(clientId, {
+              type: 'build:cancelled',
+              buildId: message.buildId,
+              success: Boolean(cancelled)
+            });
+          })
+          .catch((error) => {
+            this.sendToClient(clientId, {
+              type: 'build:cancelled',
+              buildId: message.buildId,
+              success: false,
+              error: error.message
+            });
+          });
         break;
+      }
 
       default:
         console.log('未知消息类型:', message.type);

@@ -24052,3 +24052,737 @@
 [21:36:49] 	at java.base/java.lang.Thread.run(Thread.java:842) ~[na:na]
 
 [21:36:58] 2026-03-07 21:36:58,322  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 0ms
+[22:01:53] Analytics Stat 已停止[22:01:54] System Setting 已停止[22:01:54] Gateway 已停止[22:01:54] Eureka 已停止
+========== 启动 Eureka ==========[22:02:11] 执行命令: ./mvnw -f framework/eureka/pom.xml spring-boot:run[22:02:16] [INFO] Scanning for projects...
+[22:02:17] [INFO] 
+[22:02:17] [INFO] -----------------------< io.metersphere:eureka >------------------------
+[22:02:17] [INFO] Building eureka 2.10
+[22:02:17] [INFO] --------------------------------[ jar ]---------------------------------
+[22:02:17] [INFO] 
+[22:02:17] [INFO] >>> spring-boot-maven-plugin:3.2.12:run (default-cli) > test-compile @ eureka >>>
+[22:02:21] [INFO] 
+[22:02:21] [INFO] --- maven-resources-plugin:3.3.1:resources (default-resources) @ eureka ---
+[22:02:21] [INFO] Copying 1 resource from src/main/resources to target/classes
+[22:02:21] [INFO] Copying 1 resource from src/main/resources to target/classes
+[22:02:21] [INFO] 
+[22:02:21] [INFO] --- flatten-maven-plugin:1.2.7:flatten (flatten) @ eureka ---
+[22:02:22] [INFO] Generating flattened POM of project io.metersphere:eureka:jar:2.10...
+[22:02:23] [INFO] 
+[22:02:23] [INFO] --- maven-compiler-plugin:3.11.0:compile (default-compile) @ eureka ---
+[22:02:23] [INFO] Nothing to compile - all classes are up to date
+[22:02:23] [INFO] 
+[22:02:23] [INFO] --- maven-resources-plugin:3.3.1:testResources (default-testResources) @ eureka ---
+[22:02:23] [INFO] skip non existing resourceDirectory /Users/edy/ideaProjects/metersphere/framework/eureka/src/test/resources
+[22:02:23] [INFO] 
+[22:02:23] [INFO] --- maven-compiler-plugin:3.11.0:testCompile (default-testCompile) @ eureka ---
+[22:02:23] [INFO] No sources to compile
+[22:02:23] [INFO] 
+[22:02:23] [INFO] <<< spring-boot-maven-plugin:3.2.12:run (default-cli) < test-compile @ eureka <<<
+[22:02:23] [INFO] 
+[22:02:23] [INFO] 
+[22:02:23] [INFO] --- spring-boot-maven-plugin:3.2.12:run (default-cli) @ eureka ---
+[22:02:24] [INFO] Attaching agents: []
+[22:02:25] Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+[22:02:26] 22:02:26,138 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 173
+[22:02:26] 22:02:26,138 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+[22:02:26] 22:02:26,139 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 183
+[22:02:26] 22:02:26,139 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+[22:02:26] 22:02:26,328 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [console]
+[22:02:26] 22:02:26,329 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+[22:02:26] 22:02:26,357 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:26] 22:02:26,405 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [debugAppender]
+[22:02:26] 22:02:26,405 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:02:26] 22:02:26,442 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@215219944 - No compression will be used
+[22:02:26] 22:02:26,450 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@215219944 - Will use the pattern /opt/metersphere/logs/eureka/history/debug.%d{yyyyMMdd}-%i.log for the active file
+[22:02:26] 22:02:26,481 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@57c758ac - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/eureka/history/debug.%d{yyyyMMdd}-%i.log'.
+[22:02:26] 22:02:26,482 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@57c758ac - Roll-over at midnight.
+[22:02:26] 22:02:26,497 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@57c758ac - Setting initial period to 2026-01-21T11:48:27.581Z
+[22:02:26] 22:02:26,497 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@57c758ac - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:02:26] 22:02:26,497 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@57c758ac - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:02:26] 22:02:26,503 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:26] 22:02:26,510 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[debugAppender] - Active log file name: /opt/metersphere/logs/eureka/debug.log
+[22:02:26] 22:02:26,510 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[debugAppender] - File property is set to [/opt/metersphere/logs/eureka/debug.log]
+[22:02:26] 22:02:26,512 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [infoAppender]
+[22:02:26] 22:02:26,512 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:02:26] 22:02:26,516 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@558216562 - No compression will be used
+[22:02:26] 22:02:26,517 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@558216562 - Will use the pattern /opt/metersphere/logs/eureka/history/info.%d{yyyyMMdd}-%i.log for the active file
+[22:02:26] 22:02:26,520 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@39529185 - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/eureka/history/info.%d{yyyyMMdd}-%i.log'.
+[22:02:26] 22:02:26,520 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@39529185 - Roll-over at midnight.
+[22:02:26] 22:02:26,522 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@39529185 - Setting initial period to 2026-03-07T13:50:38.650Z
+[22:02:26] 22:02:26,523 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@39529185 - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:02:26] 22:02:26,523 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@39529185 - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:02:26] 22:02:26,526 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:26] 22:02:26,529 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[infoAppender] - Active log file name: /opt/metersphere/logs/eureka/info.log
+[22:02:26] 22:02:26,530 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[infoAppender] - File property is set to [/opt/metersphere/logs/eureka/info.log]
+[22:02:26] 22:02:26,530 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [errorAppender]
+[22:02:26] 22:02:26,530 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:02:26] 22:02:26,535 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1928931046 - No compression will be used
+[22:02:26] 22:02:26,536 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1928931046 - Will use the pattern /opt/metersphere/logs/eureka/history/error.%d{yyyyMMdd}-%i.log for the active file
+[22:02:26] 22:02:26,536 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@3daa422a - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/eureka/history/error.%d{yyyyMMdd}-%i.log'.
+[22:02:26] 22:02:26,536 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@3daa422a - Roll-over at midnight.
+[22:02:26] 22:02:26,537 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@3daa422a - Setting initial period to 2026-01-21T11:48:27.581Z
+[22:02:26] 22:02:26,538 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@3daa422a - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:02:26] 22:02:26,538 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@3daa422a - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:02:26] 22:02:26,539 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:26] 22:02:26,540 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[errorAppender] - Active log file name: /opt/metersphere/logs/eureka/error.log
+[22:02:26] 22:02:26,541 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[errorAppender] - File property is set to [/opt/metersphere/logs/eureka/error.log]
+[22:02:26] 22:02:26,546 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [warnAppender]
+[22:02:26] 22:02:26,546 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:02:26] 22:02:26,548 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@835227336 - No compression will be used
+[22:02:26] 22:02:26,548 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@835227336 - Will use the pattern /opt/metersphere/logs/eureka/history/warn.%d{yyyyMMdd}-%i.log for the active file
+[22:02:26] 22:02:26,550 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1cbbffcd - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/eureka/history/warn.%d{yyyyMMdd}-%i.log'.
+[22:02:26] 22:02:26,550 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1cbbffcd - Roll-over at midnight.
+[22:02:26] 22:02:26,552 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1cbbffcd - Setting initial period to 2026-01-21T11:48:27.580Z
+[22:02:26] 22:02:26,552 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1cbbffcd - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:02:26] 22:02:26,552 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@1cbbffcd - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:02:26] 22:02:26,554 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:26] 22:02:26,559 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[warnAppender] - Active log file name: /opt/metersphere/logs/eureka/warn.log
+[22:02:26] 22:02:26,559 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[warnAppender] - File property is set to [/opt/metersphere/logs/eureka/warn.log]
+[22:02:26] 22:02:26,561 |-WARN in ch.qos.logback.core.model.processor.AppenderModelHandler - Appender named [consoleAsyncAppender] not referenced. Skipping further processing.
+[22:02:26] 22:02:26,562 |-WARN in ch.qos.logback.core.model.processor.AppenderModelHandler - Appender named [debugAsyncAppender] not referenced. Skipping further processing.
+[22:02:26] 22:02:26,562 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [infoAsyncAppender]
+[22:02:26] 22:02:26,562 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:02:26] 22:02:26,571 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAppender] to ch.qos.logback.classic.AsyncAppender[infoAsyncAppender]
+[22:02:26] 22:02:26,572 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Attaching appender named [infoAppender] to AsyncAppender.
+[22:02:26] 22:02:26,574 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Setting discardingThreshold to 2000
+[22:02:26] 22:02:26,575 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [errorAsyncAppender]
+[22:02:26] 22:02:26,575 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:02:26] 22:02:26,576 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [errorAppender] to ch.qos.logback.classic.AsyncAppender[errorAsyncAppender]
+[22:02:26] 22:02:26,577 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Attaching appender named [errorAppender] to AsyncAppender.
+[22:02:26] 22:02:26,577 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Setting discardingThreshold to 2000
+[22:02:26] 22:02:26,577 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [warnAsyncAppender]
+[22:02:26] 22:02:26,578 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:02:26] 22:02:26,579 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [warnAppender] to ch.qos.logback.classic.AsyncAppender[warnAsyncAppender]
+[22:02:26] 22:02:26,579 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Attaching appender named [warnAppender] to AsyncAppender.
+[22:02:26] 22:02:26,579 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Setting discardingThreshold to 2000
+[22:02:26] 22:02:26,580 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [backendApiAppender]
+[22:02:26] 22:02:26,580 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:02:26] 22:02:26,583 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@501107890 - No compression will be used
+[22:02:26] 22:02:26,584 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@501107890 - Will use the pattern /opt/metersphere/logs/eureka/history/api/info.%d{yyyyMMdd}-%i.log for the active file
+[22:02:26] 22:02:26,585 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7714e963 - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/eureka/history/api/info.%d{yyyyMMdd}-%i.log'.
+[22:02:26] 22:02:26,586 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7714e963 - Roll-over at midnight.
+[22:02:26] 22:02:26,587 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7714e963 - Setting initial period to 2026-01-21T11:53:47.538Z
+[22:02:26] 22:02:26,587 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7714e963 - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:02:26] 22:02:26,587 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7714e963 - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:02:26] 22:02:26,588 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:26] 22:02:26,591 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[backendApiAppender] - Active log file name: /opt/metersphere/logs/eureka/api/info.log
+[22:02:26] 22:02:26,591 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[backendApiAppender] - File property is set to [/opt/metersphere/logs/eureka/api/info.log]
+[22:02:26] 22:02:26,592 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [backendApiAsyncAppender]
+[22:02:26] 22:02:26,592 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:02:26] 22:02:26,593 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [backendApiAppender] to ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender]
+[22:02:26] 22:02:26,594 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Attaching appender named [backendApiAppender] to AsyncAppender.
+[22:02:26] 22:02:26,594 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Setting discardingThreshold to 2000
+[22:02:26] 22:02:26,595 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere.controller.handler.WebLogAspect] to false
+[22:02:26] 22:02:26,596 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - io.metersphere.controller.handler.WebLogAspect level set to DEBUG
+[22:02:26] 22:02:26,596 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [backendApiAsyncAppender] to Logger[io.metersphere.controller.handler.WebLogAspect]
+[22:02:26] 22:02:26,597 |-INFO in ch.qos.logback.classic.model.processor.RootLoggerModelHandler - Setting level of ROOT logger to INFO
+[22:02:26] 22:02:26,598 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[ROOT]
+[22:02:26] 22:02:26,599 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [console] to Logger[ROOT]
+[22:02:26] 22:02:26,599 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere] to false
+[22:02:26] 22:02:26,600 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - io.metersphere level set to DEBUG
+[22:02:26] 22:02:26,600 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[io.metersphere]
+[22:02:26] 22:02:26,600 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [warnAsyncAppender] to Logger[io.metersphere]
+[22:02:26] 22:02:26,600 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [errorAsyncAppender] to Logger[io.metersphere]
+[22:02:26] 22:02:26,601 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [io.metersphere.base.mapper] to DEBUG
+[22:02:26] 22:02:26,601 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [console] to Logger[io.metersphere.base.mapper]
+[22:02:26] 22:02:26,601 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [io.metersphere.EurekaApplication] to DEBUG
+[22:02:26] 22:02:26,601 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere.EurekaApplication] to false
+[22:02:26] 22:02:26,601 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[io.metersphere.EurekaApplication]
+[22:02:26] 22:02:26,602 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@6eda5c9 - End of configuration.
+[22:02:26] 22:02:26,604 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@72057ecf - Registering current configuration as safe fallback point
+[22:02:26] 22:02:26,604 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1afd44cb - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 683 milliseconds. ExecutionStatus=DO_NOT_INVOKE_NEXT_IF_ANY
+[22:02:27] 22:02:27,946 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:02:27] 22:02:27,947 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Queue flush finished successfully within timeout.
+[22:02:27] 22:02:27,947 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:02:27] 22:02:27,947 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Queue flush finished successfully within timeout.
+[22:02:27] 22:02:27,947 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:02:27] 22:02:27,948 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Queue flush finished successfully within timeout.
+[22:02:27] 22:02:27,948 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:02:27] 22:02:27,948 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Queue flush finished successfully within timeout.
+[22:02:27] 22:02:27,946 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:02:27] 22:02:27,947 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Queue flush finished successfully within timeout.
+[22:02:27] 22:02:27,947 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:02:27] 22:02:27,947 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Queue flush finished successfully within timeout.
+[22:02:27] 22:02:27,947 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:02:27] 22:02:27,948 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Queue flush finished successfully within timeout.
+[22:02:27] 22:02:27,948 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:02:27] 22:02:27,948 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Queue flush finished successfully within timeout.
+[22:02:27] 22:02:27,988 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 173
+[22:02:27] 22:02:27,988 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+[22:02:27] 22:02:27,988 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 183
+[22:02:27] 22:02:27,988 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+[22:02:27] 22:02:27,995 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [console]
+[22:02:27] 22:02:27,995 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+[22:02:27] 22:02:27,996 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:27] 22:02:27,996 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [debugAppender]
+[22:02:27] 22:02:27,997 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:02:28] 22:02:27,999 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@509832867 - No compression will be used
+[22:02:28] 22:02:28,000 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@509832867 - Will use the pattern /opt/metersphere/logs/eureka/history/debug.%d{yyyyMMdd}-%i.log for the active file
+[22:02:28] 22:02:28,001 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@115667d - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/eureka/history/debug.%d{yyyyMMdd}-%i.log'.
+[22:02:28] 22:02:28,002 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@115667d - Roll-over at midnight.
+[22:02:28] 22:02:28,003 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@115667d - Setting initial period to 2026-01-21T11:48:27.581Z
+[22:02:28] 22:02:28,004 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@115667d - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:02:28] 22:02:28,004 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@115667d - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:02:28] 22:02:28,010 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:28] 22:02:28,011 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[debugAppender] - Active log file name: /opt/metersphere/logs/eureka/debug.log
+[22:02:28] 22:02:28,012 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[debugAppender] - File property is set to [/opt/metersphere/logs/eureka/debug.log]
+[22:02:28] 22:02:28,013 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [infoAppender]
+[22:02:28] 22:02:28,013 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:02:28] 22:02:28,016 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1936502650 - No compression will be used
+[22:02:28] 22:02:28,019 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1936502650 - Will use the pattern /opt/metersphere/logs/eureka/history/info.%d{yyyyMMdd}-%i.log for the active file
+[22:02:28] 22:02:28,020 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@4ce7fffa - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/eureka/history/info.%d{yyyyMMdd}-%i.log'.
+[22:02:28] 22:02:28,020 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@4ce7fffa - Roll-over at midnight.
+[22:02:28] 22:02:28,021 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@4ce7fffa - Setting initial period to 2026-03-07T13:50:38.650Z
+[22:02:28] 22:02:28,022 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@4ce7fffa - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:02:28] 22:02:28,022 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@4ce7fffa - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:02:28] 22:02:28,023 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:28] 22:02:28,024 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[infoAppender] - Active log file name: /opt/metersphere/logs/eureka/info.log
+[22:02:28] 22:02:28,024 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[infoAppender] - File property is set to [/opt/metersphere/logs/eureka/info.log]
+[22:02:28] 22:02:28,025 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [errorAppender]
+[22:02:28] 22:02:28,025 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:02:28] 22:02:28,028 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1232373427 - No compression will be used
+[22:02:28] 22:02:28,031 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1232373427 - Will use the pattern /opt/metersphere/logs/eureka/history/error.%d{yyyyMMdd}-%i.log for the active file
+[22:02:28] 22:02:28,032 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@495fac5f - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/eureka/history/error.%d{yyyyMMdd}-%i.log'.
+[22:02:28] 22:02:28,033 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@495fac5f - Roll-over at midnight.
+[22:02:28] 22:02:28,034 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@495fac5f - Setting initial period to 2026-01-21T11:48:27.581Z
+[22:02:28] 22:02:28,034 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@495fac5f - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:02:28] 22:02:28,034 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@495fac5f - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:02:28] 22:02:28,036 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:28] 22:02:28,038 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[errorAppender] - Active log file name: /opt/metersphere/logs/eureka/error.log
+[22:02:28] 22:02:28,038 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[errorAppender] - File property is set to [/opt/metersphere/logs/eureka/error.log]
+[22:02:28] 22:02:28,039 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [warnAppender]
+[22:02:28] 22:02:28,039 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:02:28] 22:02:28,043 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1979787155 - No compression will be used
+[22:02:28] 22:02:28,043 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1979787155 - Will use the pattern /opt/metersphere/logs/eureka/history/warn.%d{yyyyMMdd}-%i.log for the active file
+[22:02:28] 22:02:28,045 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@635572a7 - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/eureka/history/warn.%d{yyyyMMdd}-%i.log'.
+[22:02:28] 22:02:28,045 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@635572a7 - Roll-over at midnight.
+[22:02:28] 22:02:28,046 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@635572a7 - Setting initial period to 2026-01-21T11:48:27.580Z
+[22:02:28] 22:02:28,046 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@635572a7 - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:02:28] 22:02:28,046 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@635572a7 - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:02:28] 22:02:28,047 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:28] 22:02:28,051 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[warnAppender] - Active log file name: /opt/metersphere/logs/eureka/warn.log
+[22:02:28] 22:02:28,052 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[warnAppender] - File property is set to [/opt/metersphere/logs/eureka/warn.log]
+[22:02:28] 22:02:28,052 |-WARN in ch.qos.logback.core.model.processor.AppenderModelHandler - Appender named [consoleAsyncAppender] not referenced. Skipping further processing.
+[22:02:28] 22:02:28,052 |-WARN in ch.qos.logback.core.model.processor.AppenderModelHandler - Appender named [debugAsyncAppender] not referenced. Skipping further processing.
+[22:02:28] 22:02:28,052 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [infoAsyncAppender]
+[22:02:28] 22:02:28,053 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:02:28] 22:02:28,053 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAppender] to ch.qos.logback.classic.AsyncAppender[infoAsyncAppender]
+[22:02:28] 22:02:28,053 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Attaching appender named [infoAppender] to AsyncAppender.
+[22:02:28] 22:02:28,053 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Setting discardingThreshold to 2000
+[22:02:28] 22:02:28,054 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [errorAsyncAppender]
+[22:02:28] 22:02:28,054 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:02:28] 22:02:28,055 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [errorAppender] to ch.qos.logback.classic.AsyncAppender[errorAsyncAppender]
+[22:02:28] 22:02:28,055 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Attaching appender named [errorAppender] to AsyncAppender.
+[22:02:28] 22:02:28,055 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Setting discardingThreshold to 2000
+[22:02:28] 22:02:28,055 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [warnAsyncAppender]
+[22:02:28] 22:02:28,055 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:02:28] 22:02:28,058 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [warnAppender] to ch.qos.logback.classic.AsyncAppender[warnAsyncAppender]
+[22:02:28] 22:02:28,058 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Attaching appender named [warnAppender] to AsyncAppender.
+[22:02:28] 22:02:28,058 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Setting discardingThreshold to 2000
+[22:02:28] 22:02:28,059 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [backendApiAppender]
+[22:02:28] 22:02:28,059 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:02:28] 22:02:28,065 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@840083671 - No compression will be used
+[22:02:28] 22:02:28,065 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@840083671 - Will use the pattern /opt/metersphere/logs/eureka/history/api/info.%d{yyyyMMdd}-%i.log for the active file
+[22:02:28] 22:02:28,065 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7a1a3478 - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/eureka/history/api/info.%d{yyyyMMdd}-%i.log'.
+[22:02:28] 22:02:28,066 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7a1a3478 - Roll-over at midnight.
+[22:02:28] 22:02:28,067 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7a1a3478 - Setting initial period to 2026-01-21T11:53:47.538Z
+[22:02:28] 22:02:28,068 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7a1a3478 - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:02:28] 22:02:28,068 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7a1a3478 - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:02:28] 22:02:28,069 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:02:28] 22:02:28,073 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[backendApiAppender] - Active log file name: /opt/metersphere/logs/eureka/api/info.log
+[22:02:28] 22:02:28,073 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[backendApiAppender] - File property is set to [/opt/metersphere/logs/eureka/api/info.log]
+[22:02:28] 22:02:28,074 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [backendApiAsyncAppender]
+[22:02:28] 22:02:28,074 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:02:28] 22:02:28,076 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [backendApiAppender] to ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender]
+[22:02:28] 22:02:28,076 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Attaching appender named [backendApiAppender] to AsyncAppender.
+[22:02:28] 22:02:28,077 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Setting discardingThreshold to 2000
+[22:02:28] 22:02:28,078 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere.controller.handler.WebLogAspect] to false
+[22:02:28] 22:02:28,079 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@495b0487 - Propagating DEBUG level on Logger[io.metersphere.controller.handler.WebLogAspect] onto the JUL framework
+[22:02:28] 22:02:28,082 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - io.metersphere.controller.handler.WebLogAspect level set to DEBUG
+[22:02:28] 22:02:28,082 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [backendApiAsyncAppender] to Logger[io.metersphere.controller.handler.WebLogAspect]
+[22:02:28] 22:02:28,082 |-INFO in ch.qos.logback.classic.model.processor.RootLoggerModelHandler - Setting level of ROOT logger to INFO
+[22:02:28] 22:02:28,082 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@495b0487 - Propagating INFO level on Logger[ROOT] onto the JUL framework
+[22:02:28] 22:02:28,082 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[ROOT]
+[22:02:28] 22:02:28,082 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [console] to Logger[ROOT]
+[22:02:28] 22:02:28,082 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere] to false
+[22:02:28] 22:02:28,082 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@495b0487 - Propagating DEBUG level on Logger[io.metersphere] onto the JUL framework
+[22:02:28] 22:02:28,083 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - io.metersphere level set to DEBUG
+[22:02:28] 22:02:28,083 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[io.metersphere]
+[22:02:28] 22:02:28,083 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [warnAsyncAppender] to Logger[io.metersphere]
+[22:02:28] 22:02:28,083 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [errorAsyncAppender] to Logger[io.metersphere]
+[22:02:28] 22:02:28,083 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [io.metersphere.base.mapper] to DEBUG
+[22:02:28] 22:02:28,083 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@495b0487 - Propagating DEBUG level on Logger[io.metersphere.base.mapper] onto the JUL framework
+[22:02:28] 22:02:28,083 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [console] to Logger[io.metersphere.base.mapper]
+[22:02:28] 22:02:28,084 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [io.metersphere.EurekaApplication] to DEBUG
+[22:02:28] 22:02:28,084 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@495b0487 - Propagating DEBUG level on Logger[io.metersphere.EurekaApplication] onto the JUL framework
+[22:02:28] 22:02:28,084 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere.EurekaApplication] to false
+[22:02:28] 22:02:28,084 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[io.metersphere.EurekaApplication]
+[22:02:28] 22:02:28,084 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@2a76840c - End of configuration.
+[22:02:28] 22:02:28,085 |-INFO in org.springframework.boot.logging.logback.SpringBootJoranConfigurator@71454b9d - Registering current configuration as safe fallback point
+
+[22:02:28]   .   ____          _            __ _ _
+[22:02:28]  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+[22:02:28] ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+[22:02:28]  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+[22:02:28]   '  |____| .__|_| |_|_| |_\__, | / / / /
+[22:02:28]  =========|_|==============|___/=/_/_/_/
+[22:02:28]  :: Spring Boot ::               (v3.2.12)
+
+[22:02:31] 2026-03-07 22:02:31,568  INFO y.config.RepositoryConfigurationDelegate: 295 - Multiple Spring Data modules found, entering strict repository configuration mode
+[22:02:31] 2026-03-07 22:02:31,576  INFO y.config.RepositoryConfigurationDelegate: 143 - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+[22:02:31] 2026-03-07 22:02:31,684  INFO y.config.RepositoryConfigurationDelegate: 211 - Finished Spring Data repository scanning in 60 ms. Found 0 Redis repository interfaces.
+[22:02:32] 2026-03-07 22:02:32,619  INFO amework.cloud.context.scope.GenericScope: 282 - BeanFactory id=cd75b750-8b28-3328-8a74-6b24a9bd3c70
+[22:02:32] 2026-03-07 22:02:32,880  WARN trationDelegate$BeanPostProcessorChecker: 429 - Bean 'org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration$DeferringLoadBalancerInterceptorConfig' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration$DeferringLoadBalancerInterceptorConfig] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). The currently created BeanPostProcessor [lbRestClientPostProcessor] is declared through a non-static factory method on that class; consider declaring it as static instead.
+[22:02:32] 2026-03-07 22:02:32,888  WARN trationDelegate$BeanPostProcessorChecker: 437 - Bean 'deferringLoadBalancerInterceptor' of type [org.springframework.cloud.client.loadbalancer.DeferringLoadBalancerInterceptor] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected/applied to a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies/advisors. If this bean does not have to be post-processed, declare it with ROLE_INFRASTRUCTURE.
+[22:02:33] 2026-03-07 22:02:33,844  INFO edded.jetty.JettyServletWebServerFactory: 176 - Server initialized with port: 8761
+[22:02:33] 2026-03-07 22:02:33,855  INFO          org.eclipse.jetty.server.Server: 553 - jetty-12.0.15; built: 2024-11-05T19:44:57.623Z; git: 8281ae9740d4b4225e8166cc476bad237c70213a; jvm 17.0.12+8-LTS-286
+[22:02:33] 2026-03-07 22:02:33,942  INFO erver.handler.ContextHandler.application:2870 - Initializing Spring embedded WebApplicationContext
+[22:02:33] 2026-03-07 22:02:33,945  INFO ntext.ServletWebServerApplicationContext: 296 - Root WebApplicationContext: initialization completed in 5364 ms
+[22:02:33] Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+[22:02:35] 2026-03-07 22:02:35,114  INFO se.jetty.session.DefaultSessionIdManager: 328 - Session workerName=node0
+[22:02:35] 2026-03-07 22:02:35,135  INFO ipse.jetty.server.handler.ContextHandler: 756 - Started osbwej.JettyEmbeddedWebAppContext@2c0798bd{application,/,b=file:/private/var/folders/kk/629y_3zj6hz2gdjxgs9zz89h0000gn/T/jetty-docbase.8761.8922215979024979936/,a=AVAILABLE,h=oeje10s.SessionHandler@2e3252{STARTED}}
+[22:02:35] 2026-03-07 22:02:35,136  INFO jetty.ee10.servlet.ServletContextHandler:1051 - Started osbwej.JettyEmbeddedWebAppContext@2c0798bd{application,/,b=file:/private/var/folders/kk/629y_3zj6hz2gdjxgs9zz89h0000gn/T/jetty-docbase.8761.8922215979024979936/,a=AVAILABLE,h=oeje10s.SessionHandler@2e3252{STARTED}}
+[22:02:35] 2026-03-07 22:02:35,142  INFO          org.eclipse.jetty.server.Server: 610 - Started oejs.Server@4b87760e{STARTING}[12.0.15,sto=0] @9945ms
+[22:02:36] 2026-03-07 22:02:36,058  INFO                     org.redisson.Version:  43 - Redisson 3.25.0
+[22:02:36] 2026-03-07 22:02:36,190  WARN lver.dns.DnsServerAddressStreamProviders:  70 - Can not find io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider in the classpath, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'
+[22:02:36] 2026-03-07 22:02:36,806  INFO nnection.pool.MasterPubSubConnectionPool: 137 - 1 connections initialized for localhost/127.0.0.1:6379
+[22:02:37] 2026-03-07 22:02:37,113  INFO son.connection.pool.MasterConnectionPool: 137 - 24 connections initialized for localhost/127.0.0.1:6379
+[22:02:40] 2026-03-07 22:02:40,345  WARN iguration$LoadBalancerCaffeineWarnLogger:  94 - Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+[22:02:40] 2026-03-07 22:02:40,706  INFO cloud.netflix.eureka.InstanceInfoFactory:  67 - Setting initial instance status as: STARTING
+[22:02:40] 2026-03-07 22:02:40,757  INFO    com.netflix.discovery.DiscoveryClient: 327 - Initializing Eureka in region us-east-1
+[22:02:40] 2026-03-07 22:02:40,758  INFO    com.netflix.discovery.DiscoveryClient: 330 - Client configured to neither register nor query for data.
+[22:02:40] 2026-03-07 22:02:40,775  INFO    com.netflix.discovery.DiscoveryClient: 345 - Discovery Client initialized at timestamp 1772892160775 with initial instances count: 0
+[22:02:40] 2026-03-07 22:02:40,851  INFO etflix.eureka.DefaultEurekaServerContext:  66 - Initializing ...
+[22:02:40] 2026-03-07 22:02:40,855  WARN m.netflix.eureka.cluster.PeerEurekaNodes: 154 - The replica size seems to be empty. Check the route 53 DNS Registry
+[22:02:40] 2026-03-07 22:02:40,983  INFO eureka.registry.AbstractInstanceRegistry: 158 - Finished initializing remote region registries. All known remote regions: []
+[22:02:40] 2026-03-07 22:02:40,985  INFO etflix.eureka.DefaultEurekaServerContext:  73 - Initialized
+[22:02:41] 2026-03-07 22:02:41,082  INFO ka.serviceregistry.EurekaServiceRegistry:  70 - Registering application EUREKA with eureka with status UP
+[22:02:41] 2026-03-07 22:02:41,104  INFO flix.eureka.server.EurekaServerBootstrap: 142 - isAws returned false
+[22:02:41] 2026-03-07 22:02:41,105  INFO flix.eureka.server.EurekaServerBootstrap: 108 - Initialized server context
+[22:02:41] 2026-03-07 22:02:41,105  INFO a.registry.PeerAwareInstanceRegistryImpl: 246 - Got 1 instances from neighboring DS node
+[22:02:41] 2026-03-07 22:02:41,106  INFO a.registry.PeerAwareInstanceRegistryImpl: 247 - Renew threshold is: 1
+[22:02:41] 2026-03-07 22:02:41,106  INFO a.registry.PeerAwareInstanceRegistryImpl: 258 - Changing status to UP
+[22:02:41] 2026-03-07 22:02:41,122  INFO ver.EurekaServerInitializerConfiguration:  68 - Started Eureka Server
+[22:02:42] 2026-03-07 22:02:42,238  INFO scovery.provider.DiscoveryJerseyProvider:  70 - Using JSON encoding codec LegacyJacksonJson
+[22:02:42] 2026-03-07 22:02:42,239  INFO scovery.provider.DiscoveryJerseyProvider:  71 - Using JSON decoding codec LegacyJacksonJson
+[22:02:42] 2026-03-07 22:02:42,239  INFO scovery.provider.DiscoveryJerseyProvider:  80 - Using XML encoding codec XStreamXml
+[22:02:42] 2026-03-07 22:02:42,239  INFO scovery.provider.DiscoveryJerseyProvider:  81 - Using XML decoding codec XStreamXml
+[22:02:42] 2026-03-07 22:02:42,432  INFO erver.handler.ContextHandler.application:2870 - Initializing Spring DispatcherServlet 'dispatcherServlet'
+[22:02:42] 2026-03-07 22:02:42,432  INFO gframework.web.servlet.DispatcherServlet: 532 - Initializing Servlet 'dispatcherServlet'
+[22:02:42] 2026-03-07 22:02:42,436  INFO gframework.web.servlet.DispatcherServlet: 554 - Completed initialization in 4 ms
+[22:02:42] 2026-03-07 22:02:42,468  INFO g.eclipse.jetty.server.AbstractConnector: 326 - Started ServerConnector@295e9aef{HTTP/1.1, (http/1.1)}{0.0.0.0:8761}
+[22:02:42] 2026-03-07 22:02:42,470  INFO k.boot.web.embedded.jetty.JettyWebServer: 168 - Jetty started on port 8761 (http/1.1) with context path '/'
+[22:02:42] 2026-03-07 22:02:42,472  INFO ceregistry.EurekaAutoServiceRegistration: 150 - Updating port to 8761
+[22:02:42] 2026-03-07 22:02:42,743  INFO edded.jetty.JettyServletWebServerFactory: 176 - Server initialized with port: 8752
+[22:02:42] 2026-03-07 22:02:42,745  INFO          org.eclipse.jetty.server.Server: 553 - jetty-12.0.15; built: 2024-11-05T19:44:57.623Z; git: 8281ae9740d4b4225e8166cc476bad237c70213a; jvm 17.0.12+8-LTS-286
+[22:02:42] 2026-03-07 22:02:42,751  INFO erver.handler.ContextHandler.application:2870 - Initializing Spring embedded WebApplicationContext
+[22:02:42] 2026-03-07 22:02:42,751  INFO ntext.ServletWebServerApplicationContext: 296 - Root WebApplicationContext: initialization completed in 257 ms
+[22:02:42] Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+[22:02:42] 2026-03-07 22:02:42,771  INFO se.jetty.session.DefaultSessionIdManager: 328 - Session workerName=node0
+[22:02:42] 2026-03-07 22:02:42,773  INFO ipse.jetty.server.handler.ContextHandler: 756 - Started osbwej.JettyEmbeddedWebAppContext@4487dce{application,/,b=file:/private/var/folders/kk/629y_3zj6hz2gdjxgs9zz89h0000gn/T/jetty-docbase.8752.3083377393154411168/,a=AVAILABLE,h=oeje10s.SessionHandler@3aafa1c1{STARTED}}
+[22:02:42] 2026-03-07 22:02:42,773  INFO jetty.ee10.servlet.ServletContextHandler:1051 - Started osbwej.JettyEmbeddedWebAppContext@4487dce{application,/,b=file:/private/var/folders/kk/629y_3zj6hz2gdjxgs9zz89h0000gn/T/jetty-docbase.8752.3083377393154411168/,a=AVAILABLE,h=oeje10s.SessionHandler@3aafa1c1{STARTED}}
+[22:02:42] 2026-03-07 22:02:42,775  INFO          org.eclipse.jetty.server.Server: 610 - Started oejs.Server@667ce5fa{STARTING}[12.0.15,sto=0] @17577ms
+[22:02:42] 2026-03-07 22:02:42,820  INFO tuate.endpoint.web.EndpointLinksResolver:  58 - Exposing 1 endpoint(s) beneath base path '/actuator'
+[22:02:42] 2026-03-07 22:02:42,955  INFO erver.handler.ContextHandler.application:2870 - Initializing Spring DispatcherServlet 'dispatcherServletRegistration'
+[22:02:42] 2026-03-07 22:02:42,955  INFO gframework.web.servlet.DispatcherServlet: 532 - Initializing Servlet 'dispatcherServletRegistration'
+[22:02:42] 2026-03-07 22:02:42,956  INFO gframework.web.servlet.DispatcherServlet: 554 - Completed initialization in 1 ms
+[22:02:42] 2026-03-07 22:02:42,962  INFO g.eclipse.jetty.server.AbstractConnector: 326 - Started ServerConnector@27f09e08{HTTP/1.1, (http/1.1)}{0.0.0.0:8752}
+[22:02:42] 2026-03-07 22:02:42,963  INFO k.boot.web.embedded.jetty.JettyWebServer: 168 - Jetty started on port 8752 (http/1.1) with context path '/'
+[22:02:51] 2026-03-07 22:02:51,111  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 0ms
+[22:03:01] 2026-03-07 22:03:01,116  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 4ms
+
+========== 启动 Gateway ==========[22:03:07] 执行命令: ./mvnw -f framework/gateway/pom.xml spring-boot:run[22:03:11] 2026-03-07 22:03:11,116  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 0ms
+[22:03:11] [INFO] Scanning for projects...
+[22:03:12] [INFO] 
+[22:03:12] [INFO] -----------------------< io.metersphere:gateway >-----------------------
+[22:03:12] [INFO] Building gateway 2.10
+[22:03:12] [INFO] --------------------------------[ jar ]---------------------------------
+[22:03:12] [INFO] 
+[22:03:12] [INFO] >>> spring-boot-maven-plugin:3.2.12:run (default-cli) > test-compile @ gateway >>>
+[22:03:16] [INFO] 
+[22:03:16] [INFO] --- maven-antrun-plugin:3.1.0:run (main-class-placement) @ gateway ---
+[22:03:16] [INFO] Executing tasks
+[22:03:16] [INFO] Executed tasks
+[22:03:16] [INFO] 
+[22:03:16] [INFO] --- maven-resources-plugin:3.3.1:resources (default-resources) @ gateway ---
+[22:03:17] [INFO] Copying 0 resource from src/main/java to target/classes
+[22:03:17] [INFO] Copying 334 resources from src/main/resources to target/classes
+[22:03:18] [INFO] 
+[22:03:18] [INFO] --- flatten-maven-plugin:1.2.7:flatten (flatten) @ gateway ---
+[22:03:18] [INFO] Generating flattened POM of project io.metersphere:gateway:jar:2.10...
+[22:03:18] [INFO] 
+[22:03:18] [INFO] --- maven-compiler-plugin:3.11.0:compile (default-compile) @ gateway ---
+[22:03:19] [INFO] Nothing to compile - all classes are up to date
+[22:03:19] [INFO] 
+[22:03:19] [INFO] --- maven-resources-plugin:3.3.1:testResources (default-testResources) @ gateway ---
+[22:03:19] [INFO] skip non existing resourceDirectory /Users/edy/ideaProjects/metersphere/framework/gateway/src/test/resources
+[22:03:19] [INFO] 
+[22:03:19] [INFO] --- maven-compiler-plugin:3.11.0:testCompile (default-testCompile) @ gateway ---
+[22:03:19] [INFO] No sources to compile
+[22:03:19] [INFO] 
+[22:03:19] [INFO] <<< spring-boot-maven-plugin:3.2.12:run (default-cli) < test-compile @ gateway <<<
+[22:03:19] [INFO] 
+[22:03:19] [INFO] 
+[22:03:19] [INFO] --- spring-boot-maven-plugin:3.2.12:run (default-cli) @ gateway ---
+[22:03:20] [INFO] Attaching agents: []
+[22:03:21] 2026-03-07 22:03:21,118  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 1ms
+[22:03:21] 22:03:21,091 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 174
+[22:03:21] 22:03:21,091 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+[22:03:21] 22:03:21,092 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 183
+[22:03:21] 22:03:21,092 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+[22:03:21] 22:03:21,296 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [console]
+[22:03:21] 22:03:21,297 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+[22:03:21] 22:03:21,317 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:21] 22:03:21,377 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [debugAppender]
+[22:03:21] 22:03:21,378 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:03:21] 22:03:21,407 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1254344205 - No compression will be used
+[22:03:21] 22:03:21,417 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1254344205 - Will use the pattern /opt/metersphere/logs/gateway/history/debug.%d{yyyyMMdd}-%i.log for the active file
+[22:03:21] 22:03:21,457 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@35ef1869 - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/gateway/history/debug.%d{yyyyMMdd}-%i.log'.
+[22:03:21] 22:03:21,457 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@35ef1869 - Roll-over at midnight.
+[22:03:21] 22:03:21,480 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@35ef1869 - Setting initial period to 2026-01-21T11:48:27.600Z
+[22:03:21] 22:03:21,481 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@35ef1869 - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:03:21] 22:03:21,481 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@35ef1869 - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:03:21] 22:03:21,485 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:21] 22:03:21,497 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[debugAppender] - Active log file name: /opt/metersphere/logs/gateway/debug.log
+[22:03:21] 22:03:21,498 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[debugAppender] - File property is set to [/opt/metersphere/logs/gateway/debug.log]
+[22:03:21] 22:03:21,502 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [infoAppender]
+[22:03:21] 22:03:21,502 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:03:21] 22:03:21,507 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1076607567 - No compression will be used
+[22:03:21] 22:03:21,508 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1076607567 - Will use the pattern /opt/metersphere/logs/gateway/history/info.%d{yyyyMMdd}-%i.log for the active file
+[22:03:21] 22:03:21,508 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@795cd85e - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/gateway/history/info.%d{yyyyMMdd}-%i.log'.
+[22:03:21] 22:03:21,508 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@795cd85e - Roll-over at midnight.
+[22:03:21] 22:03:21,510 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@795cd85e - Setting initial period to 2026-03-07T13:49:30.715Z
+[22:03:21] 22:03:21,510 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@795cd85e - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:03:21] 22:03:21,510 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@795cd85e - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:03:21] 22:03:21,511 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:21] 22:03:21,513 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[infoAppender] - Active log file name: /opt/metersphere/logs/gateway/info.log
+[22:03:21] 22:03:21,513 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[infoAppender] - File property is set to [/opt/metersphere/logs/gateway/info.log]
+[22:03:21] 22:03:21,515 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [errorAppender]
+[22:03:21] 22:03:21,516 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:03:21] 22:03:21,518 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1509791656 - No compression will be used
+[22:03:21] 22:03:21,518 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1509791656 - Will use the pattern /opt/metersphere/logs/gateway/history/error.%d{yyyyMMdd}-%i.log for the active file
+[22:03:21] 22:03:21,519 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@f5ac9e4 - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/gateway/history/error.%d{yyyyMMdd}-%i.log'.
+[22:03:21] 22:03:21,520 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@f5ac9e4 - Roll-over at midnight.
+[22:03:21] 22:03:21,521 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@f5ac9e4 - Setting initial period to 2026-03-05T07:44:52.080Z
+[22:03:21] 22:03:21,521 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@f5ac9e4 - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:03:21] 22:03:21,521 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@f5ac9e4 - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:03:21] 22:03:21,523 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:21] 22:03:21,527 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[errorAppender] - Active log file name: /opt/metersphere/logs/gateway/error.log
+[22:03:21] 22:03:21,528 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[errorAppender] - File property is set to [/opt/metersphere/logs/gateway/error.log]
+[22:03:21] 22:03:21,529 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [warnAppender]
+[22:03:21] 22:03:21,529 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:03:21] 22:03:21,532 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@306115458 - No compression will be used
+[22:03:21] 22:03:21,533 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@306115458 - Will use the pattern /opt/metersphere/logs/gateway/history/warn.%d{yyyyMMdd}-%i.log for the active file
+[22:03:21] 22:03:21,535 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@dbf57b3 - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/gateway/history/warn.%d{yyyyMMdd}-%i.log'.
+[22:03:21] 22:03:21,536 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@dbf57b3 - Roll-over at midnight.
+[22:03:21] 22:03:21,537 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@dbf57b3 - Setting initial period to 2026-03-05T05:04:07.318Z
+[22:03:21] 22:03:21,537 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@dbf57b3 - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:03:21] 22:03:21,537 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@dbf57b3 - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:03:21] 22:03:21,538 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:21] 22:03:21,541 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[warnAppender] - Active log file name: /opt/metersphere/logs/gateway/warn.log
+[22:03:21] 22:03:21,542 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[warnAppender] - File property is set to [/opt/metersphere/logs/gateway/warn.log]
+[22:03:21] 22:03:21,543 |-WARN in ch.qos.logback.core.model.processor.AppenderModelHandler - Appender named [consoleAsyncAppender] not referenced. Skipping further processing.
+[22:03:21] 22:03:21,543 |-WARN in ch.qos.logback.core.model.processor.AppenderModelHandler - Appender named [debugAsyncAppender] not referenced. Skipping further processing.
+[22:03:21] 22:03:21,544 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [infoAsyncAppender]
+[22:03:21] 22:03:21,544 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:03:21] 22:03:21,547 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAppender] to ch.qos.logback.classic.AsyncAppender[infoAsyncAppender]
+[22:03:21] 22:03:21,549 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Attaching appender named [infoAppender] to AsyncAppender.
+[22:03:21] 22:03:21,550 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Setting discardingThreshold to 2000
+[22:03:21] 22:03:21,551 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [errorAsyncAppender]
+[22:03:21] 22:03:21,551 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:03:21] 22:03:21,552 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [errorAppender] to ch.qos.logback.classic.AsyncAppender[errorAsyncAppender]
+[22:03:21] 22:03:21,552 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Attaching appender named [errorAppender] to AsyncAppender.
+[22:03:21] 22:03:21,552 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Setting discardingThreshold to 2000
+[22:03:21] 22:03:21,552 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [warnAsyncAppender]
+[22:03:21] 22:03:21,552 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:03:21] 22:03:21,553 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [warnAppender] to ch.qos.logback.classic.AsyncAppender[warnAsyncAppender]
+[22:03:21] 22:03:21,553 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Attaching appender named [warnAppender] to AsyncAppender.
+[22:03:21] 22:03:21,553 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Setting discardingThreshold to 2000
+[22:03:21] 22:03:21,553 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [backendApiAppender]
+[22:03:21] 22:03:21,553 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:03:21] 22:03:21,554 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1156304131 - No compression will be used
+[22:03:21] 22:03:21,554 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1156304131 - Will use the pattern /opt/metersphere/logs/gateway/history/api/info.%d{yyyyMMdd}-%i.log for the active file
+[22:03:21] 22:03:21,555 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@694abbdc - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/gateway/history/api/info.%d{yyyyMMdd}-%i.log'.
+[22:03:21] 22:03:21,555 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@694abbdc - Roll-over at midnight.
+[22:03:21] 22:03:21,556 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@694abbdc - Setting initial period to 2026-01-21T11:48:27.601Z
+[22:03:21] 22:03:21,557 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@694abbdc - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:03:21] 22:03:21,557 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@694abbdc - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:03:21] 22:03:21,558 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:21] 22:03:21,562 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[backendApiAppender] - Active log file name: /opt/metersphere/logs/gateway/api/info.log
+[22:03:21] 22:03:21,563 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[backendApiAppender] - File property is set to [/opt/metersphere/logs/gateway/api/info.log]
+[22:03:21] 22:03:21,563 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [backendApiAsyncAppender]
+[22:03:21] 22:03:21,563 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:03:21] 22:03:21,565 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [backendApiAppender] to ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender]
+[22:03:21] 22:03:21,566 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Attaching appender named [backendApiAppender] to AsyncAppender.
+[22:03:21] 22:03:21,566 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Setting discardingThreshold to 2000
+[22:03:21] 22:03:21,569 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere.controller.handler.WebLogAspect] to false
+[22:03:21] 22:03:21,571 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - io.metersphere.controller.handler.WebLogAspect level set to DEBUG
+[22:03:21] 22:03:21,572 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [backendApiAsyncAppender] to Logger[io.metersphere.controller.handler.WebLogAspect]
+[22:03:21] 22:03:21,574 |-INFO in ch.qos.logback.classic.model.processor.RootLoggerModelHandler - Setting level of ROOT logger to INFO
+[22:03:21] 22:03:21,575 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[ROOT]
+[22:03:21] 22:03:21,575 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [console] to Logger[ROOT]
+[22:03:21] 22:03:21,575 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere] to false
+[22:03:21] 22:03:21,576 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - io.metersphere level set to DEBUG
+[22:03:21] 22:03:21,576 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[io.metersphere]
+[22:03:21] 22:03:21,576 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [warnAsyncAppender] to Logger[io.metersphere]
+[22:03:21] 22:03:21,576 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [errorAsyncAppender] to Logger[io.metersphere]
+[22:03:21] 22:03:21,576 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [io.metersphere.base.mapper] to DEBUG
+[22:03:21] 22:03:21,576 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [console] to Logger[io.metersphere.base.mapper]
+[22:03:21] 22:03:21,576 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [io.metersphere.GatewayApplication] to DEBUG
+[22:03:21] 22:03:21,577 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere.GatewayApplication] to false
+[22:03:21] 22:03:21,577 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[io.metersphere.GatewayApplication]
+[22:03:21] 22:03:21,577 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@6356695f - End of configuration.
+[22:03:21] 22:03:21,579 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@4f6ee6e4 - Registering current configuration as safe fallback point
+[22:03:21] 22:03:21,579 |-INFO in ch.qos.logback.classic.util.ContextInitializer@4466af20 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 752 milliseconds. ExecutionStatus=DO_NOT_INVOKE_NEXT_IF_ANY
+[22:03:23] 22:03:23,763 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:03:23] 22:03:23,765 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Queue flush finished successfully within timeout.
+[22:03:23] 22:03:23,766 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:03:23] 22:03:23,767 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Queue flush finished successfully within timeout.
+[22:03:23] 22:03:23,769 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:03:23] 22:03:23,770 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Queue flush finished successfully within timeout.
+[22:03:23] 22:03:23,775 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:03:23] 22:03:23,778 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Queue flush finished successfully within timeout.
+[22:03:23] 22:03:23,763 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:03:23] 22:03:23,765 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Queue flush finished successfully within timeout.
+[22:03:23] 22:03:23,766 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:03:23] 22:03:23,767 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Queue flush finished successfully within timeout.
+[22:03:23] 22:03:23,769 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:03:23] 22:03:23,770 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Queue flush finished successfully within timeout.
+[22:03:23] 22:03:23,775 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Worker thread will flush remaining events before exiting. 
+[22:03:23] 22:03:23,778 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Queue flush finished successfully within timeout.
+[22:03:23] 22:03:23,835 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 174
+[22:03:23] 22:03:23,835 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+[22:03:23] 22:03:23,835 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - <level> element is deprecated. Near [level] on line 183
+[22:03:23] 22:03:23,835 |-WARN in ch.qos.logback.classic.joran.action.LevelAction - Please use "level" attribute within <logger> or <root> elements instead.
+[22:03:23] 22:03:23,852 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [console]
+[22:03:23] 22:03:23,853 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+[22:03:23] 22:03:23,854 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:23] 22:03:23,855 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [debugAppender]
+[22:03:23] 22:03:23,856 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:03:23] 22:03:23,864 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@87060781 - No compression will be used
+[22:03:23] 22:03:23,864 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@87060781 - Will use the pattern /opt/metersphere/logs/gateway/history/debug.%d{yyyyMMdd}-%i.log for the active file
+[22:03:23] 22:03:23,865 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2df6226d - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/gateway/history/debug.%d{yyyyMMdd}-%i.log'.
+[22:03:23] 22:03:23,866 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2df6226d - Roll-over at midnight.
+[22:03:23] 22:03:23,867 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2df6226d - Setting initial period to 2026-01-21T11:48:27.600Z
+[22:03:23] 22:03:23,868 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2df6226d - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:03:23] 22:03:23,868 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2df6226d - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:03:23] 22:03:23,870 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:23] 22:03:23,887 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[debugAppender] - Active log file name: /opt/metersphere/logs/gateway/debug.log
+[22:03:23] 22:03:23,890 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[debugAppender] - File property is set to [/opt/metersphere/logs/gateway/debug.log]
+[22:03:23] 22:03:23,893 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [infoAppender]
+[22:03:23] 22:03:23,905 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:03:23] 22:03:23,917 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@317562294 - No compression will be used
+[22:03:23] 22:03:23,918 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@317562294 - Will use the pattern /opt/metersphere/logs/gateway/history/info.%d{yyyyMMdd}-%i.log for the active file
+[22:03:23] 22:03:23,920 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@4ff4357f - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/gateway/history/info.%d{yyyyMMdd}-%i.log'.
+[22:03:23] 22:03:23,922 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@4ff4357f - Roll-over at midnight.
+[22:03:23] 22:03:23,926 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@4ff4357f - Setting initial period to 2026-03-07T13:49:30.715Z
+[22:03:23] 22:03:23,930 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@4ff4357f - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:03:23] 22:03:23,931 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@4ff4357f - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:03:23] 22:03:23,934 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:23] 22:03:23,944 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[infoAppender] - Active log file name: /opt/metersphere/logs/gateway/info.log
+[22:03:23] 22:03:23,945 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[infoAppender] - File property is set to [/opt/metersphere/logs/gateway/info.log]
+[22:03:23] 22:03:23,945 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [errorAppender]
+[22:03:23] 22:03:23,945 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:03:23] 22:03:23,964 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1238080693 - No compression will be used
+[22:03:23] 22:03:23,986 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1238080693 - Will use the pattern /opt/metersphere/logs/gateway/history/error.%d{yyyyMMdd}-%i.log for the active file
+[22:03:23] 22:03:23,998 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2eee3069 - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/gateway/history/error.%d{yyyyMMdd}-%i.log'.
+[22:03:23] 22:03:23,998 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2eee3069 - Roll-over at midnight.
+[22:03:24] 22:03:24,012 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2eee3069 - Setting initial period to 2026-03-05T07:44:52.080Z
+[22:03:24] 22:03:24,017 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2eee3069 - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:03:24] 22:03:24,017 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2eee3069 - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:03:24] 22:03:24,026 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:24] 22:03:24,031 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[errorAppender] - Active log file name: /opt/metersphere/logs/gateway/error.log
+[22:03:24] 22:03:24,045 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[errorAppender] - File property is set to [/opt/metersphere/logs/gateway/error.log]
+[22:03:24] 22:03:24,045 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [warnAppender]
+[22:03:24] 22:03:24,045 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:03:24] 22:03:24,047 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@765826899 - No compression will be used
+[22:03:24] 22:03:24,048 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@765826899 - Will use the pattern /opt/metersphere/logs/gateway/history/warn.%d{yyyyMMdd}-%i.log for the active file
+[22:03:24] 22:03:24,054 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5629510 - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/gateway/history/warn.%d{yyyyMMdd}-%i.log'.
+[22:03:24] 22:03:24,060 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5629510 - Roll-over at midnight.
+[22:03:24] 22:03:24,092 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5629510 - Setting initial period to 2026-03-05T05:04:07.318Z
+[22:03:24] 22:03:24,093 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5629510 - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:03:24] 22:03:24,093 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5629510 - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:03:24] 22:03:24,103 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:24] 22:03:24,113 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[warnAppender] - Active log file name: /opt/metersphere/logs/gateway/warn.log
+[22:03:24] 22:03:24,114 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[warnAppender] - File property is set to [/opt/metersphere/logs/gateway/warn.log]
+[22:03:24] 22:03:24,114 |-WARN in ch.qos.logback.core.model.processor.AppenderModelHandler - Appender named [consoleAsyncAppender] not referenced. Skipping further processing.
+[22:03:24] 22:03:24,114 |-WARN in ch.qos.logback.core.model.processor.AppenderModelHandler - Appender named [debugAsyncAppender] not referenced. Skipping further processing.
+[22:03:24] 22:03:24,114 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [infoAsyncAppender]
+[22:03:24] 22:03:24,114 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:03:24] 22:03:24,115 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAppender] to ch.qos.logback.classic.AsyncAppender[infoAsyncAppender]
+[22:03:24] 22:03:24,116 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Attaching appender named [infoAppender] to AsyncAppender.
+[22:03:24] 22:03:24,116 |-INFO in ch.qos.logback.classic.AsyncAppender[infoAsyncAppender] - Setting discardingThreshold to 2000
+[22:03:24] 22:03:24,120 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [errorAsyncAppender]
+[22:03:24] 22:03:24,135 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:03:24] 22:03:24,144 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [errorAppender] to ch.qos.logback.classic.AsyncAppender[errorAsyncAppender]
+[22:03:24] 22:03:24,144 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Attaching appender named [errorAppender] to AsyncAppender.
+[22:03:24] 22:03:24,144 |-INFO in ch.qos.logback.classic.AsyncAppender[errorAsyncAppender] - Setting discardingThreshold to 2000
+[22:03:24] 22:03:24,145 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [warnAsyncAppender]
+[22:03:24] 22:03:24,145 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:03:24] 22:03:24,149 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [warnAppender] to ch.qos.logback.classic.AsyncAppender[warnAsyncAppender]
+[22:03:24] 22:03:24,150 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Attaching appender named [warnAppender] to AsyncAppender.
+[22:03:24] 22:03:24,150 |-INFO in ch.qos.logback.classic.AsyncAppender[warnAsyncAppender] - Setting discardingThreshold to 2000
+[22:03:24] 22:03:24,156 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [backendApiAppender]
+[22:03:24] 22:03:24,157 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+[22:03:24] 22:03:24,161 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@333034015 - No compression will be used
+[22:03:24] 22:03:24,161 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@333034015 - Will use the pattern /opt/metersphere/logs/gateway/history/api/info.%d{yyyyMMdd}-%i.log for the active file
+[22:03:24] 22:03:24,163 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2826f61 - The date pattern is 'yyyyMMdd' from file name pattern '/opt/metersphere/logs/gateway/history/api/info.%d{yyyyMMdd}-%i.log'.
+[22:03:24] 22:03:24,163 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2826f61 - Roll-over at midnight.
+[22:03:24] 22:03:24,166 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2826f61 - Setting initial period to 2026-01-21T11:48:27.601Z
+[22:03:24] 22:03:24,166 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2826f61 - SizeAndTimeBasedFNATP is deprecated. Use SizeAndTimeBasedRollingPolicy instead
+[22:03:24] 22:03:24,166 |-WARN in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2826f61 - For more information see http://logback.qos.ch/manual/appenders.html#SizeAndTimeBasedRollingPolicy
+[22:03:24] 22:03:24,167 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+[22:03:24] 22:03:24,172 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[backendApiAppender] - Active log file name: /opt/metersphere/logs/gateway/api/info.log
+[22:03:24] 22:03:24,172 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[backendApiAppender] - File property is set to [/opt/metersphere/logs/gateway/api/info.log]
+[22:03:24] 22:03:24,173 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [backendApiAsyncAppender]
+[22:03:24] 22:03:24,174 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+[22:03:24] 22:03:24,177 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [backendApiAppender] to ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender]
+[22:03:24] 22:03:24,179 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Attaching appender named [backendApiAppender] to AsyncAppender.
+[22:03:24] 22:03:24,180 |-INFO in ch.qos.logback.classic.AsyncAppender[backendApiAsyncAppender] - Setting discardingThreshold to 2000
+[22:03:24] 22:03:24,185 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere.controller.handler.WebLogAspect] to false
+[22:03:24] 22:03:24,187 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@62727399 - Propagating DEBUG level on Logger[io.metersphere.controller.handler.WebLogAspect] onto the JUL framework
+[22:03:24] 22:03:24,194 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - io.metersphere.controller.handler.WebLogAspect level set to DEBUG
+[22:03:24] 22:03:24,195 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [backendApiAsyncAppender] to Logger[io.metersphere.controller.handler.WebLogAspect]
+[22:03:24] 22:03:24,195 |-INFO in ch.qos.logback.classic.model.processor.RootLoggerModelHandler - Setting level of ROOT logger to INFO
+[22:03:24] 22:03:24,195 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@62727399 - Propagating INFO level on Logger[ROOT] onto the JUL framework
+[22:03:24] 22:03:24,195 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[ROOT]
+[22:03:24] 22:03:24,195 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [console] to Logger[ROOT]
+[22:03:24] 22:03:24,195 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere] to false
+[22:03:24] 22:03:24,195 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@62727399 - Propagating DEBUG level on Logger[io.metersphere] onto the JUL framework
+[22:03:24] 22:03:24,196 |-INFO in ch.qos.logback.classic.model.processor.LevelModelHandler - io.metersphere level set to DEBUG
+[22:03:24] 22:03:24,196 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[io.metersphere]
+[22:03:24] 22:03:24,196 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [warnAsyncAppender] to Logger[io.metersphere]
+[22:03:24] 22:03:24,196 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [errorAsyncAppender] to Logger[io.metersphere]
+[22:03:24] 22:03:24,196 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [io.metersphere.base.mapper] to DEBUG
+[22:03:24] 22:03:24,196 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@62727399 - Propagating DEBUG level on Logger[io.metersphere.base.mapper] onto the JUL framework
+[22:03:24] 22:03:24,196 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [console] to Logger[io.metersphere.base.mapper]
+[22:03:24] 22:03:24,197 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [io.metersphere.GatewayApplication] to DEBUG
+[22:03:24] 22:03:24,197 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@62727399 - Propagating DEBUG level on Logger[io.metersphere.GatewayApplication] onto the JUL framework
+[22:03:24] 22:03:24,197 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [io.metersphere.GatewayApplication] to false
+[22:03:24] 22:03:24,197 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [infoAsyncAppender] to Logger[io.metersphere.GatewayApplication]
+[22:03:24] 22:03:24,197 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@115667d - End of configuration.
+[22:03:24] 22:03:24,197 |-INFO in org.springframework.boot.logging.logback.SpringBootJoranConfigurator@736caf7a - Registering current configuration as safe fallback point
+
+[22:03:24]   .   ____          _            __ _ _
+[22:03:24]  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+[22:03:24] ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+[22:03:24]  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+[22:03:24]   '  |____| .__|_| |_|_| |_\__, | / / / /
+[22:03:24]  =========|_|==============|___/=/_/_/_/
+[22:03:24]  :: Spring Boot ::               (v3.2.12)
+
+[22:03:24] 2026-03-07 22:03:24,403  INFO ibernate.validator.internal.util.Version:  21 - HV000001: Hibernate Validator 8.0.1.Final
+[22:03:30] 2026-03-07 22:03:30,494  INFO y.config.RepositoryConfigurationDelegate: 295 - Multiple Spring Data modules found, entering strict repository configuration mode
+[22:03:30] 2026-03-07 22:03:30,499  INFO y.config.RepositoryConfigurationDelegate: 143 - Bootstrapping Spring Data LDAP repositories in DEFAULT mode.
+[22:03:30] 2026-03-07 22:03:30,617  INFO y.config.RepositoryConfigurationDelegate: 211 - Finished Spring Data repository scanning in 85 ms. Found 0 LDAP repository interfaces.
+[22:03:30] 2026-03-07 22:03:30,659  INFO y.config.RepositoryConfigurationDelegate: 295 - Multiple Spring Data modules found, entering strict repository configuration mode
+[22:03:30] 2026-03-07 22:03:30,663  INFO y.config.RepositoryConfigurationDelegate: 143 - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+[22:03:30] 2026-03-07 22:03:30,723  INFO y.config.RepositoryConfigurationDelegate: 211 - Finished Spring Data repository scanning in 17 ms. Found 0 Redis repository interfaces.
+[22:03:31] 2026-03-07 22:03:31,124  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 4ms
+[22:03:31] 2026-03-07 22:03:31,586  INFO amework.cloud.context.scope.GenericScope: 282 - BeanFactory id=8a2ea1b8-4464-3409-8068-5b8ad83425d2
+[22:03:32] 2026-03-07 22:03:32,796  WARN trationDelegate$BeanPostProcessorChecker: 429 - Bean 'org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration$DeferringLoadBalancerInterceptorConfig' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration$DeferringLoadBalancerInterceptorConfig] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). The currently created BeanPostProcessor [lbRestClientPostProcessor] is declared through a non-static factory method on that class; consider declaring it as static instead.
+[22:03:32] 2026-03-07 22:03:32,806  WARN trationDelegate$BeanPostProcessorChecker: 437 - Bean 'deferringLoadBalancerInterceptor' of type [org.springframework.cloud.client.loadbalancer.DeferringLoadBalancerInterceptor] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected/applied to a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies/advisors. If this bean does not have to be post-processed, declare it with ROLE_INFRASTRUCTURE.
+[22:03:32] 2026-03-07 22:03:32,815  WARN trationDelegate$BeanPostProcessorChecker: 429 - Bean 'org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration' of type [org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). The currently created BeanPostProcessor [loadBalancerWebClientBuilderBeanPostProcessor] is declared through a non-static factory method on that class; consider declaring it as static instead.
+[22:03:32] 2026-03-07 22:03:32,818  WARN trationDelegate$BeanPostProcessorChecker: 437 - Bean 'org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration$ReactorDeferringLoadBalancerFilterConfig' of type [org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration$ReactorDeferringLoadBalancerFilterConfig] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected/applied to a currently created BeanPostProcessor [loadBalancerWebClientBuilderBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies/advisors. If this bean does not have to be post-processed, declare it with ROLE_INFRASTRUCTURE.
+[22:03:32] 2026-03-07 22:03:32,821  WARN trationDelegate$BeanPostProcessorChecker: 437 - Bean 'reactorDeferringLoadBalancerExchangeFilterFunction' of type [org.springframework.cloud.client.loadbalancer.reactive.DeferringLoadBalancerExchangeFilterFunction] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected/applied to a currently created BeanPostProcessor [loadBalancerWebClientBuilderBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies/advisors. If this bean does not have to be post-processed, declare it with ROLE_INFRASTRUCTURE.
+[22:03:35] 2026-03-07 22:03:35,655  INFO                     org.redisson.Version:  43 - Redisson 3.25.0
+[22:03:37] 2026-03-07 22:03:37,098  INFO nnection.pool.MasterPubSubConnectionPool: 137 - 1 connections initialized for localhost/127.0.0.1:6379
+[22:03:37] 2026-03-07 22:03:37,399  INFO son.connection.pool.MasterConnectionPool: 137 - 24 connections initialized for localhost/127.0.0.1:6379
+[22:03:40] 2026-03-07 22:03:40,590  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [After]
+[22:03:40] 2026-03-07 22:03:40,591  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [Before]
+[22:03:40] 2026-03-07 22:03:40,591  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [Between]
+[22:03:40] 2026-03-07 22:03:40,591  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [Cookie]
+[22:03:40] 2026-03-07 22:03:40,591  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [Header]
+[22:03:40] 2026-03-07 22:03:40,591  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [Host]
+[22:03:40] 2026-03-07 22:03:40,591  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [Method]
+[22:03:40] 2026-03-07 22:03:40,591  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [Path]
+[22:03:40] 2026-03-07 22:03:40,591  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [Query]
+[22:03:40] 2026-03-07 22:03:40,592  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [ReadBody]
+[22:03:40] 2026-03-07 22:03:40,592  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [RemoteAddr]
+[22:03:40] 2026-03-07 22:03:40,592  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [XForwardedRemoteAddr]
+[22:03:40] 2026-03-07 22:03:40,592  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [Weight]
+[22:03:40] 2026-03-07 22:03:40,592  INFO ateway.route.RouteDefinitionRouteLocator:  89 - Loaded RoutePredicateFactory [CloudFoundryRouteService]
+[22:03:41] 2026-03-07 22:03:41,128  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 5ms
+[22:03:42] 2026-03-07 22:03:42,145  INFO .ldap.core.support.AbstractContextSource: 419 - Property 'userDn' not set - anonymous context will be used for read-only operations
+[22:03:42] 2026-03-07 22:03:42,802  INFO DiscoveryClientOptionalArgsConfiguration:  74 - Eureka HTTP Client uses RestTemplate.
+[22:03:42] 2026-03-07 22:03:42,957  WARN iguration$LoadBalancerCaffeineWarnLogger:  94 - Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+[22:03:44] 2026-03-07 22:03:44,023  INFO cloud.netflix.eureka.InstanceInfoFactory:  67 - Setting initial instance status as: STARTING
+[22:03:44] 2026-03-07 22:03:44,354  INFO    com.netflix.discovery.DiscoveryClient: 327 - Initializing Eureka in region us-east-1
+[22:03:44] 2026-03-07 22:03:44,375  INFO hared.resolver.aws.ConfigClusterResolver:  43 - Resolving eureka endpoints via configuration
+[22:03:44] 2026-03-07 22:03:44,477  INFO    com.netflix.discovery.DiscoveryClient: 951 - Disable delta property : false
+[22:03:44] 2026-03-07 22:03:44,477  INFO    com.netflix.discovery.DiscoveryClient: 952 - Single vip registry refresh property : null
+[22:03:44] 2026-03-07 22:03:44,478  INFO    com.netflix.discovery.DiscoveryClient: 953 - Force full registry fetch : false
+[22:03:44] 2026-03-07 22:03:44,478  INFO    com.netflix.discovery.DiscoveryClient: 954 - Application is null : false
+[22:03:44] 2026-03-07 22:03:44,479  INFO    com.netflix.discovery.DiscoveryClient:   ? - Registered Applications size is zero : true
+[22:03:44] 2026-03-07 22:03:44,479  INFO    com.netflix.discovery.DiscoveryClient: 957 - Application version is -1: true
+[22:03:44] 2026-03-07 22:03:44,480  INFO    com.netflix.discovery.DiscoveryClient:1041 - Getting all instance registry info from the eureka server
+[22:03:45] 2026-03-07 22:03:45,286  INFO    com.netflix.discovery.DiscoveryClient:1050 - The response status is 200
+[22:03:45] 2026-03-07 22:03:45,291  INFO    com.netflix.discovery.DiscoveryClient:1265 - Starting heartbeat executor: renew interval is: 5
+[22:03:45] 2026-03-07 22:03:45,298  INFO netflix.discovery.InstanceInfoReplicator:  60 - InstanceInfoReplicator onDemand update allowed rate per min is 4
+[22:03:45] 2026-03-07 22:03:45,307  INFO    com.netflix.discovery.DiscoveryClient: 447 - Discovery Client initialized at timestamp 1772892225305 with initial instances count: 0
+[22:03:45] 2026-03-07 22:03:45,322  INFO ka.serviceregistry.EurekaServiceRegistry:  70 - Registering application GATEWAY with eureka with status UP
+[22:03:45] 2026-03-07 22:03:45,324  INFO    com.netflix.discovery.DiscoveryClient:1296 - Saw local status change event StatusChangeEvent [timestamp=1772892225324, current=UP, previous=STARTING]
+[22:03:45] 2026-03-07 22:03:45,329  INFO    com.netflix.discovery.DiscoveryClient: 817 - DiscoveryClient_GATEWAY/10.90.87.53:8000: registering service...
+[22:03:45] 2026-03-07 22:03:45,535  INFO k.boot.web.embedded.netty.NettyWebServer: 141 - Netty started on port 8000
+[22:03:45] 2026-03-07 22:03:45,535  INFO eureka.registry.AbstractInstanceRegistry: 271 - Registered instance GATEWAY/10.90.87.53:8000 with status UP (replication=false)
+[22:03:45] 2026-03-07 22:03:45,537  INFO ceregistry.EurekaAutoServiceRegistration: 150 - Updating port to 8000
+[22:03:45] 2026-03-07 22:03:45,542  INFO    com.netflix.discovery.DiscoveryClient: 826 - DiscoveryClient_GATEWAY/10.90.87.53:8000 - registration status: 204
+[22:03:45] 2026-03-07 22:03:45,695  INFO tuate.endpoint.web.EndpointLinksResolver:  58 - Exposing 0 endpoint(s) beneath base path '/actuator'
+[22:03:45] 2026-03-07 22:03:45,762  INFO k.boot.web.embedded.netty.NettyWebServer: 141 - Netty started on port 7421
+[22:03:45] 2026-03-07 22:03:45,841  INFO       com.zaxxer.hikari.HikariDataSource: 110 - DatebookHikariCP - Starting...
+[22:03:46] 2026-03-07 22:03:46,212  INFO        com.zaxxer.hikari.pool.HikariPool: 565 - DatebookHikariCP - Added connection com.mysql.cj.jdbc.ConnectionImpl@6eb06667
+[22:03:46] 2026-03-07 22:03:46,238  INFO       com.zaxxer.hikari.HikariDataSource: 123 - DatebookHikariCP - Start completed.
+[22:03:46] 2026-03-07 22:03:46,306 DEBUG per.FileContentMapper.selectByPrimaryKey: 135 - ==>  Preparing: SELECT file_id , file FROM file_content WHERE file_id = ?
+[22:03:46] 2026-03-07 22:03:46,346 DEBUG per.FileContentMapper.selectByPrimaryKey: 135 - ==> Parameters: ms.login.rsa.key(String)
+[22:03:46] 2026-03-07 22:03:46,405 DEBUG per.FileContentMapper.selectByPrimaryKey: 135 - <==      Total: 1
+[22:03:51] 2026-03-07 22:03:51,133  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 3ms
+[22:03:55] 2026-03-07 22:03:55,297  INFO    com.netflix.discovery.DiscoveryClient: 951 - Disable delta property : false
+[22:03:55] 2026-03-07 22:03:55,297  INFO    com.netflix.discovery.DiscoveryClient: 952 - Single vip registry refresh property : null
+[22:03:55] 2026-03-07 22:03:55,297  INFO    com.netflix.discovery.DiscoveryClient: 953 - Force full registry fetch : false
+[22:03:55] 2026-03-07 22:03:55,297  INFO    com.netflix.discovery.DiscoveryClient: 954 - Application is null : false
+[22:03:55] 2026-03-07 22:03:55,298  INFO    com.netflix.discovery.DiscoveryClient: 955 - Registered Applications size is zero : true
+[22:03:55] 2026-03-07 22:03:55,298  INFO    com.netflix.discovery.DiscoveryClient: 957 - Application version is -1: false
+[22:03:55] 2026-03-07 22:03:55,298  INFO    com.netflix.discovery.DiscoveryClient:1041 - Getting all instance registry info from the eureka server
+[22:03:55] 2026-03-07 22:03:55,348  INFO    com.netflix.discovery.DiscoveryClient:1050 - The response status is 200
+[22:04:01] 2026-03-07 22:04:01,137  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 4ms
+[22:04:11] 2026-03-07 22:04:11,141  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 3ms
+[22:04:21] 2026-03-07 22:04:21,146  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 4ms
+[22:04:31] 2026-03-07 22:04:31,149  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 3ms
+[22:04:41] 2026-03-07 22:04:41,153  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 3ms
+[22:04:51] 2026-03-07 22:04:51,157  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 4ms
+[22:05:01] 2026-03-07 22:05:01,163  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 5ms
+[22:05:11] 2026-03-07 22:05:11,168  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 5ms
+[22:05:21] 2026-03-07 22:05:21,173  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 4ms
+[22:05:31] 2026-03-07 22:05:31,176  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 2ms
+[22:05:41] 2026-03-07 22:05:41,178  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 1ms
+[22:05:46] 2026-03-07 22:05:46,088 DEBUG ase.mapper.UserMapper.selectByPrimaryKey: 135 - ==>  Preparing: SELECT id, `name`, email, `password`, `status`, create_time, update_time, `language`, last_workspace_id, phone, `source`, selenium_server, last_project_id, create_user , platform_info FROM user WHERE id = ?
+[22:05:46] 2026-03-07 22:05:46,093 DEBUG ase.mapper.UserMapper.selectByPrimaryKey: 135 - ==> Parameters: admin(String)
+[22:05:46] 2026-03-07 22:05:46,114 DEBUG ase.mapper.UserMapper.selectByPrimaryKey: 135 - <==      Total: 1
+[22:05:46] 2026-03-07 22:05:46,236 DEBUG e.mapper.UserGroupMapper.selectByExample: 135 - ==>  Preparing: SELECT id, user_id, group_id, source_id, create_time, update_time FROM user_group WHERE ( user_id = ? )
+[22:05:46] 2026-03-07 22:05:46,238 DEBUG e.mapper.UserGroupMapper.selectByExample: 135 - ==> Parameters: admin(String)
+[22:05:46] 2026-03-07 22:05:46,272 DEBUG e.mapper.UserGroupMapper.selectByExample: 135 - <==      Total: 16
+[22:05:46] 2026-03-07 22:05:46,297 DEBUG .base.mapper.GroupMapper.selectByExample: 135 - ==>  Preparing: SELECT id, `name`, description, `system`, `type`, create_time, update_time, creator, scope_id FROM `group` WHERE ( id in ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? ) )
+[22:05:46] 2026-03-07 22:05:46,300 DEBUG .base.mapper.GroupMapper.selectByExample: 135 - ==> Parameters: project_admin(String), project_admin(String), project_admin(String), ws_admin(String), ws_admin(String), project_admin(String), project_admin(String), project_admin(String), admin(String), project_admin(String), project_admin(String), super_group(String), project_admin(String), project_admin(String), ws_admin(String), project_admin(String)
+[22:05:46] 2026-03-07 22:05:46,314 DEBUG .base.mapper.GroupMapper.selectByExample: 135 - <==      Total: 4
+[22:05:46] 2026-03-07 22:05:46,331 DEBUG serGroupPermissionMapper.selectByExample: 135 - ==>  Preparing: SELECT id, group_id, permission_id, module_id FROM user_group_permission WHERE ( group_id = ? )
+[22:05:46] 2026-03-07 22:05:46,332 DEBUG serGroupPermissionMapper.selectByExample: 135 - ==> Parameters: admin(String)
+[22:05:46] 2026-03-07 22:05:46,362 DEBUG serGroupPermissionMapper.selectByExample: 135 - <==      Total: 34
+[22:05:46] 2026-03-07 22:05:46,367 DEBUG serGroupPermissionMapper.selectByExample: 135 - ==>  Preparing: SELECT id, group_id, permission_id, module_id FROM user_group_permission WHERE ( group_id = ? )
+[22:05:46] 2026-03-07 22:05:46,369 DEBUG serGroupPermissionMapper.selectByExample: 135 - ==> Parameters: project_admin(String)
+[22:05:46] 2026-03-07 22:05:46,395 DEBUG serGroupPermissionMapper.selectByExample: 135 - <==      Total: 132
+[22:05:46] 2026-03-07 22:05:46,398 DEBUG serGroupPermissionMapper.selectByExample: 135 - ==>  Preparing: SELECT id, group_id, permission_id, module_id FROM user_group_permission WHERE ( group_id = ? )
+[22:05:46] 2026-03-07 22:05:46,399 DEBUG serGroupPermissionMapper.selectByExample: 135 - ==> Parameters: super_group(String)
+[22:05:46] 2026-03-07 22:05:46,405 DEBUG serGroupPermissionMapper.selectByExample: 135 - <==      Total: 0
+[22:05:46] 2026-03-07 22:05:46,408 DEBUG serGroupPermissionMapper.selectByExample: 135 - ==>  Preparing: SELECT id, group_id, permission_id, module_id FROM user_group_permission WHERE ( group_id = ? )
+[22:05:46] 2026-03-07 22:05:46,409 DEBUG serGroupPermissionMapper.selectByExample: 135 - ==> Parameters: ws_admin(String)
+[22:05:46] 2026-03-07 22:05:46,423 DEBUG serGroupPermissionMapper.selectByExample: 135 - <==      Total: 38
+[22:05:51] 2026-03-07 22:05:51,182  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 4ms
+[22:06:01] 2026-03-07 22:06:01,186  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 3ms
+[22:06:11] 2026-03-07 22:06:11,190  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 3ms
+[22:06:21] 2026-03-07 22:06:21,193  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 3ms
+[22:06:31] 2026-03-07 22:06:31,197  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 3ms
+[22:06:41] 2026-03-07 22:06:41,202  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 5ms
+[22:06:51] 2026-03-07 22:06:51,208  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 5ms
+[22:07:01] 2026-03-07 22:07:01,212  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 4ms
+[22:07:11] 2026-03-07 22:07:11,216  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 4ms
+[22:07:21] 2026-03-07 22:07:21,220  INFO eureka.registry.AbstractInstanceRegistry:1252 - Running the evict task with compensationTime 3ms
