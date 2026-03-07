@@ -156,6 +156,11 @@ export default {
       chat_model_loading: 'Models are still loading. Please try again shortly.',
       chat_model_required: 'Select an available model before sending.',
       chat_llm_unavailable: 'LLM is unavailable right now, so chat cannot start.',
+      chat_connection_connected: 'WebSocket connected',
+      chat_connection_connecting: 'WebSocket connecting',
+      chat_connection_reconnecting: 'WebSocket reconnecting, click to retry now',
+      chat_connection_disconnected: 'WebSocket disconnected, click to reconnect',
+      chat_connection_reconnected: 'WebSocket connection restored',
     },
   },
 }

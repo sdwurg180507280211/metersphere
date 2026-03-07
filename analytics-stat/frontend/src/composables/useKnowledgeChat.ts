@@ -32,6 +32,8 @@ interface UseKnowledgeChatOptions {
   conversationId?: Ref<string>
 }
 
+export type ChatConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
+
 interface TokenPayload {
   id?: string
   userId?: string
@@ -116,6 +118,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
   const mode = options.mode ?? ref<'knowledge' | 'normal'>('knowledge')
   const conversationId = options.conversationId ?? ref('default')
   const loading = ref(false)
+  const connectionState = ref<ChatConnectionState>('connecting')
 
   const ws = ref<WebSocket | null>(null)
   let openPromise: Promise<void> | null = null
@@ -214,6 +217,8 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
     if (manualClose || reconnectTimer !== null) {
       return
     }
+
+    connectionState.value = 'reconnecting'
     reconnectTimer = window.setTimeout(() => {
       reconnectTimer = null
       void ensureSocketOpen().catch(() => {
@@ -223,6 +228,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
 
   const connect = (): Promise<void> => {
     if (ws.value?.readyState === WebSocket.OPEN) {
+      connectionState.value = 'connected'
       return Promise.resolve()
     }
 
@@ -231,11 +237,13 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
     }
 
     clearReconnectTimer()
+    connectionState.value = connectionState.value === 'reconnecting' ? 'reconnecting' : 'connecting'
     const socket = new WebSocket(buildWsUrl())
     ws.value = socket
 
     openPromise = new Promise((resolve, reject) => {
       socket.onopen = () => {
+        connectionState.value = 'connected'
         resolve()
       }
 
@@ -246,6 +254,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
       }
 
       socket.onerror = () => {
+        connectionState.value = manualClose ? 'disconnected' : 'reconnecting'
         reject(new Error('WebSocket 连接失败'))
       }
 
@@ -258,7 +267,9 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
         }
         if (!manualClose) {
           scheduleReconnect()
+          return
         }
+        connectionState.value = 'disconnected'
       }
     }).finally(() => {
       openPromise = null
@@ -282,6 +293,13 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
       throw new Error('WebSocket 尚未建立连接')
     }
     ws.value.send(JSON.stringify(payload))
+  }
+
+  const reconnect = async () => {
+    manualClose = false
+    clearReconnectTimer()
+    connectionState.value = ws.value ? 'reconnecting' : 'connecting'
+    await ensureSocketOpen()
   }
 
   const sendQuestion = async (question: string, options: SendQuestionOptions = {}) => {
@@ -390,6 +408,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
 
   onScopeDispose(() => {
     manualClose = true
+    connectionState.value = 'disconnected'
     clearReconnectTimer()
     stopGenerating()
     ws.value?.close()
@@ -399,9 +418,11 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
   return {
     messages,
     loading,
+    connectionState,
     sendQuestion,
     clearMessages,
     stopGenerating,
     setMessageFeedback,
+    reconnect,
   }
 }
