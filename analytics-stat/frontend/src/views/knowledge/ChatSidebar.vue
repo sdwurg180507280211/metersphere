@@ -43,8 +43,8 @@
     <div class="sidebar-conversations">
       <template v-if="recentSessions.length">
         <div class="group-header">
-          <span class="group-title">Today</span>
-          <span class="group-count">{{ recentSessions.length }} Total</span>
+          <span class="group-title">Recent 7 Days</span>
+          <span class="group-count">{{ recentSessions.length }}</span>
         </div>
         <ChatSessionItem
           v-for="session in recentSessions"
@@ -60,7 +60,7 @@
 
       <template v-if="olderSessions.length">
         <div class="group-header">
-          <span class="group-title">Previous 7 Days</span>
+          <span class="group-title">Earlier</span>
           <span class="group-count">{{ olderSessions.length }}</span>
         </div>
         <ChatSessionItem
@@ -83,9 +83,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useDialog } from 'naive-ui'
 import ChatSessionItem from './ChatSessionItem.vue'
 import type { ChatSession } from '@/composables/useChatSessionStore'
 
@@ -108,8 +107,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const dialog = useDialog()
-
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000
 
 const recentSessions = computed(() =>
@@ -219,31 +216,28 @@ const getSessionNegativeCount = (sessionId: string) => {
 
 .group-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 16px 24px 12px;
+  justify-content: space-between;
+  padding: 12px 24px 8px;
 }
 
 .group-title {
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 700;
-  color: #1e293b;
-  line-height: 24px;
-  letter-spacing: -0.144px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .group-count {
-  font-size: 16px;
-  font-weight: 500;
-  color: #475569;
-  line-height: 22px;
-  letter-spacing: -0.112px;
+  font-size: 12px;
+  color: #94a3b8;
 }
 
 .session-empty {
   padding: 24px;
   text-align: center;
-  font-size: 14px;
   color: #94a3b8;
+  font-size: 14px;
 }
 </style>

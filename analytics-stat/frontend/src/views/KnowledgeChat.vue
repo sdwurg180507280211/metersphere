@@ -46,15 +46,6 @@
               </n-dropdown>
             </div>
             <div class="header-center">
-              <button class="header-icon-btn" title="Share">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                  <circle cx="18" cy="5" r="3" />
-                  <circle cx="6" cy="12" r="3" />
-                  <circle cx="18" cy="19" r="3" />
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                </svg>
-              </button>
               <button class="header-icon-btn" @click="clearMessages" title="Clear">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                   <polyline points="3 6 5 6 21 6" />
@@ -63,19 +54,6 @@
               </button>
             </div>
             <div class="header-right">
-              <button class="header-icon-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                  <line x1="4" y1="21" x2="4" y2="14" />
-                  <line x1="4" y1="10" x2="4" y2="3" />
-                  <line x1="12" y1="21" x2="12" y2="12" />
-                  <line x1="12" y1="8" x2="12" y2="3" />
-                  <line x1="20" y1="21" x2="20" y2="16" />
-                  <line x1="20" y1="12" x2="20" y2="3" />
-                  <line x1="1" y1="14" x2="7" y2="14" />
-                  <line x1="9" y1="8" x2="15" y2="8" />
-                  <line x1="17" y1="16" x2="23" y2="16" />
-                </svg>
-              </button>
               <button class="header-icon-btn" @click="goToKnowledgeBase">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
@@ -114,7 +92,7 @@
 import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { NConfigProvider, NMessageProvider, NDialogProvider, NSelect, NInput, NDropdown, createDiscreteApi } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NDialogProvider, NInput, NDropdown, createDiscreteApi } from 'naive-ui'
 import ChatSidebar from './knowledge/ChatSidebar.vue'
 import ChatWelcome from './knowledge/ChatWelcome.vue'
 import ChatConversation from './knowledge/ChatConversation.vue'
@@ -173,10 +151,17 @@ watch(
   messagesRef,
   (value) => {
     if (!currentSession.value) return
-    touchSession(currentSession.value.id, value)
+    touchSession(currentSession.value.id, value, loading.value
+      ? { refreshUpdatedAt: false, resort: false, syncToStorage: "deferred" }
+      : { syncToStorage: "immediate" })
   },
   { deep: true },
 )
+
+watch(loading, (value) => {
+  if (value || !currentSession.value) return
+  touchSession(currentSession.value.id, messagesRef.value, { syncToStorage: "immediate" })
+})
 
 const sessionKeyword = ref('')
 const sidebarVisible = ref(true)
