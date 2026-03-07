@@ -128,7 +128,7 @@ export default {
     if (this.$route.matched.length > 0) {
       this.activeIndex = this.$route.matched[0].path;
       if (!this.check(this.$route.matched[0].name.toLowerCase())) {
-        window.location.href = "/#/";
+        this.$router.replace('/').catch(() => {});
       }
     }
     this.registerEvents();
@@ -145,11 +145,11 @@ export default {
     },
     active() {
       if (this.activeIndex === '/api') {
-        window.location.href = "/#/api/home";
+        this.$router.push('/api/home').catch(() => {});
       }
     },
     activeAnalyticsStat() {
-      window.location.href = "/#/analytics";
+      this.$router.push('/analytics').catch(() => {});
     },
     check(key) {
       if (key === 'ui' && !hasLicense()) {
