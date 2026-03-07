@@ -156,6 +156,11 @@ export default {
       chat_model_loading: '模型列表加載中，請稍後再試',
       chat_model_required: '請先選擇可用模型再發送',
       chat_llm_unavailable: 'LLM 未啟用，暫時無法發起問答',
+      chat_connection_connected: 'WebSocket 已連接',
+      chat_connection_connecting: 'WebSocket 連接中',
+      chat_connection_reconnecting: 'WebSocket 重連中，點擊立即重試',
+      chat_connection_disconnected: 'WebSocket 已斷開，點擊重連',
+      chat_connection_reconnected: 'WebSocket 已恢復連接',
     },
   },
 }

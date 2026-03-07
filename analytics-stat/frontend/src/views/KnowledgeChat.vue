@@ -46,6 +46,15 @@
               </n-dropdown>
             </div>
             <div class="header-center">
+              <button
+                class="connection-status"
+                :class="connectionStatusClass"
+                :disabled="connectionState === 'connecting'"
+                @click="handleReconnectClick"
+              >
+                <span class="connection-dot" />
+                <span>{{ connectionStatusText }}</span>
+              </button>
               <button class="header-icon-btn" @click="clearMessages" title="Clear">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                   <polyline points="3 6 5 6 21 6" />
@@ -111,7 +120,7 @@ import { useChatHistory } from '@/composables/useChatHistory'
 import { useChatSessionStore } from '@/composables/useChatSessionStore'
 import { resolveKnowledgeErrorMessage } from '@/composables/useKnowledgeErrorMessage'
 import { KNOWLEDGE_ROUTE_PATHS } from '@/config/knowledge-route'
-import type { ChatFeedback, ChatMessage } from '@/composables/useKnowledgeChat'
+import type { ChatConnectionState, ChatFeedback, ChatMessage } from '@/composables/useKnowledgeChat'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -145,7 +154,16 @@ const chatMode = ref<'knowledge' | 'normal'>('normal')
 const chatInputBarRef = ref<{ focus: () => void; restoreDraft: (value: string) => void } | null>(null)
 const sessionSyncPaused = ref(false)
 const activeStreamingSessionId = ref('')
-const { messages, loading, sendQuestion, clearMessages, stopGenerating, setMessageFeedback } = useKnowledgeChat({
+const {
+  messages,
+  loading,
+  connectionState,
+  sendQuestion,
+  clearMessages,
+  stopGenerating,
+  setMessageFeedback,
+  reconnect,
+} = useKnowledgeChat({
   messages: messagesRef,
   mode: chatMode,
   conversationId: currentSessionId,
@@ -242,6 +260,17 @@ const sendDisabled = computed(() => {
   return llmStatusLoading.value || !llmEnabled.value || models.value.length === 0 || !selectedModel.value
 })
 
+const connectionStatusClass = computed(() => `is-${connectionState.value}`)
+
+const connectionStatusTextMap: Record<ChatConnectionState, string> = {
+  connected: 'analytics.knowledge.chat_connection_connected',
+  connecting: 'analytics.knowledge.chat_connection_connecting',
+  reconnecting: 'analytics.knowledge.chat_connection_reconnecting',
+  disconnected: 'analytics.knowledge.chat_connection_disconnected',
+}
+
+const connectionStatusText = computed(() => t(connectionStatusTextMap[connectionState.value]))
+
 const modelOptions = computed(() =>
   models.value.map(m => ({ label: m.name, key: m.id }))
 )
@@ -281,6 +310,19 @@ const ensureChatReady = () => {
 
 const restoreDraftAfterFailure = (question: string) => {
   chatInputBarRef.value?.restoreDraft(question)
+}
+
+const handleReconnectClick = async () => {
+  if (connectionState.value === 'connected' || connectionState.value === 'connecting') {
+    return
+  }
+
+  try {
+    await reconnect()
+    message.success(t('analytics.knowledge.chat_connection_reconnected'))
+  } catch (error) {
+    message.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.chat_failed'))
+  }
 }
 
 const askQuestion = async (question: string, options: { topK?: number } = {}, restoreDraft = false) => {
@@ -513,6 +555,64 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 132px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.connection-status:disabled {
+  cursor: wait;
+}
+
+.connection-status:not(:disabled):hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.connection-status.is-connected {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.25);
+  background: rgba(240, 253, 244, 0.9);
+}
+
+.connection-status.is-connecting,
+.connection-status.is-reconnecting {
+  color: #d97706;
+  border-color: rgba(217, 119, 6, 0.25);
+  background: rgba(255, 251, 235, 0.95);
+}
+
+.connection-status.is-connecting .connection-dot,
+.connection-status.is-reconnecting .connection-dot {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.connection-status.is-disconnected {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.25);
+  background: rgba(254, 242, 242, 0.95);
+}
+
 .model-selector.loading {
   cursor: wait;
 }
@@ -524,6 +624,11 @@ onUnmounted(() => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.88); }
 }
 
 .header-icon-btn {
