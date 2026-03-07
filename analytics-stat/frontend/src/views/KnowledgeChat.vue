@@ -157,6 +157,7 @@ const chatMode = ref<'knowledge' | 'normal'>('normal')
 const { messages, loading, sendQuestion, clearMessages, stopGenerating, setMessageFeedback } = useKnowledgeChat({
   messages: messagesRef,
   mode: chatMode,
+  conversationId: currentSessionId,
 })
 
 watch(
@@ -256,22 +257,22 @@ const handleDeleteSession = (id: string) => {
 }
 
 const handleRenameSession = async (id: string, currentTitle: string) => {
+  const inputValue = ref(currentTitle)
   dialog.create({
     title: t('analytics.knowledge.rename_session'),
     content: () => {
-      const inputRef = ref(currentTitle)
       return h('div', [
         h(NInput, {
-          value: inputRef.value,
+          value: inputValue.value,
           placeholder: t('analytics.knowledge.rename_session_placeholder'),
-          onUpdateValue: (v: string) => { inputRef.value = v },
+          onUpdateValue: (v: string) => { inputValue.value = v },
         }),
       ])
     },
     positiveText: t('commons.confirm'),
     negativeText: t('commons.cancel'),
     onPositiveClick: () => {
-      renameSession(id, currentTitle)
+      renameSession(id, inputValue.value)
     },
   })
 }
@@ -325,7 +326,6 @@ const loadLlmStatus = async () => {
     ])
     llmEnabled.value = status.llmEnabled
     models.value = modelList
-    console.log('获取到的模型列表:', modelList)
     if (modelList.length > 0 && !selectedModel.value) {
       selectedModel.value = modelList[0].id
     }
