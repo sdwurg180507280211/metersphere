@@ -80,7 +80,15 @@
           />
 
           <!-- Input bar -->
-          <ChatInputBar :loading="loading" :chat-mode="chatMode" @send="handleAskPayload" @stop="stopGenerating" @update:chat-mode="chatMode = $event" />
+          <ChatInputBar
+            ref="chatInputBarRef"
+            :loading="loading"
+            :disabled="sendDisabled"
+            :chat-mode="chatMode"
+            @send="handleAskPayload"
+            @stop="stopGenerating"
+            @update:chat-mode="chatMode = $event"
+          />
         </div>
       </div>
       </n-dialog-provider>
@@ -108,7 +116,7 @@ import type { ChatFeedback, ChatMessage } from '@/composables/useKnowledgeChat'
 const { t } = useI18n()
 const router = useRouter()
 const { message, dialog } = createDiscreteApi(['message', 'dialog'])
-const { history, addQuestion, clearHistory } = useChatHistory()
+const { addQuestion } = useChatHistory()
 const {
   sessions,
   currentSession,
@@ -130,8 +138,13 @@ const themeOverrides = {
   },
 }
 
+const MODEL_STORAGE_KEY = 'knowledge-chat-selected-model'
+
 const messagesRef = ref<ChatMessage[]>([])
 const chatMode = ref<'knowledge' | 'normal'>('normal')
+const chatInputBarRef = ref<{ focus: () => void; restoreDraft: (value: string) => void } | null>(null)
+const sessionSyncPaused = ref(false)
+const activeStreamingSessionId = ref('')
 const { messages, loading, sendQuestion, clearMessages, stopGenerating, setMessageFeedback } = useKnowledgeChat({
   messages: messagesRef,
   mode: chatMode,
@@ -140,9 +153,21 @@ const { messages, loading, sendQuestion, clearMessages, stopGenerating, setMessa
 
 watch(
   () => currentSession.value?.id,
-  () => {
-    stopGenerating()
+  (_nextId, previousId) => {
+    sessionSyncPaused.value = true
+
+    if (loading.value) {
+      stopGenerating()
+      const sourceSessionId = activeStreamingSessionId.value || previousId || ''
+      if (sourceSessionId) {
+        touchSession(sourceSessionId, [...messagesRef.value], { syncToStorage: 'immediate' })
+      }
+      activeStreamingSessionId.value = ''
+    }
+
     messagesRef.value = [...(currentSession.value?.messages || [])]
+    sessionSyncPaused.value = false
+    window.requestAnimationFrame(() => chatInputBarRef.value?.focus())
   },
   { immediate: true },
 )
@@ -150,17 +175,38 @@ watch(
 watch(
   messagesRef,
   (value) => {
-    if (!currentSession.value) return
-    touchSession(currentSession.value.id, value, loading.value
-      ? { refreshUpdatedAt: false, resort: false, syncToStorage: "deferred" }
-      : { syncToStorage: "immediate" })
+    if (sessionSyncPaused.value) return
+
+    const targetSessionId = loading.value
+      ? activeStreamingSessionId.value || currentSession.value?.id
+      : currentSession.value?.id
+
+    if (!targetSessionId) return
+
+    touchSession(targetSessionId, value, loading.value
+      ? { refreshUpdatedAt: false, resort: false, syncToStorage: 'deferred' }
+      : { syncToStorage: 'immediate' })
   },
   { deep: true },
 )
 
-watch(loading, (value) => {
-  if (value || !currentSession.value) return
-  touchSession(currentSession.value.id, messagesRef.value, { syncToStorage: "immediate" })
+watch(loading, (value, previousValue) => {
+  if (value) {
+    activeStreamingSessionId.value = currentSession.value?.id || ''
+    return
+  }
+
+  if (!previousValue) {
+    return
+  }
+
+  const finishedSessionId = activeStreamingSessionId.value
+  activeStreamingSessionId.value = ''
+  if (sessionSyncPaused.value || !finishedSessionId) {
+    return
+  }
+
+  touchSession(finishedSessionId, [...messagesRef.value], { syncToStorage: 'immediate' })
 })
 
 const sessionKeyword = ref('')
@@ -182,14 +228,18 @@ const feedbackOptions = computed(() => [
 const llmStatusLoading = ref(true)
 const llmEnabled = ref(false)
 const models = ref<ModelInfo[]>([])
-const selectedModel = ref<string>('')
+const selectedModel = ref<string>(localStorage.getItem(MODEL_STORAGE_KEY) || '')
 
 const selectedModelName = computed(() => {
   if (llmStatusLoading.value) return t('analytics.knowledge.loading_models')
   if (models.value.length === 0) return t('analytics.knowledge.no_models')
-  if (!selectedModel.value) return 'sloth GPT 7.0'
-  const model = models.value.find(m => m.id === selectedModel.value)
-  return model?.name || 'sloth GPT 7.0'
+  if (!selectedModel.value) return t('analytics.knowledge.no_models')
+  const model = models.value.find((item) => item.id === selectedModel.value)
+  return model?.name || t('analytics.knowledge.no_models')
+})
+
+const sendDisabled = computed(() => {
+  return llmStatusLoading.value || !llmEnabled.value || models.value.length === 0 || !selectedModel.value
 })
 
 const modelOptions = computed(() =>
@@ -200,27 +250,64 @@ const handleModelSelect = (key: string) => {
   selectedModel.value = key
 }
 
+watch(selectedModel, (value) => {
+  if (value) {
+    localStorage.setItem(MODEL_STORAGE_KEY, value)
+    return
+  }
+  localStorage.removeItem(MODEL_STORAGE_KEY)
+})
+
 const visibleMessages = computed(() => {
   if (feedbackFilter.value === 'all') return messages.value
   return messages.value.filter((item) => item.role === 'user' || item.feedback?.rating === 'down')
 })
 
-const handleAsk = async (question: string) => {
+const ensureChatReady = () => {
+  if (llmStatusLoading.value) {
+    message.warning(t('analytics.knowledge.chat_model_loading'))
+    return false
+  }
+  if (!llmEnabled.value) {
+    message.warning(t('analytics.knowledge.chat_llm_unavailable'))
+    return false
+  }
+  if (!selectedModel.value) {
+    message.warning(t('analytics.knowledge.chat_model_required'))
+    return false
+  }
+  return true
+}
+
+const restoreDraftAfterFailure = (question: string) => {
+  chatInputBarRef.value?.restoreDraft(question)
+}
+
+const askQuestion = async (question: string, options: { topK?: number } = {}, restoreDraft = false) => {
+  if (!ensureChatReady()) {
+    if (restoreDraft) {
+      restoreDraftAfterFailure(question)
+    }
+    return
+  }
+
   try {
-    await sendQuestion(question, { modelId: selectedModel.value })
+    await sendQuestion(question, { ...options, modelId: selectedModel.value })
     addQuestion(question)
   } catch (error) {
+    if (restoreDraft) {
+      restoreDraftAfterFailure(question)
+    }
     message.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.chat_failed'))
   }
 }
 
+const handleAsk = async (question: string) => {
+  await askQuestion(question)
+}
+
 const handleAskPayload = async (payload: { question: string; topK: number }) => {
-  try {
-    await sendQuestion(payload.question, { topK: payload.topK, modelId: selectedModel.value })
-    addQuestion(payload.question)
-  } catch (error) {
-    message.error(resolveKnowledgeErrorMessage(error, t, 'analytics.knowledge.chat_failed'))
-  }
+  await askQuestion(payload.question, { topK: payload.topK }, true)
 }
 
 const handleRetry = async (question: string) => {
@@ -307,17 +394,20 @@ const loadLlmStatus = async () => {
   try {
     const [status, modelList] = await Promise.all([
       getChatBackendStatus(),
-      listModels()
+      listModels(),
     ])
     llmEnabled.value = status.llmEnabled
     models.value = modelList
-    if (modelList.length > 0 && !selectedModel.value) {
-      selectedModel.value = modelList[0].id
-    }
+
+    const preferredModelId = localStorage.getItem(MODEL_STORAGE_KEY) || selectedModel.value
+    selectedModel.value = modelList.some((item) => item.id === preferredModelId)
+      ? preferredModelId
+      : (modelList[0]?.id || '')
   } catch (error) {
     console.error('加载状态失败:', error)
     llmEnabled.value = false
     models.value = []
+    selectedModel.value = ''
   } finally {
     llmStatusLoading.value = false
   }
