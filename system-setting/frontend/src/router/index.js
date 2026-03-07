@@ -1,13 +1,11 @@
 import Vue from "vue"
 import Router from "vue-router"
+import {installSafeRouterPush} from "metersphere-frontend/src/router/install-safe-push"
 import Setting from "@/router/modules/setting";
 
 
 // 修复路由变更后报错的问题
-const routerPush = Router.prototype.push;
-Router.prototype.push = function push(location) {
-  return routerPush.call(this, location).catch(error => error)
-}
+installSafeRouterPush(Router)
 
 Vue.use(Router)
 

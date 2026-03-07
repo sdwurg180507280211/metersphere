@@ -1,5 +1,6 @@
 import Vue from "vue"
 import Router from "vue-router"
+import {installSafeRouterPush} from "./install-safe-push"
 import Layout from "../business/app-layout"
 import {hasPermissions} from "../utils/permission";
 import {SECOND_LEVEL_ROUTE_PERMISSION_MAP} from "../utils/constants";
@@ -9,10 +10,7 @@ import {MIGRATED_MODULES} from "../micro-app-config";
 const modules = require.context("./modules", true, /\.js$/)
 
 // 修复路由变更后报错的问题
-const routerPush = Router.prototype.push;
-Router.prototype.push = function push(location) {
-  return routerPush.call(this, location).catch(error => error)
-}
+installSafeRouterPush(Router)
 
 Vue.use(Router)
 
@@ -75,11 +73,34 @@ const createRouter = () => new Router({
 
 const router = createRouter()
 
+const LOGIN_CHECK_TTL = 60 * 1000
+let lastLoginCheckTime = 0
+let loginCheckPromise = null
+
+async function checkLoginWithCache(userStore) {
+  const now = Date.now()
+  if (now - lastLoginCheckTime < LOGIN_CHECK_TTL) {
+    return
+  }
+
+  if (!loginCheckPromise) {
+    loginCheckPromise = userStore.getIsLogin()
+      .then(() => {
+        lastLoginCheckTime = Date.now()
+      })
+      .finally(() => {
+        loginCheckPromise = null
+      })
+  }
+
+  await loginCheckPromise
+}
+
 // 刷新整个页面会到这里
 import('@/store').then(async ({useUserStore}) => {
   try {
     const userStore = useUserStore();
-    await userStore.getIsLogin();
+    await checkLoginWithCache(userStore);
   } catch (e) {
     // nothing
   }
@@ -96,7 +117,7 @@ router.beforeEach(async (to, from, next) => {
   let toModule = to.path.split('/')[1];
   if (to.path !== '/login' && formModule && toModule !== formModule) {
     try {
-      await store.getIsLogin();
+      await checkLoginWithCache(store);
     } catch (e) {
       // nothing
     }

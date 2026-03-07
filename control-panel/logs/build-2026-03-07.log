@@ -1,0 +1,1014 @@
+
+========== 构建 system-setting 前端 ==========[17:41:18] 构建ID: d45519bb-71b9-4950-9701-f0e5b9a31c07[17:41:25] cd system-setting/frontend[17:41:25] npm run build[17:41:25] npm warn Unknown project config "sass_binary_site". This will stop working in the next major version of npm.
+[17:41:25] npm warn Unknown project config "phantomjs_cdnurl". This will stop working in the next major version of npm.
+[17:41:25] npm warn Unknown project config "electron_mirror". This will stop working in the next major version of npm.
+[17:41:25] npm warn Unknown project config "chromedriver_cdnurl". This will stop working in the next major version of npm.
+[17:41:25] npm warn Unknown project config "operadriver_cdnurl". This will stop working in the next major version of npm.
+[17:41:25] npm warn Unknown project config "fse_binary_host_mirror". This will stop working in the next major version of npm.
+
+[17:41:25] > setting@1.0.0 build
+[17:41:25] > vue-cli-service build
+
+[17:41:27] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:41:27] All browser targets in the browserslist configuration have supported ES module.
+[17:41:27] Therefore we don't build two separate bundles for differential loading.
+
+
+[17:41:27] -  Building for production...
+[17:41:31] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:31] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:31] DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+[17:41:31] More info and automated migrator: https://sass-lang.com/d/import
+
+[17:41:31]   ╷
+[17:41:31] 2 │ @import './business/app';
+[17:41:31]   │         ^^^^^^^^^^^^^^^^
+[17:41:31]   ╵
+[17:41:31]     ../../framework/sdk-parent/frontend/src/styles/index.scss 2:9  root stylesheet
+
+[17:41:32] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:41:32] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:41:33] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:41:33] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:41:34] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:41:34] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:41:34] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:41:34] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:41:34] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:41:37] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:37] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:37] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:37] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:38] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:38] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:38] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:38] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:38] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:38] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:38] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:38] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:41] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:41] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:45] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:45] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:45] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:45] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:45] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:45] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:45] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:45] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:41:45] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:41:45] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:17] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:42:20] [43m[30m WARNING [39m[49m [33mCompiled with 2 warnings[39m[90m5:42:20 PM[39m
+
+[17:42:20] [43m[30m warning [39m[49m 
+
+[17:42:20] asset size limit: The following asset(s) exceed the recommended size limit (244 KiB).
+[17:42:20] This can impact web performance.
+[17:42:20] Assets: 
+[17:42:20]   js/setting-app.a7c9c751.js (831 KiB)
+[17:42:20]   js/setting-244.a8cf49f9.js (2.91 MiB)
+[17:42:20]   img/error4.f74d088f.gif (4.6 MiB)
+[17:42:20]   js/setting-brace.a8e93c1e.js (1.28 MiB)
+[17:42:20]   js/setting-jspdf.d356cf8d.js (341 KiB)
+[17:42:20]   js/setting-chunk-vendors.97363a21.js (2.73 MiB)
+[17:42:20]   js/setting-8707.599c1cac.js (327 KiB)
+
+[17:42:20] [43m[30m warning [39m[49m 
+
+[17:42:20] entrypoint size limit: The following entrypoint(s) combined asset size exceeds the recommended limit (244 KiB). This can impact web performance.
+[17:42:20] Entrypoints:
+[17:42:20]   app (4.4 MiB)
+[17:42:20]       js/setting-fortawesome.bc8c39f1.js
+[17:42:20]       js/setting-jsencrypt.7ff238f4.js
+[17:42:20]       js/setting-pinia.a4357129.js
+[17:42:20]       js/setting-jspdf.d356cf8d.js
+[17:42:20]       js/setting-html2canvas.01721f81.js
+[17:42:20]       js/setting-chunk-vendors.97363a21.js
+[17:42:20]       css/setting-app.daaa6dd0.css
+[17:42:20]       js/setting-app.a7c9c751.js
+
+
+[17:42:21]   [36m[1mFile[22m[39m                                      [36m[1mSize[22m[39m             [36m[1mGzipped[22m[39m
+
+[17:42:21]   [32mdist/js/setting-244.a8cf49f9.js[39m           2982.40 KiB      529.06 KiB
+[17:42:21]   [32mdist/js/setting-chunk-vendors.97363a21[39m    2792.01 KiB      816.62 KiB
+[17:42:21]   [32m.js[39m
+[17:42:21]   [32mdist/js/setting-brace.a8e93c1e.js[39m         1308.21 KiB      337.44 KiB
+[17:42:21]   [32mdist/js/setting-app.a7c9c751.js[39m           831.36 KiB       270.05 KiB
+[17:42:21]   [32mdist/js/setting-jspdf.d356cf8d.js[39m         340.76 KiB       108.62 KiB
+[17:42:21]   [32mdist/js/setting-8707.599c1cac.js[39m          327.08 KiB       74.52 KiB
+[17:42:21]   [32mdist/js/setting-html2canvas.01721f81.j[39m    198.51 KiB       46.45 KiB
+[17:42:21]   [32ms[39m
+[17:42:21]   [32mdist/js/setting-el-tree-transfer.989be[39m    151.90 KiB       48.64 KiB
+[17:42:21]   [32m0ed.js[39m
+[17:42:21]   [32mdist/js/setting-chunk-common.8ab97f8d.[39m    140.99 KiB       33.71 KiB
+[17:42:21]   [32mjs[39m
+[17:42:21]   [32mdist/js/setting-1901.a44f437a.js[39m          137.64 KiB       43.71 KiB
+[17:42:21]   [32mdist/js/setting-mockjs.855462c8.js[39m        136.28 KiB       49.93 KiB
+[17:42:21]   [32mdist/js/setting-170.5242165f.js[39m           93.47 KiB        37.90 KiB
+[17:42:21]   [32mdist/js/setting-9331.d4fb8fe6.js[39m          93.07 KiB        16.63 KiB
+[17:42:21]   [32mdist/js/setting-jsencrypt.7ff238f4.js[39m     58.14 KiB        18.24 KiB
+[17:42:21]   [32mdist/js/setting-jsondiffpatch.f5676bca[39m    54.61 KiB        16.06 KiB
+[17:42:21]   [32m.js[39m
+[17:42:21]   [32mdist/js/setting-fortawesome.bc8c39f1.j[39m    49.65 KiB        16.64 KiB
+[17:42:21]   [32ms[39m
+[17:42:21]   [32mdist/js/setting-7043.986639e2.js[39m          45.47 KiB        10.72 KiB
+[17:42:21]   [32mdist/js/setting-8796.64abb514.js[39m          39.67 KiB        12.08 KiB
+[17:42:21]   [32mdist/js/setting-6050.4184ab46.js[39m          33.34 KiB        10.48 KiB
+[17:42:21]   [32mdist/js/setting-3115.23145a66.js[39m          31.75 KiB        11.07 KiB
+[17:42:21]   [32mdist/js/setting-9457.d8470731.js[39m          30.72 KiB        8.08 KiB
+[17:42:21]   [32mdist/js/setting-1400.b43de9da.js[39m          28.95 KiB        7.14 KiB
+[17:42:21]   [32mdist/js/setting-8808.7e679894.js[39m          25.53 KiB        6.46 KiB
+[17:42:21]   [32mdist/js/setting-8238.526cfd13.js[39m          25.34 KiB        5.07 KiB
+[17:42:21]   [32mdist/js/setting-7080.b387d4e9.js[39m          24.69 KiB        6.40 KiB
+[17:42:21]   [32mdist/js/setting-4711.0a81b403.js[39m          21.91 KiB        8.62 KiB
+[17:42:21]   [32mdist/js/setting-7123.a87fafc9.js[39m          21.58 KiB        5.94 KiB
+[17:42:21]   [32mdist/js/setting-6349.ab8849c1.js[39m          20.30 KiB        4.13 KiB
+[17:42:21]   [32mdist/js/setting-8711.c02b6e0c.js[39m          19.21 KiB        4.45 KiB
+[17:42:21]   [32mdist/js/setting-5536.96fb8a4c.js[39m          18.35 KiB        4.45 KiB
+[17:42:21]   [32mdist/js/setting-pinia.a4357129.js[39m         17.07 KiB        6.50 KiB
+[17:42:21]   [32mdist/js/setting-4944.e191d90d.js[39m          15.46 KiB        4.92 KiB
+[17:42:21]   [32mdist/js/setting-7678.d9ae4a5d.js[39m          14.46 KiB        3.84 KiB
+[17:42:21]   [32mdist/js/setting-2826.cabf2b54.js[39m          14.20 KiB        4.31 KiB
+[17:42:21]   [32mdist/js/setting-3996.34c49799.js[39m          13.68 KiB        3.99 KiB
+[17:42:21]   [32mdist/js/setting-7922.e5239b22.js[39m          12.16 KiB        3.95 KiB
+[17:42:21]   [32mdist/js/setting-7244.777d3805.js[39m          10.18 KiB        3.24 KiB
+[17:42:21]   [32mdist/js/setting-1121.6a35b8cf.js[39m          9.91 KiB         3.18 KiB
+[17:42:21]   [32mdist/js/setting-8234.a119edfc.js[39m          9.17 KiB         3.19 KiB
+[17:42:21]   [32mdist/js/setting-4335.69fac7bd.js[39m          8.40 KiB         2.26 KiB
+[17:42:21]   [32mdist/js/setting-708.5571b4d3.js[39m           7.72 KiB         2.59 KiB
+[17:42:21]   [32mdist/js/setting-2767.03a6b0f4.js[39m          5.71 KiB         2.07 KiB
+[17:42:21]   [32mdist/js/setting-310.2299257e.js[39m           4.79 KiB         1.45 KiB
+[17:42:21]   [32mdist/js/setting-4145.2f25fab4.js[39m          4.26 KiB         1.55 KiB
+[17:42:21]   [32mdist/js/setting-3532.6f8e1d38.js[39m          2.04 KiB         0.93 KiB
+[17:42:21]   [32mdist/js/setting-6027.60b97d54.js[39m          1.97 KiB         0.94 KiB
+[17:42:21]   [32mdist/js/setting-9959.2155fce9.js[39m          1.21 KiB         0.67 KiB
+[17:42:21]   [32mdist/js/setting-8729.47c8d09b.js[39m          1.21 KiB         0.67 KiB
+[17:42:21]   [32mdist/js/setting-8618.3d52a9e8.js[39m          1.19 KiB         0.67 KiB
+[17:42:21]   [32mdist/js/setting-7422.6d33f2ca.js[39m          1.14 KiB         0.50 KiB
+[17:42:21]   [32mdist/js/setting-6228.a8622169.js[39m          1.02 KiB         0.53 KiB
+[17:42:21]   [32mdist/js/setting-766.a0fcf9b8.js[39m           0.95 KiB         0.60 KiB
+[17:42:21]   [32mdist/js/setting-660.d90761b8.js[39m           0.36 KiB         0.25 KiB
+[17:42:21]   [34mdist/css/setting-app.daaa6dd0.css[39m         221.12 KiB       36.87 KiB
+[17:42:21]   [34mdist/css/setting-8707.e14ae2b9.css[39m        23.22 KiB        5.48 KiB
+[17:42:21]   [34mdist/css/setting-170.a461eacf.css[39m         20.33 KiB        4.32 KiB
+[17:42:21]   [34mdist/css/setting-4520.93128c11.css[39m        18.37 KiB        10.47 KiB
+[17:42:21]   [34mdist/css/setting-9331.28189a90.css[39m        12.17 KiB        3.00 KiB
+[17:42:21]   [34mdist/css/setting-9457.5bb124b5.css[39m        9.02 KiB         2.44 KiB
+[17:42:21]   [34mdist/css/setting-1400.f6aa94b4.css[39m        8.70 KiB         2.29 KiB
+[17:42:21]   [34mdist/css/setting-3532.ab8c76c0.css[39m        7.94 KiB         2.23 KiB
+[17:42:21]   [34mdist/css/setting-6027.12948e66.css[39m        7.94 KiB         2.23 KiB
+[17:42:21]   [34mdist/css/setting-2826.252d5593.css[39m        7.10 KiB         2.03 KiB
+[17:42:21]   [34mdist/css/setting-5536.da8d28b3.css[39m        6.61 KiB         1.89 KiB
+[17:42:21]   [34mdist/css/setting-8808.ee16ea46.css[39m        6.44 KiB         1.85 KiB
+[17:42:21]   [34mdist/css/setting-8234.a41bb3cb.css[39m        6.05 KiB         1.75 KiB
+[17:42:21]   [34mdist/css/setting-4145.1305bb15.css[39m        5.89 KiB         1.69 KiB
+[17:42:21]   [34mdist/css/setting-7043.fd7713aa.css[39m        5.87 KiB         1.71 KiB
+[17:42:21]   [34mdist/css/setting-1121.2c50f932.css[39m        5.45 KiB         1.26 KiB
+[17:42:21]   [34mdist/css/setting-7244.2c50f932.css[39m        5.45 KiB         1.26 KiB
+[17:42:21]   [34mdist/css/setting-6349.2f5b8529.css[39m        3.14 KiB         1.00 KiB
+[17:42:21]   [34mdist/css/setting-8796.4dd23501.css[39m        3.13 KiB         0.97 KiB
+[17:42:21]   [34mdist/css/setting-7922.76a0966d.css[39m        2.31 KiB         0.81 KiB
+[17:42:21]   [34mdist/css/setting-7080.929ded50.css[39m        2.07 KiB         0.73 KiB
+[17:42:21]   [34mdist/css/setting-8618.9319aaec.css[39m        1.55 KiB         0.51 KiB
+[17:42:21]   [34mdist/css/setting-9959.93f9ee64.css[39m        1.54 KiB         0.50 KiB
+[17:42:21]   [34mdist/css/setting-8729.b07b274b.css[39m        1.54 KiB         0.50 KiB
+[17:42:21]   [34mdist/css/setting-708.a60042db.css[39m         0.99 KiB         0.39 KiB
+[17:42:21]   [34mdist/css/setting-2767.79eb39b0.css[39m        0.56 KiB         0.25 KiB
+[17:42:21]   [34mdist/css/setting-244.3dccc791.css[39m         0.49 KiB         0.28 KiB
+[17:42:21]   [34mdist/css/setting-310.1294ec65.css[39m         0.42 KiB         0.24 KiB
+[17:42:21]   [34mdist/css/setting-766.185b2339.css[39m         0.20 KiB         0.15 KiB
+[17:42:21]   [34mdist/css/setting-3996.91d5589a.css[39m        0.18 KiB         0.11 KiB
+[17:42:21]   [34mdist/css/setting-7678.12eabb72.css[39m        0.17 KiB         0.13 KiB
+[17:42:21]   [34mdist/css/setting-6228.4d71cafa.css[39m        0.04 KiB         0.06 KiB
+
+[17:42:21]   [90mImages and other types of assets omitted.[39m
+[17:42:21]   Build at: [37m2026-03-07T09:42:21.041Z[39m - Hash: [37m309107a9950a3858[39m - Time: [37m51416[39mms
+
+[17:42:21] [42m[30m DONE [39m[49m Build complete. The [36mdist[39m directory is ready to be deployed.
+[17:42:21] [44m[30m INFO [39m[49m Check out deployment instructions at [36mhttps://cli.vuejs.org/guide/deployment.html[39m
+       
+
+========== 重启 System Setting 服务 ==========
+========== 构建 analytics-stat 前端 ==========[17:43:28] 构建ID: 9106457d-632d-4865-ba5b-579c10453161[17:43:30] cd analytics-stat/frontend[17:43:30] npm run build
+[17:43:31] > analytics-stat-frontend@2.10.0 build
+[17:43:31] > vite build
+
+[17:43:32] [36mvite v5.4.21 [32mbuilding for production...[36m[39m
+[17:43:32] transforming...
+[17:43:44] [32m✓[39m 4529 modules transformed.
+[17:43:46] rendering chunks...
+[17:43:46] computing gzip size...
+[17:43:46] [2mdist/[22m[32mindex.html                             [39m[1m[2m     0.60 kB[22m[1m[22m[2m │ gzip:     0.51 kB[22m
+[17:43:46] [2mdist/[22m[35mcss/analytics-stat-style.BfJ-mCvw.css  [39m[1m[2m    15.41 kB[22m[1m[22m[2m │ gzip:     3.20 kB[22m
+[17:43:46] [2mdist/[22m[36mjs/analytics-stat-index.DCYlRkwh.js    [39m[1m[33m10,077.26 kB[39m[22m[2m │ gzip: 1,954.49 kB[22m
+[17:43:46] [33m
+[17:43:46] (!) Some chunks are larger than 500 kB after minification. Consider:
+[17:43:46] - Using dynamic import() to code-split the application
+[17:43:46] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[17:43:46] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[17:43:46] [32m✓ built in 14.82s[39m
+
+========== 重启 Analytics Stat 服务 ==========
+========== 构建 api-test 前端 ==========[17:58:59] 构建ID: bdd30797-bd1e-48ed-8890-3868be799fbb[17:59:05] cd api-test/frontend[17:59:05] npm run build[17:59:05] npm warn Unknown project config "sass_binary_site". This will stop working in the next major version of npm.
+[17:59:05] npm warn Unknown project config "phantomjs_cdnurl". This will stop working in the next major version of npm.
+[17:59:05] npm warn Unknown project config "electron_mirror". This will stop working in the next major version of npm.
+[17:59:05] npm warn Unknown project config "chromedriver_cdnurl". This will stop working in the next major version of npm.
+[17:59:05] npm warn Unknown project config "operadriver_cdnurl". This will stop working in the next major version of npm.
+[17:59:05] npm warn Unknown project config "fse_binary_host_mirror". This will stop working in the next major version of npm.
+
+[17:59:05] > api@1.0.0 build
+[17:59:05] > vue-cli-service build
+
+[17:59:07] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:59:07] All browser targets in the browserslist configuration have supported ES module.
+[17:59:07] Therefore we don't build two separate bundles for differential loading.
+
+
+[17:59:07] -  Building for production...
+[17:59:12] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:12] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:12] DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+[17:59:12] More info and automated migrator: https://sass-lang.com/d/import
+
+[17:59:12]   ╷
+[17:59:12] 2 │ @import './business/app';
+[17:59:12]   │         ^^^^^^^^^^^^^^^^
+[17:59:12]   ╵
+[17:59:12]     ../../framework/sdk-parent/frontend/src/styles/index.scss 2:9  root stylesheet
+
+[17:59:12] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:59:12] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:59:12] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[17:59:15] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:15] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:16] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:16] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:16] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:16] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:16] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:16] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:16] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:16] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:17] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:17] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:17] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:17] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:21] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:21] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:21] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:21] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:24] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:24] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:24] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:24] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:25] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:25] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:25] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:25] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:27] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:27] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:27] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:27] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:27] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:27] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:28] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:28] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:29] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:29] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:29] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:29] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:30] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:30] More info: https://sass-lang.com/d/legacy-js-api
+
+[17:59:30] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[17:59:30] More info: https://sass-lang.com/d/legacy-js-api
+
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:00:48] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[18:01:03] [43m[30m WARNING [39m[49m [33mCompiled with 2 warnings[39m[90m6:01:03 PM[39m
+
+[18:01:03] [43m[30m warning [39m[49m 
+
+[18:01:03] asset size limit: The following asset(s) exceed the recommended size limit (244 KiB).
+[18:01:03] This can impact web performance.
+[18:01:03] Assets: 
+[18:01:03]   js/api-index.a70f06b6.js (362 KiB)
+[18:01:03]   js/api-6612.5f268098.js (423 KiB)
+[18:01:03]   img/error4.f74d088f.gif (4.6 MiB)
+[18:01:03]   js/api-brace.a71de795.js (1.28 MiB)
+[18:01:03]   js/api-jspdf.75fe9cb4.js (341 KiB)
+[18:01:03]   js/api-echarts.28d8f268.js (668 KiB)
+[18:01:03]   js/api-chunk-common.3642dd8c.js (868 KiB)
+[18:01:03]   js/api-chunk-vendors.633a9d96.js (3.41 MiB)
+[18:01:03]   js/api-2440.3b7713db.js (332 KiB)
+[18:01:03]   js/api-6775.6ba1a763.js (358 KiB)
+[18:01:03]   api-doc.html (6.59 MiB)
+
+[18:01:03] [43m[30m warning [39m[49m 
+
+[18:01:03] entrypoint size limit: The following entrypoint(s) combined asset size exceeds the recommended limit (244 KiB). This can impact web performance.
+[18:01:03] Entrypoints:
+[18:01:03]   index (6.38 MiB)
+[18:01:03]       js/api-html2canvas.e373bfd8.js
+[18:01:03]       js/api-jspdf.75fe9cb4.js
+[18:01:03]       js/api-fortawesome.94d5651c.js
+[18:01:03]       js/api-pinia.fde01558.js
+[18:01:03]       js/api-echarts.28d8f268.js
+[18:01:03]       js/api-jsencrypt.dcc93178.js
+[18:01:03]       css/api-chunk-vendors.86171769.css
+[18:01:03]       js/api-chunk-vendors.633a9d96.js
+[18:01:03]       css/api-chunk-common.11220373.css
+[18:01:03]       js/api-chunk-common.3642dd8c.js
+[18:01:03]       css/api-index.d8bd6c5f.css
+[18:01:03]       js/api-index.a70f06b6.js
+[18:01:03]   shareApiReport (7.17 MiB)
+[18:01:03]       js/api-brace.a71de795.js
+[18:01:03]       js/api-mockjs.a2d60ee0.js
+[18:01:03]       js/api-html2canvas.e373bfd8.js
+[18:01:03]       js/api-jspdf.75fe9cb4.js
+[18:01:03]       js/api-fortawesome.94d5651c.js
+[18:01:03]       js/api-pinia.fde01558.js
+[18:01:03]       js/api-echarts.28d8f268.js
+[18:01:03]       css/api-chunk-common.11220373.css
+[18:01:03]       js/api-chunk-common.3642dd8c.js
+[18:01:03]       css/api-chunk-vendors.86171769.css
+[18:01:03]       js/api-chunk-vendors.633a9d96.js
+[18:01:03]       js/api-shareApiReport.d377fa55.js
+[18:01:03]   shareDocument (6.52 MiB)
+[18:01:03]       js/api-brace.a71de795.js
+[18:01:03]       js/api-mockjs.a2d60ee0.js
+[18:01:03]       js/api-html2canvas.e373bfd8.js
+[18:01:03]       js/api-jspdf.75fe9cb4.js
+[18:01:03]       js/api-fortawesome.94d5651c.js
+[18:01:03]       js/api-pinia.fde01558.js
+[18:01:03]       css/api-chunk-common.11220373.css
+[18:01:03]       js/api-chunk-common.3642dd8c.js
+[18:01:03]       css/api-chunk-vendors.86171769.css
+[18:01:03]       js/api-chunk-vendors.633a9d96.js
+[18:01:03]       js/api-shareDocument.fb005942.js
+[18:01:03]   apiDocument (6.52 MiB)
+[18:01:03]       js/api-brace.a71de795.js
+[18:01:03]       js/api-mockjs.a2d60ee0.js
+[18:01:03]       js/api-html2canvas.e373bfd8.js
+[18:01:03]       js/api-jspdf.75fe9cb4.js
+[18:01:03]       js/api-fortawesome.94d5651c.js
+[18:01:03]       js/api-pinia.fde01558.js
+[18:01:03]       css/api-chunk-common.11220373.css
+[18:01:03]       js/api-chunk-common.3642dd8c.js
+[18:01:03]       css/api-chunk-vendors.86171769.css
+[18:01:03]       js/api-chunk-vendors.633a9d96.js
+[18:01:03]       js/api-apiDocument.1315f453.js
+
+
+[18:01:04]   [36m[1mFile[22m[39m                                      [36m[1mSize[22m[39m             [36m[1mGzipped[22m[39m
+
+[18:01:04]   [32mdist/js/api-chunk-vendors.633a9d96.js[39m     3488.17 KiB      1031.11 KiB
+[18:01:04]   [32mdist/js/api-brace.a71de795.js[39m             1308.20 KiB      337.43 KiB
+[18:01:04]   [32mdist/js/api-chunk-common.3642dd8c.js[39m      868.09 KiB       258.69 KiB
+[18:01:04]   [32mdist/js/api-echarts.28d8f268.js[39m           668.29 KiB       226.67 KiB
+[18:01:04]   [32mdist/js/api-6612.5f268098.js[39m              423.49 KiB       82.13 KiB
+[18:01:04]   [32mdist/js/api-index.a70f06b6.js[39m             362.02 KiB       106.71 KiB
+[18:01:04]   [32mdist/js/api-6775.6ba1a763.js[39m              358.45 KiB       80.46 KiB
+[18:01:04]   [32mdist/js/api-jspdf.75fe9cb4.js[39m             340.77 KiB       108.63 KiB
+[18:01:04]   [32mdist/js/api-2440.3b7713db.js[39m              331.85 KiB       75.30 KiB
+[18:01:04]   [32mdist/js/api-html2canvas.e373bfd8.js[39m       198.49 KiB       46.45 KiB
+[18:01:04]   [32mdist/js/api-6247.772a01a5.js[39m              176.43 KiB       45.38 KiB
+[18:01:04]   [32mdist/js/api-81.f8b511b8.js[39m                158.62 KiB       40.80 KiB
+[18:01:04]   [32mdist/js/api-el-tree-transfer.07297b20.[39m    151.89 KiB       48.63 KiB
+[18:01:04]   [32mjs[39m
+[18:01:04]   [32mdist/js/api-mockjs.a2d60ee0.js[39m            138.42 KiB       50.66 KiB
+[18:01:04]   [32mdist/js/api-386.ba170f29.js[39m               136.60 KiB       43.60 KiB
+[18:01:04]   [32mdist/js/api-6532.d220a11f.js[39m              111.43 KiB       34.11 KiB
+[18:01:04]   [32mdist/js/api-6919.4b0fad3c.js[39m              102.68 KiB       40.80 KiB
+[18:01:04]   [32mdist/js/api-3108.32924208.js[39m              72.27 KiB        16.82 KiB
+[18:01:04]   [32mdist/js/api-4379.b8e099f6.js[39m              71.29 KiB        16.73 KiB
+[18:01:04]   [32mdist/js/api-129.643d9ad6.js[39m               62.08 KiB        10.27 KiB
+[18:01:04]   [32mdist/js/api-6538.c2393005.js[39m              59.26 KiB        11.28 KiB
+[18:01:04]   [32mdist/js/api-jsencrypt.dcc93178.js[39m         58.13 KiB        18.23 KiB
+[18:01:04]   [32mdist/js/api-617.1f9b3ba1.js[39m               56.80 KiB        14.57 KiB
+[18:01:04]   [32mdist/js/api-jsondiffpatch.07c7fd15.js[39m     54.60 KiB        16.06 KiB
+[18:01:04]   [32mdist/js/api-2937.d2c938d9.js[39m              53.60 KiB        14.58 KiB
+[18:01:04]   [32mdist/js/api-fortawesome.94d5651c.js[39m       49.63 KiB        16.63 KiB
+[18:01:04]   [32mdist/js/api-1534.dcbe677c.js[39m              39.77 KiB        12.13 KiB
+[18:01:04]   [32mdist/js/api-2116.ec8c0c8b.js[39m              33.45 KiB        7.90 KiB
+[18:01:04]   [32mdist/js/api-2082.9628b2d9.js[39m              33.33 KiB        10.50 KiB
+[18:01:04]   [32mdist/js/api-6755.23cb7bf8.js[39m              29.50 KiB        6.57 KiB
+[18:01:04]   [32mdist/js/api-7353.c9e692d3.js[39m              23.65 KiB        5.94 KiB
+[18:01:04]   [32mdist/js/api-4711.0a49a8fa.js[39m              21.90 KiB        8.61 KiB
+[18:01:04]   [32mdist/js/api-5337.d3a23f39.js[39m              20.93 KiB        4.54 KiB
+[18:01:04]   [32mdist/js/api-703.9c80fb9f.js[39m               20.78 KiB        5.95 KiB
+[18:01:04]   [32mdist/js/api-8379.61633f7f.js[39m              20.54 KiB        5.45 KiB
+[18:01:04]   [32mdist/js/api-6511.cd06ad15.js[39m              18.43 KiB        5.17 KiB
+[18:01:04]   [32mdist/js/api-pinia.fde01558.js[39m             17.09 KiB        6.51 KiB
+[18:01:04]   [32mdist/js/api-7388.e8afd93d.js[39m              15.99 KiB        4.08 KiB
+[18:01:04]   [32mdist/js/api-2605.cade7070.js[39m              15.58 KiB        4.68 KiB
+[18:01:04]   [32mdist/js/api-5740.788f182f.js[39m              14.60 KiB        4.05 KiB
+[18:01:04]   [32mdist/js/api-7558.0fce0f7c.js[39m              14.45 KiB        3.84 KiB
+[18:01:04]   [32mdist/js/api-8913.f592e682.js[39m              12.64 KiB        4.24 KiB
+[18:01:04]   [32mdist/js/api-9605.bc27e353.js[39m              11.58 KiB        2.99 KiB
+[18:01:04]   [32mdist/js/api-9861.5f5d3039.js[39m              11.19 KiB        3.52 KiB
+[18:01:04]   [32mdist/js/api-7484.ed1dfde2.js[39m              10.25 KiB        3.09 KiB
+[18:01:04]   [32mdist/js/api-2213.8f9f00ea.js[39m              9.80 KiB         3.37 KiB
+[18:01:04]   [32mdist/js/api-shareDocument.fb005942.js[39m     6.46 KiB         2.92 KiB
+[18:01:04]   [32mdist/js/api-2791.3c9448bf.js[39m              6.24 KiB         2.29 KiB
+[18:01:04]   [32mdist/js/api-apiDocument.1315f453.js[39m       6.01 KiB         2.71 KiB
+[18:01:04]   [32mdist/js/api-1318.27f56211.js[39m              5.79 KiB         1.97 KiB
+[18:01:04]   [32mdist/js/api-9365.bda55b71.js[39m              5.61 KiB         1.89 KiB
+[18:01:04]   [32mdist/js/api-7431.c7beee95.js[39m              5.39 KiB         1.47 KiB
+[18:01:04]   [32mdist/js/api-9487.17645bdb.js[39m              5.38 KiB         1.76 KiB
+[18:01:04]   [32mdist/js/api-6838.76f2d4c8.js[39m              5.31 KiB         2.09 KiB
+[18:01:04]   [32mdist/js/api-shareApiReport.d377fa55.js[39m    5.30 KiB         2.44 KiB
+[18:01:04]   [32mdist/js/api-1883.e7927a7e.js[39m              4.03 KiB         1.47 KiB
+[18:01:04]   [32mdist/js/api-6137.d1ba3285.js[39m              3.85 KiB         0.94 KiB
+[18:01:04]   [32mdist/js/api-2711.873babac.js[39m              3.44 KiB         1.29 KiB
+[18:01:04]   [32mdist/js/api-8942.0123739f.js[39m              2.93 KiB         1.27 KiB
+[18:01:04]   [32mdist/js/api-843.c8f2a32e.js[39m               2.76 KiB         0.98 KiB
+[18:01:04]   [32mdist/js/api-4684.46e70e8a.js[39m              2.55 KiB         1.11 KiB
+[18:01:04]   [32mdist/js/api-6393.a67c0960.js[39m              2.51 KiB         1.14 KiB
+[18:01:04]   [32mdist/js/api-6288.129287f2.js[39m              2.42 KiB         1.17 KiB
+[18:01:04]   [32mdist/js/api-5262.534b0838.js[39m              2.07 KiB         1.15 KiB
+[18:01:04]   [32mdist/js/api-3515.f11a0c0a.js[39m              1.65 KiB         0.82 KiB
+[18:01:04]   [32mdist/js/api-8581.c3a29fa9.js[39m              1.36 KiB         0.69 KiB
+[18:01:04]   [32mdist/js/api-5900.c11925ee.js[39m              1.29 KiB         0.62 KiB
+[18:01:04]   [32mdist/js/api-4497.77060a91.js[39m              1.21 KiB         0.67 KiB
+[18:01:04]   [32mdist/js/api-2437.d8981cf7.js[39m              1.21 KiB         0.67 KiB
+[18:01:04]   [32mdist/js/api-6244.facd4f8b.js[39m              1.18 KiB         0.67 KiB
+[18:01:04]   [32mdist/js/api-5123.0f2b1a9a.js[39m              1.13 KiB         0.50 KiB
+[18:01:04]   [32mdist/js/api-190.ecb8c5e0.js[39m               1.10 KiB         0.41 KiB
+[18:01:04]   [32mdist/js/api-7468.e1778337.js[39m              1.08 KiB         0.46 KiB
+[18:01:04]   [32mdist/js/api-1815.9c914123.js[39m              1.01 KiB         0.53 KiB
+[18:01:04]   [32mdist/js/api-4396.ee66a004.js[39m              0.97 KiB         0.55 KiB
+[18:01:04]   [32mdist/js/api-2961.447a53f3.js[39m              0.94 KiB         0.59 KiB
+[18:01:04]   [32mdist/js/api-654.cfae5726.js[39m               0.73 KiB         0.37 KiB
+[18:01:04]   [32mdist/js/api-2657.e4f1d447.js[39m              0.70 KiB         0.40 KiB
+[18:01:04]   [32mdist/js/api-8540.cc85644f.js[39m              0.36 KiB         0.25 KiB
+[18:01:04]   [32mdist/js/api-5697.535026c8.js[39m              0.24 KiB         0.21 KiB
+[18:01:04]   [32mdist/js/api-8078.702a8f9b.js[39m              0.24 KiB         0.21 KiB
+[18:01:04]   [32mdist/js/api-802.2adcb50b.js[39m               0.23 KiB         0.20 KiB
+[18:01:04]   [34mdist/css/api-chunk-common.11220373.css[39m    243.67 KiB       40.04 KiB
+[18:01:04]   [34mdist/css/api-index.d8bd6c5f.css[39m           214.30 KiB       35.36 KiB
+[18:01:04]   [34mdist/css/api-6612.b5c5c6fd.css[39m            48.23 KiB        16.00 KiB
+[18:01:04]   [34mdist/css/api-6919.5dfa2464.css[39m            28.25 KiB        12.32 KiB
+[18:01:04]   [34mdist/css/api-6775.d75b6176.css[39m            24.67 KiB        5.06 KiB
+[18:01:04]   [34mdist/css/api-chunk-vendors.86171769.cs[39m    19.81 KiB        10.89 KiB
+[18:01:04]   [34ms[39m
+[18:01:04]   [34mdist/css/api-2440.1a46dab9.css[39m            18.54 KiB        4.42 KiB
+[18:01:04]   [34mdist/css/api-3108.c6237316.css[39m            13.09 KiB        2.94 KiB
+[18:01:04]   [34mdist/css/api-5740.94038606.css[39m            12.77 KiB        8.71 KiB
+[18:01:04]   [34mdist/css/api-843.546c539d.css[39m             10.99 KiB        2.55 KiB
+[18:01:04]   [34mdist/css/api-6137.98a4ee6b.css[39m            6.39 KiB         1.49 KiB
+[18:01:04]   [34mdist/css/api-2937.f302d435.css[39m            6.22 KiB         1.86 KiB
+[18:01:04]   [34mdist/css/api-129.e2eb5a1d.css[39m             5.07 KiB         1.25 KiB
+[18:01:04]   [34mdist/css/api-6279.cb5b40ca.css[39m            5.05 KiB         1.33 KiB
+[18:01:04]   [34mdist/css/api-1534.4dd23501.css[39m            3.13 KiB         0.97 KiB
+[18:01:04]   [34mdist/css/api-1883.f720c6f8.css[39m            2.75 KiB         0.85 KiB
+[18:01:04]   [34mdist/css/api-6532.3bc19eaa.css[39m            2.56 KiB         0.86 KiB
+[18:01:04]   [34mdist/css/api-8434.5243f8ce.css[39m            2.28 KiB         0.78 KiB
+[18:01:04]   [34mdist/css/api-8913.075d0438.css[39m            2.23 KiB         0.79 KiB
+[18:01:04]   [34mdist/css/api-6244.9319aaec.css[39m            1.55 KiB         0.51 KiB
+[18:01:04]   [34mdist/css/api-4497.93f9ee64.css[39m            1.54 KiB         0.50 KiB
+[18:01:04]   [34mdist/css/api-2437.b07b274b.css[39m            1.54 KiB         0.50 KiB
+[18:01:04]   [34mdist/css/api-6838.4db91a85.css[39m            1.51 KiB         0.58 KiB
+[18:01:04]   [34mdist/css/api-1464.7b2faf57.css[39m            1.24 KiB         0.47 KiB
+[18:01:04]   [34mdist/css/api-6755.db8c1269.css[39m            1.15 KiB         0.45 KiB
+[18:01:04]   [34mdist/css/api-2642.3547292d.css[39m            0.94 KiB         0.39 KiB
+[18:01:04]   [34mdist/css/api-4407.740119ba.css[39m            0.60 KiB         0.29 KiB
+[18:01:04]   [34mdist/css/api-6788.740119ba.css[39m            0.60 KiB         0.29 KiB
+[18:01:04]   [34mdist/css/api-2605.f7f95dbc.css[39m            0.47 KiB         0.20 KiB
+[18:01:04]   [34mdist/css/api-7431.06eef054.css[39m            0.39 KiB         0.23 KiB
+[18:01:04]   [34mdist/css/api-9365.357d5201.css[39m            0.32 KiB         0.21 KiB
+[18:01:04]   [34mdist/css/api-703.2feee94d.css[39m             0.30 KiB         0.20 KiB
+[18:01:04]   [34mdist/css/api-4396.f10249f0.css[39m            0.29 KiB         0.20 KiB
+[18:01:04]   [34mdist/css/api-3515.4f971d66.css[39m            0.29 KiB         0.19 KiB
+[18:01:04]   [34mdist/css/api-1318.b9428f52.css[39m            0.23 KiB         0.17 KiB
+[18:01:04]   [34mdist/css/api-2961.185b2339.css[39m            0.20 KiB         0.15 KiB
+[18:01:04]   [34mdist/css/api-7388.8f07af82.css[39m            0.17 KiB         0.13 KiB
+[18:01:04]   [34mdist/css/api-7558.12eabb72.css[39m            0.17 KiB         0.13 KiB
+[18:01:04]   [34mdist/css/api-6288.575e81cc.css[39m            0.16 KiB         0.14 KiB
+[18:01:04]   [34mdist/css/api-7261.48d1083e.css[39m            0.12 KiB         0.11 KiB
+[18:01:04]   [34mdist/css/api-2711.30438560.css[39m            0.06 KiB         0.08 KiB
+[18:01:04]   [34mdist/css/api-6393.eba272d9.css[39m            0.05 KiB         0.07 KiB
+[18:01:04]   [34mdist/css/api-1815.4d71cafa.css[39m            0.04 KiB         0.06 KiB
+
+[18:01:04]   [90mImages and other types of assets omitted.[39m
+[18:01:04]   Build at: [37m2026-03-07T10:01:04.198Z[39m - Hash: [37m8b7ebf0a0cfec032[39m - Time: [37m114409[39mms
+
+[18:01:04] [42m[30m DONE [39m[49m Build complete. The [36mdist[39m directory is ready to be deployed.
+[18:01:04] [44m[30m INFO [39m[49m Check out deployment instructions at [36mhttps://cli.vuejs.org/guide/deployment.html[39m
+       
+
+========== 重启 API Test 服务 ==========
+========== 构建 sdk-parent 前端 ==========[21:28:44] 构建ID: 8c4612cc-ee22-47c7-92f4-31636462796f[21:28:47] cd framework/sdk-parent/frontend[21:28:47] npm run build[21:28:48] npm warn Unknown project config "sass_binary_site". This will stop working in the next major version of npm.
+[21:28:48] npm warn Unknown project config "phantomjs_cdnurl". This will stop working in the next major version of npm.
+[21:28:48] npm warn Unknown project config "electron_mirror". This will stop working in the next major version of npm.
+[21:28:48] npm warn Unknown project config "chromedriver_cdnurl". This will stop working in the next major version of npm.
+[21:28:48] npm warn Unknown project config "operadriver_cdnurl". This will stop working in the next major version of npm.
+[21:28:48] npm warn Unknown project config "fse_binary_host_mirror". This will stop working in the next major version of npm.
+
+[21:28:48] > metersphere-frontend@1.0.0 build
+[21:28:48] > vue-cli-service build
+
+[21:28:49] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:28:49] All browser targets in the browserslist configuration have supported ES module.
+[21:28:49] Therefore we don't build two separate bundles for differential loading.
+
+
+[21:28:49] -  Building for production...
+[21:28:52] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:52] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:28:52] DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+[21:28:52] More info and automated migrator: https://sass-lang.com/d/import
+
+[21:28:52]   ╷
+[21:28:52] 2 │ @import './business/app';
+[21:28:52]   │         ^^^^^^^^^^^^^^^^
+[21:28:52]   ╵
+[21:28:52]     src/styles/index.scss 2:9  root stylesheet
+
+[21:28:53] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:28:54] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:28:54] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:28:55] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:55] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:28:55] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:55] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:28:55] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:55] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:28:55] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:55] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:28:55] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:28:55] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:28:55] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:28:55] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:28:55] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:55] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:28:55] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:55] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:28:55] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:55] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:28:55] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:55] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:28:55] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:28:56] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:56] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:28:56] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:28:56] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:29:05] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:29:05] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:29:05] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:29:05] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:29:05] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:29:05] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:29:07] [43m[30m WARNING [39m[49m [33mCompiled with 2 warnings[39m[90m9:29:07 PM[39m
+
+[21:29:07] [43m[30m warning [39m[49m 
+
+[21:29:07] asset size limit: The following asset(s) exceed the recommended size limit (244 KiB).
+[21:29:07] This can impact web performance.
+[21:29:07] Assets: 
+[21:29:07]   js/app.63838e83.js (808 KiB)
+[21:29:07]   img/error4.f74d088f.gif (4.6 MiB)
+[21:29:07]   js/jspdf.55c12b8e.js (341 KiB)
+[21:29:07]   js/chunk-vendors.7fcc1755.js (1.2 MiB)
+[21:29:07]   js/dev/mock.js (266 KiB)
+[21:29:07]   js/dev/vue.js (426 KiB)
+[21:29:07]   js/prd/mavon-editor.js (304 KiB)
+[21:29:07]   js/dev/element-ui/element-ui.js (649 KiB)
+[21:29:07]   js/prd/element-ui/element-ui.min.js (649 KiB)
+
+[21:29:07] [43m[30m warning [39m[49m 
+
+[21:29:07] entrypoint size limit: The following entrypoint(s) combined asset size exceeds the recommended limit (244 KiB). This can impact web performance.
+[21:29:07] Entrypoints:
+[21:29:07]   app (2.85 MiB)
+[21:29:07]       js/fortawesome.5a4bd5d4.js
+[21:29:07]       js/jsencrypt.eb1f7658.js
+[21:29:07]       js/pinia.c7f1320b.js
+[21:29:07]       js/jspdf.55c12b8e.js
+[21:29:07]       js/html2canvas.8d591497.js
+[21:29:07]       js/chunk-vendors.7fcc1755.js
+[21:29:07]       css/app.3234de54.css
+[21:29:07]       js/app.63838e83.js
+
+
+[21:29:07]   [36m[1mFile[22m[39m                                      [36m[1mSize[22m[39m             [36m[1mGzipped[22m[39m
+
+[21:29:07]   [32mdist/js/prd/element-ui/element-ui.min.[39m    649.24 KiB       172.44 KiB
+[21:29:07]   [32mjs[39m
+[21:29:07]   [32mdist/js/prd/mock.min.js[39m                   136.56 KiB       49.95 KiB
+[21:29:07]   [32mdist/js/prd/vue.min.js[39m                    102.88 KiB       36.92 KiB
+[21:29:07]   [32mdist/js/prd/vue-shepherd.min.js[39m           52.62 KiB        17.21 KiB
+[21:29:07]   [32mdist/js/prd/vue-router.min.js[39m             25.48 KiB        8.98 KiB
+[21:29:07]   [32mdist/js/prd/vue-i18n.min.js[39m               23.27 KiB        6.96 KiB
+[21:29:07]   [32mdist/js/chunk-vendors.7fcc1755.js[39m         1229.60 KiB      353.97 KiB
+[21:29:07]   [32mdist/js/app.63838e83.js[39m                   808.25 KiB       262.69 KiB
+[21:29:07]   [32mdist/js/dev/element-ui/element-ui.js[39m      648.97 KiB       172.26 KiB
+[21:29:07]   [32mdist/js/dev/vue.js[39m                        426.46 KiB       100.12 KiB
+[21:29:07]   [32mdist/js/jspdf.55c12b8e.js[39m                 340.75 KiB       108.62 KiB
+[21:29:07]   [32mdist/js/prd/mavon-editor.js[39m               303.74 KiB       91.67 KiB
+[21:29:07]   [32mdist/js/dev/mock.js[39m                       265.64 KiB       69.13 KiB
+[21:29:07]   [32mdist/js/html2canvas.8d591497.js[39m           198.50 KiB       46.45 KiB
+[21:29:07]   [32mdist/js/480.b534ee32.js[39m                   137.65 KiB       43.54 KiB
+[21:29:07]   [32mdist/js/dev/vue-router.js[39m                 76.28 KiB        19.41 KiB
+[21:29:07]   [32mdist/js/jsencrypt.eb1f7658.js[39m             58.13 KiB        18.23 KiB
+[21:29:07]   [32mdist/js/dev/vue-i18n.js[39m                   55.60 KiB        12.00 KiB
+[21:29:07]   [32mdist/js/fortawesome.5a4bd5d4.js[39m           49.64 KiB        16.64 KiB
+[21:29:07]   [32mdist/js/245.ebef347c.js[39m                   39.68 KiB        12.15 KiB
+[21:29:07]   [32mdist/js/838.2573d080.js[39m                   21.90 KiB        8.62 KiB
+[21:29:07]   [32mdist/js/pinia.c7f1320b.js[39m                 17.06 KiB        6.50 KiB
+[21:29:07]   [32mdist/js/197.9cae704f.js[39m                   1.21 KiB         0.67 KiB
+[21:29:07]   [32mdist/js/115.b1e242fd.js[39m                   1.21 KiB         0.67 KiB
+[21:29:07]   [32mdist/js/872.0e84fe08.js[39m                   1.19 KiB         0.67 KiB
+[21:29:07]   [32mdist/js/74.65210795.js[39m                    0.95 KiB         0.60 KiB
+[21:29:07]   [32mdist/js/333.ee1368dd.js[39m                   0.36 KiB         0.25 KiB
+[21:29:07]   [34mdist/js/prd/element-ui/element-ui.min.[39m    234.42 KiB       36.02 KiB
+[21:29:07]   [34mcss[39m
+[21:29:07]   [34mdist/js/dev/element-ui/element-ui.css[39m     234.14 KiB       35.81 KiB
+[21:29:07]   [34mdist/css/app.3234de54.css[39m                 221.12 KiB       36.87 KiB
+[21:29:07]   [34mdist/js/prd/element-ui/element-font.cs[39m    70.73 KiB        53.21 KiB
+[21:29:07]   [34ms[39m
+[21:29:07]   [34mdist/css/245.05653b44.css[39m                 3.13 KiB         0.97 KiB
+[21:29:07]   [34mdist/css/872.8bc0f482.css[39m                 1.55 KiB         0.51 KiB
+[21:29:07]   [34mdist/css/197.4174714c.css[39m                 1.54 KiB         0.50 KiB
+[21:29:07]   [34mdist/css/115.f850b1a8.css[39m                 1.54 KiB         0.50 KiB
+[21:29:07]   [34mdist/css/74.654dddf7.css[39m                  0.20 KiB         0.15 KiB
+
+[21:29:07]   [90mImages and other types of assets omitted.[39m
+[21:29:07]   Build at: [37m2026-03-07T13:29:07.293Z[39m - Hash: [37m033baa5215c9bb8a[39m - Time: [37m16399[39mms
+
+[21:29:07] [42m[30m DONE [39m[49m Build complete. The [36mdist[39m directory is ready to be deployed.
+[21:29:07] [44m[30m INFO [39m[49m Check out deployment instructions at [36mhttps://cli.vuejs.org/guide/deployment.html[39m
+       
+
+========== 重启 Gateway 服务 ==========
+========== 构建 analytics-stat 前端 ==========[21:29:29] 构建ID: a141669a-fa68-4523-84db-3ad5bfe7fc51[21:29:31] cd analytics-stat/frontend[21:29:31] npm run build
+[21:29:32] > analytics-stat-frontend@2.10.0 build
+[21:29:32] > vite build
+
+[21:29:32] [36mvite v5.4.21 [32mbuilding for production...[36m[39m
+[21:29:33] transforming...
+[21:29:46] [32m✓[39m 4529 modules transformed.
+[21:29:50] rendering chunks...
+[21:29:50] computing gzip size...
+[21:29:50] [2mdist/[22m[32mindex.html                             [39m[1m[2m     0.60 kB[22m[1m[22m[2m │ gzip:     0.51 kB[22m
+[21:29:50] [2mdist/[22m[35mcss/analytics-stat-style.BfJ-mCvw.css  [39m[1m[2m    15.41 kB[22m[1m[22m[2m │ gzip:     3.20 kB[22m
+[21:29:50] [2mdist/[22m[36mjs/analytics-stat-index.DCYlRkwh.js    [39m[1m[33m10,077.26 kB[39m[22m[2m │ gzip: 1,954.49 kB[22m
+[21:29:50] [33m
+[21:29:50] (!) Some chunks are larger than 500 kB after minification. Consider:
+[21:29:50] - Using dynamic import() to code-split the application
+[21:29:50] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[21:29:50] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[21:29:50] [32m✓ built in 18.12s[39m
+
+========== 重启 Analytics Stat 服务 ==========
+========== 构建 system-setting 前端 ==========[21:30:17] 构建ID: 9ef81413-77cb-42d9-bc2c-0ab417c304b3[21:30:29] cd system-setting/frontend[21:30:29] npm run build[21:30:29] npm warn Unknown project config "sass_binary_site". This will stop working in the next major version of npm.
+[21:30:29] npm warn Unknown project config "phantomjs_cdnurl". This will stop working in the next major version of npm.
+[21:30:29] npm warn Unknown project config "electron_mirror". This will stop working in the next major version of npm.
+[21:30:29] npm warn Unknown project config "chromedriver_cdnurl". This will stop working in the next major version of npm.
+[21:30:29] npm warn Unknown project config "operadriver_cdnurl". This will stop working in the next major version of npm.
+[21:30:29] npm warn Unknown project config "fse_binary_host_mirror". This will stop working in the next major version of npm.
+
+[21:30:29] > setting@1.0.0 build
+[21:30:29] > vue-cli-service build
+
+[21:30:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:30:31] All browser targets in the browserslist configuration have supported ES module.
+[21:30:31] Therefore we don't build two separate bundles for differential loading.
+
+
+[21:30:31] -  Building for production...
+[21:30:41] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:30:41] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:30:41] DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+[21:30:41] More info and automated migrator: https://sass-lang.com/d/import
+
+[21:30:41]   ╷
+[21:30:41] 2 │ @import './business/app';
+[21:30:41]   │         ^^^^^^^^^^^^^^^^
+[21:30:41]   ╵
+[21:30:41]     ../../framework/sdk-parent/frontend/src/styles/index.scss 2:9  root stylesheet
+
+[21:30:45] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:30:45] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:30:45] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:30:52] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:30:52] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:30:53] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:30:53] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:30:53] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:30:53] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:30:53] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:30:53] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:30:53] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:30:53] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:30:53] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:30:53] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:30:58] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:30:58] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:31:00] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:31:00] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:31:01] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:31:01] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:31:01] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:31:01] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:31:01] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:31:01] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:31:01] DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+[21:31:01] More info: https://sass-lang.com/d/legacy-js-api
+
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:31] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[21:31:35] [43m[30m WARNING [39m[49m [33mCompiled with 2 warnings[39m[90m9:31:35 PM[39m
+
+[21:31:35] [43m[30m warning [39m[49m 
+
+[21:31:35] asset size limit: The following asset(s) exceed the recommended size limit (244 KiB).
+[21:31:35] This can impact web performance.
+[21:31:35] Assets: 
+[21:31:35]   js/setting-app.59c7abd2.js (832 KiB)
+[21:31:35]   js/setting-244.a8cf49f9.js (2.91 MiB)
+[21:31:35]   img/error4.f74d088f.gif (4.6 MiB)
+[21:31:35]   js/setting-brace.a8e93c1e.js (1.28 MiB)
+[21:31:35]   js/setting-jspdf.d356cf8d.js (341 KiB)
+[21:31:35]   js/setting-chunk-vendors.97363a21.js (2.73 MiB)
+[21:31:35]   js/setting-8707.599c1cac.js (327 KiB)
+
+[21:31:35] [43m[30m warning [39m[49m 
+
+[21:31:35] entrypoint size limit: The following entrypoint(s) combined asset size exceeds the recommended limit (244 KiB). This can impact web performance.
+[21:31:35] Entrypoints:
+[21:31:35]   app (4.4 MiB)
+[21:31:35]       js/setting-fortawesome.bc8c39f1.js
+[21:31:35]       js/setting-jsencrypt.7ff238f4.js
+[21:31:35]       js/setting-pinia.a4357129.js
+[21:31:35]       js/setting-jspdf.d356cf8d.js
+[21:31:35]       js/setting-html2canvas.01721f81.js
+[21:31:35]       js/setting-chunk-vendors.97363a21.js
+[21:31:35]       css/setting-app.daaa6dd0.css
+[21:31:35]       js/setting-app.59c7abd2.js
+
+
+[21:31:35]   [36m[1mFile[22m[39m                                      [36m[1mSize[22m[39m             [36m[1mGzipped[22m[39m
+
+[21:31:35]   [32mdist/js/setting-244.a8cf49f9.js[39m           2982.40 KiB      529.06 KiB
+[21:31:35]   [32mdist/js/setting-chunk-vendors.97363a21[39m    2792.01 KiB      816.62 KiB
+[21:31:35]   [32m.js[39m
+[21:31:35]   [32mdist/js/setting-brace.a8e93c1e.js[39m         1308.21 KiB      337.44 KiB
+[21:31:35]   [32mdist/js/setting-app.59c7abd2.js[39m           831.58 KiB       270.16 KiB
+[21:31:35]   [32mdist/js/setting-jspdf.d356cf8d.js[39m         340.76 KiB       108.62 KiB
+[21:31:35]   [32mdist/js/setting-8707.599c1cac.js[39m          327.08 KiB       74.52 KiB
+[21:31:35]   [32mdist/js/setting-html2canvas.01721f81.j[39m    198.51 KiB       46.45 KiB
+[21:31:35]   [32ms[39m
+[21:31:35]   [32mdist/js/setting-el-tree-transfer.989be[39m    151.90 KiB       48.64 KiB
+[21:31:35]   [32m0ed.js[39m
+[21:31:35]   [32mdist/js/setting-chunk-common.8ab97f8d.[39m    140.99 KiB       33.71 KiB
+[21:31:35]   [32mjs[39m
+[21:31:35]   [32mdist/js/setting-1901.a44f437a.js[39m          137.64 KiB       43.71 KiB
+[21:31:35]   [32mdist/js/setting-mockjs.855462c8.js[39m        136.28 KiB       49.93 KiB
+[21:31:35]   [32mdist/js/setting-170.5242165f.js[39m           93.47 KiB        37.90 KiB
+[21:31:35]   [32mdist/js/setting-9331.d4fb8fe6.js[39m          93.07 KiB        16.63 KiB
+[21:31:35]   [32mdist/js/setting-jsencrypt.7ff238f4.js[39m     58.14 KiB        18.24 KiB
+[21:31:35]   [32mdist/js/setting-jsondiffpatch.f5676bca[39m    54.61 KiB        16.06 KiB
+[21:31:35]   [32m.js[39m
+[21:31:35]   [32mdist/js/setting-fortawesome.bc8c39f1.j[39m    49.65 KiB        16.64 KiB
+[21:31:35]   [32ms[39m
+[21:31:35]   [32mdist/js/setting-7043.986639e2.js[39m          45.47 KiB        10.72 KiB
+[21:31:35]   [32mdist/js/setting-8796.64abb514.js[39m          39.67 KiB        12.08 KiB
+[21:31:35]   [32mdist/js/setting-6050.4184ab46.js[39m          33.34 KiB        10.48 KiB
+[21:31:35]   [32mdist/js/setting-3115.b96566b6.js[39m          31.82 KiB        11.13 KiB
+[21:31:35]   [32mdist/js/setting-9457.d8470731.js[39m          30.72 KiB        8.08 KiB
+[21:31:35]   [32mdist/js/setting-1400.b43de9da.js[39m          28.95 KiB        7.14 KiB
+[21:31:35]   [32mdist/js/setting-8808.7e679894.js[39m          25.53 KiB        6.46 KiB
+[21:31:35]   [32mdist/js/setting-8238.2d004398.js[39m          25.34 KiB        5.07 KiB
+[21:31:35]   [32mdist/js/setting-7080.b387d4e9.js[39m          24.69 KiB        6.40 KiB
+[21:31:35]   [32mdist/js/setting-4711.0a81b403.js[39m          21.91 KiB        8.62 KiB
+[21:31:35]   [32mdist/js/setting-7123.a87fafc9.js[39m          21.58 KiB        5.94 KiB
+[21:31:35]   [32mdist/js/setting-6349.ab8849c1.js[39m          20.30 KiB        4.13 KiB
+[21:31:35]   [32mdist/js/setting-8711.c02b6e0c.js[39m          19.21 KiB        4.45 KiB
+[21:31:35]   [32mdist/js/setting-5536.96fb8a4c.js[39m          18.35 KiB        4.45 KiB
+[21:31:35]   [32mdist/js/setting-pinia.a4357129.js[39m         17.07 KiB        6.50 KiB
+[21:31:35]   [32mdist/js/setting-4944.e191d90d.js[39m          15.46 KiB        4.92 KiB
+[21:31:35]   [32mdist/js/setting-7678.d9ae4a5d.js[39m          14.46 KiB        3.84 KiB
+[21:31:35]   [32mdist/js/setting-2826.cabf2b54.js[39m          14.20 KiB        4.31 KiB
+[21:31:35]   [32mdist/js/setting-3996.34c49799.js[39m          13.68 KiB        3.99 KiB
+[21:31:35]   [32mdist/js/setting-7922.e5239b22.js[39m          12.16 KiB        3.95 KiB
+[21:31:35]   [32mdist/js/setting-7244.777d3805.js[39m          10.18 KiB        3.24 KiB
+[21:31:35]   [32mdist/js/setting-1121.6a35b8cf.js[39m          9.91 KiB         3.18 KiB
+[21:31:35]   [32mdist/js/setting-8234.a119edfc.js[39m          9.17 KiB         3.19 KiB
+[21:31:35]   [32mdist/js/setting-4335.69fac7bd.js[39m          8.40 KiB         2.26 KiB
+[21:31:35]   [32mdist/js/setting-708.5571b4d3.js[39m           7.72 KiB         2.59 KiB
+[21:31:35]   [32mdist/js/setting-2767.03a6b0f4.js[39m          5.71 KiB         2.07 KiB
+[21:31:35]   [32mdist/js/setting-310.2299257e.js[39m           4.79 KiB         1.45 KiB
+[21:31:35]   [32mdist/js/setting-4145.2f25fab4.js[39m          4.26 KiB         1.55 KiB
+[21:31:35]   [32mdist/js/setting-3532.6f8e1d38.js[39m          2.04 KiB         0.93 KiB
+[21:31:35]   [32mdist/js/setting-6027.60b97d54.js[39m          1.97 KiB         0.94 KiB
+[21:31:35]   [32mdist/js/setting-9959.2155fce9.js[39m          1.21 KiB         0.67 KiB
+[21:31:35]   [32mdist/js/setting-8729.47c8d09b.js[39m          1.21 KiB         0.67 KiB
+[21:31:35]   [32mdist/js/setting-8618.3d52a9e8.js[39m          1.19 KiB         0.67 KiB
+[21:31:35]   [32mdist/js/setting-7422.6d33f2ca.js[39m          1.14 KiB         0.50 KiB
+[21:31:35]   [32mdist/js/setting-6228.a8622169.js[39m          1.02 KiB         0.53 KiB
+[21:31:35]   [32mdist/js/setting-766.a0fcf9b8.js[39m           0.95 KiB         0.60 KiB
+[21:31:35]   [32mdist/js/setting-660.d90761b8.js[39m           0.36 KiB         0.25 KiB
+[21:31:35]   [34mdist/css/setting-app.daaa6dd0.css[39m         221.12 KiB       36.87 KiB
+[21:31:35]   [34mdist/css/setting-8707.e14ae2b9.css[39m        23.22 KiB        5.48 KiB
+[21:31:35]   [34mdist/css/setting-170.a461eacf.css[39m         20.33 KiB        4.32 KiB
+[21:31:35]   [34mdist/css/setting-4520.93128c11.css[39m        18.37 KiB        10.47 KiB
+[21:31:35]   [34mdist/css/setting-9331.28189a90.css[39m        12.17 KiB        3.00 KiB
+[21:31:35]   [34mdist/css/setting-9457.5bb124b5.css[39m        9.02 KiB         2.44 KiB
+[21:31:35]   [34mdist/css/setting-1400.f6aa94b4.css[39m        8.70 KiB         2.29 KiB
+[21:31:35]   [34mdist/css/setting-3532.ab8c76c0.css[39m        7.94 KiB         2.23 KiB
+[21:31:35]   [34mdist/css/setting-6027.12948e66.css[39m        7.94 KiB         2.23 KiB
+[21:31:35]   [34mdist/css/setting-2826.252d5593.css[39m        7.10 KiB         2.03 KiB
+[21:31:35]   [34mdist/css/setting-5536.da8d28b3.css[39m        6.61 KiB         1.89 KiB
+[21:31:35]   [34mdist/css/setting-8808.ee16ea46.css[39m        6.44 KiB         1.85 KiB
+[21:31:35]   [34mdist/css/setting-8234.a41bb3cb.css[39m        6.05 KiB         1.75 KiB
+[21:31:35]   [34mdist/css/setting-4145.1305bb15.css[39m        5.89 KiB         1.69 KiB
+[21:31:35]   [34mdist/css/setting-7043.fd7713aa.css[39m        5.87 KiB         1.71 KiB
+[21:31:35]   [34mdist/css/setting-1121.2c50f932.css[39m        5.45 KiB         1.26 KiB
+[21:31:35]   [34mdist/css/setting-7244.2c50f932.css[39m        5.45 KiB         1.26 KiB
+[21:31:35]   [34mdist/css/setting-6349.2f5b8529.css[39m        3.14 KiB         1.00 KiB
+[21:31:35]   [34mdist/css/setting-8796.4dd23501.css[39m        3.13 KiB         0.97 KiB
+[21:31:35]   [34mdist/css/setting-7922.76a0966d.css[39m        2.31 KiB         0.81 KiB
+[21:31:35]   [34mdist/css/setting-7080.929ded50.css[39m        2.07 KiB         0.73 KiB
+[21:31:35]   [34mdist/css/setting-8618.9319aaec.css[39m        1.55 KiB         0.51 KiB
+[21:31:35]   [34mdist/css/setting-9959.93f9ee64.css[39m        1.54 KiB         0.50 KiB
+[21:31:35]   [34mdist/css/setting-8729.b07b274b.css[39m        1.54 KiB         0.50 KiB
+[21:31:35]   [34mdist/css/setting-708.a60042db.css[39m         0.99 KiB         0.39 KiB
+[21:31:35]   [34mdist/css/setting-2767.79eb39b0.css[39m        0.56 KiB         0.25 KiB
+[21:31:35]   [34mdist/css/setting-244.3dccc791.css[39m         0.49 KiB         0.28 KiB
+[21:31:35]   [34mdist/css/setting-310.1294ec65.css[39m         0.42 KiB         0.24 KiB
+[21:31:35]   [34mdist/css/setting-766.185b2339.css[39m         0.20 KiB         0.15 KiB
+[21:31:35]   [34mdist/css/setting-3996.91d5589a.css[39m        0.18 KiB         0.11 KiB
+[21:31:35]   [34mdist/css/setting-7678.12eabb72.css[39m        0.17 KiB         0.13 KiB
+[21:31:35]   [34mdist/css/setting-6228.4d71cafa.css[39m        0.04 KiB         0.06 KiB
+
+[21:31:35]   [90mImages and other types of assets omitted.[39m
+[21:31:35]   Build at: [37m2026-03-07T13:31:35.739Z[39m - Hash: [37mf4a90c17a6d440e8[39m - Time: [37m58862[39mms
+
+[21:31:35] [42m[30m DONE [39m[49m Build complete. The [36mdist[39m directory is ready to be deployed.
+[21:31:35] [44m[30m INFO [39m[49m Check out deployment instructions at [36mhttps://cli.vuejs.org/guide/deployment.html[39m
+       
+
+========== 重启 System Setting 服务 ==========
