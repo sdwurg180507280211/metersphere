@@ -1,12 +1,6 @@
 <template>
   <div class="chat-input-bar">
     <div class="input-container">
-      <button class="icon-btn" title="Attach file">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-        </svg>
-      </button>
-
       <n-input
         ref="inputRef"
         v-model:value="draft"
@@ -39,11 +33,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NInput } from 'naive-ui'
 
-const props = defineProps<{
+defineProps<{
   loading: boolean
   chatMode: 'knowledge' | 'normal'
 }>()
@@ -55,6 +49,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const inputRef = ref<InstanceType<typeof NInput> | null>(null)
 const draft = ref('')
 const topK = ref(5)
 
@@ -66,7 +61,7 @@ const submit = () => {
 }
 
 const focus = () => {
-  // exposed for parent to call
+  inputRef.value?.focus?.()
 }
 
 defineExpose({ focus })
@@ -86,39 +81,19 @@ defineExpose({ focus })
 .input-container {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
+  gap: 8px;
   max-width: 100%;
   width: 100%;
   background: white;
   border: 1px solid #cbd5e1;
-  border-radius: 9999px;
-  padding: 12px;
+  border-radius: 24px;
+  padding: 12px 14px;
   box-shadow: 0 4px 8px -2px rgba(23, 23, 23, 0.1), 0 2px 4px -2px rgba(23, 23, 23, 0.06);
 }
 
 .input-container:focus-within {
   border-color: #4f46e5;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
-}
-
-.icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: none;
-  border-radius: 50%;
-  cursor: pointer;
-  color: #475569;
-  flex-shrink: 0;
-  padding: 0;
-  transition: background 0.2s;
-}
-
-.icon-btn:hover {
-  background: #f8fafc;
 }
 
 .chat-textarea {

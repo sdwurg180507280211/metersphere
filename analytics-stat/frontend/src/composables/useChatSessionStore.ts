@@ -8,7 +8,14 @@ export interface ChatSession {
   messages: ChatMessage[]
 }
 
+interface TouchSessionOptions {
+  refreshUpdatedAt?: boolean
+  resort?: boolean
+  syncToStorage?: 'immediate' | 'deferred' | 'skip'
+}
+
 const STORAGE_KEY = 'knowledge-chat-sessions'
+const PERSIST_DELAY = 500
 
 function createSession(title = 'New Chat'): ChatSession {
   return {
@@ -38,6 +45,7 @@ function loadSessions(): ChatSession[] {
 export function useChatSessionStore() {
   const sessions = ref<ChatSession[]>(loadSessions())
   const currentSessionId = ref<string>('')
+  let persistTimer: ReturnType<typeof window.setTimeout> | null = null
 
   const ensureSession = () => {
     if (sessions.value.length === 0) {
@@ -51,11 +59,32 @@ export function useChatSessionStore() {
     }
   }
 
-  const persist = () => {
+  const persistNow = () => {
+    if (persistTimer !== null) {
+      window.clearTimeout(persistTimer)
+      persistTimer = null
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.value))
   }
 
-  const touchSession = (id: string, messages: ChatMessage[]) => {
+  const persistDeferred = () => {
+    if (persistTimer !== null) {
+      window.clearTimeout(persistTimer)
+    }
+    persistTimer = window.setTimeout(() => {
+      persistTimer = null
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.value))
+    }, PERSIST_DELAY)
+  }
+
+  const touchSession = (id: string, messages: ChatMessage[], options: TouchSessionOptions = {}) => {
+    const {
+      refreshUpdatedAt = true,
+      resort = true,
+      syncToStorage = 'deferred',
+    } = options
+
+    const touchedAt = Date.now()
     sessions.value = sessions.value.map((item) => {
       if (item.id !== id) {
         return item
@@ -66,19 +95,27 @@ export function useChatSessionStore() {
       return {
         ...item,
         title: nextTitle,
-        updatedAt: Date.now(),
+        updatedAt: refreshUpdatedAt ? touchedAt : item.updatedAt,
         messages,
       }
     })
-    sessions.value.sort((a, b) => b.updatedAt - a.updatedAt)
-    persist()
+
+    if (resort) {
+      sessions.value.sort((a, b) => b.updatedAt - a.updatedAt)
+    }
+
+    if (syncToStorage === 'immediate') {
+      persistNow()
+    } else if (syncToStorage === 'deferred') {
+      persistDeferred()
+    }
   }
 
   const createNewSession = () => {
     const session = createSession()
     sessions.value = [session, ...sessions.value]
     currentSessionId.value = session.id
-    persist()
+    persistNow()
   }
 
   const selectSession = (id: string) => {
@@ -90,7 +127,7 @@ export function useChatSessionStore() {
   const deleteSession = (id: string) => {
     sessions.value = sessions.value.filter((item) => item.id !== id)
     ensureSession()
-    persist()
+    persistNow()
   }
 
   const renameSession = (id: string, title: string) => {
@@ -109,17 +146,17 @@ export function useChatSessionStore() {
       }
     })
     sessions.value.sort((a, b) => b.updatedAt - a.updatedAt)
-    persist()
+    persistNow()
   }
 
   const clearAllSessions = () => {
     sessions.value = []
     ensureSession()
-    persist()
+    persistNow()
   }
 
   ensureSession()
-  persist()
+  persistNow()
 
   const currentSession = computed(() => {
     return sessions.value.find((item) => item.id === currentSessionId.value) || sessions.value[0]
