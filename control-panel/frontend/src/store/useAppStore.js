@@ -1,88 +1,136 @@
 import { create } from 'zustand'
 
-// 服务状态管理
-export const useServiceStore = create((set, get) => ({
-    services: {},
-    loading: {},
-    
-    setServices: (services) => set({ services }),
-    
-    updateServiceStatus: (id, status) => set((state) => ({
-      services: { ...state.services, [id]: status }
-    })),
-    
-    setLoading: (id, isLoading) => set((state) => ({
-      loading: { ...state.loading, [id]: isLoading }
-    })),
-    
-    fetchServices: async () => {
-      try {
-        const res = await fetch('/api/services/status')
-        const data = await res.json()
-        if (data.success) {
-          set({ services: data.data })
-        }
-      } catch (error) {
-        console.error('获取服务状态失败:', error)
-      }
-    }
-  }))
+export const useServiceStore = create((set) => ({
+  catalog: [],
+  services: {},
+  loading: {},
 
-// 日志状态管理
+  setCatalog: (catalog) => set({ catalog }),
+  setServices: (services) => set({ services }),
+
+  updateServiceStatus: (id, status) => set((state) => ({
+    services: { ...state.services, [id]: status }
+  })),
+
+  setLoading: (id, isLoading) => set((state) => ({
+    loading: { ...state.loading, [id]: isLoading }
+  })),
+
+  fetchCatalog: async () => {
+    try {
+      const res = await fetch('/api/services/catalog')
+      const data = await res.json()
+      if (data.success) {
+        set({ catalog: data.data })
+      }
+    } catch (error) {
+      console.error('获取服务目录失败:', error)
+    }
+  },
+
+  fetchServices: async () => {
+    try {
+      const res = await fetch('/api/services/status')
+      const data = await res.json()
+      if (data.success) {
+        set({ services: data.data })
+      }
+    } catch (error) {
+      console.error('获取服务状态失败:', error)
+    }
+  }
+}))
+
 export const useLogStore = create((set, get) => ({
   serviceLogs: '',
   buildLogs: '',
-  logLevel: 'all', // all | error | warn | info
-  searchTerm: '',
-  
+  filters: {
+    service: { logLevel: 'all', searchTerm: '' },
+    build: { logLevel: 'all', searchTerm: '' }
+  },
+
   appendServiceLog: (message) => set((state) => ({
     serviceLogs: limitLogs(state.serviceLogs + message)
   })),
-  
+
   appendBuildLog: (message) => set((state) => ({
     buildLogs: limitLogs(state.buildLogs + message)
   })),
-  
+
   clearServiceLogs: () => set({ serviceLogs: '' }),
   clearBuildLogs: () => set({ buildLogs: '' }),
-  
-  setLogLevel: (level) => set({ logLevel: level }),
-  setSearchTerm: (term) => set({ searchTerm: term }),
-  
-  // 获取过滤后的日志
-  getFilteredServiceLogs: () => filterLogs(get().serviceLogs, get().logLevel, get().searchTerm),
-  getFilteredBuildLogs: () => filterLogs(get().buildLogs, get().logLevel, get().searchTerm)
+
+  setLogLevel: (type, level) => set((state) => ({
+    filters: {
+      ...state.filters,
+      [type]: { ...state.filters[type], logLevel: level }
+    }
+  })),
+
+  setSearchTerm: (type, term) => set((state) => ({
+    filters: {
+      ...state.filters,
+      [type]: { ...state.filters[type], searchTerm: term }
+    }
+  })),
+
+  getFilteredLogs: (type) => {
+    const filters = get().filters[type]
+    const logs = type === 'build' ? get().buildLogs : get().serviceLogs
+    return filterLogs(logs, filters.logLevel, filters.searchTerm)
+  }
 }))
 
-// 构建状态管理
 export const useBuildStore = create((set, get) => ({
+  modules: [],
   activeBuilds: [],
   buildHistory: [],
   currentBuild: null,
   buildProgress: 0,
-  
+
+  setModules: (modules) => set({ modules }),
   setActiveBuilds: (builds) => set({ activeBuilds: builds }),
   setBuildHistory: (history) => set({ buildHistory: history }),
-  
-  addActiveBuild: (build) => set((state) => ({
-    activeBuilds: [...state.activeBuilds, build]
-  })),
-  
-  updateBuildProgress: (buildId, progress) => set((state) => ({
-    activeBuilds: state.activeBuilds.map(b =>
-      b.id === buildId ? { ...b, ...progress } : b
-    ),
-    currentBuild: state.currentBuild?.id === buildId 
-      ? { ...state.currentBuild, ...progress }
-      : state.currentBuild
-  })),
-  
+
+  addActiveBuild: (build) => set((state) => {
+    const exists = state.activeBuilds.some((item) => item.id === build.id)
+    return exists
+      ? state
+      : { activeBuilds: [...state.activeBuilds, build] }
+  }),
+
+  updateBuildProgress: (buildId, progress) => set((state) => {
+    const exists = state.activeBuilds.some((item) => item.id === buildId)
+    const nextBuilds = exists
+      ? state.activeBuilds.map((item) => (item.id === buildId ? { ...item, ...progress } : item))
+      : [...state.activeBuilds, { id: buildId, ...progress }]
+
+    return {
+      activeBuilds: nextBuilds,
+      currentBuild: state.currentBuild?.id === buildId
+        ? { ...state.currentBuild, ...progress }
+        : state.currentBuild
+    }
+  }),
+
   removeActiveBuild: (buildId) => set((state) => ({
-    activeBuilds: state.activeBuilds.filter(b => b.id !== buildId)
+    activeBuilds: state.activeBuilds.filter((item) => item.id !== buildId)
   })),
-  
+
   setCurrentBuild: (build) => set({ currentBuild: build }),
-  
+
+  fetchModules: async () => {
+    try {
+      const res = await fetch('/api/build/modules')
+      const data = await res.json()
+      if (data.success) {
+        set({ modules: data.data })
+      }
+    } catch (error) {
+      console.error('获取模块目录失败:', error)
+    }
+  },
+
   fetchActiveBuilds: async () => {
     try {
       const res = await fetch('/api/progress/active')
@@ -94,7 +142,7 @@ export const useBuildStore = create((set, get) => ({
       console.error('获取构建任务失败:', error)
     }
   },
-  
+
   fetchBuildHistory: async (limit = 10) => {
     try {
       const res = await fetch(`/api/progress/history/recent?limit=${limit}`)
@@ -106,14 +154,11 @@ export const useBuildStore = create((set, get) => ({
       console.error('获取构建历史失败:', error)
     }
   },
-  
+
   cancelBuild: async (buildId) => {
     try {
       const res = await fetch(`/api/progress/${buildId}/cancel`, { method: 'POST' })
       const data = await res.json()
-      if (data.success) {
-        get().removeActiveBuild(buildId)
-      }
       return data.success
     } catch (error) {
       console.error('取消构建失败:', error)
@@ -122,21 +167,19 @@ export const useBuildStore = create((set, get) => ({
   }
 }))
 
-// WebSocket 连接状态
-export const useWebSocketStore = create((set, get) => ({
+export const useWebSocketStore = create((set) => ({
   connected: false,
   clientId: null,
   reconnectAttempts: 0,
-  
+
   setConnected: (connected) => set({ connected }),
   setClientId: (clientId) => set({ clientId }),
-  incrementReconnect: () => set((state) => ({ 
-    reconnectAttempts: state.reconnectAttempts + 1 
+  incrementReconnect: () => set((state) => ({
+    reconnectAttempts: state.reconnectAttempts + 1
   })),
   resetReconnect: () => set({ reconnectAttempts: 0 })
 }))
 
-// 辅助函数
 function limitLogs(logs, maxLines = 1000) {
   const lines = logs.split('\n')
   if (lines.length > maxLines) {
@@ -147,22 +190,20 @@ function limitLogs(logs, maxLines = 1000) {
 
 function filterLogs(logs, level, searchTerm) {
   let lines = logs.split('\n')
-  
-  // 按级别过滤
+
   if (level !== 'all') {
-    lines = lines.filter(line => {
+    lines = lines.filter((line) => {
       if (level === 'error') return line.includes('ERROR') || line.includes('✗') || line.includes('失败')
       if (level === 'warn') return line.includes('WARN') || line.includes('warning')
       if (level === 'info') return line.includes('INFO') || line.includes('[系统]')
       return true
     })
   }
-  
-  // 按搜索词过滤
+
   if (searchTerm) {
     const term = searchTerm.toLowerCase()
-    lines = lines.filter(line => line.toLowerCase().includes(term))
+    lines = lines.filter((line) => line.toLowerCase().includes(term))
   }
-  
+
   return lines.join('\n')
 }

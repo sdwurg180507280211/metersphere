@@ -5,8 +5,16 @@ const processManager = require('../services/processManager');
 const healthChecker = require('../services/healthChecker');
 const validator = require('../utils/validator');
 const logger = require('../utils/logger');
+const config = require('../config');
 
 const serviceController = {
+  /**
+   * 获取服务目录
+   */
+  getCatalog(req, res) {
+    res.json({ success: true, data: config.serviceCatalog });
+  },
+
   /**
    * 获取所有服务状态
    */
@@ -58,8 +66,7 @@ const serviceController = {
     try {
       const { id } = req.params;
       const service = validator.getValidService(id);
-      
-      // 检查是否已在运行
+
       const status = await processManager.getStatus(id);
       if (status.running) {
         return res.json({ success: false, error: '服务已在运行中' });
@@ -80,7 +87,7 @@ const serviceController = {
     try {
       const { id } = req.params;
       const service = validator.getValidService(id);
-      
+
       const result = await processManager.stop(id, service);
       if (result.success) {
         res.json({ success: true, data: result });
@@ -100,7 +107,7 @@ const serviceController = {
     try {
       const { id } = req.params;
       const service = validator.getValidService(id);
-      
+
       const result = await processManager.restart(id, service);
       res.json({ success: true, data: result });
     } catch (error) {

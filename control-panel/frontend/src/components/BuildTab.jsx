@@ -5,26 +5,15 @@ import LogViewer from './LogViewer'
 import BuildProgress from './BuildProgress'
 import './BuildTab.css'
 
-const MODULES = [
-  { id: 'system-setting', name: 'System Setting' },
-  { id: 'project-management', name: 'Project Management' },
-  { id: 'test-track', name: 'Test Track' },
-  { id: 'api-test', name: 'API Test' },
-  { id: 'performance-test', name: 'Performance Test' },
-  { id: 'report-stat', name: 'Report Stat' },
-  { id: 'workstation', name: 'Workstation' },
-  { id: 'analytics-stat', name: 'Analytics Stat' },
-  { id: 'sdk-parent', name: 'SDK Parent (Gateway)' }
-]
-
 function BuildTab() {
-  const { activeBuilds, fetchActiveBuilds, addActiveBuild } = useBuildStore()
+  const { modules, activeBuilds, fetchModules, fetchActiveBuilds, addActiveBuild } = useBuildStore()
 
   useEffect(() => {
+    fetchModules()
     fetchActiveBuilds()
-  }, [fetchActiveBuilds])
+  }, [fetchModules, fetchActiveBuilds])
 
-  const isBuilding = activeBuilds.some(b => b.status === 'running')
+  const isBuilding = activeBuilds.some((build) => build.status === 'running')
 
   const handleBuild = useCallback(async (moduleId) => {
     if (isBuilding) {
@@ -32,24 +21,28 @@ function BuildTab() {
       return
     }
 
-    const module = MODULES.find(m => m.id === moduleId)
-    
+    const module = modules.find((item) => item.id === moduleId)
+    if (!module) {
+      toast.error('模块不存在')
+      return
+    }
+
     try {
       const res = await fetch('/api/build/frontend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ module: moduleId })
       })
-      
+
       const data = await res.json()
-      
+
       if (data.success) {
         toast.success(`已启动 ${module.name} 的构建`)
-        // 临时添加到活跃构建列表，等待 WebSocket 更新
         if (data.buildId) {
           addActiveBuild({
             id: data.buildId,
             module: module.name,
+            moduleId: module.id,
             status: 'running',
             currentStep: 0,
             totalSteps: 5,
@@ -63,19 +56,19 @@ function BuildTab() {
     } catch (error) {
       toast.error(`网络错误: ${error.message}`)
     }
-  }, [isBuilding, addActiveBuild])
+  }, [isBuilding, modules, addActiveBuild])
 
   return (
     <div className="tab-content">
       <BuildProgress />
-      
+
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">前端构建</h2>
           {isBuilding && <span className="building-badge">构建中...</span>}
         </div>
         <div className="btn-grid">
-          {MODULES.map(module => (
+          {modules.map((module) => (
             <button
               key={module.id}
               className="btn-build"

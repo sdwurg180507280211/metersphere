@@ -3,63 +3,51 @@
  */
 const config = require('../config');
 
-const VALID_SERVICES = Object.keys(config.services);
-const VALID_MODULES = [
-  'system-setting',
-  'project-management',
-  'test-track',
-  'api-test',
-  'performance-test',
-  'report-stat',
-  'workstation',
-  'analytics-stat',
-  'sdk-parent'
-];
+const VALID_SERVICES = new Set(config.serviceCatalog.map((service) => service.id));
+const VALID_MODULES = new Set(config.frontendModules.map((module) => module.id));
 
 const validator = {
   /**
    * 校验服务 ID
    */
   isValidService(serviceId) {
-    return VALID_SERVICES.includes(serviceId);
+    return VALID_SERVICES.has(serviceId);
   },
 
   /**
    * 校验前端模块
    */
-  isValidModule(module) {
-    return VALID_MODULES.includes(module);
+  isValidModule(moduleId) {
+    return VALID_MODULES.has(moduleId);
   },
 
   /**
-   * 获取有效的服务 ID
+   * 获取有效的服务配置
    */
   getValidService(serviceId) {
     if (!this.isValidService(serviceId)) {
       throw new Error(`无效的服务 ID: ${serviceId}`);
     }
+
     return config.services[serviceId];
+  },
+
+  /**
+   * 获取有效的前端模块配置
+   */
+  getValidModule(moduleId) {
+    if (!this.isValidModule(moduleId)) {
+      throw new Error(`无效的模块: ${moduleId}`);
+    }
+
+    return config.frontendModulesById[moduleId];
   },
 
   /**
    * 获取有效的前端模块路径
    */
-  getValidModulePath(module) {
-    if (!this.isValidModule(module)) {
-      throw new Error(`无效的模块: ${module}`);
-    }
-    const modules = {
-      'system-setting': 'system-setting',
-      'project-management': 'project-management',
-      'test-track': 'test-track',
-      'api-test': 'api-test',
-      'performance-test': 'performance-test',
-      'report-stat': 'report-stat',
-      'workstation': 'workstation',
-      'analytics-stat': 'analytics-stat',
-      'sdk-parent': 'framework/sdk-parent'
-    };
-    return modules[module];
+  getValidModulePath(moduleId) {
+    return this.getValidModule(moduleId).frontendPath;
   },
 
   /**
@@ -67,7 +55,7 @@ const validator = {
    */
   isValidPort(port) {
     const num = parseInt(port, 10);
-    return !isNaN(num) && num > 0 && num <= 65535;
+    return !Number.isNaN(num) && num > 0 && num <= 65535;
   },
 
   /**

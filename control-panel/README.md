@@ -137,6 +137,10 @@ npm start
 3. 重新安装依赖：`npm run install:all`
 4. 启动：`npm run dev`
 
+## 规划文档
+
+- 优化清单：`docs/control-panel-optimization-roadmap.md`
+
 ## License
 
 MIT

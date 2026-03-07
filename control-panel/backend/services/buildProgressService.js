@@ -7,14 +7,16 @@ const { v4: uuidv4 } = require('uuid');
 
 class BuildProgressService {
   constructor() {
-    this.activeBuilds = new Map(); // buildId -> buildInfo
+    this.activeBuilds = new Map();
   }
 
-  async startBuild(module) {
+  async startBuild(moduleConfig) {
     const buildId = uuidv4();
     const buildInfo = {
       id: buildId,
-      module,
+      moduleId: moduleConfig.id,
+      module: moduleConfig.name,
+      serviceId: moduleConfig.serviceId,
       status: 'running',
       startTime: Date.now(),
       steps: [
@@ -30,24 +32,14 @@ class BuildProgressService {
     };
 
     this.activeBuilds.set(buildId, buildInfo);
-    
-    // 缓存构建信息
     await cacheService.set(`build:${buildId}`, buildInfo, 3600);
-    
-    // 添加到历史记录
-    await cacheService.pushToList('build:history', {
-      id: buildId,
-      module,
-      startTime: buildInfo.startTime,
-      status: 'running'
-    }, 50);
 
     return buildId;
   }
 
   async updateStep(buildId, stepIndex, status, progress, log = '') {
     const build = this.activeBuilds.get(buildId);
-    if (!build) return;
+    if (!build || build.status === 'cancelled') return;
 
     build.steps[stepIndex] = {
       ...build.steps[stepIndex],
@@ -63,9 +55,9 @@ class BuildProgressService {
       });
     }
 
-    // 广播进度
     websocketService.broadcastBuildProgress(buildId, {
       module: build.module,
+      moduleId: build.moduleId,
       status: build.status,
       currentStep: stepIndex,
       totalSteps: build.steps.length,
@@ -75,20 +67,19 @@ class BuildProgressService {
       log
     });
 
-    // 更新缓存
     await cacheService.set(`build:${buildId}`, build, 3600);
   }
 
   async completeBuild(buildId, success, error = null) {
     const build = this.activeBuilds.get(buildId);
-    if (!build) return;
+    if (!build) return null;
+    if (build.status === 'cancelled') return build;
 
     build.status = success ? 'success' : 'failed';
     build.endTime = Date.now();
     build.duration = build.endTime - build.startTime;
     build.error = error;
 
-    // 更新所有步骤状态
     build.steps.forEach((step, idx) => {
       if (idx < build.currentStep) {
         step.status = 'completed';
@@ -99,62 +90,111 @@ class BuildProgressService {
       }
     });
 
-    // 广播完成
     websocketService.broadcastBuildProgress(buildId, {
       module: build.module,
+      moduleId: build.moduleId,
       status: build.status,
       currentStep: build.currentStep,
       totalSteps: build.steps.length,
-      overallProgress: success ? 100 : build.steps.findIndex(s => s.status === 'failed') / build.steps.length * 100,
+      stepName: build.steps[build.currentStep]?.name,
+      overallProgress: success ? 100 : Math.round((build.currentStep / build.steps.length) * 100),
       duration: build.duration,
       error
     });
 
-    // 更新缓存
     await cacheService.set(`build:${buildId}`, build, 3600);
-    
-    // 清理内存
-    setTimeout(() => this.activeBuilds.delete(buildId), 300000); // 5分钟后清理
+    await cacheService.pushToList('build:history', {
+      id: build.id,
+      moduleId: build.moduleId,
+      module: build.module,
+      status: build.status,
+      startTime: build.startTime,
+      endTime: build.endTime,
+      duration: build.duration,
+      error: build.error
+    }, 50);
 
+    this._scheduleCleanup(buildId);
     return build;
   }
 
-  async getBuild(buildId) {
-    // 先从内存获取
+  async cancelBuild(buildId, reason = '用户取消构建') {
     const build = this.activeBuilds.get(buildId);
-    if (build) return build;
-
-    // 从缓存获取
-    return await cacheService.get(`build:${buildId}`);
-  }
-
-  async getRecentBuilds(limit = 10) {
-    return await cacheService.getList('build:history', 0, limit - 1);
-  }
-
-  getActiveBuilds() {
-    return Array.from(this.activeBuilds.values()).map(b => ({
-      id: b.id,
-      module: b.module,
-      status: b.status,
-      startTime: b.startTime,
-      currentStep: b.currentStep,
-      totalSteps: b.steps.length,
-      overallProgress: Math.round((b.currentStep / b.steps.length) * 100)
-    }));
-  }
-
-  async cancelBuild(buildId) {
-    const build = this.activeBuilds.get(buildId);
-    if (!build) return false;
+    if (!build || build.status !== 'running') return false;
 
     build.status = 'cancelled';
     build.endTime = Date.now();
+    build.duration = build.endTime - build.startTime;
+    build.error = reason;
+
+    const currentStep = build.steps[build.currentStep];
+    if (currentStep) {
+      currentStep.status = 'failed';
+    }
+
+    websocketService.broadcastBuildProgress(buildId, {
+      module: build.module,
+      moduleId: build.moduleId,
+      status: 'cancelled',
+      currentStep: build.currentStep,
+      totalSteps: build.steps.length,
+      stepName: currentStep?.name,
+      overallProgress: Math.round((build.currentStep / build.steps.length) * 100),
+      duration: build.duration,
+      error: reason
+    });
 
     await cacheService.set(`build:${buildId}`, build, 3600);
-    this.activeBuilds.delete(buildId);
+    await cacheService.pushToList('build:history', {
+      id: build.id,
+      moduleId: build.moduleId,
+      module: build.module,
+      status: build.status,
+      startTime: build.startTime,
+      endTime: build.endTime,
+      duration: build.duration,
+      error: build.error
+    }, 50);
 
+    this._scheduleCleanup(buildId);
     return true;
+  }
+
+  isBuildCancelled(buildId) {
+    return this.activeBuilds.get(buildId)?.status === 'cancelled';
+  }
+
+  async getBuild(buildId) {
+    const build = this.activeBuilds.get(buildId);
+    if (build) return build;
+
+    return cacheService.get(`build:${buildId}`);
+  }
+
+  async getRecentBuilds(limit = 10) {
+    return cacheService.getList('build:history', 0, limit - 1);
+  }
+
+  getActiveBuilds() {
+    return Array.from(this.activeBuilds.values()).map((build) => ({
+      id: build.id,
+      module: build.module,
+      moduleId: build.moduleId,
+      status: build.status,
+      startTime: build.startTime,
+      currentStep: build.currentStep,
+      totalSteps: build.steps.length,
+      stepName: build.steps[build.currentStep]?.name || '准备中...',
+      overallProgress: build.status === 'success'
+        ? 100
+        : Math.round((build.currentStep / build.steps.length) * 100),
+      duration: build.duration,
+      error: build.error
+    }));
+  }
+
+  _scheduleCleanup(buildId) {
+    setTimeout(() => this.activeBuilds.delete(buildId), 300000);
   }
 }
 

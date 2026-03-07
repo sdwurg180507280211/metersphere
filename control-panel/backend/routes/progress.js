@@ -4,8 +4,8 @@
 const express = require('express');
 const router = express.Router();
 const buildProgressService = require('../services/buildProgressService');
+const processManager = require('../services/processManager');
 
-// 获取活跃的构建任务
 router.get('/active', async (req, res) => {
   try {
     const builds = buildProgressService.getActiveBuilds();
@@ -15,7 +15,16 @@ router.get('/active', async (req, res) => {
   }
 });
 
-// 获取构建详情
+router.get('/history/recent', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const history = await buildProgressService.getRecentBuilds(limit);
+    res.json({ success: true, data: history });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 router.get('/:buildId', async (req, res) => {
   try {
     const build = await buildProgressService.getBuild(req.params.buildId);
@@ -28,21 +37,9 @@ router.get('/:buildId', async (req, res) => {
   }
 });
 
-// 获取最近的构建历史
-router.get('/history/recent', async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit) || 10;
-    const history = await buildProgressService.getRecentBuilds(limit);
-    res.json({ success: true, data: history });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// 取消构建
 router.post('/:buildId/cancel', async (req, res) => {
   try {
-    const result = await buildProgressService.cancelBuild(req.params.buildId);
+    const result = await processManager.cancelBuild(req.params.buildId);
     if (result) {
       res.json({ success: true, message: '构建已取消' });
     } else {
