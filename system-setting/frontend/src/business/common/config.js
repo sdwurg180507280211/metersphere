@@ -564,7 +564,7 @@ export function getUrl(d, _this) {
     case "项目-项目管理" :
     case "項目-項目管理" :
     case "Project project manager" :
-      url += "/setting/project/:type";
+      url += "/setting/project/all";
       break;
     case "项目-环境设置" :
     case "項目-環境設置" :
