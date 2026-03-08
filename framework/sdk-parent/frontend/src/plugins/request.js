@@ -6,6 +6,7 @@ import packageJSON from '@/../package.json'
 import {getUrlParams, getUUID} from "../utils";
 import {initTaskData} from "../api/novice";
 import {Base64} from "js-base64";
+import {MIGRATED_MODULES} from "../micro-app-config";
 
 // baseURL 根据是否在微前端环境中运行来设置
 // micro-app 环境下，API 请求需要加上 /{serviceId} 前缀，通过 gateway 路由到对应后端服务

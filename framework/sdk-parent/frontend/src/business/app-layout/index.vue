@@ -209,8 +209,35 @@ export default {
     handleDataChange(e) {
       console.log('[Layout] 收到子应用数据:', e.detail.data);
     },
-    handleError(e) {
+    async handleError(e) {
       console.error('[Layout] 子应用加载出错:', e.detail.name, e.detail.error);
+
+      // 子应用加载失败时，尝试跳转到可用服务
+      const redirectKey = 'micro_app_redirect_attempted';
+      const redirectTTL = 5000;
+      const timestamp = Number(sessionStorage.getItem(redirectKey) || 0);
+
+      if (timestamp && Date.now() - timestamp < redirectTTL) {
+        return;
+      }
+
+      try {
+        sessionStorage.setItem(redirectKey, String(Date.now()));
+        const response = await this.$get('/services');
+        const services = response.data || [];
+        const currentService = e.detail.name;
+
+        const availableServices = services
+          .map(s => s?.serviceId)
+          .filter(serviceId => serviceId && MIGRATED_MODULES[serviceId]);
+
+        const targetService = availableServices.find(s => s !== currentService);
+        if (targetService) {
+          window.location.replace(`/#/${targetService}`);
+        }
+      } catch (err) {
+        sessionStorage.removeItem(redirectKey);
+      }
     },
     loadAnnouncement() {
       // 获取公告内容

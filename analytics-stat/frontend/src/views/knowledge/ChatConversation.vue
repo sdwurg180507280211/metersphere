@@ -6,7 +6,11 @@
         :key="message.id"
         class="message-row"
       >
-        <ChatMessageUser v-if="message.role === 'user'" :message="message" />
+        <ChatMessageUser 
+          v-if="message.role === 'user'" 
+          :message="message"
+          @edit="(content) => emit('edit', content)"
+        />
         <ChatMessageBot
           v-else
           :message="message"
@@ -38,6 +42,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   retry: [question: string]
   feedback: [{ messageId: string; rating: 'up' | 'down'; reason?: string }]
+  edit: [content: string]
 }>()
 
 const { t } = useI18n()
@@ -75,15 +80,39 @@ watch(
 
 <style scoped>
 .chat-conversation {
-  height: 0;
-  flex: 1 1 auto;
+  height: 100%;
   overflow-y: auto;
-  padding: 32px 96px;
+  padding: 0 24px;
   background: white;
 }
 
 .chat-conversation > .message-row {
-  max-width: 100%;
-  margin: 0 0 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Scrollbar */
+.chat-conversation::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-conversation::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-conversation::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.chat-conversation::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .chat-conversation {
+    padding: 0 16px;
+  }
 }
 </style>
