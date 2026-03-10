@@ -20,6 +20,8 @@
         <module>xpack-interface</module>
         <module>jmeter</module>
         <module>sdk</module>
+        <module>metersphere-plugin-sdk</module>
+        <module>metersphere-platform-plugin-sdk</module>
     </modules>
 
     <build>
