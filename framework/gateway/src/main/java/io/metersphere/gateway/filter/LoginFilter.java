@@ -9,6 +9,7 @@ import org.springdoc.core.properties.SwaggerUiConfigProperties;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
@@ -31,6 +32,9 @@ public class LoginFilter implements WebFilter, Ordered {
     @Resource
     private SwaggerUiConfigProperties swaggerUiConfigProperties;
 
+    @Value("${management.server.port:7421}")
+    private int managementPort;
+
     @PostConstruct
     public void init() {
         basePattern = new PathPatternParser().parse("/**");
@@ -40,6 +44,8 @@ public class LoginFilter implements WebFilter, Ordered {
         excludePatterns.add(new PathPatternParser().parse("/authsource/*"));
         //扫码源
         excludePatterns.add(new PathPatternParser().parse("/sso/callback/we_com"));
+        // actuator 健康检查端点
+        excludePatterns.add(new PathPatternParser().parse("/actuator/**"));
 
         // 各模块首页
         swaggerUiConfigProperties.getUrls().forEach(v -> excludePatterns.add(new PathPatternParser().parse("/" + v.getName())));
@@ -66,6 +72,11 @@ public class LoginFilter implements WebFilter, Ordered {
     public Mono<Void> filter(final ServerWebExchange serverWebExchange, final WebFilterChain webFilterChain) {
         ServerHttpRequest request = serverWebExchange.getRequest();
         if (isApiKeyCall(request)) {
+            return webFilterChain.filter(serverWebExchange);
+        }
+
+        // 如果是 management port，直接放行（不需要认证）
+        if (request.getLocalAddress() != null && request.getLocalAddress().getPort() == managementPort) {
             return webFilterChain.filter(serverWebExchange);
         }
 
