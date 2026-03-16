@@ -485,27 +485,37 @@ export default {
       if (!Array.isArray(savedConditions)) {
         return;
       }
+
+      // 获取所有可用组件（包括未显示的自定义字段）
+      let allComponents = this.condition.custom
+        ? concat(this.config.components[0].child, this.config.components[1].child)
+        : this.config.components;
+
       savedConditions.forEach((saved) => {
-        // 在当前显示的搜索组件中查找与已保存条件 key 匹配的组件
-        const target = _findByKey(this.optional.components, saved.key);
+        // 先在当前显示的组件中查找
+        let target = _findByKey(this.optional.components, saved.key);
+
+        // 如果未找到，在所有组件中查找并添加到显示列表
         if (!target) {
-          // 字段在当前模板中不存在，跳过（兼容模板字段变更场景）
-          return;
+          target = _findByKey(allComponents, saved.key);
+          if (target) {
+            this.optional.components.push(target);
+          } else {
+            return;
+          }
         }
-        // 恢复操作符值（如 like、in、equals 等）
+
+        // 恢复操作符值
         if (saved.operator !== undefined && target.operator) {
           target.operator.value = saved.operator;
         }
-        // 恢复搜索值（可能是字符串、数组等多种类型）
+        // 恢复搜索值
         if (saved.value !== undefined) {
-          // 检查是否是需要从 API 加载选项的字段（如创建人、处理人等）
           if (target.options && target.options.url) {
-            // 延迟恢复，给 API 一些时间加载
             setTimeout(() => {
               target.value = saved.value;
-            }, 800);
+            }, 1000);
           } else {
-            // 直接恢复值
             target.value = saved.value;
           }
         }
