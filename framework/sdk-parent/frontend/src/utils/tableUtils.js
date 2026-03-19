@@ -954,6 +954,19 @@ export function getCustomFieldFilter(field, userFilter) {
 // ============================================================
 
 /**
+ * 获取当前项目ID
+ * 只从 sessionStorage.projectId 获取，保证项目切换后立即生效，避免读到脏数据
+ * @returns {string} 项目ID，如果获取不到则返回空字符串
+ */
+export function getCurrentProjectId() {
+  try {
+    return sessionStorage.getItem('projectId') || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+/**
  * 生成高级搜索条件的 localStorage 存储键
  * 格式为 ADV_SEARCH_{userId}_{projectId}_{moduleKey}，确保用户隔离、项目隔离和模块隔离
  * @param {string} userId - 用户 ID
