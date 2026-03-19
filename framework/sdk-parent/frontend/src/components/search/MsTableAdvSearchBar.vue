@@ -101,6 +101,12 @@ export default {
       type: String,
       default: '',
     },
+    // 项目ID，用于项目隔离
+    // 配合moduleKey使用，实现用户+项目+模块的三重隔离
+    projectId: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -241,11 +247,11 @@ export default {
       this.$emit("search", condition);
 
       // 【搜索记忆】保存当前搜索条件到 localStorage
-      // 仅当传入了 moduleKey 且能获取到有效用户 ID 时才执行保存
-      if (this.moduleKey) {
+      // 仅当传入了 moduleKey、projectId 且能获取到有效用户 ID 时才执行保存
+      if (this.moduleKey && this.projectId) {
         const userId = getCurrentUserId();
         if (userId) {
-          saveAdvSearchCondition(userId, this.moduleKey, this.optional.components);
+          saveAdvSearchCondition(userId, this.projectId, this.moduleKey, this.optional.components);
         }
       }
 
@@ -319,10 +325,10 @@ export default {
       this.$emit("search");
 
       // 【搜索记忆】重置时清除 localStorage 中保存的搜索条件
-      if (this.moduleKey) {
+      if (this.moduleKey && this.projectId) {
         const userId = getCurrentUserId();
         if (userId) {
-          clearAdvSearchCondition(userId, this.moduleKey);
+          clearAdvSearchCondition(userId, this.projectId, this.moduleKey);
         }
       }
     },
@@ -344,10 +350,10 @@ export default {
 
       // 【搜索记忆】从 localStorage 回填上次保存的搜索条件
       // 在 slice 截取默认显示条件之后、设置 disable 状态之前执行
-      if (this.moduleKey) {
+      if (this.moduleKey && this.projectId) {
         const userId = getCurrentUserId();
         if (userId) {
-          const saved = getAdvSearchCondition(userId, this.moduleKey);
+          const saved = getAdvSearchCondition(userId, this.projectId, this.moduleKey);
           if (saved) {
             this._restoreSearchConditions(saved);
           }
