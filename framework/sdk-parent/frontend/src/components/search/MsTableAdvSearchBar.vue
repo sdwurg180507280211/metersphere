@@ -64,8 +64,8 @@ import {cloneDeep, concat, slice} from "lodash-es";
 import {_findByKey, _findIndexByKey} from "./custom-component";
 // 导入用户身份工具函数，用于获取当前登录用户 ID
 import {getCurrentUserId} from "../../utils/token";
-// 导入高级搜索条件记忆相关的工具函数（保存、读取、清除）
-import {saveAdvSearchCondition, getAdvSearchCondition, clearAdvSearchCondition} from "../../utils/tableUtils";
+// 导入高级搜索条件记忆相关的工具函数（保存、读取、清除、获取项目ID）
+import {saveAdvSearchCondition, getAdvSearchCondition, clearAdvSearchCondition, getCurrentProjectId} from "../../utils/tableUtils";
 
  // 高级搜索参数组装规则（非常关键）：
  // 1) 内置字段 key：由 search-components.js 统一维护（BUILTIN_ADV_SEARCH_KEYS），后端直接识别 combine[key]。
@@ -121,6 +121,19 @@ export default {
       nullFilterKey: "",
       isInit: false,
     };
+  },
+  computed: {
+    effectiveProjectId() {
+      const propProjectId = this.projectId ? String(this.projectId).trim() : '';
+      if (propProjectId) {
+        return propProjectId;
+      }
+      const currentProjectId = getCurrentProjectId();
+      if (!currentProjectId) {
+        console.warn('[AdvSearch] 无法获取 projectId，搜索记忆已禁用');
+      }
+      return currentProjectId || '';
+    }
   },
   mounted() {
     // 注册当前组件为活跃的高级搜索组件
@@ -247,11 +260,16 @@ export default {
       this.$emit("search", condition);
 
       // 【搜索记忆】保存当前搜索条件到 localStorage
-      // 仅当传入了 moduleKey、projectId 且能获取到有效用户 ID 时才执行保存
-      if (this.moduleKey && this.projectId) {
-        const userId = getCurrentUserId();
-        if (userId) {
-          saveAdvSearchCondition(userId, this.projectId, this.moduleKey, this.optional.components);
+      // 仅当传入了 moduleKey 且能获取到有效项目 ID 和用户 ID 时才执行保存
+      if (this.moduleKey) {
+        const projectId = this.effectiveProjectId;
+        if (!projectId) {
+          console.warn('[AdvSearch] 无法获取 projectId，跳过保存搜索记忆，避免不同项目间共享');
+        } else {
+          const userId = getCurrentUserId();
+          if (userId) {
+            saveAdvSearchCondition(userId, projectId, this.moduleKey, this.optional.components);
+          }
         }
       }
 
@@ -325,10 +343,15 @@ export default {
       this.$emit("search");
 
       // 【搜索记忆】重置时清除 localStorage 中保存的搜索条件
-      if (this.moduleKey && this.projectId) {
-        const userId = getCurrentUserId();
-        if (userId) {
-          clearAdvSearchCondition(userId, this.projectId, this.moduleKey);
+      if (this.moduleKey) {
+        const projectId = this.effectiveProjectId;
+        if (!projectId) {
+          console.warn('[AdvSearch] 无法获取 projectId，跳过清理搜索记忆');
+        } else {
+          const userId = getCurrentUserId();
+          if (userId) {
+            clearAdvSearchCondition(userId, projectId, this.moduleKey);
+          }
         }
       }
     },
@@ -350,12 +373,17 @@ export default {
 
       // 【搜索记忆】从 localStorage 回填上次保存的搜索条件
       // 在 slice 截取默认显示条件之后、设置 disable 状态之前执行
-      if (this.moduleKey && this.projectId) {
-        const userId = getCurrentUserId();
-        if (userId) {
-          const saved = getAdvSearchCondition(userId, this.projectId, this.moduleKey);
-          if (saved) {
-            this._restoreSearchConditions(saved);
+      if (this.moduleKey) {
+        const projectId = this.effectiveProjectId;
+        if (!projectId) {
+          console.warn('[AdvSearch] 无法获取 projectId，跳过恢复搜索记忆，避免不同项目间共享');
+        } else {
+          const userId = getCurrentUserId();
+          if (userId) {
+            const saved = getAdvSearchCondition(userId, projectId, this.moduleKey);
+            if (saved) {
+              this._restoreSearchConditions(saved);
+            }
           }
         }
       }
