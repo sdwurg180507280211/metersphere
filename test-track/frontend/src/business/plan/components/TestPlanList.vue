@@ -38,7 +38,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('commons.name')"
-            min-width="200px"
+            min-width="120px"
         >
         </ms-table-column>
         <ms-table-column
@@ -55,7 +55,7 @@
             :filters="userFilter"
             :fields-width="fieldsWidth"
             :label="$t('commons.create_user')"
-            min-width="200px"
+            min-width="120px"
         >
         </ms-table-column>
         <ms-table-column
@@ -65,7 +65,7 @@
             column-key="status"
             :field="item"
             :fields-width="fieldsWidth"
-            min-width="120px"
+            min-width="60px"
             :label="$t('test_track.plan.plan_status')"
         >
           <template v-slot:default="scope">
@@ -116,7 +116,7 @@
             column-key="scheduleStatus"
             :field="item"
             :fields-width="fieldsWidth"
-            min-width="200px"
+            min-width="100px"
             :label="$t('commons.trigger_mode.schedule')"
         >
           <template v-slot="scope">
@@ -166,7 +166,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('test_track.plan.follow_people')"
-            min-width="200px"
+            min-width="120px"
         >
         </ms-table-column>
         <ms-table-column
@@ -177,7 +177,7 @@
             sortable
             :filters="stageFilters"
             :label="$t('test_track.plan.plan_stage')"
-            min-width="120px"
+            min-width="115px"
         >
           <template v-slot:default="scope">
             <plan-stage-table-item
@@ -191,7 +191,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.home.test_rate')"
-            min-width="120px"
+            min-width="80px"
         >
           <template v-slot:default="scope">
             <el-progress
@@ -206,7 +206,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.plan_project')"
-            min-width="200px"
+            min-width="120px"
         >
         </ms-table-column>
 
@@ -215,7 +215,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.case.module')"
-            min-width="150px">
+            min-width="120px">
           <template v-slot:default="scope">
             <span>{{ nodePathMap.get(scope.row.nodeId) }}</span>
           </template>
@@ -228,7 +228,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.test_plan_test_case_count')"
-            min-width="200px"
+            min-width="100px"
         >
         </ms-table-column>
         <ms-table-column
@@ -236,7 +236,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.test_plan_api_case_count')"
-            min-width="200px"
+            min-width="100px"
         >
         </ms-table-column>
         <ms-table-column
@@ -244,7 +244,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.test_plan_api_scenario_count')"
-            min-width="200px"
+            min-width="100px"
         >
         </ms-table-column>
         <ms-table-column
@@ -252,7 +252,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.test_plan_ui_scenario_count')"
-            min-width="200px"
+            min-width="100px"
         >
         </ms-table-column>
         <ms-table-column
@@ -260,7 +260,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.test_plan_load_case_count')"
-            min-width="200px"
+            min-width="100px"
         >
         </ms-table-column>
         <ms-table-column
@@ -268,7 +268,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('commons.pass_rate')"
-            min-width="120px"
+            min-width="80px"
         >
           <template v-slot:default="scope">
             <span v-if="scope.row.isMetricLoadOver">{{
@@ -283,7 +283,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('test_track.plan.planned_start_time')"
-            min-width="200px"
+            min-width="120px"
         >
           <template v-slot:default="scope">
             <span>{{ scope.row.plannedStartTime | datetimeFormat }}</span>
@@ -295,7 +295,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('test_track.plan.planned_end_time')"
-            min-width="160px"
+            min-width="120px"
         >
           <template v-slot:default="scope">
             <span>{{ scope.row.plannedEndTime | datetimeFormat }}</span>
@@ -307,7 +307,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('test_track.plan.actual_start_time')"
-            min-width="200px"
+            min-width="120px"
         >
           <template v-slot:default="scope">
             <span>{{ scope.row.actualStartTime | datetimeFormat }}</span>
@@ -319,7 +319,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('test_track.plan.actual_end_time')"
-            min-width="200px"
+            min-width="120px"
         >
           <template v-slot:default="scope">
             <span>{{ scope.row.actualEndTime | datetimeFormat }}</span>
