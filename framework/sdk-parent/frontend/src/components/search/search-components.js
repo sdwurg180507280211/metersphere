@@ -1155,5 +1155,108 @@ export const BUILTIN_ADV_SEARCH_KEYS = [
   'moduleIds',
   'workspaceIds',  // 新增：所属工作空间
   'projectIds',    // 新增：所属项目
+  'dmpNum',        // 需求池：需求编号
+  'requirementName', // 需求池：需求名称
+  'poolStatus',    // 需求池：需求池状态
+  'systemName',    // 需求池：所属系统
+  'reqFatherClass', // 需求池：需求大类
+  'reqSonClass',    // 需求池：需求子类
+  'reqManagerName', // 需求池：需求负责人
+];
+
+// 需求池状态
+export const REQUIREMENT_POOL_STATUS = {
+  key: "poolStatus",
+  name: 'MsTableSearchSelect',
+  label: '需求池状态',
+  operator: {
+    options: [OPERATORS.IN, OPERATORS.NOT_IN]
+  },
+  options: [
+    {label: '未创建', value: 'PENDING'},
+    {label: '已创建', value: 'CREATED'},
+    {label: '已取消', value: 'CANCELLED'}
+  ],
+  props: {
+    multiple: true
+  }
+};
+
+// 需求编号
+export const REQUIREMENT_DMP_NUM = {
+  key: "dmpNum",
+  name: 'MsTableSearchInput',
+  label: '需求编号',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求名称
+export const REQUIREMENT_NAME = {
+  key: "requirementName",
+  name: 'MsTableSearchInput',
+  label: '需求名称',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 所属系统
+export const REQUIREMENT_SYSTEM_NAME = {
+  key: "systemName",
+  name: 'MsTableSearchInput',
+  label: '所属系统',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求大类
+export const REQUIREMENT_FATHER_CLASS = {
+  key: "reqFatherClass",
+  name: 'MsTableSearchInput',
+  label: '需求大类',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求子类
+export const REQUIREMENT_SON_CLASS = {
+  key: "reqSonClass",
+  name: 'MsTableSearchInput',
+  label: '需求子类',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求负责人
+export const REQUIREMENT_MANAGER_NAME = {
+  key: "reqManagerName",
+  name: 'MsTableSearchInput',
+  label: '需求负责人',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求池列表高级搜索配置
+export const REQUIREMENT_POOL_LIST = [
+  REQUIREMENT_DMP_NUM,
+  REQUIREMENT_NAME,
+  REQUIREMENT_POOL_STATUS,
+  REQUIREMENT_SYSTEM_NAME,
+  REQUIREMENT_FATHER_CLASS,
+  REQUIREMENT_SON_CLASS,
+  REQUIREMENT_MANAGER_NAME,
+  CREATE_TIME
 ];
 
