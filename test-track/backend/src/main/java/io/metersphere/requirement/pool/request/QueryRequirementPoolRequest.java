@@ -25,4 +25,6 @@ public class QueryRequirementPoolRequest extends RequirementPool {
     private String projectId;
 
     private String workspaceId;
+
+    private String name;
 }
