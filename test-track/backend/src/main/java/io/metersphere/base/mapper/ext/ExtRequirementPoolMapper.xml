@@ -121,6 +121,9 @@
         select requirement_pool.*
         from requirement_pool
         <where>
+            <if test="request.name != null and request.name != ''">
+                and requirement_pool.requirement_name like CONCAT('%', #{request.name}, '%')
+            </if>
             <if test="request.combine != null">
                 <include refid="combine">
                     <property name="condition" value="request.combine"/>
