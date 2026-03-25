@@ -66,6 +66,11 @@ export default {
       name: "testCaseReviewView",
       component: () => import('@/business/review/view/TestCaseReviewView')
     },
+    {
+      path: "requirement-pool/list",
+      name: "requirementPool",
+      component: () => import('@/business/requirement-pool/list.vue')
+    }
   ]
 };
 

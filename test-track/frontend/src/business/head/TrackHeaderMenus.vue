@@ -56,6 +56,11 @@ export default {
           permission: 'PROJECT_TRACK_REVIEW:READ'
         },
         {
+          path: '/track/requirement-pool/list',
+          name: '需求池',
+          permission: 'PROJECT_TRACK_PLAN:READ'
+        },
+        {
           path: '/track/plan/all',
           name: this.$t('test_track.plan.test_plan'),
           permission: 'PROJECT_TRACK_PLAN:READ'

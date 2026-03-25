@@ -222,4 +222,16 @@ export let CUSTOM_TABLE_HEADER = {
     },
     { id: "status", key: "l", label: "commons.status" },
   ],
+
+  // 需求池列表
+  REQUIREMENT_POOL_LIST: [
+    { id: "dmpNum", key: "1", label: "需求编号", minWidth: 150, sortable: true },
+    { id: "requirementName", key: "2", label: "需求名称", minWidth: 200, sortable: true },
+    { id: "poolStatus", key: "3", label: "需求池状态", minWidth: 120, filters: [{text: '未创建', value: 'PENDING'}, {text: '已创建', value: 'CREATED'}, {text: '已取消', value: 'CANCELLED'}], columnKey: 'poolStatus' },
+    { id: "systemName", key: "4", label: "所属系统", minWidth: 150, sortable: true },
+    { id: "reqManagerName", key: "5", label: "需求负责人", minWidth: 120 },
+    { id: "reqFatherClass", key: "6", label: "需求父类", minWidth: 120 },
+    { id: "reqSonClass", key: "7", label: "需求子类", minWidth: 120 },
+    { id: "createTime", key: "8", label: "创建时间", minWidth: 180, sortable: true },
+  ],
 };

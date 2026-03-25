@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="io.metersphere.base.mapper.ext.ExtRequirementPoolMapper">
+
+    <resultMap id="BaseResultMap" type="io.metersphere.base.domain.RequirementPool">
+        <id column="id" property="id" jdbcType="VARCHAR"/>
+        <result column="dmp_num" property="dmpNum" jdbcType="VARCHAR"/>
+        <result column="requirement_name" property="requirementName" jdbcType="VARCHAR"/>
+        <result column="pool_status" property="poolStatus" jdbcType="VARCHAR"/>
+        <result column="system_name" property="systemName" jdbcType="VARCHAR"/>
+        <result column="req_manager_name" property="reqManagerName" jdbcType="VARCHAR"/>
+        <result column="req_father_class" property="reqFatherClass" jdbcType="VARCHAR"/>
+        <result column="req_son_class" property="reqSonClass" jdbcType="VARCHAR"/>
+        <result column="create_time" property="createTime" jdbcType="BIGINT"/>
+        <result column="up_time" property="upTime" jdbcType="BIGINT"/>
+        <result column="linked_plan_id" property="linkedPlanId" jdbcType="VARCHAR"/>
+        <result column="linked_plan_name" property="linkedPlanName" jdbcType="VARCHAR"/>
+        <result column="trace_id" property="traceId" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="condition">
+        <choose>
+            <when test='${object}.operator == "like"'>
+                like CONCAT('%', #{${object}.value},'%')
+            </when>
+            <when test='${object}.operator == "not like"'>
+                not like CONCAT('%', #{${object}.value},'%')
+            </when>
+            <when test='${object}.operator == "in"'>
+                in
+                <foreach collection="${object}.value" item="v" separator="," open="(" close=")">
+                    #{v}
+                </foreach>
+            </when>
+            <when test='${object}.operator == "not in"'>
+                not in
+                <foreach collection="${object}.value" item="v" separator="," open="(" close=")">
+                    #{v}
+                </foreach>
+            </when>
+            <when test='${object}.operator == "between"'>
+                between #{${object}.value[0]} and #{${object}.value[1]}
+            </when>
+            <when test='${object}.operator == "gt"'>
+                &gt; #{${object}.value}
+            </when>
+            <when test='${object}.operator == "lt"'>
+                &lt; #{${object}.value}
+            </when>
+            <when test='${object}.operator == "ge"'>
+                &gt;= #{${object}.value}
+            </when>
+            <when test='${object}.operator == "le"'>
+                &lt;= #{${object}.value}
+            </when>
+            <otherwise>
+                = #{${object}.value}
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="combine">
+        <if test="${condition}.dmpNum != null">
+            and requirement_pool.dmp_num
+            <include refid="condition">
+                <property name="object" value="${condition}.dmpNum"/>
+            </include>
+        </if>
+        <if test="${condition}.requirementName != null">
+            and requirement_pool.requirement_name
+            <include refid="condition">
+                <property name="object" value="${condition}.requirementName"/>
+            </include>
+        </if>
+        <if test="${condition}.createTime != null">
+            and requirement_pool.create_time
+            <include refid="condition">
+                <property name="object" value="${condition}.createTime"/>
+            </include>
+        </if>
+        <if test="${condition}.upTime != null">
+            and requirement_pool.up_time
+            <include refid="condition">
+                <property name="object" value="${condition}.upTime"/>
+            </include>
+        </if>
+    </sql>
+
+    <sql id="filter">
+        <if test="request.filters != null and request.filters.size() > 0">
+            <foreach collection="request.filters.entrySet()" index="key" item="values">
+                <if test="values != null and values.size() > 0">
+                    <choose>
+                        <when test="key=='poolStatus'">
+                            and requirement_pool.pool_status in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='systemName'">
+                            and requirement_pool.system_name in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='reqFatherClass'">
+                            and requirement_pool.req_father_class in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='reqSonClass'">
+                            and requirement_pool.req_son_class in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='reqManagerName'">
+                            and requirement_pool.req_manager_name in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                    </choose>
+                </if>
+            </foreach>
+        </if>
+    </sql>
+
+    <select id="list" resultMap="BaseResultMap" parameterType="io.metersphere.requirement.pool.request.QueryRequirementPoolRequest">
+        select requirement_pool.*
+        from requirement_pool
+        <where>
+            <if test="request.combine != null">
+                <include refid="combine">
+                    <property name="condition" value="request.combine"/>
+                </include>
+            </if>
+            <include refid="filter"/>
+        </where>
+        <choose>
+            <when test="request.orders != null and request.orders.size() > 0">
+                order by
+                <foreach collection="request.orders" separator="," item="order">
+                    ${order.name} ${order.type}
+                </foreach>
+            </when>
+            <otherwise>
+                order by create_time DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectByDmpNum" resultMap="BaseResultMap">
+        select requirement_pool.*
+        from requirement_pool
+        where requirement_pool.dmp_num = #{dmpNum}
+    </select>
+
+    <update id="updatePoolStatusAndLinkedPlan">
+        update requirement_pool
+        set pool_status = #{poolStatus},
+            linked_plan_id = #{linkedPlanId},
+            linked_plan_name = #{linkedPlanName}
+        where dmp_num = #{dmpNum}
+    </update>
+
+</mapper>
