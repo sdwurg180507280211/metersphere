@@ -47,7 +47,8 @@ inclusion: always  # 始终生效
 
 ### 2.3 数据库连接信息
 ```bash
-mysql -h localhost -u root -p'Password123@mysql' -e "USE metersphere_dev;"
+# 本项目数据库连接方式：参考本地文件: /opt/metersphere/conf/metersphere.properties
+# 主数据库（默认）：metersphere_test
 ```
 
 ### 2.5 常用查询模板
