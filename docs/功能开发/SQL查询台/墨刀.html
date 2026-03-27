@@ -1,0 +1,445 @@
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeterSphere Query Hub 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slide-in {
+            animation: slideInRight 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-800 font-sans">
+<!-- 顶部导航栏 -->
+<header class="h-14 bg-slate-900 text-white flex items-center justify-between px-4 sticky top-0 z-50 shadow-md">
+    <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-2">
+            <span class="iconify text-blue-400 text-2xl" data-icon="simple-icons:metersphere"></span>
+            <span class="font-bold text-lg tracking-tight">MeterSphere Query Hub 2026</span>
+        </div>
+        <nav class="hidden md:flex space-x-6 ml-8 text-sm font-medium">
+            <a href="#" class="text-blue-400 border-b-2 border-blue-400 pb-1">查询面板</a>
+            <a href="#" class="text-slate-300 hover:text-white transition-colors">仪表盘</a>
+            <a href="#" class="text-slate-300 hover:text-white transition-colors">项目管理</a>
+        </nav>
+    </div>
+    <div class="flex items-center space-x-4">
+        <div class="text-xs text-slate-400 mr-2">2026年01月07日</div>
+        <button class="p-2 hover:bg-slate-800 rounded-lg relative">
+            <span class="iconify text-xl" data-icon="flowbite:bell-outline"></span>
+            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+        </button>
+        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs ring-2 ring-slate-700">AI</div>
+    </div>
+</header>
+
+<main class="flex h-[calc(100vh-56px)] overflow-hidden">
+    <!-- 左侧查询库管理面板 -->
+    <aside class="w-64 border-r border-gray-200 bg-white flex flex-col shrink-0">
+        <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+            <h2 class="font-bold text-gray-700 flex items-center">
+                <span class="iconify mr-2 text-blue-500" data-icon="ph:bookmarks-bold"></span>
+                查询库
+            </h2>
+            <button class="text-blue-600 hover:bg-blue-50 p-1 rounded transition-colors">
+                <span class="iconify" data-icon="ph:plus-bold"></span>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-2 space-y-1">
+            <div class="text-[10px] font-bold text-gray-400 uppercase px-2 py-1 mt-2">预设查询</div>
+            <div class="flex items-center px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm cursor-pointer border-l-4 border-blue-600">
+                <span class="iconify mr-2" data-icon="ph:flame-bold"></span>
+                <span>我的待办事项</span>
+            </div>
+            <div class="flex items-center px-3 py-2 hover:bg-gray-100 text-gray-600 rounded-lg text-sm cursor-pointer transition-colors">
+                <span class="iconify mr-2" data-icon="ph:clock-bold"></span>
+                <span>最近更新的任务</span>
+            </div>
+            <div class="text-[10px] font-bold text-gray-400 uppercase px-2 py-1 mt-4">收藏夹</div>
+            <div class="group flex items-center px-3 py-2 hover:bg-gray-100 text-gray-600 rounded-lg text-sm cursor-pointer justify-between">
+                <div class="flex items-center">
+                    <span class="iconify mr-2 text-yellow-500" data-icon="ph:star-fill"></span>
+                    <span>Q1 冲刺目标</span>
+                </div>
+                <span class="text-[10px] bg-gray-200 px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">12</span>
+            </div>
+            <div class="group flex items-center px-3 py-2 hover:bg-gray-100 text-gray-600 rounded-lg text-sm cursor-pointer justify-between">
+                <div class="flex items-center">
+                    <span class="iconify mr-2 text-orange-500" data-icon="ph:bug-bold"></span>
+                    <span>高优先级缺陷</span>
+                </div>
+                <span class="text-[10px] bg-gray-200 px-1 rounded opacity-0 group-hover:opacity-100">5</span>
+            </div>
+        </div>
+        <div class="p-4 border-t border-gray-100 bg-gray-50">
+            <div class="flex items-center text-xs text-gray-500 mb-2">
+                <span class="iconify mr-1" data-icon="ph:info"></span>
+                <span>当前工作空间容量</span>
+            </div>
+            <div class="w-full bg-gray-200 h-1 rounded-full overflow-hidden">
+                <div class="bg-blue-600 h-full w-3/4"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 中间主体区域 -->
+    <section class="flex-1 flex flex-col min-w-0 bg-white">
+        <!-- 智能过滤与 JQL 控制台 -->
+        <div class="border-b border-gray-200 shadow-sm z-10">
+            <!-- 级联选择器与业务模块 -->
+            <div class="px-4 py-3 flex flex-wrap items-center gap-3">
+                <div class="relative group">
+                    <button id="ms-cascade-picker" class="flex items-center bg-gray-100 rounded-lg px-3 py-1.5 border border-gray-200 hover:border-blue-400 transition-all text-sm font-medium">
+                        <span class="iconify text-gray-400 mr-2" data-icon="ph:tree-structure-bold"></span>
+                        <span id="selected-context">选择工作空间 / 项目</span>
+                        <span class="iconify ml-2 text-gray-400" data-icon="ph:caret-down"></span>
+                    </button>
+                </div>
+
+                <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg" id="module-selector">
+                    <button data-module="bug" class="module-btn px-4 py-1 text-xs font-semibold rounded bg-white shadow-sm text-blue-600">缺陷</button>
+                    <button data-module="requirement" class="module-btn px-4 py-1 text-xs font-semibold rounded text-gray-500 hover:bg-white hover:shadow-sm">需求</button>
+                    <button data-module="task" class="module-btn px-4 py-1 text-xs font-semibold rounded text-gray-500 hover:bg-white hover:shadow-sm">任务</button>
+                </div>
+
+                <div class="flex-1"></div>
+
+                <div class="flex items-center space-x-2">
+                    <div class="relative">
+                        <input type="text" placeholder="关键词检索..." class="pl-9 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all">
+                        <span class="iconify absolute left-3 top-2.5 text-gray-400" data-icon="ph:magnifying-glass"></span>
+                    </div>
+                    <button id="toggle-jql" class="flex items-center px-3 py-1.5 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <span class="iconify mr-2" data-icon="ph:code-bold"></span>
+                        JQL
+                    </button>
+                    <button class="flex items-center px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition-all active:scale-95">
+                        立即查询
+                    </button>
+                </div>
+            </div>
+
+            <!-- JQL 规则构建器 (抽屉/折叠) -->
+            <div id="jql-panel" class="hidden px-4 pb-4 bg-slate-50 border-t border-gray-100">
+                <div class="flex items-center justify-between py-2 text-xs text-gray-500">
+                    <span>高级 JQL 构建器 (Auto-complete 开启)</span>
+                    <div class="flex space-x-3">
+                        <button class="text-blue-600 hover:underline">验证语法</button>
+                        <button class="text-blue-600 hover:underline">存为模板</button>
+                    </div>
+                </div>
+                <div class="relative">
+                    <textarea class="w-full h-24 p-4 bg-slate-900 text-green-400 font-mono text-sm rounded-lg shadow-inner outline-none ring-1 ring-slate-700 focus:ring-2 focus:ring-blue-400" spellcheck="false">project = "CORE" AND status IN ("Open", "In Progress") AND priority = "High" ORDER BY created DESC</textarea>
+                    <div class="absolute bottom-2 right-4 flex space-x-2">
+                        <span class="text-xs text-slate-500">Chars: 104</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据展示区控制条 -->
+        <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-500">找到 <span class="font-bold text-gray-800">128</span> 个结果</span>
+                <div class="flex items-center space-x-1 border border-gray-200 rounded-md p-0.5">
+                    <button class="p-1 rounded bg-blue-100 text-blue-600" id="view-list">
+                        <span class="iconify" data-icon="ph:list-bold"></span>
+                    </button>
+                    <button class="p-1 rounded hover:bg-gray-50 text-gray-400" id="view-detail">
+                        <span class="iconify" data-icon="ph:split-screen-bold"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button class="text-sm font-medium text-gray-600 px-3 py-1 hover:bg-gray-100 rounded-md flex items-center">
+                    <span class="iconify mr-1" data-icon="ph:export-bold"></span> 导出报告
+                </button>
+                <div class="relative group">
+                    <button id="field-config-btn" class="text-sm font-medium text-gray-600 px-3 py-1 hover:bg-gray-100 rounded-md flex items-center">
+                        <span class="iconify mr-1" data-icon="ph:columns-bold"></span> 自定义字段
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 核心列表区 -->
+        <div id="content-area" class="flex-1 overflow-auto hide-scrollbar">
+            <table class="w-full text-left border-collapse">
+                <thead class="sticky top-0 bg-gray-50 z-10 shadow-sm">
+                <tr class="text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                    <th class="px-4 py-3 w-10"><input type="checkbox" class="rounded"></th>
+                    <th class="px-4 py-3 w-32">键值</th>
+                    <th class="px-4 py-3 min-w-[300px]">概要</th>
+                    <th class="px-4 py-3">负责人</th>
+                    <th class="px-4 py-3">报告人</th>
+                    <th class="px-4 py-3">状态</th>
+                    <th class="px-4 py-3">优先级</th>
+                    <th class="px-4 py-3 text-right">更新时间</th>
+                </tr>
+                </thead>
+                <tbody class="text-sm divide-y divide-gray-100">
+                <tr class="hover:bg-blue-50/50 transition-colors cursor-pointer group">
+                    <td class="px-4 py-3"><input type="checkbox" class="rounded"></td>
+                    <td class="px-4 py-3 font-semibold text-blue-600">CORE-2048</td>
+                    <td class="px-4 py-3">
+                        <div class="flex flex-col">
+                            <span class="text-gray-900 font-medium">修复登录页在 Safari 浏览器下的白屏异常</span>
+                            <span class="text-xs text-gray-400 mt-1">Sprint 24 · 性能优化模块</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center">
+                            <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] mr-2">ZH</div>
+                            <span>张三</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-gray-500">李四</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase">In Progress</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="iconify text-red-500 text-lg" data-icon="ph:arrow-fat-up-fill"></span>
+                    </td>
+                    <td class="px-4 py-3 text-right text-gray-400 text-xs">刚刚</td>
+                </tr>
+                <tr class="hover:bg-blue-50/50 transition-colors cursor-pointer group">
+                    <td class="px-4 py-3"><input type="checkbox" class="rounded"></td>
+                    <td class="px-4 py-3 font-semibold text-blue-600">CORE-2045</td>
+                    <td class="px-4 py-3">
+                        <div class="flex flex-col">
+                            <span class="text-gray-900 font-medium">API 接口参数校验逻辑增强</span>
+                            <span class="text-xs text-gray-400 mt-1">Sprint 24 · 安全加固</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center">
+                            <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-[10px] mr-2">WA</div>
+                            <span>王五</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-gray-500">系统</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase">Resolved</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="iconify text-orange-400 text-lg" data-icon="ph:arrow-fat-up-fill"></span>
+                    </td>
+                    <td class="px-4 py-3 text-right text-gray-400 text-xs">2小时前</td>
+                </tr>
+                <tr class="hover:bg-blue-50/50 transition-colors cursor-pointer group">
+                    <td class="px-4 py-3"><input type="checkbox" class="rounded"></td>
+                    <td class="px-4 py-3 font-semibold text-blue-600">CORE-2041</td>
+                    <td class="px-4 py-3">
+                        <div class="flex flex-col">
+                            <span class="text-gray-900 font-medium">[紧急] 数据库连接池耗尽告警分析</span>
+                            <span class="text-xs text-gray-400 mt-1">紧急修复 · 运维</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center">
+                            <div class="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-[10px] mr-2">CH</div>
+                            <span>陈六</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-gray-500">张三</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-[10px] font-bold uppercase">To Do</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="iconify text-red-600 text-lg" data-icon="ph:warning-circle-fill"></span>
+                    </td>
+                    <td class="px-4 py-3 text-right text-gray-400 text-xs">昨日</td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="p-8 flex flex-col items-center">
+                <div id="chart-container" class="w-full max-w-2xl h-64 mb-4"></div>
+            </div>
+        </div>
+
+        <!-- 分页与统计 -->
+        <footer class="h-10 border-t border-gray-200 bg-gray-50 flex items-center justify-between px-4 text-xs text-gray-500 shrink-0">
+            <div class="flex items-center space-x-4">
+                <span>每页显示: 25条</span>
+                <div class="flex items-center space-x-1">
+                    <button class="px-2 hover:bg-gray-200 rounded transition-colors"><span class="iconify" data-icon="ph:caret-left-bold"></span></button>
+                    <span class="font-medium text-gray-700">1 / 5</span>
+                    <button class="px-2 hover:bg-gray-200 rounded transition-colors"><span class="iconify" data-icon="ph:caret-right-bold"></span></button>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                    已连接到云端同步引擎
+                </div>
+            </div>
+        </footer>
+    </section>
+
+    <!-- 右侧详情预览 (侧边弹窗形式，默认隐藏) -->
+    <div id="side-panel" class="hidden w-[450px] bg-white border-l border-gray-200 flex flex-col animate-slide-in shadow-2xl">
+        <div class="h-14 border-b border-gray-100 flex items-center justify-between px-4">
+            <div class="flex items-center space-x-2">
+                <span class="iconify text-blue-600 text-lg" data-icon="ph:bug-bold"></span>
+                <span class="font-bold">CORE-2048</span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <button class="p-2 hover:bg-gray-100 rounded-md"><span class="iconify" data-icon="ph:link-bold"></span></button>
+                <button class="p-2 hover:bg-gray-100 rounded-md"><span class="iconify" data-icon="ph:dots-three-outline-vertical-bold"></span></button>
+                <button id="close-panel" class="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                    <span class="iconify" data-icon="ph:x-bold"></span>
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-5 space-y-6">
+            <div>
+                <h3 class="text-xl font-bold leading-tight">修复登录页在 Safari 浏览器下的白屏异常</h3>
+                <div class="flex mt-3 space-x-2">
+                    <button class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs font-semibold transition-colors flex items-center">
+                        <span class="iconify mr-1" data-icon="ph:paperclip"></span> 添加附件
+                    </button>
+                    <button class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs font-semibold transition-colors flex items-center">
+                        <span class="iconify mr-1" data-icon="ph:git-merge"></span> 关联PR
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">状态</label>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded font-bold text-[10px]">开发中</span>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">优先级</label>
+                        <div class="flex items-center">
+                            <span class="iconify text-red-500 mr-2" data-icon="ph:arrow-fat-up-fill"></span>
+                            高 (High)
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">经办人</label>
+                        <div class="flex items-center">
+                            <div class="w-5 h-5 rounded-full bg-blue-500 mr-2"></div>
+                            <span>张三</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">截止日期</label>
+                        <span class="text-red-500 font-medium">2026-01-10</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100 pt-5">
+                <label class="block font-bold text-gray-700 mb-2">描述</label>
+                <div class="bg-gray-50 p-4 rounded-lg text-sm text-gray-600 leading-relaxed border border-dashed border-gray-200">
+                    用户在登录系统时，若使用 Safari 浏览器版本 17+ 访问，页面在初始 JS 加载后进入挂死状态...
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100 pt-5">
+                <div class="flex items-center justify-between mb-3">
+                    <label class="font-bold text-gray-700">活动记录</label>
+                    <div class="text-xs text-blue-600 cursor-pointer">按最新排序</div>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
+                        <div class="flex-1 bg-gray-50 rounded-lg p-3 text-xs">
+                            <div class="font-bold mb-1">李四 <span class="text-gray-400 font-normal ml-2">1小时前</span></div>
+                            已经在测试环境复现了，应该是特定 CSS 属性导致。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-gray-100">
+            <input type="text" placeholder="发表评论..." class="w-full bg-gray-100 border-none rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-blue-400 outline-none">
+        </div>
+    </div>
+</main>
+
+<script>
+    // 1. 初始化图表
+    document.addEventListener('DOMContentLoaded', function() {
+        const chartDom = document.getElementById('chart-container');
+        const myChart = echarts.init(chartDom);
+        const option = {
+            title: { text: '当前筛选下各状态分布', left: 'center', textStyle: { fontSize: 13, color: '#666' } },
+            tooltip: { trigger: 'item' },
+            legend: { bottom: '5%', left: 'center' },
+            series: [
+                {
+                    name: '状态统计',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                    label: { show: false },
+                    data: [
+                        { value: 45, name: 'To Do', itemStyle: { color: '#cbd5e1' } },
+                        { value: 38, name: 'In Progress', itemStyle: { color: '#3b82f6' } },
+                        { value: 25, name: 'Review', itemStyle: { color: '#f59e0b' } },
+                        { value: 20, name: 'Resolved', itemStyle: { color: '#22c55e' } }
+                    ]
+                }
+            ]
+        };
+        myChart.setOption(option);
+
+        window.addEventListener('resize', () => myChart.resize());
+    });
+
+    // 2. 交互逻辑
+    const jqlPanel = document.getElementById('jql-panel');
+    const toggleJqlBtn = document.getElementById('toggle-jql');
+    const viewDetailBtn = document.getElementById('view-detail');
+    const sidePanel = document.getElementById('side-panel');
+    const closePanelBtn = document.getElementById('close-panel');
+    const rows = document.querySelectorAll('tbody tr');
+
+    // JQL面板切换
+    toggleJqlBtn.addEventListener('click', () => {
+        jqlPanel.classList.toggle('hidden');
+    });
+
+    // 详情视图切换演示 (模拟点击行打开详情)
+    rows.forEach(row => {
+        row.addEventListener('click', () => {
+            sidePanel.classList.remove('hidden');
+            rows.forEach(r => r.classList.remove('bg-blue-50'));
+            row.classList.add('bg-blue-50');
+        });
+    });
+
+    closePanelBtn.addEventListener('click', () => {
+        sidePanel.classList.add('hidden');
+        rows.forEach(r => r.classList.remove('bg-blue-50'));
+    });
+
+    // 视图样式切换示意
+    viewDetailBtn.addEventListener('click', () => {
+        sidePanel.classList.toggle('hidden');
+        viewDetailBtn.classList.toggle('bg-blue-100');
+        viewDetailBtn.classList.toggle('text-blue-600');
+    });
+</script>
+
+
+</body></html>
