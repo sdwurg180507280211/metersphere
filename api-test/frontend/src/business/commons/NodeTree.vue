@@ -32,7 +32,7 @@
           </span>
 
           <span v-if="!data.isEdit" class="node-icon">
-            <i class="el-icon-folder" />
+            <i :class="node.isCurrent ? 'el-icon-folder-opened' : 'el-icon-folder'" :style="node.isCurrent ? 'color: var(--primary_color)' : ''" />
           </span>
           <el-tooltip class="item" effect="dark" :content="data.name" placement="top-start" :open-delay="1000">
             <span v-if="!data.isEdit" class="node-title" v-text="isDefault(data) ? getLocalDefaultName() : data.name" />
@@ -601,5 +601,29 @@ export default {
 .name-input :deep(.el-input__inner) {
   height: 25px;
   line-height: 25px;
+}
+
+/* 新增选中状态样式 */
+:deep(.el-tree-node__content) {
+  height: 40px;
+  border-radius: 4px;
+}
+
+:deep(.el-tree-node__content:hover) {
+  background-color: rgba(31, 35, 41, 0.1);
+}
+
+:deep(.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content) {
+  background-color: rgba(120, 56, 135, 0.1);
+}
+
+:deep(.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content .node-title) {
+  color: #783887;
+  font-weight: 500;
+}
+
+:deep(.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content .count-title) {
+  color: #783887;
+  font-weight: 500;
 }
 </style>

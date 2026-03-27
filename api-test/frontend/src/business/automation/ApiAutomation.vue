@@ -45,7 +45,7 @@
             </template>
           </ms-api-scenario-list>
         </el-tab-pane>
-        <el-tab-pane name="default" :label="$t('api_test.automation.scenario_list')">
+        <el-tab-pane name="default" :label="defaultTabLabel">
           <ms-api-scenario-list
             v-if="!trashEnable"
             @getTrashCase="getTrashCase"
@@ -154,6 +154,17 @@ export default {
     projectId() {
       return getCurrentProjectID();
     },
+    defaultTabLabel() {
+      let label = this.$t('api_test.automation.scenario_list');
+      if (this.selectNodeIds && this.selectNodeIds.length > 0) {
+        const nodeId = this.selectNodeIds[0];
+        const node = this.findNodeById(this.moduleOptions, nodeId);
+        if (node && node.name) {
+          label = node.name;
+        }
+      }
+      return label;
+    },
   },
   data() {
     return {
@@ -228,6 +239,17 @@ export default {
   },
   methods: {
     hasPermission,
+    findNodeById(tree, id) {
+      if (!tree || tree.length === 0) return null;
+      for (let node of tree) {
+        if (node.id === id) return node;
+        if (node.children) {
+          const found = this.findNodeById(node.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    },
     exportAPI(nodeTree) {
       this.$refs.apiScenarioList.exportApi(nodeTree);
     },

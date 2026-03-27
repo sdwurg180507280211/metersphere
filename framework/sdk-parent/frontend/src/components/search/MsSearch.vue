@@ -10,6 +10,7 @@
       :show-link="showAdvSearchLink"
       :condition.sync="condition"
       :module-key="moduleKey"
+      :project-id="projectId"
       @search="search"
       class="ms-adv-search"
       ref="advSearch"/>
@@ -53,6 +54,11 @@ export default {
     },
     // 模块标识符，透传给 MsTableAdvSearchBar 启用搜索记忆功能
     moduleKey: {
+      type: String,
+      default: '',
+    },
+    // 项目ID，透传给 MsTableAdvSearchBar 实现项目隔离
+    projectId: {
       type: String,
       default: '',
     },

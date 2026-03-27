@@ -27,6 +27,7 @@
           :plan-status="planStatus "
           :clickType="clickType"
           :select-node-ids="selectNodeIds"
+          :select-node-name="selectNodeName"
           :version-enable="versionEnable"
           @refresh="refresh"
           @refreshTree="refreshTree"
@@ -96,6 +97,8 @@ export default {
       tmpActiveDom: null,
       tmpPath: null,
       currentNode: null,
+      // 当前选中模块的名称，传给右侧列表显示在表格上方
+      selectNodeName: '',
     };
   },
   props: [
@@ -144,6 +147,7 @@ export default {
     },
     clearSelectNode() {
       this.selectNodeIds = [];
+      this.selectNodeName = '';
       useStore().testPlanViewSelectNode = {};
     },
     initData() {
@@ -159,6 +163,12 @@ export default {
       this.selectNodeIds = nodeIds;
       useStore().testPlanViewSelectNode = node;
       this.currentNode = node;
+      // 更新选中模块名称：根节点（全部用例）时清空，子模块时显示模块名
+      if (node && node.data) {
+        this.selectNodeName = node.data.id === 'root' ? '' : (node.data.name || '');
+      } else {
+        this.selectNodeName = '';
+      }
       // 切换node后，重置分页数
       if (this.$refs.testPlanTestCaseList) {
         this.$refs.testPlanTestCaseList.currentPage = 1;

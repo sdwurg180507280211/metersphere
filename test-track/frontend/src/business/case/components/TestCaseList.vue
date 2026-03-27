@@ -6,7 +6,7 @@
     >
       <!-- 表头统计内容  -->
       <ms-table-count-bar
-        :count-content="$t('case.all_case_content') + ' (' + page.total + ')'"
+        :count-content="countBarTitle"
       ></ms-table-count-bar>
     </div>
 
@@ -477,6 +477,7 @@ export default {
       enableOrderDrag: true,
       isMoveBatch: true,
       loading: false,
+      headerInited: false,
       condition: {
         components: TEST_CASE_CONFIGS,
         filters: {},
@@ -656,6 +657,19 @@ export default {
       }
       return map;
     },
+    /**
+     * 表头统计栏标题：根据左侧树选中的模块动态显示
+     * - 未选中 / 选中根节点 → 显示"全部用例 (N)"
+     * - 选中子模块 → 显示"模块名 (N)"
+     */
+    countBarTitle() {
+      let label = this.$t('case.all_case_content');
+      if (this.selectNode && this.selectNode.data
+          && this.selectNode.data.id !== 'root') {
+        label = this.selectNode.data.name || label;
+      }
+      return label + ' (' + this.page.total + ')';
+    },
   },
   created: function () {
     this.currentVersion = this.defaultVersion || null;
@@ -664,8 +678,9 @@ export default {
     getProjectMemberUserFilter((data) => {
       this.userFilter = data;
     });
-    this.getTemplateField();
-    this.initTableData();
+    this.getTemplateField(() => {
+      this.initTableData();
+    });
     let redirectParam = this.$route.query.dataSelectRange;
     this.checkRedirectEditPage(redirectParam);
     // 切换tab之后版本查询
@@ -698,7 +713,6 @@ export default {
           return;
         }
         this.getProject();
-        this.getTemplateField();
         let ids = this.$route.params.ids;
         if (ids) {
           this.condition.ids = ids;
@@ -707,11 +721,18 @@ export default {
         if (!dataSelectRange) {
           delete this.condition.filters.review_status;
         }
-        this.initTableData();
-        this.condition.ids = null;
+        this.getTemplateField(() => {
+          this.initTableData();
+          this.condition.ids = null;
+        });
       }
     },
     selectNodeIds() {
+      // headerInited 为 false 说明模板字段还未加载完，此时 selectNodeIds 的变化
+      // 来自 TestCaseNodeTree mounted() 的初始化重置，不是用户操作，跳过避免重复加载
+      if (!this.headerInited) {
+        return;
+      }
       this.clearTableSelect();
       this.page.currentPage = 1;
       initCondition(this.condition, false);
@@ -773,7 +794,7 @@ export default {
         query: this.getEditRedirectQuery(mode),
       });
     },
-    async getTemplateField() {
+    async getTemplateField(callback) {
       this.loading = true;
       // 防止第一次渲染版本字段展示顺序错乱
       await this.checkVersionEnable();
@@ -794,7 +815,6 @@ export default {
         // 忽略错误，系统可能没有所属系统数据
       });
       Promise.all([p1, p2, p3]).then((data) => {
-        this.loading = false;
         let template = data[1];
         this.testCaseTemplate = template;
         this.fields = getTableHeaderWithCustomFields(
@@ -827,15 +847,25 @@ export default {
           this.valueArr,
           this.members
         );
-        this.$nextTick(() => {
-          if (this.$refs.table) {
-            this.$refs.table.resetHeader(() => {
-              this.loading = false;
-            });
+        const finishLoad = () => {
+          if (typeof callback === "function") {
+            callback();
           } else {
             this.loading = false;
           }
+        };
+        this.$nextTick(() => {
+          if (this.$refs.table && this.headerInited) {
+            this.$refs.table.resetHeader(() => {
+              finishLoad();
+            });
+          } else {
+            this.headerInited = true;
+            finishLoad();
+          }
         });
+      }).catch(() => {
+        this.loading = false;
       });
     },
     checkCurrentProject() {
@@ -956,6 +986,22 @@ export default {
       let dataRange = this.$route.params.dataSelectRange;
       this.selectDataRange = dataRange;
     },
+    normalizeCaseRows(list) {
+      const rows = Array.isArray(list) ? list : [];
+      parseCustomFilesForList(rows);
+      parseTag(rows);
+      return rows.map((item) => {
+        const row = item ? { ...item } : {};
+        if (row.customFields && typeof row.customFields === "string") {
+          try {
+            row.customFields = JSON.parse(row.customFields);
+          } catch (e) {
+            row.customFields = [];
+          }
+        }
+        return row;
+      });
+    },
     initTableData(nodeIds) {
       this.condition.planId = "";
       this.condition.nodeIds = [];
@@ -1041,14 +1087,7 @@ export default {
           this.loading = false;
           let data = response.data;
           this.page.total = data.itemCount;
-          this.page.data = data.listObject;
-          parseCustomFilesForList(this.page.data);
-          parseTag(this.page.data);
-          this.page.data.forEach((item) => {
-            if (item.customFields) {
-              item.customFields = JSON.parse(item.customFields);
-            }
-          });
+          this.page.data = this.normalizeCaseRows(data.listObject);
         });
         this.$emit("getTrashList");
         this.$emit("getPublicList");

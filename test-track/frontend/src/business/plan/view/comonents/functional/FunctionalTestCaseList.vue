@@ -1,13 +1,8 @@
 <template>
   <div class="card-container">
     <ms-table-header :condition.sync="condition" @search="search" ref="tableHeader"
-                     :show-create="false" class="table-header" :tip="$t('commons.search_by_id_name_tag')">
-
-      <!-- 不显示 “全部用例” 标题,使标题为空 -->
-      <template v-slot:title>
-        <span></span>
-      </template>
-
+                     :show-create="false" class="table-header" :tip="$t('commons.search_by_id_name_tag')"
+                     :title="selectNodeName || null">
       <template v-slot:button>
         <ms-table-button v-permission="['PROJECT_TRACK_CASE:READ']" v-if="!showMyTestCase" icon="el-icon-s-custom"
                          :content="$t('test_track.plan_view.my_case')" @click="searchMyTestCase"/>
@@ -21,7 +16,7 @@
     </ms-table-header>
 
     <ms-table
-        v-loading="result.loading"
+        v-loading="loading"
         :field-key="tableHeaderKey"
         :data="tableData"
         :condition="condition"
@@ -390,6 +385,7 @@ export default {
       screenHeight: 'calc(100vh - 275px)',
       tableLabel: [],
       result: {},
+      loading: false,
       deletePath: "/test/case/delete",
       condition: {
         components: TEST_PLAN_TEST_CASE_CONFIGS,
@@ -468,6 +464,11 @@ export default {
     },
     planStatus: {
       type: String
+    },
+    // 左侧树选中的模块名称，显示在表格上方标题区域
+    selectNodeName: {
+      type: String,
+      default: ''
     }
   },
   computed: {
@@ -575,10 +576,11 @@ export default {
     this.pageCount = Math.ceil(this.total / this.pageSize);
   },
   mounted() {
-    this.getTemplateField();
+    this.getTemplateField(() => {
+      this.refreshTableAndPlan();
+    });
     this.$emit('setCondition', this.condition);
     this.$EventBus.$on("openFailureTestCase", this.handleOpenFailureTestCase);
-    this.refreshTableAndPlan();
     this.hasEditPermission = hasPermission('PROJECT_TRACK_PLAN:READ+EDIT');
     this.getMaintainerOptions();
     this.getVersionOptions();
@@ -614,8 +616,8 @@ export default {
         this.$refs.testPlanTestCaseEdit.openTestCaseEdit(this.tableData[this.tableData.length - 1], this.tableData);
       });
     },
-    getTemplateField() {
-      this.result.loading = true;
+    getTemplateField(callback) {
+      this.loading = true;
       let p1 = getProjectMember()
           .then((response) => {
             this.members = response.data;
@@ -646,8 +648,14 @@ export default {
           if (this.$refs.table) {
             this.$refs.table.resetHeader();
           }
-          this.result.loading = false;
+          if (typeof callback === 'function') {
+            callback();
+          } else {
+            this.loading = false;
+          }
         });
+      }).catch(() => {
+        this.loading = false;
       });
     },
     getCustomFieldFilter(field) {
@@ -664,11 +672,30 @@ export default {
       }
       return value ? value : defaultVal;
     },
+    normalizeTableData(list) {
+      const rows = Array.isArray(list) ? list : [];
+      parseTag(rows);
+      parseCustomFilesForList(rows);
+      return rows.map((item) => {
+        const row = item ? { ...item } : {};
+        if (row.customFields && typeof row.customFields === 'string') {
+          try {
+            row.customFields = JSON.parse(row.customFields);
+          } catch (e) {
+            row.customFields = [];
+          }
+        }
+        row.showTags = row.tags;
+        row.issuesSize = row.issuesCount;
+        row.hasLoadIssue = false;
+        row.issuesContent = [];
+        return row;
+      });
+    },
     initTableData(callback) {
       initCondition(this.condition, this.condition.selectAll);
       this.enableOrderDrag = this.condition.orders.length > 0 ? false : true;
 
-      this.autoCheckStatus();
       if (this.planId) {
         // param.planId = this.planId;
         this.condition.planId = this.planId;
@@ -687,24 +714,12 @@ export default {
       }
       this.condition.projectId = getCurrentProjectID();
       if (this.planId) {
-        this.result = getTestPlanTestCase(this.currentPage, this.pageSize, this.condition)
+        this.loading = true;
+        getTestPlanTestCase(this.currentPage, this.pageSize, this.condition)
             .then((r) => {
               this.total = r.data.itemCount;
               this.pageCount = Math.ceil(this.total / this.pageSize);
-              this.tableData = r.data.listObject;
-              parseTag(this.tableData);
-              parseCustomFilesForList(this.tableData);
-              for (let i = 0; i < this.tableData.length; i++) {
-                if (this.tableData[i]) {
-                  if (this.tableData[i].customFields) {
-                    this.tableData[i].customFields = JSON.parse(this.tableData[i].customFields);
-                  }
-                  this.$set(this.tableData[i], "showTags", this.tableData[i].tags);
-                  this.$set(this.tableData[i], "issuesSize", this.tableData[i].issuesCount);
-                  this.$set(this.tableData[i], "hasLoadIssue", false);
-                  this.$set(this.tableData[i], "issuesContent", []);
-                }
-              }
+              this.tableData = this.normalizeTableData(r.data.listObject);
 
               // 需要判断tableData数据，放回调里面
               this.getPreData();
@@ -712,8 +727,13 @@ export default {
               if (typeof callback === "function") {
                 callback();
               }
+            })
+            .finally(() => {
+              this.loading = false;
             });
         this.getNexPageData();
+      } else {
+        this.loading = false;
       }
     },
     getNexPageData() {
@@ -763,6 +783,7 @@ export default {
         this.$refs.tableHeader.resetSearchData();
       }
       this.getTestPlanById();
+      this.autoCheckStatus();
       this.initTableData();
     },
     search() {

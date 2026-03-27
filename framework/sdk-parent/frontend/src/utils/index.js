@@ -116,8 +116,10 @@ export function fullScreenLoading(component) {
   });
 }
 
+// 关闭全屏加载遮罩
+// timeout 参数保留向后兼容，默认 1ms（等当前渲染完成后立即关闭）
 export function stopFullScreenLoading(loading, timeout) {
-  timeout = timeout ? timeout : 2000;
+  timeout = timeout ? timeout : 1;
   setTimeout(() => {
     loading.close();
   }, timeout);

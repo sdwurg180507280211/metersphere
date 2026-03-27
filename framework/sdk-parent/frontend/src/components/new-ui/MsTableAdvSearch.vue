@@ -83,7 +83,7 @@ import { _findByKey, _findIndexByKey } from "../search/custom-component";
 // 导入用户身份工具函数，用于获取当前登录用户 ID
 import { getCurrentUserId } from "../../utils/token";
 // 导入高级搜索条件记忆相关的工具函数（保存、读取、清除）
-import { saveAdvSearchCondition, getAdvSearchCondition, clearAdvSearchCondition } from "../../utils/tableUtils";
+import { saveAdvSearchCondition, getAdvSearchCondition, clearAdvSearchCondition, getCurrentProjectId } from "../../utils/tableUtils";
 
 // 高级搜索参数组装规则（非常关键）：
 // 1) 内置字段 key：由 search-components.js 统一维护（BUILTIN_ADV_SEARCH_KEYS），后端直接识别 combine[key]。
@@ -119,6 +119,11 @@ export default {
       type: String,
       default: '',
     },
+    // 项目ID，用于项目隔离
+    projectId: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -134,6 +139,22 @@ export default {
       isInit: false,
       conditionNum: 0,
     };
+  },
+  computed: {
+    effectiveProjectId() {
+      const propProjectId = this.projectId ? String(this.projectId).trim() : '';
+      if (propProjectId) {
+        return propProjectId;
+      }
+      const currentProjectId = getCurrentProjectId();
+      if (!currentProjectId) {
+        console.warn('[AdvSearch] 无法获取 projectId，搜索记忆已禁用');
+      }
+      return currentProjectId || '';
+    },
+    isAuto() {
+      return this.conditionNum > 0;
+    },
   },
   mounted() {
     // 注册当前组件为活跃的高级搜索组件
@@ -258,9 +279,6 @@ export default {
         }
       });
 
-      // 处理级联逻辑（新增）
-      this.handleCascadeLogic();
-
       if (this.conditionNum > 0) {
         this.$refs["filter-btn"].$el.focus();
         this.$refs["filter-btn"].$el.style.width = "auto";
@@ -279,11 +297,16 @@ export default {
       this.$emit("search", condition);
 
       // 【搜索记忆】保存当前搜索条件到 localStorage
-      // 仅当传入了 moduleKey 且能获取到有效用户 ID 时才执行保存
+      // 仅当传入了 moduleKey 且能获取到有效项目 ID 和用户 ID 时才执行保存
       if (this.moduleKey) {
-        const userId = getCurrentUserId();
-        if (userId) {
-          saveAdvSearchCondition(userId, this.moduleKey, this.optional.components);
+        const projectId = this.effectiveProjectId;
+        if (!projectId) {
+          console.warn('[AdvSearch] 无法获取 projectId，跳过保存搜索记忆，避免不同项目间共享');
+        } else {
+          const userId = getCurrentUserId();
+          if (userId) {
+            saveAdvSearchCondition(userId, projectId, this.moduleKey, this.optional.components);
+          }
         }
       }
 
@@ -361,9 +384,14 @@ export default {
 
       // 【搜索记忆】重置时清除 localStorage 中保存的搜索条件
       if (this.moduleKey) {
-        const userId = getCurrentUserId();
-        if (userId) {
-          clearAdvSearchCondition(userId, this.moduleKey);
+        const projectId = this.effectiveProjectId;
+        if (!projectId) {
+          console.warn('[AdvSearch] 无法获取 projectId，跳过清理搜索记忆');
+        } else {
+          const userId = getCurrentUserId();
+          if (userId) {
+            clearAdvSearchCondition(userId, projectId, this.moduleKey);
+          }
         }
       }
     },
@@ -386,11 +414,16 @@ export default {
       // 【搜索记忆】从 localStorage 回填上次保存的搜索条件
       // 在 slice 截取默认显示条件之后、设置 disable 状态之前执行
       if (this.moduleKey) {
-        const userId = getCurrentUserId();
-        if (userId) {
-          const saved = getAdvSearchCondition(userId, this.moduleKey);
-          if (saved) {
-            this._restoreSearchConditions(saved);
+        const projectId = this.effectiveProjectId;
+        if (!projectId) {
+          console.warn('[AdvSearch] 无法获取 projectId，跳过恢复搜索记忆，避免不同项目间共享');
+        } else {
+          const userId = getCurrentUserId();
+          if (userId) {
+            const saved = getAdvSearchCondition(userId, projectId, this.moduleKey);
+            if (saved) {
+              this._restoreSearchConditions(saved);
+            }
           }
         }
       }
@@ -488,20 +521,39 @@ export default {
       if (!Array.isArray(savedConditions)) {
         return;
       }
+
+      // 获取所有可用组件（包括未显示的自定义字段）
+      let allComponents = this.condition.custom
+        ? concat(this.config.components[0].child, this.config.components[1].child)
+        : this.config.components;
+
       savedConditions.forEach((saved) => {
-        // 在当前显示的搜索组件中查找与已保存条件 key 匹配的组件
-        const target = _findByKey(this.optional.components, saved.key);
+        // 先在当前显示的组件中查找
+        let target = _findByKey(this.optional.components, saved.key);
+
+        // 如果未找到，在所有组件中查找并添加到显示列表
         if (!target) {
-          // 字段在当前模板中不存在，跳过（兼容模板字段变更场景）
-          return;
+          target = _findByKey(allComponents, saved.key);
+          if (target) {
+            this.optional.components.push(target);
+          } else {
+            return;
+          }
         }
-        // 恢复操作符值（如 like、in、equals 等）
+
+        // 恢复操作符值
         if (saved.operator !== undefined && target.operator) {
           target.operator.value = saved.operator;
         }
-        // 恢复搜索值（可能是字符串、数组等多种类型）
+        // 恢复搜索值
         if (saved.value !== undefined) {
-          target.value = saved.value;
+          if (target.options && target.options.url) {
+            setTimeout(() => {
+              target.value = saved.value;
+            }, 1000);
+          } else {
+            target.value = saved.value;
+          }
         }
       });
     },
@@ -527,32 +579,11 @@ export default {
         }
       }
     },
-    // 新增方法：处理级联逻辑（工作空间-项目级联）
-    handleCascadeLogic() {
-      this.optional.components.forEach((component) => {
-        // 检查是否有级联配置
-        if (component.cascadeKey && component.cascadeUpdate) {
-          // 查找依赖的组件（如工作空间）
-          const cascadeComponent = this.optional.components.find(
-            c => c.key === component.cascadeKey
-          );
-          if (cascadeComponent && cascadeComponent.value) {
-            // 触发级联更新
-            component.cascadeUpdate(component, cascadeComponent.value);
-          }
-        }
-      });
-    },
     setScrollToBottom() {
       if (this.$refs["scrollbar"]) {
         this.$refs["scrollbar"].wrap.scrollTop =
           this.$refs["scrollbar"].wrap.scrollHeight;
       }
-    },
-  },
-  computed: {
-    isAuto() {
-      return this.conditionNum > 0;
     },
   },
 };

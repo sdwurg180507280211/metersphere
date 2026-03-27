@@ -133,7 +133,8 @@ public class TemporaryFileUtil {
                 deleteFile.delete();
             }
             File deleteFileFolder = deleteFile.getParentFile();
-            if (deleteFileFolder.isDirectory() && deleteFileFolder.listFiles().length == 0) {
+            File[] files = deleteFileFolder.listFiles();
+            if (deleteFileFolder.isDirectory() && files != null && files.length == 0) {
                 deleteFileFolder.delete();
             }
         });
