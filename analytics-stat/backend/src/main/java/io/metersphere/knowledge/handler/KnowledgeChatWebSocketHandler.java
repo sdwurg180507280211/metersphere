@@ -48,7 +48,13 @@ public class KnowledgeChatWebSocketHandler extends TextWebSocketHandler {
         String userToken = extractUserToken(session);
         try {
             String payload = message.getPayload();
-            if (StringUtils.isBlank(payload) || "ping".equalsIgnoreCase(payload.trim())) {
+            if (StringUtils.isBlank(payload)) {
+                return;
+            }
+
+            // 处理心跳
+            if ("ping".equalsIgnoreCase(payload.trim())) {
+                session.sendMessage(new TextMessage("pong"));
                 return;
             }
 

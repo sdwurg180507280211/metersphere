@@ -82,6 +82,8 @@
         :placeholder="currentPlaceholder"
         class="chat-textarea"
         @keydown.enter.exact.prevent="submit"
+        @keydown.enter.ctrl.exact.prevent="submit"
+        @keydown.enter.meta.exact.prevent="submit"
         @keydown.enter.shift.exact="insertNewLine"
       />
 
@@ -110,7 +112,7 @@
     <div class="input-footer">
       <div class="footer-left">
         <span class="hint">
-          <kbd>Enter</kbd> {{ t('analytics.knowledge.send') }} · <kbd>Shift</kbd> + <kbd>Enter</kbd> {{ t('analytics.knowledge.new_line') }}
+          <kbd>Enter</kbd> / <kbd>Ctrl</kbd> + <kbd>Enter</kbd> {{ t('analytics.knowledge.send') }} · <kbd>Shift</kbd> + <kbd>Enter</kbd> {{ t('analytics.knowledge.new_line') }}
         </span>
       </div>
       <div class="footer-right">

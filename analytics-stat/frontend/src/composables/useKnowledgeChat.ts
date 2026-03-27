@@ -55,6 +55,7 @@ const WORKSPACE_ID_KEY = 'workspace_id'
 const MAX_HISTORY_TURNS = 10
 const RECONNECT_DELAY = 1500
 const OPEN_TIMEOUT = 5000
+const HEARTBEAT_INTERVAL = 30000 // 30秒心跳
 
 function getTokenPayload(): TokenPayload {
   const tokenStr = localStorage.getItem(TOKEN_KEY)
@@ -123,6 +124,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
   const ws = ref<WebSocket | null>(null)
   let openPromise: Promise<void> | null = null
   let reconnectTimer: number | null = null
+  let heartbeatTimer: number | null = null
   let manualClose = false
   let activeRequest: ActiveRequest | null = null
 
@@ -130,6 +132,22 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
     if (reconnectTimer !== null) {
       window.clearTimeout(reconnectTimer)
       reconnectTimer = null
+    }
+  }
+
+  const startHeartbeat = () => {
+    stopHeartbeat()
+    heartbeatTimer = window.setInterval(() => {
+      if (ws.value?.readyState === WebSocket.OPEN) {
+        ws.value.send('ping')
+      }
+    }, HEARTBEAT_INTERVAL)
+  }
+
+  const stopHeartbeat = () => {
+    if (heartbeatTimer !== null) {
+      window.clearInterval(heartbeatTimer)
+      heartbeatTimer = null
     }
   }
 
@@ -244,21 +262,25 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
     openPromise = new Promise((resolve, reject) => {
       socket.onopen = () => {
         connectionState.value = 'connected'
+        startHeartbeat()
         resolve()
       }
 
       socket.onmessage = (event) => {
         if (typeof event.data === 'string') {
+          if (event.data === 'pong') return
           handleServerMessage(event.data)
         }
       }
 
       socket.onerror = () => {
         connectionState.value = manualClose ? 'disconnected' : 'reconnecting'
+        stopHeartbeat()
         reject(new Error('WebSocket 连接失败'))
       }
 
       socket.onclose = () => {
+        stopHeartbeat()
         if (ws.value === socket) {
           ws.value = null
         }
@@ -410,6 +432,7 @@ export function useKnowledgeChat(options: UseKnowledgeChatOptions = {}) {
     manualClose = true
     connectionState.value = 'disconnected'
     clearReconnectTimer()
+    stopHeartbeat()
     stopGenerating()
     ws.value?.close()
     ws.value = null
