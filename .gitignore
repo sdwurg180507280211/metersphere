@@ -48,3 +48,4 @@ qywx.json
 
 # 个人资料（不提交）
 #docs/08-参考资料/
+.claude/settings.local.json
