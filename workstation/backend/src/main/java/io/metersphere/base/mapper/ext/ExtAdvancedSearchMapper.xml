@@ -1,0 +1,639 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="io.metersphere.base.mapper.ext.ExtAdvancedSearchMapper">
+
+    <!-- 
+        高级检索 Mapper XML
+        支持跨工作空间、跨项目的动态查询
+        支持 JQL 和传统 combine 两种查询模式
+    -->
+
+    <!-- ==================== 通用 SQL 片段 ==================== -->
+    
+    <!-- 
+        combine 条件构建（复用现有的高级搜索机制）
+        支持动态拼接各种字段的查询条件
+    -->
+    <sql id="combineCondition">
+        <if test="request.combine != null">
+            <!-- 名称/标题模糊查询 -->
+            <if test="request.combine.name != null">
+                and ${tableAlias}.name
+                <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                    <property name="object" value="request.combine.name"/>
+                </include>
+            </if>
+            
+            <!-- ID/编号查询 -->
+            <if test="request.combine.num != null">
+                and ${tableAlias}.num
+                <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                    <property name="object" value="request.combine.num"/>
+                </include>
+            </if>
+            
+            <!-- 状态查询 -->
+            <if test="request.combine.status != null">
+                and ${tableAlias}.status
+                <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                    <property name="object" value="request.combine.status"/>
+                </include>
+            </if>
+            
+            <!-- 创建人查询（支持多选） -->
+            <if test="request.combine.createUser != null">
+                and ${tableAlias}.create_user
+                <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                    <property name="object" value="request.combine.createUser"/>
+                </include>
+            </if>
+            
+            <!-- 更新人查询 -->
+            <if test="request.combine.updateUser != null">
+                and ${tableAlias}.update_user
+                <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                    <property name="object" value="request.combine.updateUser"/>
+                </include>
+            </if>
+            
+            <!-- 创建时间查询 -->
+            <if test="request.combine.createTime != null">
+                and ${tableAlias}.create_time
+                <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                    <property name="object" value="request.combine.createTime"/>
+                </include>
+            </if>
+            
+            <!-- 更新时间查询 -->
+            <if test="request.combine.updateTime != null">
+                and ${tableAlias}.update_time
+                <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                    <property name="object" value="request.combine.updateTime"/>
+                </include>
+            </if>
+        </if>
+    </sql>
+    
+    <!-- 
+        filters 条件构建（快速筛选）
+        支持多选值的 IN 查询
+    -->
+    <sql id="filtersCondition">
+        <if test="request.filters != null and request.filters.size() > 0">
+            <foreach collection="request.filters.entrySet()" index="key" item="values">
+                <if test="values != null and values.size() > 0">
+                    and ${tableAlias}.${key} in
+                    <foreach collection="values" item="value" separator="," open="(" close=")">
+                        #{value}
+                    </foreach>
+                </if>
+            </foreach>
+        </if>
+    </sql>
+    
+    <!-- 
+        工作空间和项目过滤
+        确保只查询用户有权限访问的数据
+    -->
+    <sql id="workspaceProjectFilter">
+        <if test="request.workspaceIds != null and request.workspaceIds.size() > 0">
+            and project.workspace_id in
+            <foreach collection="request.workspaceIds" item="wsId" separator="," open="(" close=")">
+                #{wsId}
+            </foreach>
+        </if>
+        <if test="request.projectIds != null and request.projectIds.size() > 0">
+            and ${tableAlias}.project_id in
+            <foreach collection="request.projectIds" item="projId" separator="," open="(" close=")">
+                #{projId}
+            </foreach>
+        </if>
+    </sql>
+    
+    <!-- 
+        JQL WHERE 子句
+        当使用 JQL 模式时，直接拼接转换后的 SQL WHERE 条件
+        注意：这里使用 ${} 而不是 #{} 因为这是动态SQL片段，不是参数值
+    -->
+    <sql id="jqlCondition">
+        <if test="request.useJQL != null and request.useJQL == true and request.jqlWhereClause != null and request.jqlWhereClause != ''">
+            and (${request.jqlWhereClause})
+        </if>
+    </sql>
+    
+    <!-- 
+        排序条件
+        支持多字段排序
+    -->
+    <sql id="orderByClause">
+        <if test="request.orders != null and request.orders.size() > 0">
+            order by
+            <foreach collection="request.orders" item="order" separator=",">
+                ${tableAlias}.${order.name} ${order.type}
+            </foreach>
+        </if>
+        <if test="request.orders == null or request.orders.size() == 0">
+            order by ${tableAlias}.update_time desc
+        </if>
+    </sql>
+
+
+    <!-- ==================== 测试用例查询 ==================== -->
+    
+    <!-- 
+        查询测试用例列表
+        支持跨项目查询，返回测试用例的基本信息和关联的项目、工作空间信息
+    -->
+    <select id="queryTestCases" resultType="java.util.Map">
+        select
+            test_case.id,
+            test_case.num,
+            test_case.name,
+            test_case.priority,
+            test_case.type,
+            test_case.method,
+            test_case.status,
+            test_case.review_status as reviewStatus,
+            test_case.maintainer,
+            test_case.create_user as createUser,
+            test_case.create_time as createTime,
+            test_case.update_time as updateTime,
+            test_case.node_id as nodeId,
+            test_case.node_path as nodePath,
+            project.id as projectId,
+            project.name as projectName,
+            workspace.id as workspaceId,
+            workspace.name as workspaceName
+        from test_case
+        inner join project on test_case.project_id = project.id
+        inner join workspace on project.workspace_id = workspace.id
+        <where>
+            <!-- 排除已删除的用例 -->
+            and (test_case.status is null or test_case.status != 'Trash')
+            
+            <!-- 工作空间和项目过滤 -->
+            <include refid="workspaceProjectFilter">
+                <property name="tableAlias" value="test_case"/>
+            </include>
+            
+            <!-- JQL 条件（优先级高于 combine） -->
+            <include refid="jqlCondition"/>
+            
+            <!-- combine 高级搜索条件 -->
+            <if test="request.useJQL == null or request.useJQL == false">
+                <include refid="combineCondition">
+                    <property name="tableAlias" value="test_case"/>
+                </include>
+                
+                <!-- 测试用例专属字段 -->
+                <if test="request.combine != null">
+                    <!-- 优先级 -->
+                    <if test="request.combine.priority != null">
+                        and test_case.priority
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.priority"/>
+                        </include>
+                    </if>
+                    
+                    <!-- 维护人（支持多选） -->
+                    <if test="request.combine.maintainer != null">
+                        and test_case.maintainer
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.maintainer"/>
+                        </include>
+                    </if>
+                    
+                    <!-- 用例类型 -->
+                    <if test="request.combine.type != null">
+                        and test_case.type
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.type"/>
+                        </include>
+                    </if>
+                    
+                    <!-- 用例方式 -->
+                    <if test="request.combine.method != null">
+                        and test_case.method
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.method"/>
+                        </include>
+                    </if>
+                    
+                    <!-- 评审状态 -->
+                    <if test="request.combine.reviewStatus != null">
+                        and test_case.review_status
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.reviewStatus"/>
+                        </include>
+                    </if>
+                </if>
+                
+                <!-- filters 快速筛选 -->
+                <include refid="filtersCondition">
+                    <property name="tableAlias" value="test_case"/>
+                </include>
+            </if>
+        </where>
+        
+        <!-- 排序 -->
+        <include refid="orderByClause">
+            <property name="tableAlias" value="test_case"/>
+        </include>
+    </select>
+
+
+    <!-- ==================== 缺陷查询 ==================== -->
+    
+    <!-- 
+        查询缺陷列表
+        支持跨项目查询，返回缺陷的基本信息和关联的项目、工作空间信息
+    -->
+    <select id="queryIssues" resultType="java.util.Map">
+        select
+            issues.id,
+            issues.num,
+            issues.title as name,
+            issues.status,
+            issues.platform,
+            issues.platform_status as platformStatus,
+            issues.creator as createUser,
+            issues.create_time as createTime,
+            issues.update_time as updateTime,
+            issues.resource_id as resourceId,
+            project.id as projectId,
+            project.name as projectName,
+            workspace.id as workspaceId,
+            workspace.name as workspaceName
+        from issues
+        inner join project on issues.project_id = project.id
+        inner join workspace on project.workspace_id = workspace.id
+        <where>
+            <!-- 工作空间和项目过滤 -->
+            <include refid="workspaceProjectFilter">
+                <property name="tableAlias" value="issues"/>
+            </include>
+            
+            <!-- JQL 条件 -->
+            <include refid="jqlCondition"/>
+            
+            <!-- combine 高级搜索条件 -->
+            <if test="request.useJQL == null or request.useJQL == false">
+                <!-- 标题查询（映射到 name 字段） -->
+                <if test="request.combine != null and request.combine.name != null">
+                    and issues.title
+                    <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                        <property name="object" value="request.combine.name"/>
+                    </include>
+                </if>
+                
+                <!-- 其他通用字段 -->
+                <include refid="combineCondition">
+                    <property name="tableAlias" value="issues"/>
+                </include>
+                
+                <!-- 缺陷专属字段 -->
+                <if test="request.combine != null">
+                    <!-- 平台 -->
+                    <if test="request.combine.platform != null">
+                        and issues.platform
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.platform"/>
+                        </include>
+                    </if>
+                    
+                    <!-- 关联用例ID -->
+                    <if test="request.combine.resourceId != null">
+                        and issues.resource_id
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.resourceId"/>
+                        </include>
+                    </if>
+                </if>
+                
+                <!-- filters 快速筛选 -->
+                <include refid="filtersCondition">
+                    <property name="tableAlias" value="issues"/>
+                </include>
+            </if>
+        </where>
+        
+        <!-- 排序 -->
+        <include refid="orderByClause">
+            <property name="tableAlias" value="issues"/>
+        </include>
+    </select>
+
+
+    <!-- ==================== 测试计划查询 ==================== -->
+    
+    <!-- 
+        查询测试计划列表
+        支持跨项目查询，返回测试计划的基本信息和关联的项目、工作空间信息
+    -->
+    <select id="queryTestPlans" resultType="java.util.Map">
+        select
+            test_plan.id,
+            test_plan.name,
+            test_plan.status,
+            test_plan.stage,
+            test_plan.principal,
+            test_plan.planned_start_time as plannedStartTime,
+            test_plan.planned_end_time as plannedEndTime,
+            test_plan.actual_start_time as actualStartTime,
+            test_plan.actual_end_time as actualEndTime,
+            test_plan.creator as createUser,
+            test_plan.create_time as createTime,
+            test_plan.update_time as updateTime,
+            project.id as projectId,
+            project.name as projectName,
+            workspace.id as workspaceId,
+            workspace.name as workspaceName
+        from test_plan
+        inner join project on test_plan.project_id = project.id
+        inner join workspace on project.workspace_id = workspace.id
+        <where>
+            <!-- 排除已删除的测试计划 -->
+            and (test_plan.status is null or test_plan.status != 'Trash')
+            
+            <!-- 工作空间和项目过滤 -->
+            <include refid="workspaceProjectFilter">
+                <property name="tableAlias" value="test_plan"/>
+            </include>
+            
+            <!-- JQL 条件 -->
+            <include refid="jqlCondition"/>
+            
+            <!-- combine 高级搜索条件 -->
+            <if test="request.useJQL == null or request.useJQL == false">
+                <include refid="combineCondition">
+                    <property name="tableAlias" value="test_plan"/>
+                </include>
+                
+                <!-- 测试计划专属字段 -->
+                <if test="request.combine != null">
+                    <!-- 负责人（支持多选） -->
+                    <if test="request.combine.principal != null">
+                        and test_plan.principal
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.principal"/>
+                        </include>
+                    </if>
+                    
+                    <!-- 计划阶段 -->
+                    <if test="request.combine.stage != null">
+                        and test_plan.stage
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.stage"/>
+                        </include>
+                    </if>
+                    
+                    <!-- 计划开始时间 -->
+                    <if test="request.combine.plannedStartTime != null">
+                        and test_plan.planned_start_time
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.plannedStartTime"/>
+                        </include>
+                    </if>
+                    
+                    <!-- 计划结束时间 -->
+                    <if test="request.combine.plannedEndTime != null">
+                        and test_plan.planned_end_time
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.plannedEndTime"/>
+                        </include>
+                    </if>
+                    
+                    <!-- 实际开始时间 -->
+                    <if test="request.combine.actualStartTime != null">
+                        and test_plan.actual_start_time
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.actualStartTime"/>
+                        </include>
+                    </if>
+                    
+                    <!-- 实际结束时间 -->
+                    <if test="request.combine.actualEndTime != null">
+                        and test_plan.actual_end_time
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.actualEndTime"/>
+                        </include>
+                    </if>
+                </if>
+                
+                <!-- filters 快速筛选 -->
+                <include refid="filtersCondition">
+                    <property name="tableAlias" value="test_plan"/>
+                </include>
+            </if>
+        </where>
+        
+        <!-- 排序 -->
+        <include refid="orderByClause">
+            <property name="tableAlias" value="test_plan"/>
+        </include>
+    </select>
+
+    <!-- ==================== 用例评审查询 ==================== -->
+    
+    <!-- 
+        查询用例评审列表
+        支持跨项目查询，返回用例评审的基本信息和关联的项目、工作空间信息
+    -->
+    <select id="queryTestCaseReviews" resultType="java.util.Map">
+        select
+            test_case_review.id,
+            test_case_review.name,
+            test_case_review.status,
+            test_case_review.creator as createUser,
+            test_case_review.create_time as createTime,
+            test_case_review.update_time as updateTime,
+            test_case_review.end_time as endTime,
+            project.id as projectId,
+            project.name as projectName,
+            workspace.id as workspaceId,
+            workspace.name as workspaceName
+        from test_case_review
+        inner join project on test_case_review.project_id = project.id
+        inner join workspace on project.workspace_id = workspace.id
+        <where>
+            <!-- 排除已删除的评审 -->
+            and (test_case_review.status is null or test_case_review.status != 'Trash')
+            
+            <!-- 工作空间和项目过滤 -->
+            <include refid="workspaceProjectFilter">
+                <property name="tableAlias" value="test_case_review"/>
+            </include>
+            
+            <!-- JQL 条件 -->
+            <include refid="jqlCondition"/>
+            
+            <!-- combine 高级搜索条件 -->
+            <if test="request.useJQL == null or request.useJQL == false">
+                <include refid="combineCondition">
+                    <property name="tableAlias" value="test_case_review"/>
+                </include>
+                
+                <!-- 用例评审专属字段 -->
+                <if test="request.combine != null">
+                    <!-- 评审截止日期 -->
+                    <if test="request.combine.endTime != null">
+                        and test_case_review.end_time
+                        <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                            <property name="object" value="request.combine.endTime"/>
+                        </include>
+                    </if>
+                </if>
+                
+                <!-- filters 快速筛选 -->
+                <include refid="filtersCondition">
+                    <property name="tableAlias" value="test_case_review"/>
+                </include>
+            </if>
+        </where>
+        
+        <!-- 排序 -->
+        <include refid="orderByClause">
+            <property name="tableAlias" value="test_case_review"/>
+        </include>
+    </select>
+
+    <!-- ==================== 详情查询 ==================== -->
+    
+    <!-- 
+        获取测试用例详情
+        返回测试用例的完整信息，包括关联的项目、工作空间、自定义字段等
+    -->
+    <select id="getTestCaseDetail" resultType="java.util.Map">
+        select
+            test_case.id,
+            test_case.num,
+            test_case.name,
+            test_case.priority,
+            test_case.type,
+            test_case.method,
+            test_case.status,
+            test_case.review_status as reviewStatus,
+            test_case.maintainer,
+            test_case.create_user as createUser,
+            test_case.create_time as createTime,
+            test_case.update_time as updateTime,
+            test_case.node_id as nodeId,
+            test_case.node_path as nodePath,
+            test_case.prerequisite,
+            test_case.remark,
+            test_case.steps,
+            test_case.step_description as stepDescription,
+            test_case.expected_result as expectedResult,
+            test_case.custom_fields as customFields,
+            test_case.step_model as stepModel,
+            test_case.tags,
+            project.id as projectId,
+            project.name as projectName,
+            workspace.id as workspaceId,
+            workspace.name as workspaceName,
+            creator.name as createUserName,
+            maintainer_user.name as maintainerName
+        from test_case
+        inner join project on test_case.project_id = project.id
+        inner join workspace on project.workspace_id = workspace.id
+        left join user creator on test_case.create_user = creator.id
+        left join user maintainer_user on test_case.maintainer = maintainer_user.id
+        where test_case.id = #{id}
+    </select>
+    
+    <!-- 
+        获取缺陷详情
+        返回缺陷的完整信息，包括关联的项目、工作空间、自定义字段等
+    -->
+    <select id="getIssueDetail" resultType="java.util.Map">
+        select
+            issues.id,
+            issues.num,
+            issues.title as name,
+            issues.status,
+            issues.platform,
+            issues.platform_status as platformStatus,
+            issues.platform_id as platformId,
+            issues.creator as createUser,
+            issues.create_time as createTime,
+            issues.update_time as updateTime,
+            issues.resource_id as resourceId,
+            issues.description,
+            issues.custom_fields as customFields,
+            issues.reporter,
+            project.id as projectId,
+            project.name as projectName,
+            workspace.id as workspaceId,
+            workspace.name as workspaceName,
+            creator.name as createUserName
+        from issues
+        inner join project on issues.project_id = project.id
+        inner join workspace on project.workspace_id = workspace.id
+        left join user creator on issues.creator = creator.id
+        where issues.id = #{id}
+    </select>
+    
+    <!-- 
+        获取测试计划详情
+        返回测试计划的完整信息，包括关联的项目、工作空间、统计数据等
+    -->
+    <select id="getTestPlanDetail" resultType="java.util.Map">
+        select
+            test_plan.id,
+            test_plan.name,
+            test_plan.status,
+            test_plan.stage,
+            test_plan.principal,
+            test_plan.planned_start_time as plannedStartTime,
+            test_plan.planned_end_time as plannedEndTime,
+            test_plan.actual_start_time as actualStartTime,
+            test_plan.actual_end_time as actualEndTime,
+            test_plan.creator as createUser,
+            test_plan.create_time as createTime,
+            test_plan.update_time as updateTime,
+            test_plan.description,
+            test_plan.tags,
+            test_plan.repeat_case as repeatCase,
+            test_plan.automatic_status_update as automaticStatusUpdate,
+            project.id as projectId,
+            project.name as projectName,
+            workspace.id as workspaceId,
+            workspace.name as workspaceName,
+            creator.name as createUserName,
+            principal_user.name as principalName
+        from test_plan
+        inner join project on test_plan.project_id = project.id
+        inner join workspace on project.workspace_id = workspace.id
+        left join user creator on test_plan.creator = creator.id
+        left join user principal_user on test_plan.principal = principal_user.id
+        where test_plan.id = #{id}
+    </select>
+    
+    <!-- 
+        获取用例评审详情
+        返回用例评审的完整信息，包括关联的项目、工作空间、评审人等
+    -->
+    <select id="getTestCaseReviewDetail" resultType="java.util.Map">
+        select
+            test_case_review.id,
+            test_case_review.name,
+            test_case_review.status,
+            test_case_review.creator as createUser,
+            test_case_review.create_time as createTime,
+            test_case_review.update_time as updateTime,
+            test_case_review.end_time as endTime,
+            test_case_review.description,
+            test_case_review.tags,
+            project.id as projectId,
+            project.name as projectName,
+            workspace.id as workspaceId,
+            workspace.name as workspaceName,
+            creator.name as createUserName
+        from test_case_review
+        inner join project on test_case_review.project_id = project.id
+        inner join workspace on project.workspace_id = workspace.id
+        left join user creator on test_case_review.creator = creator.id
+        where test_case_review.id = #{id}
+    </select>
+
+</mapper>
