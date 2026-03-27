@@ -38,6 +38,19 @@ public class BaseProjectController {
         return baseProjectService.getUserProject(request, SessionUtils.getCurrentProjectId());
     }
 
+    /**
+     * 获取当前用户有权限的所有项目列表（GET 版本）
+     * 用于高级搜索下拉选项，MsTableSearchSelect 组件只支持 GET 请求
+     *
+     * @return 当前用户有权限的项目列表
+     */
+    @GetMapping("/list/user/project")
+    public List<Project> getUserProjectForSearch() {
+        ProjectRequest request = new ProjectRequest();
+        request.setUserId(SessionUtils.getUserId());
+        return baseProjectService.getUserProject(request, SessionUtils.getCurrentProjectId());
+    }
+
     @MsFileLimit
     @PostMapping(value = "upload/files/{projectId}", consumes = {"multipart/form-data"})
     @MsAuditLog(module = OperLogModule.PROJECT_FILE_MANAGEMENT, type = OperLogConstants.IMPORT, content = "#msClass.getLogDetails(#projectId)", msClass = BaseProjectService.class)

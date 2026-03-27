@@ -28,6 +28,7 @@
           :condition.sync="condition"
           :show-base-search="haveSearch"
           :module-key="moduleKey"
+          :project-id="projectId"
           @search="search">
         </ms-search>
       </span>

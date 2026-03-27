@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
@@ -44,11 +45,16 @@ public class LoginFilter implements WebFilter, Ordered {
         excludePatterns.add(new PathPatternParser().parse("/authsource/*"));
         //扫码源
         excludePatterns.add(new PathPatternParser().parse("/sso/callback/we_com"));
+<<<<<<< HEAD
         // 浏览器特殊请求（Chrome DevTools等）
         excludePatterns.add(new PathPatternParser().parse("/.well-known/**"));
         // 健康检查端点
         excludePatterns.add(new PathPatternParser().parse("/actuator/health"));
         excludePatterns.add(new PathPatternParser().parse("/actuator/info"));
+=======
+        // actuator 健康检查端点
+        excludePatterns.add(new PathPatternParser().parse("/actuator/**"));
+>>>>>>> develop-v2.10.26
 
         // 各模块首页
         swaggerUiConfigProperties.getUrls().forEach(v -> excludePatterns.add(new PathPatternParser().parse("/" + v.getName())));
@@ -82,6 +88,11 @@ public class LoginFilter implements WebFilter, Ordered {
         }
 
         if (isApiKeyCall(request)) {
+            return webFilterChain.filter(serverWebExchange);
+        }
+
+        // 如果是 management port，直接放行（不需要认证）
+        if (request.getLocalAddress() != null && request.getLocalAddress().getPort() == managementPort) {
             return webFilterChain.filter(serverWebExchange);
         }
 

@@ -1052,8 +1052,9 @@ export const TEST_CASE_RELEVANCE_ISSUE_LIST = [NAME, PLATFORM, CREATE_TIME, CREA
 // =========================
 // 所属工作空间（多选）
 // =========================
+// 说明：用于高级搜索中按工作空间筛选缺陷，GET 请求加载当前用户有权限的所有工作空间
 export const WORKSPACE = {
-  key: "workspaceIds",  // 使用复数形式，表示支持多选
+  key: "workspaceIds",
   name: 'MsTableSearchSelect',
   label: "所属工作空间",
   operator: {
@@ -1061,32 +1062,9 @@ export const WORKSPACE = {
     options: [OPERATORS.IN, OPERATORS.NOT_IN]
   },
   options: {
-    url: "/workspace/list/all",  // 获取所有工作空间
-    labelKey: "name",
-    valueKey: "id",
-    showLabel: option => {
-      return option.label;
-    }
-  },
-  props: {
-    multiple: true,
-    'collapse-tags': true  // 多选时折叠标签
-  }
-};
-
-// =========================
-// 所属项目（多选，支持级联）
-// =========================
-export const PROJECT = {
-  key: "projectIds",  // 使用复数形式，表示支持多选
-  name: 'MsTableSearchSelect',
-  label: "所属项目",
-  operator: {
-    value: OPERATORS.IN.value,
-    options: [OPERATORS.IN, OPERATORS.NOT_IN]
-  },
-  options: {
-    url: "/project/list/related/by-workspace",  // 获取项目列表（支持按工作空间过滤）
+    // 复用 SDK 中 BaseWorkspaceController 已有的 GET 端点
+    // 返回当前登录用户有权限的所有工作空间列表
+    url: "/workspace/list/userworkspace",
     labelKey: "name",
     valueKey: "id",
     showLabel: option => {
@@ -1096,22 +1074,35 @@ export const PROJECT = {
   props: {
     multiple: true,
     'collapse-tags': true
+  }
+};
+
+// =========================
+// 所属项目（多选）
+// =========================
+// 说明：用于高级搜索中按项目筛选缺陷，GET 请求加载当前用户有权限的所有项目
+// 不做级联（MsTableSearchSelect 只支持 GET + created 时一次性加载，无法动态刷新）
+export const PROJECT = {
+  key: "projectIds",
+  name: 'MsTableSearchSelect',
+  label: "所属项目",
+  operator: {
+    value: OPERATORS.IN.value,
+    options: [OPERATORS.IN, OPERATORS.NOT_IN]
   },
-  // 级联逻辑：监听工作空间变化
-  cascadeKey: "workspaceIds",  // 依赖的字段key
-  cascadeUpdate: function(component, workspaceIds) {
-    // 当工作空间变化时，重新加载项目列表
-    if (workspaceIds && workspaceIds.length > 0) {
-      // 更新请求参数，只获取选中工作空间下的项目
-      component.options.params = { workspaceIds: workspaceIds };
-    } else {
-      // 未选择工作空间时，显示所有项目
-      component.options.params = {};
+  options: {
+    // 复用 SDK 中 BaseProjectController 新增的 GET 端点
+    // 返回当前登录用户有权限的所有项目列表
+    url: "/project/list/user/project",
+    labelKey: "name",
+    valueKey: "id",
+    showLabel: option => {
+      return option.label;
     }
-    // 触发重新加载
-    if (component.init && typeof component.init === 'function') {
-      component.init();
-    }
+  },
+  props: {
+    multiple: true,
+    'collapse-tags': true
   }
 };
 

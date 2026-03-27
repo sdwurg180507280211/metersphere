@@ -68,8 +68,10 @@
         :total="total"
         enableSelection
         :condition="condition"
+        :row-click-style="true"
         @filter="filter"
         @refresh="onChange"
+        @handleRowClick="openRowEditor"
         ref="variableTable"
       >
         <ms-table-column prop="num" sortable label="ID" min-width="60" />
@@ -109,7 +111,6 @@
               size="mini"
               maxlength="200"
               :placeholder="$t('api_test.variable_name')"
-              show-word-limit
               @change="change(scope.row)"
             />
           </template>
@@ -168,7 +169,6 @@
               :placeholder="valueText(scope.row)"
               @change="changeVariableVal(scope.row)"
               :maxlength="5000"
-              show-word-limit
               :disabled="
                 scope.row.type === 'COUNTER' || scope.row.type === 'RANDOM'
               "
@@ -243,6 +243,42 @@
       ref="variableImport"
       @mergeData="mergeData"
     ></variable-import>
+    <el-dialog
+      class="row-editor-dialog"
+      :title="$t('api_test.environment.common_config')"
+      :visible.sync="rowEditorVisible"
+      width="1040px"
+      :close-on-click-modal="false"
+      append-to-body
+    >
+      <el-form :model="rowEditorForm" label-width="70px" size="small">
+        <el-form-item :label="$t('api_test.variable_name')">
+          <el-input v-model="rowEditorForm.name" maxlength="200" show-word-limit />
+        </el-form-item>
+        <el-form-item :label="$t('api_test.value')">
+          <el-input
+            v-model="rowEditorForm.value"
+            :placeholder="valueText(rowEditorForm)"
+            :maxlength="5000"
+            show-word-limit
+            :disabled="
+              rowEditorForm.type === 'COUNTER' || rowEditorForm.type === 'RANDOM'
+            "
+          />
+        </el-form-item>
+        <el-form-item :label="$t('commons.remark')">
+          <el-input
+            v-model="rowEditorForm.description"
+            type="textarea"
+            :rows="16"
+          />
+        </el-form-item>
+      </el-form>
+      <span slot="footer">
+        <el-button size="small" @click="rowEditorVisible = false">{{ $t('commons.cancel') }}</el-button>
+        <el-button type="primary" size="small" @click="confirmRowEditor">{{ $t('commons.confirm') }}</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -328,6 +364,15 @@ export default {
         selectAll: false,
         unSelectIds: [],
       },
+      rowEditorVisible: false,
+      rowEditorForm: {
+        id: "",
+        name: "",
+        value: "",
+        description: "",
+        type: "CONSTANT",
+      },
+      rowEditorTargetId: "",
     };
   },
   watch: {
@@ -511,6 +556,54 @@ export default {
           item.enable = row.enable;
         }
       });
+    },
+    openRowEditor(row, column) {
+      if (this.isReadOnly || !row || !row.id) {
+        return;
+      }
+      if (!column || column.property !== "num") {
+        return;
+      }
+      this.rowEditorTargetId = row.id;
+      this.rowEditorForm = {
+        id: row.id,
+        name: row.name,
+        value: row.value,
+        description: row.description,
+        type: row.type,
+      };
+      this.rowEditorVisible = true;
+    },
+    confirmRowEditor() {
+      let repeatKey = "";
+      this.items.forEach((item) => {
+        if (
+          item.id !== this.rowEditorTargetId &&
+          item.name &&
+          item.name === this.rowEditorForm.name
+        ) {
+          repeatKey = item.name;
+        }
+      });
+      if (repeatKey !== "") {
+        this.$warning(
+          `${this.$t(
+            "api_test.environment.common_config"
+          )}【${repeatKey}】${this.$t("load_test.param_is_duplicate")}`
+        );
+        return;
+      }
+      this.items.forEach((item) => {
+        if (item.id === this.rowEditorTargetId) {
+          item.name = this.rowEditorForm.name;
+          item.value = this.rowEditorForm.value;
+          item.description = this.rowEditorForm.description;
+        }
+      });
+      this.rowEditorVisible = false;
+      this.rowEditorTargetId = "";
+      this.filter(this.currentPage);
+      this.$emit("change", this.items);
     },
     valueText(data) {
       switch (data.type) {
@@ -819,5 +912,14 @@ export default {
 
 .kv-delete {
   width: 60px;
+}
+
+.row-editor-dialog :deep(.el-textarea__inner) {
+  width: 100%;
+  resize: vertical;
+}
+
+.row-editor-dialog :deep(.el-form-item__content) {
+  overflow: visible;
 }
 </style>
