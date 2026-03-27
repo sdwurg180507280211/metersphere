@@ -14,7 +14,7 @@
           <span class="bot-name">{{ t('analytics.knowledge.chat_assistant') }}</span>
           <span class="model-tag" v-if="message.model">{{ message.model }}</span>
         </div>
-        <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
+        <span class="timestamp">{{ formattedTime }}</span>
       </div>
       
       <!-- Loading State -->
@@ -143,16 +143,16 @@ const showFeedbackForm = ref(false)
 const feedbackRating = ref<'up' | 'down' | null>(props.message.feedback?.rating || null)
 const feedbackReason = ref(props.message.feedback?.reason || '')
 
-const formatTime = (timestamp: number) => {
-  const date = new Date(timestamp)
+const formattedTime = computed(() => {
+  const date = new Date(props.message.timestamp)
   const now = new Date()
   const isToday = date.toDateString() === now.toDateString()
-  
+
   if (isToday) {
     return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }
   return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
+})
 
 const handleFeedback = (rating: 'up' | 'down') => {
   if (feedbackRating.value === rating) {

@@ -8,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
@@ -16,10 +17,7 @@ import org.springframework.web.socket.WebSocketSession;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +27,8 @@ public class KnowledgeChatWebSocketService {
     private static final int MAX_SNIPPET_LENGTH = 200;
     private static final int MAX_TOP_K = 10;
     private static final int MAX_HISTORY_TURNS_LIMIT = 20;
+    private static final int MAX_USER_CONCURRENT_REQUESTS = 3;
+    private static final long REQUEST_TIMEOUT_MS = 300000; // 5分钟
 
     @Value("${chat.api.top-k:5}")
     private int defaultTopK;
@@ -42,9 +42,20 @@ public class KnowledgeChatWebSocketService {
     @Autowired
     private KnowledgeChatLlmClient llmClient;
 
+    @Autowired
+    @Qualifier("chatExecutor")
+    private Executor chatExecutor;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ConcurrentMap<String, CompletableFuture<Void>> activeRequests = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Boolean> cancelledRequests = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Long> requestTimestamps = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Integer> userRequestCounts = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "chat-cleanup");
+        t.setDaemon(true);
+        return t;
+    });
 
     public void processMessage(String fallbackUserId,
                                String userId,
@@ -65,7 +76,15 @@ public class KnowledgeChatWebSocketService {
         int safeTopK = normalizeTopK(topK);
         List<KnowledgeChatLlmClient.HistoryTurn> safeHistory = normalizeHistory(history);
 
+        // 检查用户并发限制
+        if (!checkUserConcurrency(effectiveUserId, session, normalizedRequestId)) {
+            sendError(session, normalizedRequestId, "请求过于频繁，请稍后再试");
+            return;
+        }
+
         cancelledRequests.remove(taskKey);
+        requestTimestamps.put(taskKey, System.currentTimeMillis());
+
         CompletableFuture<Void> task = CompletableFuture.runAsync(() -> {
             try {
                 if ("knowledge".equals(effectiveMode)) {
@@ -85,8 +104,10 @@ public class KnowledgeChatWebSocketService {
             } finally {
                 activeRequests.remove(taskKey);
                 cancelledRequests.remove(taskKey);
+                requestTimestamps.remove(taskKey);
+                decrementUserRequestCount(effectiveUserId);
             }
-        });
+        }, chatExecutor);
 
         activeRequests.put(taskKey, task);
     }
@@ -258,5 +279,36 @@ public class KnowledgeChatWebSocketService {
         } catch (Exception e) {
             logger.error("发送error失败: {}", e.getMessage(), e);
         }
+    }
+
+    private boolean checkUserConcurrency(String userId, WebSocketSession session, String requestId) {
+        int count = userRequestCounts.compute(userId, (k, v) -> v == null ? 1 : v + 1);
+        if (count > MAX_USER_CONCURRENT_REQUESTS) {
+            userRequestCounts.computeIfPresent(userId, (k, v) -> v - 1);
+            logger.warn("用户并发请求超限, userId={}, count={}", userId, count);
+            return false;
+        }
+        return true;
+    }
+
+    private void decrementUserRequestCount(String userId) {
+        userRequestCounts.computeIfPresent(userId, (k, v) -> v <= 1 ? null : v - 1);
+    }
+
+    private void cleanupExpiredRequests() {
+        long now = System.currentTimeMillis();
+        requestTimestamps.entrySet().removeIf(entry -> {
+            if (now - entry.getValue() > REQUEST_TIMEOUT_MS) {
+                String taskKey = entry.getKey();
+                CompletableFuture<Void> task = activeRequests.remove(taskKey);
+                if (task != null) {
+                    task.cancel(true);
+                }
+                cancelledRequests.remove(taskKey);
+                logger.info("清理超时请求: {}", taskKey);
+                return true;
+            }
+            return false;
+        });
     }
 }

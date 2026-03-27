@@ -5,6 +5,9 @@
 -- 更新时间：2026-01-30 - 新增回收站数据过滤(tc.delete_time IS NULL)
 -- 更新时间：2026-01-30 - 新增测试计划按模块统计SQL
 -- 更新时间：2026-02-06 - SQL3和SQL4添加创建时间范围过滤
+-- 更新时间：2026-03-20 - 新增SQL11：按项目统计各状态测试计划数量及已完成或已结束且通过率>95%的计划数量
+
+-- 所有SQL都要加上时间范围
 -- ==========================================
 
 -- 方式一：按工作空间名称查询（分离统计,避免笛卡尔积）
@@ -329,6 +332,246 @@ GROUP BY
 ORDER BY
     p.name;
 
+-- SQL8: 从所属系统角度统计功能用例数量、缺陷总数及严重程度分布
+-- 时间范围：2020-01-01 至 2026-12-31
+-- 更新时间：2026-03-17 - 修复"未分配系统"重复问题，添加TRIM后空值过滤
+
+SELECT
+    COALESCE(system_names.name, '未分配系统') AS 所属系统,
+    COALESCE(test_case_count, 0) AS 功能用例数量,
+    COALESCE(issue_total, 0) AS 缺陷总数,
+    COALESCE(severity_阻断, 0) AS 严重程度_阻断,
+    COALESCE(severity_严重, 0) AS 严重程度_严重,
+    COALESCE(severity_一般, 0) AS 严重程度_一般,
+    COALESCE(severity_其他, 0) AS 严重程度_其他,
+    COALESCE(project_list, '-') AS 用例所属项目,
+    COALESCE(issue_project_list, '-') AS 缺陷所属项目
+FROM (
+    SELECT DISTINCT
+        CASE
+            WHEN asys.id IS NULL THEN 'UNASSIGNED'
+            ELSE raw_systems.system_id
+        END AS system_id
+    FROM (
+        SELECT DISTINCT
+            COALESCE(NULLIF(TRIM(BOTH '"' FROM cftc.value), ''), 'UNASSIGNED') AS system_id
+        FROM custom_field_test_case cftc
+        INNER JOIN test_case tc ON cftc.resource_id = tc.id
+        INNER JOIN project p ON tc.project_id = p.id
+        INNER JOIN workspace w ON p.workspace_id = w.id
+        WHERE cftc.field_id = 'case-associated-system-field-2024-12-01-002'
+            AND tc.delete_time IS NULL
+            AND w.name = '功能测试工作空间'
+        UNION
+        SELECT DISTINCT
+            COALESCE(NULLIF(TRIM(BOTH '"' FROM cfi.value), ''), 'UNASSIGNED') AS system_id
+        FROM custom_field_issues cfi
+        INNER JOIN issues i ON cfi.resource_id = i.id
+        INNER JOIN project p ON i.project_id = p.id
+        INNER JOIN workspace w ON p.workspace_id = w.id
+        WHERE cfi.field_id = 'issue-associated-system-field-2024-12-16-001'
+            AND w.name = '功能测试工作空间'
+    ) raw_systems
+    LEFT JOIN associated_system asys ON raw_systems.system_id = asys.id
+) systems
+LEFT JOIN (
+    SELECT
+        TRIM(BOTH '"' FROM cftc.value) AS system_id,
+        COUNT(DISTINCT tc.id) AS test_case_count,
+        GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ') AS project_list
+    FROM test_case tc
+    INNER JOIN custom_field_test_case cftc
+        ON tc.id = cftc.resource_id
+    INNER JOIN project p ON tc.project_id = p.id
+    INNER JOIN workspace w ON p.workspace_id = w.id
+    WHERE cftc.field_id = 'case-associated-system-field-2024-12-01-002'
+        AND tc.type = 'functional'
+        AND cftc.value IS NOT NULL
+        AND cftc.value != ''
+        AND tc.delete_time IS NULL
+        AND tc.create_time BETWEEN UNIX_TIMESTAMP('2020-01-01 00:00:00') * 1000
+                               AND UNIX_TIMESTAMP('2026-12-31 23:59:59') * 1000
+        AND w.name = '功能测试工作空间'
+    GROUP BY TRIM(BOTH '"' FROM cftc.value)
+) tc_stats ON systems.system_id = tc_stats.system_id
+LEFT JOIN (
+    SELECT
+        TRIM(BOTH '"' FROM cfi.value) AS system_id,
+        COUNT(DISTINCT i.id) AS issue_total,
+        SUM(CASE WHEN TRIM(BOTH '"' FROM cfi_severity.value) = '阻断' THEN 1 ELSE 0 END) AS severity_阻断,
+        SUM(CASE WHEN TRIM(BOTH '"' FROM cfi_severity.value) = '严重' THEN 1 ELSE 0 END) AS severity_严重,
+        SUM(CASE WHEN TRIM(BOTH '"' FROM cfi_severity.value) = '一般' THEN 1 ELSE 0 END) AS severity_一般,
+        SUM(CASE WHEN TRIM(BOTH '"' FROM cfi_severity.value) NOT IN ('阻断', '严重', '一般') OR cfi_severity.value IS NULL THEN 1 ELSE 0 END) AS severity_其他,
+        GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ') AS issue_project_list
+    FROM issues i
+    INNER JOIN custom_field_issues cfi
+        ON i.id = cfi.resource_id
+    INNER JOIN project p ON i.project_id = p.id
+    INNER JOIN workspace w ON p.workspace_id = w.id
+    LEFT JOIN custom_field_issues cfi_severity
+        ON i.id = cfi_severity.resource_id
+        AND cfi_severity.field_id = 'issue-severity-level-field-2024-12-01-002'
+    WHERE cfi.field_id = 'issue-associated-system-field-2024-12-16-001'
+        AND cfi.value IS NOT NULL
+        AND cfi.value != ''
+        AND i.create_time BETWEEN UNIX_TIMESTAMP('2020-01-01 00:00:00') * 1000
+                              AND UNIX_TIMESTAMP('2026-12-31 23:59:59') * 1000
+        AND w.name = '功能测试工作空间'
+    GROUP BY TRIM(BOTH '"' FROM cfi.value)
+) issue_stats ON systems.system_id = issue_stats.system_id
+LEFT JOIN associated_system system_names ON systems.system_id = system_names.id
+ORDER BY 缺陷总数 DESC, 功能用例数量 DESC;
+
+
+-- SQL9: 从用例执行人维度统计执行用例数量、创建缺陷数量、缺陷严重等级分布
+-- 时间范围：2020-01-01 至 2026-12-31
+
+SELECT
+    COALESCE(u.name, testers.tester_id, '未分配') AS 执行人,
+    COALESCE(test_case_count, 0) AS 执行用例数量,
+    COALESCE(project_list, '-') AS 所属项目,
+    COALESCE(issue_count, 0) AS 创建缺陷数量,
+    COALESCE(severity_阻断, 0) AS 严重程度_阻断,
+    COALESCE(severity_严重, 0) AS 严重程度_严重,
+    COALESCE(severity_一般, 0) AS 严重程度_一般,
+    COALESCE(severity_其他, 0) AS 严重程度_其他
+FROM (
+    SELECT DISTINCT tptc.executor AS tester_id
+    FROM test_plan_test_case tptc
+    INNER JOIN test_plan tp ON tptc.plan_id = tp.id
+    INNER JOIN project p ON tp.project_id = p.id
+    INNER JOIN workspace w ON p.workspace_id = w.id
+    WHERE tptc.executor IS NOT NULL AND tptc.executor != ''
+        AND w.name = '功能测试工作空间'
+    UNION
+    SELECT DISTINCT i.creator AS tester_id
+    FROM issues i
+    INNER JOIN project p ON i.project_id = p.id
+    INNER JOIN workspace w ON p.workspace_id = w.id
+    WHERE i.creator IS NOT NULL AND i.creator != ''
+        AND w.name = '功能测试工作空间'
+) testers
+LEFT JOIN (
+    SELECT
+        tptc.executor AS tester_id,
+        COUNT(DISTINCT tptc.id) AS test_case_count,
+        GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ') AS project_list
+    FROM test_plan_test_case tptc
+    INNER JOIN test_plan tp ON tptc.plan_id = tp.id
+    INNER JOIN project p ON tp.project_id = p.id
+    INNER JOIN workspace w ON p.workspace_id = w.id
+    INNER JOIN test_case tc ON tptc.case_id = tc.id
+    WHERE tptc.executor IS NOT NULL
+        AND tptc.executor != ''
+        AND tptc.is_del = 0
+        AND tc.delete_time IS NULL
+        AND tptc.update_time BETWEEN UNIX_TIMESTAMP('2020-01-01 00:00:00') * 1000
+                            AND UNIX_TIMESTAMP('2026-12-31 23:59:59') * 1000
+        AND w.name = '功能测试工作空间'
+    GROUP BY tptc.executor
+) tc_stats ON testers.tester_id = tc_stats.tester_id
+LEFT JOIN (
+    SELECT
+        i.creator AS tester_id,
+        COUNT(*) AS issue_count,
+        SUM(CASE WHEN TRIM(BOTH '"' FROM cfi_severity.value) = '阻断' THEN 1 ELSE 0 END) AS severity_阻断,
+        SUM(CASE WHEN TRIM(BOTH '"' FROM cfi_severity.value) = '严重' THEN 1 ELSE 0 END) AS severity_严重,
+        SUM(CASE WHEN TRIM(BOTH '"' FROM cfi_severity.value) = '一般' THEN 1 ELSE 0 END) AS severity_一般,
+        SUM(CASE WHEN TRIM(BOTH '"' FROM cfi_severity.value) NOT IN ('阻断', '严重', '一般') OR cfi_severity.value IS NULL THEN 1 ELSE 0 END) AS severity_其他
+    FROM issues i
+    INNER JOIN project p ON i.project_id = p.id
+    INNER JOIN workspace w ON p.workspace_id = w.id
+    LEFT JOIN custom_field_issues cfi_severity
+        ON i.id = cfi_severity.resource_id
+        AND cfi_severity.field_id = 'issue-severity-level-field-2024-12-01-002'
+    WHERE i.creator IS NOT NULL
+        AND i.creator != ''
+        AND i.create_time BETWEEN UNIX_TIMESTAMP('2020-01-01 00:00:00') * 1000
+                            AND UNIX_TIMESTAMP('2026-12-31 23:59:59') * 1000
+        AND w.name = '功能测试工作空间'
+    GROUP BY i.creator
+) issue_stats ON testers.tester_id = issue_stats.tester_id
+LEFT JOIN user u ON testers.tester_id = u.id
+ORDER BY 执行用例数量 DESC, 创建缺陷数量 DESC;
+
+
+-- SQL10: 从创建人维度统计功能用例数量（区分工作空间、排除回收站）
+-- 时间范围：2020-01-01 至 2026-12-31
+
+SELECT
+    COALESCE(u.name, tc.create_user, '未分配') AS 创建人,
+    COUNT(*) AS 功能用例数量
+FROM test_case tc
+INNER JOIN project p ON tc.project_id = p.id
+INNER JOIN workspace w ON p.workspace_id = w.id
+LEFT JOIN user u ON tc.create_user = u.id
+WHERE tc.type = 'functional'
+    AND tc.delete_time IS NULL
+    AND tc.create_time BETWEEN UNIX_TIMESTAMP('2020-01-01 00:00:00') * 1000
+                           AND UNIX_TIMESTAMP('2026-12-31 23:59:59') * 1000
+    AND w.name = '功能测试工作空间'
+GROUP BY tc.create_user, u.name
+ORDER BY 功能用例数量 DESC;
+
+-- SQL11: 统计每个项目下各状态的测试计划数量及已完成或已结束且通过率>95%的测试计划数量（排除已删除，带时间范围）
+-- 说明：
+--   1. 各状态统计：Prepare(未开始)、Underway(进行中)、Completed(已完成)、Finished(已结束)、Archived(已归档)
+--   2. 通过率计算：Pass状态用例数 / 总用例数 * 100，排除已删除的用例关联(is_del=0)
+--   3. 排除已删除的测试计划（status != 'Trash'）
+--   4. 时间范围：按测试计划的计划开始时间和计划结束时间过滤（test_plan.planned_start_time / planned_end_time）
+-- 创建时间：2026-03-20
+SELECT
+    w.name AS '工作空间名称',
+    p.name AS '项目名称',
+    COUNT(DISTINCT tp.id) AS '测试计划总数',
+    COUNT(DISTINCT CASE WHEN tp.status = 'Prepare' THEN tp.id END) AS '未开始',
+    COUNT(DISTINCT CASE WHEN tp.status = 'Underway' THEN tp.id END) AS '进行中',
+    COUNT(DISTINCT CASE WHEN tp.status = 'Completed' THEN tp.id END) AS '已完成',
+    COUNT(DISTINCT CASE WHEN tp.status = 'Finished' THEN tp.id END) AS '已结束',
+    COUNT(DISTINCT CASE WHEN tp.status = 'Archived' THEN tp.id END) AS '已归档',
+    COALESCE(hp.high_pass_count, 0) AS '已完成或已结束且通过率>95%',
+    CONCAT(
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-01-01 00:00:00')),
+        ' ~ ',
+        FROM_UNIXTIME(UNIX_TIMESTAMP('2026-03-20 23:59:59'))
+    ) AS '统计时间范围(计划时间)'
+FROM
+    workspace w
+    INNER JOIN project p ON w.id = p.workspace_id
+    LEFT JOIN test_plan tp ON p.id = tp.project_id
+        AND tp.status != 'Trash'  -- 排除已删除的计划
+        AND tp.planned_start_time >= UNIX_TIMESTAMP('2026-01-01 00:00:00') * 1000  -- 计划开始时间（毫秒时间戳）
+        AND tp.planned_end_time <= UNIX_TIMESTAMP('2026-03-20 23:59:59') * 1000  -- 计划结束时间（毫秒时间戳）
+    -- 子查询: 统计已完成(Completed)或已结束(Finished)且通过率>95%的测试计划数量
+    LEFT JOIN (
+        SELECT
+            project_id,
+            COUNT(*) AS high_pass_count
+        FROM (
+            SELECT
+                tp2.id,
+                tp2.project_id,
+                COUNT(tptc.id) AS total_cases,
+                SUM(CASE WHEN tptc.status = 'Pass' THEN 1 ELSE 0 END) AS pass_cases,
+                ROUND(SUM(CASE WHEN tptc.status = 'Pass' THEN 1 ELSE 0 END) / COUNT(tptc.id) * 100, 2) AS pass_rate
+            FROM test_plan tp2
+            INNER JOIN test_plan_test_case tptc ON tp2.id = tptc.plan_id AND tptc.is_del = 0
+            WHERE tp2.status IN ('Completed', 'Finished')  -- 已完成或已结束
+              AND tp2.status != 'Trash'  -- 排除已删除的计划
+              AND tp2.planned_start_time >= UNIX_TIMESTAMP('2026-01-01 00:00:00') * 1000  -- 计划开始时间（毫秒时间戳）
+              AND tp2.planned_end_time <= UNIX_TIMESTAMP('2026-03-20 23:59:59') * 1000  -- 计划结束时间（毫秒时间戳）
+            GROUP BY tp2.id, tp2.project_id
+            HAVING pass_rate > 95
+        ) high_pass_plans
+        GROUP BY project_id
+    ) hp ON p.id = hp.project_id
+WHERE
+    w.name = '功能测试工作空间'  -- 替换为实际工作空间名称
+GROUP BY
+    w.name, p.name
+ORDER BY
+    p.name;
+
 
 -- ==========================================
 -- 说明：
@@ -364,4 +607,10 @@ ORDER BY
 --     - SQL4: 按创建时间过滤（test_plan.create_time）
 --     - 统计某时间段内新创建的用例、测试计划、缺陷数量
 --     - 适用场景：统计新增数据、分析增长趋势
+-- 14. SQL11 通过率计算（2026-03-20新增）：
+--     - 通过率 = Pass状态用例数 / 总关联用例数 * 100
+--     - 仅统计已完成(Completed)或已结束(Finished)状态的测试计划
+--     - 排除已删除的用例关联（test_plan_test_case.is_del = 0）
+--     - 排除已删除的测试计划（test_plan.status != 'Trash'）
+--     - 使用嵌套子查询：内层按计划维度计算通过率并筛选>95%，外层按项目汇总数量
 -- ==========================================
