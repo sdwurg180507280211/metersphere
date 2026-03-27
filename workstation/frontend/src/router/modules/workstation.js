@@ -3,6 +3,7 @@ import Upcoming from '@/business/upcoming/Upcoming'
 import Focus from '@/business/focus/Focus'
 import Creation from '@/business/creation/Creation'
 import Dashboard from '@/business/dashboard/Dashboard'
+import AdvancedSearch from '@/business/advanced-search/AdvancedSearch'
 
 export default {
   path: "/workstation",
@@ -29,6 +30,11 @@ export default {
       path: 'creation',
       name: 'workstationCreation',
       component: Creation,
+    },
+    {
+      path: 'advanced-search',
+      name: 'workstationAdvancedSearch',
+      component: AdvancedSearch,
     },
   ]
 };
