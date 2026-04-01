@@ -160,9 +160,9 @@ public class IssueStatusTransitionService {
         updateIssue.setUpdateTime(System.currentTimeMillis());
         issuesMapper.updateByPrimaryKeySelective(updateIssue);
 
-        // closed -> reopened 时，自动增加“复测次数”（系统字段），并与状态变更一起写入审计日志
+        // 只要流转到 reopened，自动增加"复测次数"（系统字段），并与状态变更一起写入审计日志
         List<IssueChangeLogDetailDTO> extraLogDetails = new ArrayList<>();
-        if (StringUtils.equals(currentStatus, "closed") && StringUtils.equals(toStatus, "reopened")) {
+        if (StringUtils.equals(toStatus, "reopened")) {
             IssueChangeLogDetailDTO retestCountLog = increaseRetestCount(issue);
             if (retestCountLog != null) {
                 extraLogDetails.add(retestCountLog);
@@ -204,7 +204,7 @@ public class IssueStatusTransitionService {
     }
 
     /**
-     * 仅在 closed -> reopened 场景下调用：复测次数 +1（如果不存在，则按0初始化后 +1）。
+     * 只要流转到 reopened 场景下调用：复测次数 +1（如果不存在，则按0初始化后 +1）。
      *
      * @return 返回用于审计日志的明细（FIELD_TYPE_CUSTOM），若字段不存在则返回null（不阻断状态流转）
      */

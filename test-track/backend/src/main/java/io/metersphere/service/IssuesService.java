@@ -715,6 +715,8 @@ public class IssuesService {
         request.setOrders(ServiceUtils.getDefaultOrderByField(request.getOrders(), "create_time"));
         setCustomFieldsOrder(request);
         ServiceUtils.setBaseQueryRequestCustomMultipleFields(request);
+        // 设置当前用户ID，用于跨项目搜索时的权限过滤
+        request.setUserId(SessionUtils.getUserId());
         List<IssuesDao> issues = extIssuesMapper.getIssues(request);
 
         Map<String, Set<String>> caseSetMap = getCaseSetMap(issues);
@@ -772,6 +774,22 @@ public class IssuesService {
             request.setCurrentUserId(userId);
             request.setUserGroupId(userGroupId);
         }
+    }
+
+    /**
+     * 获取用户在项目中所属的用户组
+     * 目的是：前端据此判断是否需要勾选"只看我创建的"默认选项
+     * 如果不这样做：前端无法知道用户的用户组，无法实现用户组权限过滤
+     *
+     * @param projectId 项目ID
+     * @param userId 用户ID
+     * @return 用户组ID（如 'developer', 'tester'），如果不属于任何用户组则返回null
+     */
+    public String getUserGroupInProject(String projectId, String userId) {
+        if (StringUtils.isBlank(projectId) || StringUtils.isBlank(userId)) {
+            return null;
+        }
+        return extIssuesMapper.getUserGroupInProject(userId, projectId);
     }
 
     private void setCustomFieldsOrder(IssuesRequest request) {
@@ -1461,6 +1479,8 @@ public class IssuesService {
 
     public List<IssuesDao> relateList(IssuesRequest request) {
         request.setOrders(ServiceUtils.getDefaultOrderByField(request.getOrders(), "create_time"));
+        // 设置当前用户ID，用于跨项目搜索时的权限过滤
+        request.setUserId(SessionUtils.getUserId());
         List<IssuesDao> issues = extIssuesMapper.getIssues(request);
         Map<String, User> userMap = getUserMap(issues);
         issues.forEach(issue -> {
@@ -1885,6 +1905,8 @@ public class IssuesService {
 
     public List<IssuesDao> listByWorkspaceId(IssuesRequest request) {
         request.setOrders(ServiceUtils.getDefaultOrderByField(request.getOrders(), "create_time"));
+        // 设置当前用户ID，用于权限过滤
+        request.setUserId(SessionUtils.getUserId());
         return extIssuesMapper.getIssues(request);
     }
 
@@ -2094,6 +2116,8 @@ public class IssuesService {
             }
         });
         ServiceUtils.setBaseQueryRequestCustomMultipleFields(request);
+        // 设置当前用户ID，用于跨项目搜索时的权限过滤
+        request.setUserId(SessionUtils.getUserId());
 
         // 添加用户组权限过滤（导出时也需要应用权限过滤）
         addUserGroupFilter(request);
@@ -2409,11 +2433,17 @@ public class IssuesService {
             }
         }
 
-        // 状态过滤时, 设置自定义状态字段ID
-        Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
-        if (StringUtils.equals(project.getPlatform(), "Local")) {
-            CustomField statusField = baseCustomFieldService.getCustomFieldByName(request.getProjectId(), SystemCustomField.ISSUE_STATUS);
-            request.setStatusFieldId(statusField.getId());
+        // 状态过滤时设置自定义状态字段ID
+        // 让 MyBatis XML 中 doneStatus 条件能正确引用 Local 平台的状态字段
+        // 跨项目搜索时 projectId 可能为 null，需要做非空检查避免 NPE
+        if (StringUtils.isNotBlank(request.getProjectId())) {
+            Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
+            if (project != null && StringUtils.equals(project.getPlatform(), "Local")) {
+                CustomField statusField = baseCustomFieldService.getCustomFieldByName(request.getProjectId(), SystemCustomField.ISSUE_STATUS);
+                if (statusField != null) {
+                    request.setStatusFieldId(statusField.getId());
+                }
+            }
         }
     }
 
