@@ -25,7 +25,7 @@
           :label="$t('advanced_search.module_review')"
         />
       </el-select>
-      
+
       <!-- 工作空间选择 -->
       <el-select
         v-model="store.selectedWorkspaces"
@@ -41,7 +41,7 @@
           :label="ws.name"
         />
       </el-select>
-      
+
       <!-- 项目选择 -->
       <el-select
         v-model="store.selectedProjects"
@@ -57,21 +57,21 @@
           :label="proj.name"
         />
       </el-select>
-      
+
       <!-- 查询模式切换 -->
       <el-radio-group
         v-model="store.queryMode"
         size="small"
         @change="onQueryModeChange"
       >
-        <el-radio-button value="visual">
+        <el-radio-button label="visual">
           {{ $t('advanced_search.mode_visual') }}
         </el-radio-button>
-        <el-radio-button value="jql">
+        <el-radio-button label="jql">
           {{ $t('advanced_search.mode_jql') }}
         </el-radio-button>
       </el-radio-group>
-      
+
       <!-- 查询按钮 -->
       <el-button
         type="primary"
@@ -81,7 +81,7 @@
       >
         {{ $t('commons.search') }}
       </el-button>
-      
+
       <!-- 导出按钮 -->
       <el-button
         icon="el-icon-download"
@@ -90,7 +90,7 @@
         {{ $t('commons.export') }}
       </el-button>
     </div>
-    
+
     <!-- 查询条件区域 -->
     <div class="query-condition-area">
       <!-- JQL 模式 -->
@@ -98,7 +98,7 @@
         v-if="store.queryMode === 'jql'"
         v-model="store.jqlQuery"
       />
-      
+
       <!-- 可视化模式 -->
       <div v-else class="visual-query">
         <el-alert
@@ -109,14 +109,14 @@
         >
           {{ $t('advanced_search.cross_project_tip') }}
         </el-alert>
-        
+
         <!-- 这里可以添加可视化查询条件组件 -->
         <div class="visual-filters">
           <p>{{ $t('advanced_search.visual_mode_placeholder') }}</p>
         </div>
       </div>
     </div>
-    
+
     <!-- 结果展示区域 -->
     <div class="result-area">
       <!-- 工具栏 -->
@@ -124,7 +124,7 @@
         <span class="result-count">
           {{ $t('advanced_search.result_count', { count: store.pagination.total }) }}
         </span>
-        
+
         <div class="toolbar-actions">
           <!-- 视图切换 -->
           <el-radio-group
@@ -132,18 +132,18 @@
             size="small"
             @change="onViewModeChange"
           >
-            <el-radio-button value="list">
+            <el-radio-button label="list">
               <i class="el-icon-s-grid"></i>
               {{ $t('advanced_search.view_list') }}
             </el-radio-button>
-            <el-radio-button value="split">
+            <el-radio-button label="split">
               <i class="el-icon-s-unfold"></i>
               {{ $t('advanced_search.view_split') }}
             </el-radio-button>
           </el-radio-group>
         </div>
       </div>
-      
+
       <!-- 列表视图 -->
       <div v-if="store.viewMode === 'list'" class="list-view">
         <el-table
@@ -190,7 +190,7 @@
             </template>
           </el-table-column>
         </el-table>
-        
+
         <!-- 分页 -->
         <el-pagination
           :current-page="store.pagination.current"
@@ -202,7 +202,7 @@
           @current-change="handleCurrentChange"
         />
       </div>
-      
+
       <!-- 分屏视图 -->
       <div v-else class="split-view">
         <div class="split-list">
@@ -226,7 +226,7 @@
             />
           </el-table>
         </div>
-        
+
         <div class="split-detail">
           <div v-if="store.detailData" class="detail-content">
             <h3>{{ store.detailData.name }}</h3>
@@ -280,51 +280,32 @@ export default {
   },
   
   async mounted() {
-    // 加载初始数据
     await this.store.loadWorkspaces();
     await this.store.loadFieldMetadata();
   },
   
   methods: {
-    /**
-     * 模块变更处理
-     */
     async onModuleChange() {
       await this.store.switchModule(this.store.currentModule);
     },
     
-    /**
-     * 工作空间变更处理
-     */
     async onWorkspaceChange() {
       await this.store.loadProjects();
       this.store.selectedProjects = [];
     },
     
-    /**
-     * 项目变更处理
-     */
     async onProjectChange() {
       await this.store.onProjectChange();
     },
     
-    /**
-     * 查询模式变更处理
-     */
     onQueryModeChange() {
       this.store.switchQueryMode(this.store.queryMode);
     },
     
-    /**
-     * 视图模式变更处理
-     */
     onViewModeChange() {
       this.store.switchViewMode(this.store.viewMode);
     },
     
-    /**
-     * 执行查询
-     */
     async handleSearch() {
       try {
         await this.store.executeQuery();
@@ -334,9 +315,6 @@ export default {
       }
     },
     
-    /**
-     * 导出
-     */
     async handleExport() {
       try {
         await this.store.exportExcel();
@@ -346,9 +324,6 @@ export default {
       }
     },
     
-    /**
-     * 行点击处理
-     */
     async handleRowClick(row) {
       if (this.store.viewMode === 'split') {
         try {
@@ -359,25 +334,16 @@ export default {
       }
     },
     
-    /**
-     * 分页大小变更
-     */
     handleSizeChange(size) {
       this.store.pagination.pageSize = size;
       this.handleSearch();
     },
     
-    /**
-     * 当前页变更
-     */
     handleCurrentChange(page) {
       this.store.pagination.current = page;
       this.handleSearch();
     },
     
-    /**
-     * 格式化时间
-     */
     formatTime(timestamp) {
       return formatTime(timestamp);
     }

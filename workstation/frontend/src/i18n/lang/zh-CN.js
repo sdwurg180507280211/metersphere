@@ -1,6 +1,7 @@
 import el from "metersphere-frontend/src/i18n/lang/ele-zh-CN"; // 加载element的内容
 import fu from "fit2cloud-ui/src/locale/lang/zh-CN"; // 加载fit2cloud的内容
 import mf from "metersphere-frontend/src/i18n/lang/zh-CN"
+import advancedSearch from "./zh-CN-advanced-search";
 
 const message = {
   advanced_search: {
@@ -11,20 +12,20 @@ const message = {
     recent_views: '最近浏览',
     shared_views: '共享视图',
     no_shared_views: '暂无共享视图',
-    
+
     // 业务模块
     test_case: '测试用例',
     issue: '缺陷',
     test_plan: '测试计划',
     test_case_review: '用例评审',
-    
+
     // 筛选条件
     select_workspace: '选择工作空间',
     select_project: '选择项目',
     add_filter: '添加筛选条件',
     search_field: '搜索字段',
     clear_all: '清空',
-    
+
     // 查询模式
     visual_mode: '可视化',
     jql_mode: 'JQL',
@@ -32,7 +33,7 @@ const message = {
     syntax_help: '语法帮助',
     execute_query: '执行查询',
     fix_syntax_error: '请先修复语法错误',
-    
+
     // JQL 帮助
     jql_help_title: 'JQL 语法帮助',
     jql_help_content: `
@@ -49,16 +50,16 @@ const message = {
         <li>AND, OR : 逻辑操作符</li>
       </ul>
     `,
-    
+
     // 跨项目提示
     cross_project_tip: '跨项目查询仅支持系统字段筛选，如需使用自定义字段请选择单个项目',
-    
+
     // 字段分组
     basic_info: '基础信息',
     module_specific: '模块专属',
     audit_trail: '审计追踪',
     custom_fields: '自定义字段',
-    
+
     // 字段名称
     id: 'ID',
     name: '名称',
@@ -69,7 +70,7 @@ const message = {
     create_time: '创建时间',
     update_time: '更新时间',
     description: '描述',
-    
+
     // 结果展示
     total_results: '共 {count} 条结果',
     list_view: '列表视图',
@@ -79,7 +80,7 @@ const message = {
     reset_default: '恢复默认',
     export: '导出',
     select_item_to_view: '选择一条记录查看详情',
-    
+
     // 操作提示
     search: '查询',
     query_failed: '查询失败',
@@ -89,7 +90,7 @@ const message = {
     load_users_failed: '加载用户列表失败',
     load_workspaces_failed: '加载工作空间列表失败',
     load_projects_failed: '加载项目列表失败',
-    
+
     // 用户选择器
     select_users: '选择用户',
     current_user: '我自己',
@@ -101,6 +102,11 @@ const message = {
     select_date: '选择日期',
     select_module: '选择模块'
   }
+}
+
+// 合并 advanced-search 翻译
+if (advancedSearch && advancedSearch.advanced_search) {
+  message.advanced_search = { ...message.advanced_search, ...advancedSearch.advanced_search };
 }
 
 export default {

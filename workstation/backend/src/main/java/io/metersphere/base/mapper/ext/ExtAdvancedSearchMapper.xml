@@ -90,8 +90,8 @@
             </foreach>
         </if>
     </sql>
-    
-    <!-- 
+
+    <!--
         工作空间和项目过滤
         确保只查询用户有权限访问的数据
     -->
@@ -109,8 +109,8 @@
             </foreach>
         </if>
     </sql>
-    
-    <!-- 
+
+    <!--
         JQL WHERE 子句
         当使用 JQL 模式时，直接拼接转换后的 SQL WHERE 条件
         注意：这里使用 ${} 而不是 #{} 因为这是动态SQL片段，不是参数值
@@ -170,12 +170,12 @@
         <where>
             <!-- 排除已删除的用例 -->
             and (test_case.status is null or test_case.status != 'Trash')
-            
+
             <!-- 工作空间和项目过滤 -->
             <include refid="workspaceProjectFilter">
                 <property name="tableAlias" value="test_case"/>
             </include>
-            
+
             <!-- JQL 条件（优先级高于 combine） -->
             <include refid="jqlCondition"/>
             
@@ -272,7 +272,7 @@
             <include refid="workspaceProjectFilter">
                 <property name="tableAlias" value="issues"/>
             </include>
-            
+
             <!-- JQL 条件 -->
             <include refid="jqlCondition"/>
             
@@ -354,12 +354,12 @@
         <where>
             <!-- 排除已删除的测试计划 -->
             and (test_plan.status is null or test_plan.status != 'Trash')
-            
+
             <!-- 工作空间和项目过滤 -->
             <include refid="workspaceProjectFilter">
                 <property name="tableAlias" value="test_plan"/>
             </include>
-            
+
             <!-- JQL 条件 -->
             <include refid="jqlCondition"/>
             
@@ -458,12 +458,12 @@
         <where>
             <!-- 排除已删除的评审 -->
             and (test_case_review.status is null or test_case_review.status != 'Trash')
-            
+
             <!-- 工作空间和项目过滤 -->
             <include refid="workspaceProjectFilter">
                 <property name="tableAlias" value="test_case_review"/>
             </include>
-            
+
             <!-- JQL 条件 -->
             <include refid="jqlCondition"/>
             
