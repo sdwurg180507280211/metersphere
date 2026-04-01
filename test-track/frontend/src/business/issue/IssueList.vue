@@ -545,24 +545,26 @@ export default {
       if (this.$refs.table) this.$refs.table.reloadTable();
     },
     search() {
+      // 清除用户组权限过滤条件
+      // 用户进行搜索/筛选/重置时，应该能看到所有符合条件的缺陷
+      this.clearUserGroupFilter();
+
       // 添加搜索条件时，当前页设置成第一页
       this.page.currentPage = 1;
       this.pageRefresh = false;
       this.getIssues();
     },
     /**
-     * 我在做：处理分页翻页事件，并标记 pageRefresh。
-     * 目的是：让 MsTable 在翻页加载时不清空跨页勾选。
-     * 如果不这样做，就无法实现：翻页后仍保留之前页的选中状态。
+     * 处理分页翻页事件
+     * 标记 pageRefresh 让 MsTable 在翻页加载时不清空跨页勾选
      */
     handlePageChange() {
       this.pageRefresh = true;
       this.getIssues();
     },
     /**
-     * 我在做：处理分页大小变更。
-     * 目的是：页大小变化属于“重新刷新列表”，按统一体验应清空跨页勾选，并回到第一页。
-     * 如果不这样做，就无法实现：页大小变化后勾选状态不混乱且分页正确。
+     * 处理分页大小变更
+     * 页大小变化属于"重新刷新列表"，清空跨页勾选并回到第一页
      */
     handlePageSizeChange() {
       this.page.currentPage = 1;
@@ -572,6 +574,10 @@ export default {
     handleHeadChange() {
       this.initFields(this.issueTemplate);
     },
+    /**
+     * 加载缺陷列表数据
+     * 使用 page.condition.filters 中的过滤条件（包括用户组权限过滤）
+     */
     getIssues() {
       this.loading = true;
       if (this.dataSelectRange === 'thisWeekUnClosedIssue') {
@@ -684,9 +690,10 @@ export default {
         this.$warning(this.$t("test_track.issue.check_select"));
         return;
       }
-      // 我在做：批量删除时把“全选范围”一并传给后端（而不是只传 selectAll=true）。
-      // 目的是：MsTable 的 selectAll=true 代表“选择当前筛选结果的全集（跨页）”，后端必须用同样的筛选条件计算全集 Q(...)，再扣除 unSelectIds。
-      // 如果不这样做，就会出现：筛选后全选批量删除误删项目/工作空间全量数据（后端无法得知 Q(...) 的范围，只能按全量处理）。
+      // 批量删除时把"全选范围"一并传给后端（而不是只传 selectAll=true）
+      // MsTable 的 selectAll=true 代表"选择当前筛选结果的全集（跨页）"
+      // 后端必须用同样的筛选条件计算全集 Q(...)，再扣除 unSelectIds
+      // 如果不这样做，筛选后全选批量删除可能误删项目/工作空间全量数据
       batchDeleteIssue({
         "batchDeleteIds": selectIds,
         "batchDeleteAll": this.page.condition.selectAll,
