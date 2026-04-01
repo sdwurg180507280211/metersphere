@@ -892,17 +892,27 @@ export default {
     if (this.stepFilter) {
       this.operatingElements = this.stepFilter.get('ALL');
     }
-    this.getWsProjects();
-    this.getMaintainerOptions();
-    this.getApiScenario();
     this.buttonData = buttons(this);
+
+    // 并行加载所有数据，减少总加载时间
+    // 关键数据并行加载
+    Promise.all([
+      this.getApiScenario(),
+      this.getWsProjects(),
+      this.getMaintainerOptions(),
+      this.getDefaultVersion()
+    ]).catch(error => {
+      console.error('关键数据加载失败:', error);
+      this.$error(this.$t('commons.load_failed'));
+    });
+
+    // 非关键数据也可以并行加载，不需要等待$nextTick
     this.getPlugins().then(() => {
       this.initPlugins();
     });
     this.result = getEnvironmentByProjectId(this.projectId).then((response) => {
       this.environments = response.data;
     });
-    this.getDefaultVersion();
   },
   mounted() {
     this.$nextTick(() => {
@@ -1777,7 +1787,7 @@ export default {
       this.cancelBatchProcessing();
     },
     getMaintainerOptions() {
-      getMaintainer().then((response) => {
+      return getMaintainer().then((response) => {
         this.maintainerOptions = response.data;
       });
     },
@@ -2144,7 +2154,7 @@ export default {
         this.currentScenario.headers = [];
       }
       if (this.currentScenario && this.currentScenario.id) {
-        this.result = getScenarioWithBLOBsById(this.currentScenario.id).then((response) => {
+        return this.result = getScenarioWithBLOBsById(this.currentScenario.id).then((response) => {
           if (response.data) {
             this.currentScenario.apiScenarioModuleId = response.data.apiScenarioModuleId;
             this.currentScenario.modulePath = response.data.modulePath;
@@ -2506,7 +2516,7 @@ export default {
       this.environmentType = val;
     },
     getWsProjects() {
-      getOwnerProjects().then((res) => {
+      return getOwnerProjects().then((res) => {
         this.projectList = res.data;
       });
     },
@@ -2746,9 +2756,9 @@ export default {
     },
     getDefaultVersion() {
       if (!hasLicense()) {
-        return;
+        return Promise.resolve();
       }
-      getDefaultVersion(this.projectId).then((response) => {
+      return getDefaultVersion(this.projectId).then((response) => {
         this.latestVersionId = response.data;
         this.getVersionHistory();
       });
