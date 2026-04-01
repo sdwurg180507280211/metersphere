@@ -476,6 +476,7 @@
     </el-dialog>
 
     <review-or-plan-batch-move @refresh="refresh" @moveSave="moveSave" ref="testReviewBatchMove"/>
+    <test-plan-export @export="exportTestPlan" ref="testPlanExport"/>
   </el-card>
 </template>
 
@@ -533,11 +534,14 @@ import TestPlanReportReview from "@/business/report/components/TestPlanReportRev
 import {mapState} from "pinia";
 import {useStore} from "@/store";
 import ReviewOrPlanBatchMove from "@/business/case/components/ReviewOrPlanBatchMove.vue";
+import TestPlanExport from "@/business/plan/components/export/TestPlanExport.vue";
+import {getCurrentWorkspaceId} from "metersphere-frontend/src/utils/token";
 
 export default {
   name: "TestPlanList",
   components: {
     ReviewOrPlanBatchMove,
+    TestPlanExport,
     MsTagsColumn,
     TestPlanReportReview,
     MsTag,
@@ -640,6 +644,11 @@ export default {
           handleClick: this.handleBatchDelete,
           permissions: ["PROJECT_TRACK_PLAN:READ+BATCH_DELETE"],
         },
+        {
+          name: this.$t("commons.export"),
+          handleClick: this.handleExport,
+          permissions: ["PROJECT_TRACK_PLAN:READ"],
+        },
       ],
       simpleOperators: [
         {
@@ -665,6 +674,13 @@ export default {
   watch: {
     $route(to, from) {
       if (to.path.indexOf("/track/plan/all") >= 0) {
+        // 重置 condition 中的选择相关字段
+        this.condition.selectAll = false;
+        this.condition.unSelectIds = [];
+        this.condition.name = "";
+        this.condition.combine = null;
+        // 重置页码
+        this.currentPage = 1;
         this.initTableData();
       }
     },
@@ -1252,18 +1268,27 @@ export default {
         return;
       }
     },
-    // haveUIScenario() {
-    //   if (hasLicense()) {
-    //     return new Promise((resolve) => {
-    //       testPlanHaveUiCase(this.currentPlanId).then((r) => {
-    //         this.haveUICase = r.data;
-    //         resolve();
-    //       });
-    //     });
-    //   } else {
-    //     return new Promise((resolve) => resolve());
-    //   }
-    // },
+    handleExport() {
+      let exportIds = this.$refs.testPlanLitTable.selectIds;
+      if (exportIds.length === 0) {
+        this.$warning(this.$t("test_track.issue.check_select"));
+        return;
+      }
+      this.$refs.testPlanExport.open();
+    },
+    exportTestPlan() {
+      let param = {
+        "projectId": getCurrentProjectID(),
+        "workspaceId": getCurrentWorkspaceId(),
+        "isSelectAll": this.condition.selectAll,
+        "exportIds": this.$refs.testPlanLitTable.selectIds,
+        "orders": getLastTableSortField(this.tableHeaderKey),
+        "combine": this.condition.combine,
+        "name": this.condition.name,
+        "unSelectIds": this.condition.unSelectIds
+      }
+      this.$fileDownloadPost("/test/plan/export", param);
+    },
   },
 };
 </script>
