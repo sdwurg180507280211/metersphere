@@ -649,12 +649,23 @@ export default {
     getOperators(val) {
       const type = this.getFieldType(val);
       if (type === 'select' || type === 'user') {
-        return [{l: this.$t('advanced_search.op_in'), v: 'in'}, {l: this.$t('advanced_search.op_not_in'), v: 'not_in'}];
+        return [
+          {l: this.$t('advanced_search.op_in'), v: 'in'},
+          {l: this.$t('advanced_search.op_not_in'), v: 'not_in'}
+        ];
       }
       if (type === 'date') {
-        return [{l: this.$t('advanced_search.op_between'), v: 'between'}, {l: this.$t('advanced_search.op_before'), v: 'lt'}, {l: this.$t('advanced_search.op_after'), v: 'gt'}];
+        return [
+          {l: this.$t('advanced_search.op_between'), v: 'between'},
+          {l: this.$t('advanced_search.op_before'), v: 'lt'},
+          {l: this.$t('advanced_search.op_after'), v: 'gt'}
+        ];
       }
-      return [{l: this.$t('advanced_search.op_contains'), v: 'like'}, {l: this.$t('advanced_search.op_equals'), v: '='}, {l: this.$t('advanced_search.op_not_equals'), v: '!='}];
+      return [
+        {l: this.$t('advanced_search.op_contains'), v: 'like'},
+        {l: this.$t('advanced_search.op_equals'), v: '='},
+        {l: this.$t('advanced_search.op_not_equals'), v: '!='}
+      ];
     },
     
     loadUsers() {
