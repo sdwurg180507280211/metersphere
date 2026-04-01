@@ -1,6 +1,7 @@
 import el from "metersphere-frontend/src/i18n/lang/ele-en-US";
 import fu from "fit2cloud-ui/src/locale/lang/en_US"; // 加载fit2cloud的内容
 import mf from "metersphere-frontend/src/i18n/lang/en-US"
+import advancedSearch from "./en-US-advanced-search";
 
 const message = {
   advanced_search: {
@@ -11,20 +12,20 @@ const message = {
     recent_views: 'Recent Views',
     shared_views: 'Shared Views',
     no_shared_views: 'No shared views',
-    
+
     // Business modules
     test_case: 'Test Case',
     issue: 'Issue',
     test_plan: 'Test Plan',
     test_case_review: 'Test Case Review',
-    
+
     // Filter conditions
     select_workspace: 'Select Workspace',
     select_project: 'Select Project',
     add_filter: 'Add Filter',
     search_field: 'Search Field',
     clear_all: 'Clear All',
-    
+
     // Query mode
     visual_mode: 'Visual',
     jql_mode: 'JQL',
@@ -32,7 +33,7 @@ const message = {
     syntax_help: 'Syntax Help',
     execute_query: 'Execute Query',
     fix_syntax_error: 'Please fix syntax errors first',
-    
+
     // JQL help
     jql_help_title: 'JQL Syntax Help',
     jql_help_content: `
@@ -49,16 +50,16 @@ const message = {
         <li>AND, OR : Logical operators</li>
       </ul>
     `,
-    
+
     // Cross-project tip
     cross_project_tip: 'Cross-project queries only support system fields. Please select a single project to use custom fields',
-    
+
     // Field groups
     basic_info: 'Basic Info',
     module_specific: 'Module Specific',
     audit_trail: 'Audit Trail',
     custom_fields: 'Custom Fields',
-    
+
     // Field names
     id: 'ID',
     name: 'Name',
@@ -69,7 +70,7 @@ const message = {
     create_time: 'Create Time',
     update_time: 'Update Time',
     description: 'Description',
-    
+
     // Result display
     total_results: 'Total {count} results',
     list_view: 'List View',
@@ -79,7 +80,7 @@ const message = {
     reset_default: 'Reset Default',
     export: 'Export',
     select_item_to_view: 'Select an item to view details',
-    
+
     // Action tips
     search: 'Search',
     query_failed: 'Query failed',
@@ -89,7 +90,7 @@ const message = {
     load_users_failed: 'Load users failed',
     load_workspaces_failed: 'Load workspaces failed',
     load_projects_failed: 'Load projects failed',
-    
+
     // User selector
     select_users: 'Select Users',
     current_user: 'Me',
@@ -103,10 +104,14 @@ const message = {
   }
 }
 
+// 合并 advanced-search 翻译
+if (advancedSearch && advancedSearch.advanced_search) {
+  message.advanced_search = { ...message.advanced_search, ...advancedSearch.advanced_search };
+}
+
 export default {
   ...el,
   ...fu,
   ...mf,
   ...message
 };
-

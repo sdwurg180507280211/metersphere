@@ -2,7 +2,6 @@ package io.metersphere.workstation.service;
 
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.workstation.dto.JQLValidationResult;
-import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
@@ -12,17 +11,38 @@ import java.util.regex.Pattern;
 
 /**
  * JQL 语法解析器
- * 
+ *
  * 将类似 Jira JQL 的查询语句解析为抽象语法树（AST）
  * 支持的操作符：=, !=, ~, IN, NOT IN, >, >=, <, <=, CONTAINS, AND, OR
- * 
+ *
  * @author MeterSphere
  */
 @Service
 public class JQLParser {
-    
-    @Resource
-    private FieldMetadataService fieldMetadataService;
+
+    /**
+     * 预编译的JQL正则表达式Pattern
+     * 避免每次调用tokenize时重新编译
+     */
+    private static final Pattern JQL_PATTERN;
+
+    /**
+     * 预编译的日期Pattern
+     */
+    private static final Pattern DATE_PATTERN = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
+
+    static {
+        JQL_PATTERN = Pattern.compile(
+            "(?i)\\b(AND|OR|IN|NOT\\s+IN|CONTAINS)\\b|" +
+            "([><=!~]+)|" +
+            "\"([^\"]*)\"|" +
+            "'([^']*)'|" +
+            "\\(|\\)|,|" +
+            "(\\d{4}-\\d{2}-\\d{2})|" +
+            "(\\w+)|" +
+            "\\s+"
+        );
+    }
     
     // 操作符映射
     private static final Map<String, TokenType> OPERATORS = new HashMap<>();
@@ -91,41 +111,28 @@ public class JQLParser {
     
     /**
      * 词法分析
-     * 
+     *
      * 我在做：将 JQL 字符串分解为 Token 序列
      * 目的是：为语法分析提供输入
      * 如果不这样做：无法进行语法分析
-     * 
+     *
      * @param jql JQL 查询语句
      * @return Token 列表
      */
     private List<Token> tokenize(String jql) {
         List<Token> tokens = new ArrayList<>();
-        
-        // 正则表达式模式：匹配关键字、操作符、字符串、标识符等
-        Pattern pattern = Pattern.compile(
-            "(?i)\\b(AND|OR|IN|NOT\\s+IN|CONTAINS)\\b|" +  // 关键字
-            "([><=!~]+)|" +                                 // 操作符
-            "\"([^\"]*)\"|" +                              // 双引号字符串
-            "'([^']*)'|" +                                 // 单引号字符串
-            "\\(|\\)|,|" +                                 // 括号和逗号
-            "(\\d{4}-\\d{2}-\\d{2})|" +                   // 日期
-            "(\\w+)|" +                                    // 标识符
-            "\\s+"                                         // 空白字符
-        );
-        
-        Matcher matcher = pattern.matcher(jql);
+        Matcher matcher = JQL_PATTERN.matcher(jql);
         int position = 0;
-        
+
         while (matcher.find()) {
             String match = matcher.group().trim();
             if (match.isEmpty()) continue;
-            
+
             TokenType type = determineTokenType(match);
             tokens.add(new Token(type, match, position));
             position = matcher.end();
         }
-        
+
         tokens.add(new Token(TokenType.EOF, "", position));
         return tokens;
     }
@@ -147,7 +154,7 @@ public class JQLParser {
         }
         
         // 检查是否为日期
-        if (text.matches("\\d{4}-\\d{2}-\\d{2}")) {
+        if (DATE_PATTERN.matcher(text).matches()) {
             return TokenType.DATE;
         }
         

@@ -1,7 +1,6 @@
 package io.metersphere.workstation.controller;
 
 import io.metersphere.commons.utils.Pager;
-import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.request.AdvancedSearchRequest;
 import io.metersphere.workstation.dto.JQLSuggestion;
 import io.metersphere.workstation.dto.JQLValidationResult;
@@ -33,27 +32,27 @@ import java.util.Map;
 @RequestMapping("workstation/advanced-search")
 @RestController
 public class AdvancedSearchController {
-    
+
     @Resource
     private AdvancedSearchService advancedSearchService;
-    
+
     @Resource
     private FieldMetadataService fieldMetadataService;
-    
+
     @Resource
     private JQLParser jqlParser;
-    
+
     @Resource
     private UserQueryService userQueryService;
-    
-    @Resource
-    private WorkspaceQueryService workspaceQueryService;
-    
-    @Resource
-    private ProjectQueryService projectQueryService;
-    
+
     @Resource
     private JQLSuggestionService jqlSuggestionService;
+
+    @Resource
+    private WorkspaceQueryService workspaceQueryService;
+
+    @Resource
+    private ProjectQueryService projectQueryService;
     
     /**
      * 执行高级检索查询
@@ -114,28 +113,28 @@ public class AdvancedSearchController {
             @RequestParam(defaultValue = "20") int pageSize) {
         return userQueryService.getUsers(workspaceIds, keyword, pageNum, pageSize);
     }
-    
+
     /**
      * 获取工作空间列表
-     * 
+     *
      * 我在做：返回当前用户有权限访问的工作空间列表
      * 目的是：为工作空间选择器提供数据源
      * 如果不这样做：无法进行工作空间筛选
-     * 
+     *
      * @return 工作空间列表
      */
     @GetMapping("/workspaces")
     public List<WorkspaceSimpleDTO> getWorkspaces() {
         return workspaceQueryService.getUserWorkspaces();
     }
-    
+
     /**
      * 获取项目列表
-     * 
+     *
      * 我在做：返回当前用户有权限访问的项目列表
      * 目的是：为项目选择器提供数据源，支持按工作空间过滤
      * 如果不这样做：无法进行项目筛选
-     * 
+     *
      * @param workspaceIds 工作空间ID列表（逗号分隔，可选）
      * @return 项目列表
      */
@@ -148,7 +147,7 @@ public class AdvancedSearchController {
         }
         return projectQueryService.getUserProjects(wsIdList);
     }
-    
+
     /**
      * 获取详情
      * 
