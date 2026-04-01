@@ -757,6 +757,10 @@ public class BaseUserService {
         return baseUserGroupMapper.getProjectMemberOption(projectId);
     }
 
+    public List<User> getWorkspaceMemberList(String workspaceId) {
+        return getWsAllMember(workspaceId);
+    }
+
 
     public int updateUserSeleniumServer(EditSeleniumServerRequest request) {
         UserExample userExample = new UserExample();
