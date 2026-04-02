@@ -478,13 +478,19 @@ export default {
     
     fieldsByGroup() {
       const fields = Array.isArray(this.store.availableFields) ? this.store.availableFields : [];
-      return {
-        basic: fields.filter(f => f && f.group === 'basic'),
-        user: fields.filter(f => f && f.group === 'user'),
-        module: fields.filter(f => f && f.group === 'module'),
-        custom: fields.filter(f => f && f.group === 'custom'),
-        date: fields.filter(f => f && f.group === 'date')
+      const grouped = {
+        basic: [],
+        user: [],
+        module: [],
+        custom: [],
+        date: []
       };
+      fields.forEach(f => {
+        if (f && grouped.hasOwnProperty(f.group)) {
+          grouped[f.group].push(f);
+        }
+      });
+      return grouped;
     },
     
     allColDefs() {
@@ -533,11 +539,17 @@ export default {
     },
     
     groupedColumns() {
-      return {
-        basic: this.allColDefs.filter(c => c.group === 'basic'),
-        system: this.allColDefs.filter(c => c.group === 'system'),
-        module: this.allColDefs.filter(c => c.group === 'module')
+      const grouped = {
+        basic: [],
+        system: [],
+        module: []
       };
+      this.allColDefs.forEach(c => {
+        if (c.group && grouped.hasOwnProperty(c.group)) {
+          grouped[c.group].push(c);
+        }
+      });
+      return grouped;
     },
     
     defaultColumns() {
@@ -566,16 +578,12 @@ export default {
   
   methods: {
     async onWorkspaceChange() {
-      if (this.store.selectedWorkspaces.length === 0) {
-        // 如果清空了工作空间，清空项目和项目列表
-        this.store.projects = [];
-        this.store.selectedProjects = [];
-        return;
-      }
       try {
         await this.store.loadProjects();
-        this.store.selectedProjects = [];
-        this.$message.success(this.$t('advanced_search.project_list_updated'));
+        if (this.store.selectedWorkspaces.length > 0) {
+          this.store.selectedProjects = [];
+          this.$message.success(this.$t('advanced_search.project_list_updated'));
+        }
       } catch (error) {
         this.$message.error(this.$t('advanced_search.load_projects_failed'));
       }
