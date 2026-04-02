@@ -755,10 +755,8 @@ export default {
     }
     this.condition.filters = { status: ['Prepare', 'Underway', 'Completed'] };
 
-    // 创建防抖函数
     this.debouncedNodeChange = debounce(this.nodeChange, 300);
 
-    // 延迟加载环境配置
     this.$nextTick(() => {
       this.initEnvironment();
     });

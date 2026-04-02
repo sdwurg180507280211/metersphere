@@ -3,10 +3,23 @@
     <div class="main-card">
     <!-- 顶部筛选栏 -->
     <div class="top-filter-bar">
+      <!-- 查询模式切换 -->
+      <el-radio-group v-model="store.queryMode" size="small" style="margin-right: 8px;" @change="onQueryModeChange">
+        <el-radio-button label="visual">
+          <i class="el-icon-view"></i> {{ $t('advanced_search.mode_visual') }}
+        </el-radio-button>
+        <el-radio-button label="jql">
+          <i class="el-icon-edit-outline"></i> {{ $t('advanced_search.mode_jql') }}
+        </el-radio-button>
+      </el-radio-group>
+
+      <div class="vertical-divider"></div>
+
       <!-- 业务模块选择 -->
       <el-select
         v-model="store.currentModule"
         :placeholder="$t('advanced_search.select_module')"
+        style="width: 140px;"
         @change="onModuleChange"
       >
         <el-option value="TEST_CASE" :label="$t('advanced_search.module_test_case')" />
@@ -15,131 +28,159 @@
         <el-option value="TEST_CASE_REVIEW" :label="$t('advanced_search.module_review')" />
       </el-select>
 
-      <div style="width: 1px; height: 16px; background: #ddd;"></div>
+      <!-- 工作空间和项目多选 -->
+      <div class="scope-selectors">
+        <el-select
+          v-model="store.selectedWorkspaces"
+          multiple
+          collapse-tags
+          :placeholder="$t('advanced_search.select_workspace')"
+          style="width: 180px;"
+          @change="onWorkspaceChange"
+        >
+          <el-option v-for="ws in store.workspaces" :key="ws.id" :label="ws.name" :value="ws.id" />
+        </el-select>
 
-      <!-- 工作空间多选 -->
-      <el-select
-        v-model="store.selectedWorkspaces"
-        multiple
-        collapse-tags
-        :placeholder="$t('advanced_search.select_workspace')"
-        @change="onWorkspaceChange"
+        <el-select
+          v-model="store.selectedProjects"
+          multiple
+          collapse-tags
+          :disabled="store.selectedWorkspaces.length === 0"
+          :placeholder="store.selectedWorkspaces.length === 0 ? $t('advanced_search.please_select_workspace_first') : $t('advanced_search.select_project')"
+          style="width: 180px;"
+          @change="onProjectChange"
+        >
+          <el-option v-for="proj in store.projects" :key="proj.id" :value="proj.id" :label="proj.name" />
+        </el-select>
+      </div>
+
+      <!-- 筛选条件按钮 (仅可视化模式) -->
+      <el-popover
+        v-if="store.queryMode === 'visual'"
+        placement="bottom-start"
+        width="450"
+        trigger="click"
+        v-model="popoverVisible"
       >
-        <el-option v-for="ws in store.workspaces" :key="ws.id" :label="ws.name" :value="ws.id" />
-      </el-select>
-
-      <!-- 项目多选 -->
-      <el-select
-        v-model="store.selectedProjects"
-        multiple
-        collapse-tags
-        :disabled="store.selectedWorkspaces.length === 0"
-        :placeholder="store.selectedWorkspaces.length === 0 ? $t('advanced_search.please_select_workspace_first') : $t('advanced_search.select_project')"
-        @change="onProjectChange"
-      >
-        <el-option v-for="proj in store.projects" :key="proj.id" :value="proj.id" :label="proj.name" />
-      </el-select>
-
-      <!-- 筛选条件按钮 -->
-      <el-popover placement="bottom-start" width="450" trigger="click" v-model="popoverVisible">
-        <div style="padding: 10px;">
-          <div style="font-weight: bold; margin-bottom: 12px; font-size: 13px;">{{ $t('advanced_search.select_filter_field') }}</div>
-
-          <!-- 基础信息 -->
-          <div class="field-group">
-            <div class="field-group-title">📋 {{ $t('advanced_search.basic_info') }}</div>
-            <div class="field-group-items">
-              <el-tag
-                v-for="field in fieldsByGroup.basic"
-                :key="field.field || field.value"
-                size="small"
-                style="cursor: pointer;"
-                :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
-                @click="addFilter(field)"
-              >
-                <i :class="field.icon || 'el-icon-document'"></i> {{ field.label || field.name }}
-              </el-tag>
-            </div>
+        <div class="filter-popover-content">
+          <div class="popover-header">
+            <span class="popover-title">{{ $t('advanced_search.select_filter_field') }}</span>
+            <el-input
+              v-model="fieldSearchText"
+              size="mini"
+              prefix-icon="el-icon-search"
+              :placeholder="$t('advanced_search.search')"
+              style="width: 150px;"
+              clearable
+            />
           </div>
 
-          <!-- 人员相关 -->
-          <div class="field-group">
-            <div class="field-group-title">👤 {{ $t('advanced_search.user_related') }}</div>
-            <div class="field-group-items">
-              <el-tag
-                v-for="field in fieldsByGroup.user"
-                :key="field.field || field.value"
-                size="small"
-                style="cursor: pointer;"
-                :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
-                @click="addFilter(field)"
-              >
-                <i :class="field.icon || 'el-icon-user'"></i> {{ field.label || field.name }}
-              </el-tag>
+          <div class="filter-groups-container">
+            <!-- 基础信息 -->
+            <div class="field-group" v-if="filteredFields.basic.length > 0">
+              <div class="field-group-title">📋 {{ $t('advanced_search.basic_info') }}</div>
+              <div class="field-group-items">
+                <el-tag
+                  v-for="field in filteredFields.basic"
+                  :key="field.field || field.value"
+                  size="small"
+                  class="field-tag"
+                  :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
+                  @click="addFilter(field)"
+                >
+                  <i :class="field.icon || 'el-icon-document'"></i> {{ field.label || field.name }}
+                </el-tag>
+              </div>
             </div>
-          </div>
 
-          <!-- 模块专属 -->
-          <div class="field-group">
-            <div class="field-group-title">🔧 {{ currentModuleLabel }}专属</div>
-            <div class="field-group-items">
-              <el-tag
-                v-for="field in fieldsByGroup.module"
-                :key="field.field || field.value"
-                size="small"
-                style="cursor: pointer;"
-                :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
-                @click="addFilter(field)"
-                :disabled="field.projectSpecific && !store.isSingleProjectMode"
-              >
-                <i :class="field.icon || 'el-icon-setting'"></i> {{ field.label || field.name }}
-                <span v-if="field.projectSpecific" style="color:#e6a23c; margin-left:2px;">*</span>
-              </el-tag>
+            <!-- 人员相关 -->
+            <div class="field-group" v-if="filteredFields.user.length > 0">
+              <div class="field-group-title">👤 {{ $t('advanced_search.user_related') }}</div>
+              <div class="field-group-items">
+                <el-tag
+                  v-for="field in filteredFields.user"
+                  :key="field.field || field.value"
+                  size="small"
+                  class="field-tag"
+                  :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
+                  @click="addFilter(field)"
+                >
+                  <i :class="field.icon || 'el-icon-user'"></i> {{ field.label || field.name }}
+                </el-tag>
+              </div>
             </div>
-          </div>
 
-          <!-- 自定义字段 -->
-          <div class="field-group" v-if="store.isSingleProjectMode && fieldsByGroup.custom.length > 0">
-            <div class="field-group-title">📝 {{ $t('advanced_search.custom_fields') }}</div>
-            <div class="field-group-items">
-              <el-tag
-                v-for="field in fieldsByGroup.custom"
-                :key="field.field || field.value"
-                size="small"
-                style="cursor: pointer;"
-                :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
-                @click="addFilter(field)"
-              >
-                {{ field.label || field.name }}
-              </el-tag>
+            <!-- 模块专属 -->
+            <div class="field-group" v-if="filteredFields.module.length > 0">
+              <div class="field-group-title">🔧 {{ currentModuleLabel }} {{ $t('advanced_search.basic_attributes') }}</div>
+              <div class="field-group-items">
+                <el-tag
+                  v-for="field in filteredFields.module"
+                  :key="field.field || field.value"
+                  size="small"
+                  class="field-tag"
+                  :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
+                  @click="addFilter(field)"
+                  :disabled="field.projectSpecific && !store.isSingleProjectMode"
+                >
+                  <i :class="field.icon || 'el-icon-setting'"></i> {{ field.label || field.name }}
+                  <span v-if="field.projectSpecific" style="color:#e6a23c; margin-left:2px;">*</span>
+                </el-tag>
+              </div>
             </div>
-          </div>
 
-          <!-- 时间相关 -->
-          <div class="field-group">
-            <div class="field-group-title">📅 {{ $t('advanced_search.date_related') }}</div>
-            <div class="field-group-items">
-              <el-tag
-                v-for="field in fieldsByGroup.date"
-                :key="field.field || field.value"
-                size="small"
-                style="cursor: pointer;"
-                :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
-                @click="addFilter(field)"
-              >
-                <i :class="field.icon || 'el-icon-date'"></i> {{ field.label || field.name }}
-              </el-tag>
+            <!-- 自定义字段 -->
+            <div class="field-group" v-if="store.isSingleProjectMode && filteredFields.custom.length > 0">
+              <div class="field-group-title">📝 {{ $t('advanced_search.custom_fields') }}</div>
+              <div class="field-group-items">
+                <el-tag
+                  v-for="field in filteredFields.custom"
+                  :key="field.field || field.value"
+                  size="small"
+                  class="field-tag"
+                  :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
+                  @click="addFilter(field)"
+                >
+                  {{ field.label || field.name }}
+                </el-tag>
+              </div>
+            </div>
+
+            <!-- 时间相关 -->
+            <div class="field-group" v-if="filteredFields.date.length > 0">
+              <div class="field-group-title">📅 {{ $t('advanced_search.date_related') }}</div>
+              <div class="field-group-items">
+                <el-tag
+                  v-for="field in filteredFields.date"
+                  :key="field.field || field.value"
+                  size="small"
+                  class="field-tag"
+                  :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
+                  @click="addFilter(field)"
+                >
+                  <i :class="field.icon || 'el-icon-date'"></i> {{ field.label || field.name }}
+                </el-tag>
+              </div>
             </div>
           </div>
         </div>
         <div slot="reference" class="inline-add-filter-btn">
-          <i class="el-icon-plus" style="margin-right: 4px;"></i> {{ $t('advanced_search.add_filter') }}
+          <i class="el-icon-plus"></i> {{ $t('advanced_search.add_filter') }}
         </div>
       </el-popover>
 
-      <el-button type="primary" icon="el-icon-search" size="small" style="margin-left: auto;" @click="handleSearch" :loading="store.loading">
-        {{ $t('advanced_search.search') }}
-      </el-button>
+      <div class="toolbar-actions">
+        <el-button type="primary" icon="el-icon-search" size="small" @click="handleSearch" :loading="store.loading">
+          {{ $t('advanced_search.search') }}
+        </el-button>
+        <el-button v-if="store.queryMode === 'visual' && store.conditions.length > 0" size="small" icon="el-icon-star-off" @click="saveVisualQuery">
+          {{ $t('advanced_search.jql_save') }}
+        </el-button>
+        <el-button v-if="store.queryMode === 'visual'" size="small" icon="el-icon-refresh" @click="clearConditions">
+          {{ $t('advanced_search.clear_all') }}
+        </el-button>
+      </div>
+    </div>
 
       <!-- 跨项目模式提示 -->
       <div class="cross-project-warning" v-if="!store.isSingleProjectMode && store.selectedProjects.length > 0">
@@ -155,82 +196,90 @@
 
     <!-- 活跃条件标签栏（仅可视化模式） -->
     <div v-else-if="store.conditions.length > 0" class="active-tags-bar">
-      <div v-for="(cond, idx) in store.conditions" :key="idx" class="condition-tag">
-        <span class="condition-field-label">{{ getFieldLabel(cond.field) }}:</span>
-
-        <!-- 操作符选择 -->
-        <el-select v-model="cond.op" size="mini" style="width: 75px; margin-right: 4px;">
-          <el-option v-for="o in getOperators(cond.field)" :key="o.v" :label="o.l" :value="o.v" />
-        </el-select>
-
-        <!-- 根据字段类型渲染不同输入控件 -->
-        <div style="width: 180px;">
-          <!-- 日期类型 -->
-          <el-date-picker
-            v-if="getFieldType(cond.field) === 'date'"
-            v-model="cond.value"
-            type="daterange"
-            size="mini"
-            style="width: 100%"
-            range-separator="-"
-            :start-placeholder="$t('advanced_search.start_date')"
-            :end-placeholder="$t('advanced_search.end_date')"
-            value-format="yyyy-MM-dd"
-          />
-
-          <!-- 下拉选择类型 -->
-          <el-select
-            v-else-if="getFieldType(cond.field) === 'select'"
-            v-model="cond.value"
-            size="mini"
-            style="width: 100%"
-            :placeholder="$t('advanced_search.select_value')"
-            multiple
-            collapse-tags
-          >
-            <el-option v-for="opt in getFieldOptions(cond.field)" :key="opt" :label="opt" :value="opt" />
-          </el-select>
-
-          <!-- 用户类型 -->
-          <el-select
-            v-else-if="getFieldType(cond.field) === 'user'"
-            v-model="cond.value"
-            size="mini"
-            style="width: 100%"
-            :placeholder="$t('advanced_search.select_users')"
-            multiple
-            collapse-tags
-            filterable
-            remote
-            :remote-method="searchUsers"
-            :loading="userLoading"
-          >
-            <el-option key="CURRENT_USER" :label="$t('advanced_search.current_user')" value="CURRENT_USER">
-              <div class="user-option">
-                <div class="user-avatar" style="background: #409eff;">⭐</div>
-                <div class="user-info">
-                  <span class="user-name">{{ $t('advanced_search.current_user') }}</span>
-                </div>
-              </div>
-            </el-option>
-            <el-option v-for="user in userList" :key="user.id" :label="user.name" :value="user.id">
-              <div class="user-option">
-                <div class="user-avatar">{{ (user.name || '-').charAt(0) }}</div>
-                <div class="user-info">
-                  <span class="user-name">{{ user.name }}</span>
-                  <span class="user-email">{{ user.email }}</span>
-                </div>
-              </div>
-            </el-option>
-          </el-select>
-
-          <!-- 文本类型 -->
-          <el-input v-else v-model="cond.value" size="mini" :placeholder="$t('advanced_search.enter_value')" />
-        </div>
-
-        <i class="el-icon-close" style="margin-left: 6px; cursor: pointer; color: #999;" @click="removeCondition(idx)"></i>
+      <div class="active-tags-header">
+        <i class="el-icon-finished"></i>
+        <span>{{ $t('advanced_search.add_filter') }} ({{ store.conditions.length }})</span>
       </div>
-      <el-button type="text" size="mini" style="margin-left: auto; color: #909399" @click="clearConditions">
+      <div class="tags-container">
+        <div v-for="(cond, idx) in store.conditions" :key="idx" class="condition-tag">
+          <span class="condition-field-label">{{ getFieldLabel(cond.field) }}</span>
+
+          <!-- 操作符选择 -->
+          <el-select v-model="cond.op" size="mini" class="op-selector">
+            <el-option v-for="o in getOperators(cond.field)" :key="o.v" :label="o.l" :value="o.v" />
+          </el-select>
+
+          <!-- 根据字段类型渲染不同输入控件 -->
+          <div class="cond-value-input">
+            <!-- 日期类型 -->
+            <el-date-picker
+              v-if="getFieldType(cond.field) === 'date'"
+              v-model="cond.value"
+              type="daterange"
+              size="mini"
+              style="width: 100%"
+              range-separator="-"
+              :start-placeholder="$t('advanced_search.start_date')"
+              :end-placeholder="$t('advanced_search.end_date')"
+              value-format="yyyy-MM-dd"
+            />
+
+            <!-- 下拉选择类型 -->
+            <el-select
+              v-else-if="getFieldType(cond.field) === 'select'"
+              v-model="cond.value"
+              size="mini"
+              style="width: 100%"
+              :placeholder="$t('advanced_search.select_value')"
+              multiple
+              collapse-tags
+            >
+              <el-option v-for="opt in getFieldOptions(cond.field)" :key="opt" :label="opt" :value="opt" />
+            </el-select>
+
+            <!-- 用户类型 -->
+            <el-select
+              v-else-if="getFieldType(cond.field) === 'user'"
+              v-model="cond.value"
+              size="mini"
+              style="width: 100%"
+              :placeholder="$t('advanced_search.select_users')"
+              multiple
+              collapse-tags
+              filterable
+              remote
+              :remote-method="searchUsers"
+              :loading="userLoading"
+            >
+              <el-option key="CURRENT_USER" :label="$t('advanced_search.current_user')" value="CURRENT_USER">
+                <div class="user-option">
+                  <div class="user-avatar" style="background: #409eff;">⭐</div>
+                  <div class="user-info">
+                    <span class="user-name">{{ $t('advanced_search.current_user') }}</span>
+                  </div>
+                </div>
+              </el-option>
+              <el-option v-for="user in userList" :key="user.id" :label="user.name" :value="user.id">
+                <div class="user-option">
+                  <div class="user-avatar">{{ (user.name || '-').charAt(0) }}</div>
+                  <div class="user-info">
+                    <span class="user-name">{{ user.name }}</span>
+                    <span class="user-email">{{ user.email }}</span>
+                  </div>
+                </div>
+              </el-option>
+            </el-select>
+
+            <!-- 文本类型 -->
+            <el-input v-else v-model="cond.value" size="mini" :placeholder="$t('advanced_search.enter_value')" />
+          </div>
+
+          <div class="remove-cond-btn" @click="removeCondition(idx)">
+            <i class="el-icon-close"></i>
+          </div>
+        </div>
+      </div>
+      <el-button type="text" size="mini" class="clear-all-btn" @click="clearConditions">
         {{ $t('advanced_search.clear_all') }}
       </el-button>
     </div>
@@ -395,38 +444,66 @@
         <!-- 右侧详情面板 -->
         <div class="split-right" v-if="store.selectedRow">
           <div class="detail-header">
-            <div style="font-size: 12px; color: #909399; margin-bottom: 8px;">
-              {{ store.selectedRow.workspaceName || '-' }} / {{ store.selectedRow.projectName || '-' }} / {{ store.selectedRow.num || store.selectedRow.id }}
+            <div class="detail-top-nav">
+              <span class="detail-breadcrumb">
+                {{ store.selectedRow.workspaceName || '-' }} / {{ store.selectedRow.projectName || '-' }} / {{ store.selectedRow.num || store.selectedRow.id }}
+              </span>
+              <div class="detail-actions">
+                <el-button size="mini" icon="el-icon-document-copy" @click="copyId(store.selectedRow.num || store.selectedRow.id)">
+                  {{ $t('advanced_search.detail_copy_id') }}
+                </el-button>
+                <el-button type="primary" size="mini" icon="el-icon-full-screen" @click="openFullDetail(store.selectedRow)">
+                  {{ $t('advanced_search.detail_open_in_new_tab') }}
+                </el-button>
+              </div>
             </div>
             <div class="detail-title">
-              <el-tag size="medium" :type="getModuleTagType()" effect="dark" style="vertical-align: 2px; margin-right: 8px;">
+              <el-tag size="medium" :type="getModuleTagType()" effect="dark" class="module-tag">
                 {{ currentModuleShortLabel }}
               </el-tag>
               {{ store.selectedRow.name || store.selectedRow.title }}
             </div>
             <div class="detail-meta-row">
-              <span><i class="el-icon-user"></i> {{ $t('commons.create_user') }}: {{ store.selectedRow.createUserName || store.selectedRow.creator }}</span>
-              <span><i class="el-icon-date"></i> {{ $t('commons.create_time') }}: {{ formatTime(store.selectedRow.createTime || store.selectedRow.create_time) || '-' }}</span>
-              <span><i class="el-icon-time"></i> {{ $t('advanced_search.updated_at') }}: {{ formatTime(store.selectedRow.updateTime || store.selectedRow.update_time) }}</span>
+              <div class="meta-item">
+                <i class="el-icon-user"></i> 
+                <span class="meta-label">{{ $t('commons.create_user') }}:</span>
+                <span class="meta-value">{{ store.selectedRow.createUserName || store.selectedRow.creator }}</span>
+              </div>
+              <div class="meta-item">
+                <i class="el-icon-date"></i>
+                <span class="meta-label">{{ $t('commons.create_time') }}:</span>
+                <span class="meta-value">{{ formatTime(store.selectedRow.createTime || store.selectedRow.create_time) || '-' }}</span>
+              </div>
+              <div class="meta-item">
+                <i class="el-icon-time"></i>
+                <span class="meta-label">{{ $t('advanced_search.updated_at') }}:</span>
+                <span class="meta-value">{{ formatTime(store.selectedRow.updateTime || store.selectedRow.update_time) }}</span>
+              </div>
             </div>
           </div>
 
-          <div class="detail-section-title">{{ $t('advanced_search.basic_attributes') }}</div>
-          <div class="detail-field-grid">
-            <div class="detail-field-item" v-for="f in currentModuleFields" :key="f.field || f.value">
-              <span class="detail-label">{{ f.label || f.name }}</span>
-              <span class="detail-value">
-                <el-tag v-if="(f.field || f.value) === 'status'" size="small" :type="getStatusType(store.selectedRow[f.field || f.value])">
-                  {{ store.selectedRow[f.field || f.value] }}
-                </el-tag>
-                <el-tag v-else-if="(f.field || f.value) === 'priority'" size="small" :type="getPriorityType(store.selectedRow[f.field || f.value])">
-                  {{ store.selectedRow[f.field || f.value] }}
-                </el-tag>
-                <el-tag v-else-if="(f.field || f.value) === 'severity'" size="small" :type="getSeverityType(store.selectedRow[f.field || f.value])">
-                  {{ store.selectedRow[f.field || f.value] }}
-                </el-tag>
-                <span v-else>{{ store.selectedRow[f.field || f.value] || '-' }}</span>
-              </span>
+          <div class="detail-content">
+            <div class="detail-section">
+              <div class="detail-section-title">
+                <i class="el-icon-info"></i> {{ $t('advanced_search.basic_attributes') }}
+              </div>
+              <div class="detail-field-grid">
+                <div class="detail-field-item" v-for="f in currentModuleFields" :key="f.field || f.value">
+                  <span class="detail-label">{{ f.label || f.name }}</span>
+                  <div class="detail-value">
+                    <el-tag v-if="(f.field || f.value) === 'status'" size="small" :type="getStatusType(store.selectedRow[f.field || f.value])" effect="plain">
+                      {{ store.selectedRow[f.field || f.value] }}
+                    </el-tag>
+                    <el-tag v-else-if="(f.field || f.value) === 'priority'" size="small" :type="getPriorityType(store.selectedRow[f.field || f.value])" effect="dark">
+                      {{ store.selectedRow[f.field || f.value] }}
+                    </el-tag>
+                    <el-tag v-else-if="(f.field || f.value) === 'severity'" size="small" :type="getSeverityType(store.selectedRow[f.field || f.value])" effect="dark">
+                      {{ store.selectedRow[f.field || f.value] }}
+                    </el-tag>
+                    <span v-else>{{ store.selectedRow[f.field || f.value] || '-' }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -453,11 +530,28 @@ export default {
       store: useAdvancedSearchStore(),
       popoverVisible: false,
       userLoading: false,
-      userList: []
+      userList: [],
+      fieldSearchText: ''
     };
   },
   
   computed: {
+    filteredFields() {
+      const groups = this.fieldsByGroup;
+      if (!this.fieldSearchText) return groups;
+      
+      const search = this.fieldSearchText.toLowerCase();
+      const filterFn = f => (f.label || f.name || '').toLowerCase().includes(search);
+      
+      return {
+        basic: groups.basic.filter(filterFn),
+        user: groups.user.filter(filterFn),
+        module: groups.module.filter(filterFn),
+        custom: groups.custom.filter(filterFn),
+        date: groups.date.filter(filterFn)
+      };
+    },
+
     currentModuleLabel() {
       const labels = {
         'TEST_CASE': this.$t('advanced_search.module_test_case'),
@@ -693,6 +787,51 @@ export default {
       ];
     },
     
+    saveVisualQuery() {
+      if (this.store.conditions.length === 0) return;
+      
+      const parts = this.store.conditions.filter(c => c.value && (Array.isArray(c.value) ? c.value.length > 0 : c.value !== '')).map(c => {
+        let val = c.value;
+        let op = c.op;
+        
+        if (op === 'in' || op === 'not_in') {
+          const list = Array.isArray(val) ? val : [val];
+          val = `(${list.map(v => `"${v}"`).join(', ')})`;
+          op = op === 'in' ? 'IN' : 'NOT IN';
+        } else if (op === 'between') {
+          if (Array.isArray(val) && val.length === 2) {
+            return `${c.field} >= "${val[0]}" AND ${c.field} <= "${val[1]}"`;
+          }
+          return null;
+        } else {
+          val = `"${val}"`;
+          if (op === 'like') op = '~';
+          else if (op === 'lt') op = '<';
+          else if (op === 'gt') op = '>';
+        }
+        return `${c.field} ${op} ${val}`;
+      }).filter(p => p !== null);
+      
+      if (parts.length === 0) return;
+      
+      this.store.jqlQuery = parts.join(' AND ');
+      this.store.queryMode = 'jql';
+      this.$message.info(this.$t('advanced_search.switch_to_jql') + '，' + this.$t('advanced_search.jql_save'));
+    },
+
+    openFullDetail(row) {
+      const module = this.store.currentModule.toLowerCase().replace('_', '-');
+      const url = `/${module}/detail/${row.id}`;
+      window.open(url, '_blank');
+    },
+
+    copyId(id) {
+      if (!id) return;
+      navigator.clipboard.writeText(id).then(() => {
+        this.$message.success(this.$t('commons.copy_success'));
+      });
+    },
+
     loadUsers() {
       this.userList = [
         { id: 'user-001', name: '张三', email: 'zhangsan@example.com' },
@@ -814,158 +953,197 @@ export default {
 .top-filter-bar {
   display: flex;
   gap: 12px;
-  padding: 20px;
-  background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
-  flex-wrap: wrap;
+  padding: 12px 20px;
+  background: #fff;
   align-items: center;
-  transition: box-shadow 0.3s ease;
   border-bottom: 1px solid #ebeef5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 
-  .el-select {
-    width: 200px;
-    transition: all 0.3s ease;
+  .vertical-divider {
+    width: 1px;
+    height: 20px;
+    background: #e6e6e6;
+    margin: 0 4px;
+  }
+
+  .scope-selectors {
+    display: flex;
+    gap: 8px;
+  }
+
+  .toolbar-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.filter-popover-content {
+  padding: 4px;
+
+  .popover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+
+    .popover-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: #303133;
+    }
+  }
+}
+
+.filter-groups-container {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #e8e8e8;
+    border-radius: 3px;
   }
 }
 
 .inline-add-filter-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   height: 32px;
-  padding: 0 16px;
-  border: 1.5px dashed #d9d9d9;
-  border-radius: 6px;
+  padding: 0 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
   color: #606266;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s;
   font-size: 13px;
-  font-weight: 500;
-
-  &:hover {
-    color: #783887;
-    border-color: #783887;
-    border-style: solid;
-    background: linear-gradient(135deg, rgba(120, 56, 135, 0.08) 0%, rgba(120, 56, 135, 0.03) 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(120, 56, 135, 0.15);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-}
-
-.cross-project-warning {
-  width: 100%;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, #fff7e6 0%, #fef3e6 100%);
-  border: 1px solid #ffd591;
-  border-radius: 6px;
-  color: #d46b08;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  animation: fadeIn 0.3s ease;
 
   i {
-    font-size: 16px;
+    margin-right: 6px;
+    font-size: 14px;
+    color: #783887;
   }
-}
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
+  &:hover {
+    border-color: #783887;
+    color: #783887;
+    background: #fdf6ff;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.field-group {
-  margin-bottom: 16px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.field-group-title {
-  font-size: 12px;
-  color: #606266;
-  margin-bottom: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.field-group-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-
-  .el-tag {
-    transition: all 0.3s ease;
-    cursor: pointer;
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-    }
-  }
-}
-
-.query-condition-area {
-  padding: 16px 20px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #ebeef5;
 }
 
 .active-tags-bar {
-  padding: 12px 20px;
-  background: linear-gradient(to bottom, #fafbfc 0%, #ffffff 100%);
+  padding: 8px 20px;
+  background: #f8f9fb;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
   align-items: center;
-  min-height: 56px;
+  gap: 16px;
   border-bottom: 1px solid #ebeef5;
-  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+  min-height: 48px;
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
+  .active-tags-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #909399;
+    font-weight: 600;
+    white-space: nowrap;
+
+    i {
+      color: #67c23a;
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .tags-container {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .clear-all-btn {
+    color: #909399;
+    font-size: 12px;
+    &:hover {
+      color: #f56c6c;
+    }
   }
 }
 
 .condition-tag {
   background: #fff;
   border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  padding: 4px 6px 4px 10px;
+  border-radius: 4px;
+  padding: 2px 2px 2px 10px;
   display: flex;
   align-items: center;
   font-size: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
+  transition: all 0.2s;
 
   &:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
+    border-color: #783887;
+    box-shadow: 0 2px 6px rgba(120, 56, 135, 0.1);
   }
-}
 
-.condition-field-label {
-  color: #909399;
-  margin-right: 6px;
-  font-weight: 600;
+  .condition-field-label {
+    color: #606266;
+    font-weight: 600;
+    margin-right: 8px;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .op-selector {
+    width: 80px;
+    margin-right: 8px;
+    ::v-deep .el-input__inner {
+      border: none;
+      background: #f4f4f5;
+      height: 24px;
+      line-height: 24px;
+      padding: 0 20px 0 8px;
+    }
+  }
+
+  .cond-value-input {
+    width: 160px;
+    ::v-deep .el-input__inner {
+      border: none;
+      border-bottom: 1px dashed #dcdfe6;
+      border-radius: 0;
+      height: 24px;
+      line-height: 24px;
+      padding: 0 4px;
+      &:focus {
+        border-bottom-color: #783887;
+      }
+    }
+  }
+
+  .remove-cond-btn {
+    margin-left: 6px;
+    padding: 4px;
+    cursor: pointer;
+    color: #c0c4cc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #fef0f0;
+      color: #f56c6c;
+    }
+  }
 }
 
 .user-option {
@@ -1158,91 +1336,128 @@ export default {
   flex: 1;
   background: #fff;
   overflow-y: auto;
-  padding: 28px 48px;
+  padding: 0;
+}
 
-  &::-webkit-scrollbar {
-    width: 8px;
+.detail-header {
+  padding: 24px 32px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+
+  .detail-top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
   }
 
-  &::-webkit-scrollbar-thumb {
-    background: #d9d9d9;
+  .detail-breadcrumb {
+    font-size: 12px;
+    color: #909399;
+    background: #f4f4f5;
+    padding: 2px 8px;
     border-radius: 4px;
+  }
 
-    &:hover {
-      background: #bfbfbf;
+  .detail-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .module-tag {
+      border-radius: 4px;
+      font-size: 11px;
+      padding: 0 8px;
+      height: 22px;
+      line-height: 22px;
+    }
+  }
+
+  .detail-meta-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+
+      i {
+        color: #909399;
+      }
+
+      .meta-label {
+        color: #909399;
+      }
+
+      .meta-value {
+        color: #606266;
+        font-weight: 500;
+      }
     }
   }
 }
 
-.detail-header {
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 20px;
-  margin-bottom: 24px;
+.detail-content {
+  padding: 24px 32px;
 }
 
-.detail-title {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  color: #1f2f3d;
-  line-height: 1.4;
-}
+.detail-section {
+  margin-bottom: 32px;
 
-.detail-meta-row {
-  display: flex;
-  gap: 28px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: #606266;
-  flex-wrap: wrap;
+  .detail-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
-  i {
-    margin-right: 4px;
-    color: #909399;
+    i {
+      color: #783887;
+    }
   }
-}
-
-.detail-section-title {
-  font-size: 15px;
-  font-weight: 700;
-  border-left: 4px solid #783887;
-  padding-left: 12px;
-  margin: 28px 0 16px;
-  color: #303133;
-  letter-spacing: 0.3px;
 }
 
 .detail-field-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px 40px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
 }
 
 .detail-field-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px;
-  background: #fafbfc;
+  gap: 4px;
+  padding: 12px 16px;
+  background: #f8f9fb;
   border-radius: 6px;
-  transition: all 0.3s ease;
+  border: 1px solid transparent;
+  transition: all 0.2s;
 
   &:hover {
-    background: #f5f7fa;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: #fff;
+    border-color: #e4e7ed;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   }
-}
 
-.detail-label {
-  font-size: 12px;
-  color: #909399;
-  font-weight: 600;
-}
+  .detail-label {
+    font-size: 12px;
+    color: #909399;
+  }
 
-.detail-value {
-  font-size: 14px;
-  color: #303133;
-  font-weight: 500;
+  .detail-value {
+    font-size: 14px;
+    color: #303133;
+    font-weight: 500;
+  }
 }
 
 // 响应式设计
