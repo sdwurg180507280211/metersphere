@@ -894,8 +894,6 @@ export default {
     }
     this.buttonData = buttons(this);
 
-    // 并行加载所有数据，减少总加载时间
-    // 关键数据并行加载
     Promise.all([
       this.getApiScenario(),
       this.getWsProjects(),
@@ -906,7 +904,6 @@ export default {
       this.$error(this.$t('commons.load_failed'));
     });
 
-    // 非关键数据也可以并行加载，不需要等待$nextTick
     this.getPlugins().then(() => {
       this.initPlugins();
     });
