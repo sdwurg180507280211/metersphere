@@ -795,9 +795,9 @@ export default {
 
 <style scoped lang="scss">
 .advanced-search-page {
-  padding: 20px;
-  background-color: #f5f7fa;
-  height: calc(100vh - 84px);
+  padding: 0;
+  background-color: #fff;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -808,8 +808,6 @@ export default {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
 
@@ -1073,6 +1071,11 @@ export default {
   overflow: hidden;
 }
 
+.list-view-wrap .el-table {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .pagination-wrap {
   padding: 16px 20px;
   text-align: right;
@@ -1083,9 +1086,10 @@ export default {
 
 .split-layout {
   display: flex;
-  height: 100%;
+  flex: 1;
   width: 100%;
   background: #fff;
+  overflow: hidden;
 }
 
 .split-left {
