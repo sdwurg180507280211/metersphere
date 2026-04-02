@@ -11,6 +11,8 @@ export default {
     // ========== Filter ==========
     select_workspace: 'Select Workspace',
     select_project: 'Select Project',
+    please_select_workspace_first: 'Please select workspace first',
+    project_list_updated: 'Project list updated',
     select_filter_field: 'Select Filter Field',
     workspace_placeholder: 'All Workspaces',
     project_placeholder: 'All Projects',

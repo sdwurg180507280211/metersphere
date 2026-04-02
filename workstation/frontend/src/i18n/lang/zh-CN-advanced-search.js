@@ -11,6 +11,8 @@ export default {
     // ========== 筛选 ==========
     select_workspace: '选择工作空间',
     select_project: '选择项目',
+    please_select_workspace_first: '请先选择工作空间',
+    project_list_updated: '项目列表已更新',
     select_filter_field: '选择筛选字段',
     workspace_placeholder: '全部工作空间',
     project_placeholder: '全部项目',

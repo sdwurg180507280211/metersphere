@@ -32,7 +32,8 @@
         v-model="store.selectedProjects"
         multiple
         collapse-tags
-        :placeholder="$t('advanced_search.select_project')"
+        :disabled="store.selectedWorkspaces.length === 0"
+        :placeholder="store.selectedWorkspaces.length === 0 ? $t('advanced_search.please_select_workspace_first') : $t('advanced_search.select_project')"
         @change="onProjectChange"
       >
         <el-option v-for="proj in store.projects" :key="proj.id" :value="proj.id" :label="proj.name" />
@@ -565,8 +566,19 @@ export default {
   
   methods: {
     async onWorkspaceChange() {
-      await this.store.loadProjects();
-      this.store.selectedProjects = [];
+      if (this.store.selectedWorkspaces.length === 0) {
+        // 如果清空了工作空间，清空项目和项目列表
+        this.store.projects = [];
+        this.store.selectedProjects = [];
+        return;
+      }
+      try {
+        await this.store.loadProjects();
+        this.store.selectedProjects = [];
+        this.$message.success(this.$t('advanced_search.project_list_updated'));
+      } catch (error) {
+        this.$message.error(this.$t('advanced_search.load_projects_failed'));
+      }
     },
     
     async onProjectChange() {

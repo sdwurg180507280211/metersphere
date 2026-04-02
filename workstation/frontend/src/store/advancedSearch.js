@@ -219,11 +219,17 @@ export const useAdvancedSearchStore = defineStore('advancedSearch', {
      */
     async loadProjects() {
       try {
+        // 如果没有选择工作空间，清空项目列表
+        if (!this.selectedWorkspaces || this.selectedWorkspaces.length === 0) {
+          this.projects = [];
+          return;
+        }
         const workspaceIds = this.selectedWorkspaces.join(',');
         const response = await api.getProjects(workspaceIds);
         this.projects = response.data || [];
       } catch (error) {
         console.error('加载项目列表失败:', error);
+        this.projects = [];
         throw error;
       }
     },
