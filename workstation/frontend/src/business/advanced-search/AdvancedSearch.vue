@@ -76,6 +76,23 @@
           </div>
 
           <div class="filter-groups-container">
+            <!-- 常用筛选 (快捷访问) -->
+            <div class="field-group quick-access" v-if="quickFields.length > 0">
+              <div class="field-group-title">🚀 {{ $t('advanced_search.jql_examples_title') }}</div>
+              <div class="field-group-items">
+                <el-tag
+                  v-for="field in quickFields"
+                  :key="field.field || field.value"
+                  size="small"
+                  class="field-tag quick-tag"
+                  effect="plain"
+                  @click="addFilter(field)"
+                >
+                  <i :class="field.icon || 'el-icon-star-off'"></i> {{ field.label || field.name }}
+                </el-tag>
+              </div>
+            </div>
+
             <!-- 基础信息 -->
             <div class="field-group" v-if="filteredFields.basic.length > 0">
               <div class="field-group-title">📋 {{ $t('advanced_search.basic_info') }}</div>
@@ -93,19 +110,19 @@
               </div>
             </div>
 
-            <!-- 人员相关 -->
-            <div class="field-group" v-if="filteredFields.user.length > 0">
-              <div class="field-group-title">👤 {{ $t('advanced_search.user_related') }}</div>
+            <!-- 审计追踪 (人员与时间) -->
+            <div class="field-group" v-if="filteredFields.audit.length > 0">
+              <div class="field-group-title">👤 {{ $t('advanced_search.audit_trail') }}</div>
               <div class="field-group-items">
                 <el-tag
-                  v-for="field in filteredFields.user"
+                  v-for="field in filteredFields.audit"
                   :key="field.field || field.value"
                   size="small"
                   class="field-tag"
                   :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
                   @click="addFilter(field)"
                 >
-                  <i :class="field.icon || 'el-icon-user'"></i> {{ field.label || field.name }}
+                  <i :class="field.icon || 'el-icon-time'"></i> {{ field.label || field.name }}
                 </el-tag>
               </div>
             </div>
@@ -142,23 +159,6 @@
                   @click="addFilter(field)"
                 >
                   {{ field.label || field.name }}
-                </el-tag>
-              </div>
-            </div>
-
-            <!-- 时间相关 -->
-            <div class="field-group" v-if="filteredFields.date.length > 0">
-              <div class="field-group-title">📅 {{ $t('advanced_search.date_related') }}</div>
-              <div class="field-group-items">
-                <el-tag
-                  v-for="field in filteredFields.date"
-                  :key="field.field || field.value"
-                  size="small"
-                  class="field-tag"
-                  :effect="isFieldSelected(field.field || field.value) ? 'dark' : 'plain'"
-                  @click="addFilter(field)"
-                >
-                  <i :class="field.icon || 'el-icon-date'"></i> {{ field.label || field.name }}
                 </el-tag>
               </div>
             </div>
@@ -211,17 +211,26 @@
 
           <!-- 根据字段类型渲染不同输入控件 -->
           <div class="cond-value-input">
+            <!-- 数字类型 -->
+            <el-input-number
+              v-if="getFieldType(cond.field) === 'number'"
+              v-model="cond.value"
+              size="mini"
+              controls-position="right"
+              style="width: 100%"
+            />
+
             <!-- 日期类型 -->
             <el-date-picker
-              v-if="getFieldType(cond.field) === 'date'"
+              v-else-if="getFieldType(cond.field) === 'date' || getFieldType(cond.field) === 'datetime'"
               v-model="cond.value"
-              type="daterange"
+              :type="cond.op === 'between' ? 'daterange' : 'date'"
               size="mini"
               style="width: 100%"
               range-separator="-"
               :start-placeholder="$t('advanced_search.start_date')"
               :end-placeholder="$t('advanced_search.end_date')"
-              value-format="yyyy-MM-dd"
+              :value-format="getFieldType(cond.field) === 'date' ? 'yyyy-MM-dd' : 'yyyy-MM-dd HH:mm:ss'"
             />
 
             <!-- 下拉选择类型 -->
@@ -231,11 +240,26 @@
               size="mini"
               style="width: 100%"
               :placeholder="$t('advanced_search.select_value')"
-              multiple
+              :multiple="['in', 'not_in'].includes(cond.op)"
               collapse-tags
             >
-              <el-option v-for="opt in getFieldOptions(cond.field)" :key="opt" :label="opt" :value="opt" />
+              <el-option 
+                v-for="opt in getFieldOptions(cond.field)" 
+                :key="opt.value || opt" 
+                :label="opt.label || opt" 
+                :value="opt.value || opt" 
+              />
             </el-select>
+
+            <!-- 树形选择 (如模块) -->
+            <ms-node-tree-select
+              v-else-if="getFieldType(cond.field) === 'treeSelect'"
+              v-model="cond.value"
+              size="mini"
+              style="width: 100%"
+              :module="store.currentModule"
+              :project-ids="store.selectedProjects"
+            />
 
             <!-- 用户类型 -->
             <el-select
@@ -509,7 +533,6 @@
         </div>
       </div>
     </div>
-    </div>
   </div>
 </template>
 
@@ -536,6 +559,39 @@ export default {
   },
   
   computed: {
+    quickFields() {
+      const common = ['status', 'createUser', 'createTime'];
+      const moduleSpecific = {
+        'TEST_CASE': ['priority', 'maintainer', 'type'],
+        'ISSUE': ['severity', 'assignee', 'platform'],
+        'TEST_PLAN': ['principal', 'stage'],
+        'TEST_CASE_REVIEW': ['reviewer', 'reviewStatus']
+      };
+      
+      const names = [...common, ...(moduleSpecific[this.store.currentModule] || [])];
+      return this.getSafeFields().filter(f => names.includes(f.field || f.value));
+    },
+
+    fieldsByGroup() {
+      const fields = Array.isArray(this.store.availableFields) ? this.store.availableFields : [];
+      const grouped = {
+        basic: [],
+        module: [],
+        audit: [],
+        custom: []
+      };
+      fields.forEach(f => {
+        const group = f.group || 'basic';
+        if (grouped[group]) {
+          grouped[group].push(f);
+        } else {
+          // 兜底处理：未知的组放进基础信息
+          grouped.basic.push(f);
+        }
+      });
+      return grouped;
+    },
+    
     filteredFields() {
       const groups = this.fieldsByGroup;
       if (!this.fieldSearchText) return groups;
@@ -545,48 +601,10 @@ export default {
       
       return {
         basic: groups.basic.filter(filterFn),
-        user: groups.user.filter(filterFn),
         module: groups.module.filter(filterFn),
-        custom: groups.custom.filter(filterFn),
-        date: groups.date.filter(filterFn)
+        audit: groups.audit.filter(filterFn),
+        custom: groups.custom.filter(filterFn)
       };
-    },
-
-    currentModuleLabel() {
-      const labels = {
-        'TEST_CASE': this.$t('advanced_search.module_test_case'),
-        'ISSUE': this.$t('advanced_search.module_issue'),
-        'TEST_PLAN': this.$t('advanced_search.module_test_plan'),
-        'TEST_CASE_REVIEW': this.$t('advanced_search.module_review')
-      };
-      return labels[this.store.currentModule] || '';
-    },
-    
-    currentModuleShortLabel() {
-      const labels = {
-        'TEST_CASE': 'Case',
-        'ISSUE': 'Bug',
-        'TEST_PLAN': 'Plan',
-        'TEST_CASE_REVIEW': 'Review'
-      };
-      return labels[this.store.currentModule] || '';
-    },
-    
-    fieldsByGroup() {
-      const fields = Array.isArray(this.store.availableFields) ? this.store.availableFields : [];
-      const grouped = {
-        basic: [],
-        user: [],
-        module: [],
-        custom: [],
-        date: []
-      };
-      fields.forEach(f => {
-        if (f && Object.hasOwn(grouped, f.group)) {
-          grouped[f.group].push(f);
-        }
-      });
-      return grouped;
     },
     
     allColDefs() {
@@ -704,6 +722,34 @@ export default {
     
     async onModuleChange() {
       await this.store.switchModule(this.store.currentModule);
+      this.addDefaultConditions();
+    },
+
+    addDefaultConditions() {
+      // 根据不同模块添加默认的筛选条件，提升开箱即用的体验
+      const module = this.store.currentModule;
+      
+      // 先清空现有条件（switchModule 已经清空了 store.conditions，这里是保险）
+      this.store.clearConditions();
+      
+      const defaultFields = {
+        'TEST_CASE': ['status', 'priority', 'maintainer'],
+        'ISSUE': ['status', 'severity', 'assignee'],
+        'TEST_PLAN': ['status', 'principal', 'stage'],
+        'TEST_CASE_REVIEW': ['status', 'reviewer', 'reviewStatus']
+      };
+      
+      const fieldsToHead = defaultFields[module] || ['status'];
+      
+      // 延迟一下确保 availableFields 已经加载完成
+      this.$nextTick(() => {
+        fieldsToHead.forEach(fieldName => {
+          const field = this.store.availableFields.find(f => (f.field || f.value) === fieldName);
+          if (field) {
+            this.store.addCondition(field);
+          }
+        });
+      });
     },
     
     onQueryModeChange() {
@@ -762,12 +808,20 @@ export default {
     
     getFieldOptions(val) {
       const f = this.getSafeFields().find(f => (f.field || f.value) === val);
-      return f ? (f.options || []) : [];
+      return f && f.options ? f.options : [];
     },
     
     getOperators(val) {
+      const f = this.getSafeFields().find(f => (f.field || f.value) === val);
+      if (f && f.operators && f.operators.length > 0) {
+        return f.operators.map(op => ({
+          l: this.$t(`advanced_search.op_${op}`) || op,
+          v: op
+        }));
+      }
+
       const type = this.getFieldType(val);
-      if (type === 'select' || type === 'user') {
+      if (type === 'select' || type === 'user' || type === 'treeSelect') {
         return [
           {l: this.$t('advanced_search.op_in'), v: 'in'},
           {l: this.$t('advanced_search.op_not_in'), v: 'not_in'}
@@ -1009,6 +1063,25 @@ export default {
   &::-webkit-scrollbar-thumb {
     background: #e8e8e8;
     border-radius: 3px;
+  }
+
+  .quick-access {
+    background: #fdf6ff;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px dashed #78388750;
+    margin-bottom: 20px;
+
+    .quick-tag {
+      background: #fff;
+      border-color: #78388730;
+      color: #783887;
+      &:hover {
+        background: #783887;
+        color: #fff;
+        border-color: #783887;
+      }
+    }
   }
 }
 
