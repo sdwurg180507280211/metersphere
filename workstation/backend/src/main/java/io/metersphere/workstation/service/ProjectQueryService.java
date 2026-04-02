@@ -63,7 +63,7 @@ public class ProjectQueryService {
 
         // 查询所有有权限的项目
         ProjectExample example = new ProjectExample();
-        ProjectExample.Criteria criteria = example.createCriteria();
+        example.setDistinct(true); // 数据库层面去重
 
         // 第一种情况：用户对工作空间有权限，则该工作空间下的所有项目都有权限
         ProjectExample.Criteria orCriteria = example.or();
@@ -73,24 +73,21 @@ public class ProjectQueryService {
         ProjectExample.Criteria orCriteria2 = example.or();
         orCriteria2.andIdIn(sourceIds);
 
+        // 如果指定了工作空间，进一步过滤
+        if (workspaceIds != null && !workspaceIds.isEmpty()) {
+            // 对所有条件都添加 workspace 过滤
+            orCriteria.andWorkspaceIdIn(workspaceIds);
+            orCriteria2.andWorkspaceIdIn(workspaceIds);
+        }
+
         example.setOrderByClause("update_time DESC");
 
         List<Project> projects = projectMapper.selectByExample(example);
 
-        // 转换为 DTO 并去重
-        List<ProjectSimpleDTO> result = projects.stream()
+        // 转换为 DTO
+        return projects.stream()
                 .map(this::convertToSimpleDTO)
-                .distinct()
                 .collect(Collectors.toList());
-
-        // 如果指定了工作空间，则在结果中进一步过滤
-        if (workspaceIds != null && !workspaceIds.isEmpty()) {
-            result = result.stream()
-                    .filter(p -> workspaceIds.contains(p.getWorkspaceId()))
-                    .collect(Collectors.toList());
-        }
-
-        return result;
     }
     
     /**

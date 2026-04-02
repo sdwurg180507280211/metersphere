@@ -38,23 +38,20 @@ export const useAdvancedSearchStore = defineStore('advancedSearch', {
 
     // 当前选中的行（分屏视图）
     selectedRow: null,
-    
+
     // 查询结果列表
     results: [],
-    
+
     // 分页信息
     pagination: {
       current: 1,
       pageSize: 10,
       total: 0
     },
-    
+
     // 视图模式：'list'（列表）或 'split'（分屏）
     viewMode: 'list',
-    
-    // 当前选中的数据ID（分屏模式使用）
-    selectedId: null,
-    
+
     // 详情数据
     detailData: null,
     
@@ -220,8 +217,8 @@ export const useAdvancedSearchStore = defineStore('advancedSearch', {
     async loadProjects() {
       try {
         // 如果没有选择工作空间，清空项目列表
-        if (!this.selectedWorkspaces || this.selectedWorkspaces.length === 0) {
-          this.projects = [];
+        if (this.selectedWorkspaces.length === 0) {
+          this.clearProjects();
           return;
         }
         const workspaceIds = this.selectedWorkspaces.join(',');
@@ -232,6 +229,14 @@ export const useAdvancedSearchStore = defineStore('advancedSearch', {
         this.projects = [];
         throw error;
       }
+    },
+
+    /**
+     * 清空项目列表和选择
+     */
+    clearProjects() {
+      this.projects = [];
+      this.selectedProjects = [];
     },
     
     /**
@@ -343,7 +348,6 @@ export const useAdvancedSearchStore = defineStore('advancedSearch', {
       try {
         const response = await api.getDetail(this.currentModule, id);
         this.detailData = response.data;
-        this.selectedId = id;
         return response.data;
       } catch (error) {
         console.error('加载详情失败:', error);
@@ -389,7 +393,7 @@ export const useAdvancedSearchStore = defineStore('advancedSearch', {
     switchViewMode(mode) {
       this.viewMode = mode;
       if (mode === 'list') {
-        this.selectedId = null;
+        this.selectedRow = null;
         this.detailData = null;
       }
     },
@@ -411,7 +415,7 @@ export const useAdvancedSearchStore = defineStore('advancedSearch', {
         pageSize: 10,
         total: 0
       };
-      this.selectedId = null;
+      this.selectedRow = null;
       this.detailData = null;
     }
   },
