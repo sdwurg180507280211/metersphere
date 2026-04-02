@@ -191,7 +191,13 @@ export const useAdvancedSearchStore = defineStore('advancedSearch', {
       try {
         const projectId = this.isSingleProjectMode ? this.selectedProjects[0] : null;
         const response = await api.getFieldMetadata(this.currentModule, projectId);
-        this.fieldMetadata = response.data || [];
+        
+        // 关键修复：合并系统字段和自定义字段为扁平数组
+        const data = response.data || {};
+        const systemFields = data.systemFields || [];
+        const customFields = data.customFields || [];
+        
+        this.fieldMetadata = [...systemFields, ...customFields];
       } catch (error) {
         console.error('加载字段元数据失败:', error);
         throw error;
