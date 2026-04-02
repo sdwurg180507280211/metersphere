@@ -36,7 +36,10 @@
         :placeholder="store.selectedWorkspaces.length === 0 ? $t('advanced_search.please_select_workspace_first') : $t('advanced_search.select_project')"
         @change="onProjectChange"
       >
-        <el-option v-for="proj in store.projects" :key="proj.id" :value="proj.id" :label="proj.name" />
+        <el-option v-for="proj in store.projects" :key="proj.id" :value="proj.id">
+          <span>{{ proj.name }}</span>
+          <span style="float: right; color: #ccc; font-size: 12px; margin-left: 10px;">{{ proj.workspaceName }}</span>
+        </el-option>
       </el-select>
 
       <!-- 筛选条件按钮 -->
@@ -580,8 +583,12 @@ export default {
     async onWorkspaceChange() {
       try {
         await this.store.loadProjects();
+        // 过滤掉不在当前工作空间中的项目
+        const validProjectIds = this.store.projects.map(p => p.id);
+        this.store.selectedProjects = this.store.selectedProjects.filter(id =>
+          validProjectIds.includes(id)
+        );
         if (this.store.selectedWorkspaces.length > 0) {
-          this.store.selectedProjects = [];
           this.$message.success(this.$t('advanced_search.project_list_updated'));
         }
       } catch (error) {
