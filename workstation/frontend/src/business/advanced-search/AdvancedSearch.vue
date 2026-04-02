@@ -486,7 +486,7 @@ export default {
         date: []
       };
       fields.forEach(f => {
-        if (f && grouped.hasOwnProperty(f.group)) {
+        if (f && Object.hasOwn(grouped, f.group)) {
           grouped[f.group].push(f);
         }
       });
@@ -545,7 +545,7 @@ export default {
         module: []
       };
       this.allColDefs.forEach(c => {
-        if (c.group && grouped.hasOwnProperty(c.group)) {
+        if (c.group && Object.hasOwn(grouped, c.group)) {
           grouped[c.group].push(c);
         }
       });
