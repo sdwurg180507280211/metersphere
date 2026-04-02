@@ -1,5 +1,6 @@
 <template>
   <div class="advanced-search-page">
+    <div class="main-card">
     <!-- 顶部筛选栏 -->
     <div class="top-filter-bar">
       <!-- 业务模块选择 -->
@@ -36,10 +37,7 @@
         :placeholder="store.selectedWorkspaces.length === 0 ? $t('advanced_search.please_select_workspace_first') : $t('advanced_search.select_project')"
         @change="onProjectChange"
       >
-        <el-option v-for="proj in store.projects" :key="proj.id" :value="proj.id">
-          <span>{{ proj.name }}</span>
-          <span style="float: right; color: #ccc; font-size: 12px; margin-left: 10px;">{{ proj.workspaceName }}</span>
-        </el-option>
+        <el-option v-for="proj in store.projects" :key="proj.id" :value="proj.id" :label="proj.name" />
       </el-select>
 
       <!-- 筛选条件按钮 -->
@@ -434,6 +432,7 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -583,12 +582,8 @@ export default {
     async onWorkspaceChange() {
       try {
         await this.store.loadProjects();
-        // 过滤掉不在当前工作空间中的项目
-        const validProjectIds = this.store.projects.map(p => p.id);
-        this.store.selectedProjects = this.store.selectedProjects.filter(id =>
-          validProjectIds.includes(id)
-        );
         if (this.store.selectedWorkspaces.length > 0) {
+          this.store.selectedProjects = [];
           this.$message.success(this.$t('advanced_search.project_list_updated'));
         }
       } catch (error) {
@@ -802,10 +797,20 @@ export default {
 .advanced-search-page {
   padding: 20px;
   background-color: #f5f7fa;
-  min-height: 100vh;
+  height: calc(100vh - 84px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  overflow: hidden;
+}
+
+.main-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
 }
 
 .top-filter-bar {
@@ -813,15 +818,10 @@ export default {
   gap: 12px;
   padding: 20px;
   background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   flex-wrap: wrap;
   align-items: center;
   transition: box-shadow 0.3s ease;
-
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
+  border-bottom: 1px solid #ebeef5;
 
   .el-select {
     width: 200px;
@@ -868,7 +868,6 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 2px 6px rgba(255, 213, 145, 0.2);
   animation: fadeIn 0.3s ease;
 
   i {
@@ -920,23 +919,20 @@ export default {
 }
 
 .query-condition-area {
-  margin-bottom: 20px;
-  padding: 16px;
-  background-color: white;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 16px 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #ebeef5;
 }
 
 .active-tags-bar {
   padding: 12px 20px;
   background: linear-gradient(to bottom, #fafbfc 0%, #ffffff 100%);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   min-height: 56px;
+  border-bottom: 1px solid #ebeef5;
   animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1020,12 +1016,11 @@ export default {
 
 .result-toolbar {
   padding: 12px 20px;
-  border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: linear-gradient(to right, #fafbfc 0%, #ffffff 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid #ebeef5;
   min-height: 52px;
 }
 
@@ -1066,17 +1061,16 @@ export default {
   flex: 1;
   overflow: hidden;
   position: relative;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
 }
 
 .list-view-wrap {
-  height: 100%;
+  flex: 1;
   width: 100%;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  overflow: hidden;
 }
 
 .pagination-wrap {
@@ -1084,6 +1078,7 @@ export default {
   text-align: right;
   background: #fafbfc;
   border-top: 1px solid #ebeef5;
+  flex-shrink: 0;
 }
 
 .split-layout {
