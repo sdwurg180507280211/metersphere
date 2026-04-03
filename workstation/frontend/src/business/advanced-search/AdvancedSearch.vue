@@ -718,8 +718,17 @@ export default {
     },
     
     addFilter(field) {
-      this.store.addCondition(field);
-      this.popoverVisible = false;
+      const fieldVal = field.field || field.value;
+      const index = this.store.conditions.findIndex(c => c.field === fieldVal);
+      
+      if (index > -1) {
+        // 如果已存在，则反选（移除）
+        this.store.removeCondition(index);
+      } else {
+        // 如果不存在，则添加
+        this.store.addCondition(field);
+      }
+      // 不再关闭弹窗，允许持续操作
     },
     
     removeCondition(idx) {
@@ -755,11 +764,36 @@ export default {
     
     getOperators(val) {
       const f = this.getSafeFields().find(f => (f.field || f.value) === val);
+      
+      // 定义符号到国际化 Key 的映射
+      const opMap = {
+        '=': 'op_equals',
+        '!=': 'op_not_equals',
+        '~': 'op_like',
+        'like': 'op_like',
+        'in': 'op_in',
+        'IN': 'op_in',
+        'not_in': 'op_not_in',
+        'NOT IN': 'op_not_in',
+        'between': 'op_between',
+        'BETWEEN': 'op_between',
+        'lt': 'op_before',
+        '<': 'op_less',
+        '<=': 'op_less_equal',
+        'gt': 'op_after',
+        '>': 'op_greater',
+        '>=': 'op_greater_equal',
+        'contains': 'op_contains'
+      };
+
       if (f && f.operators && f.operators.length > 0) {
-        return f.operators.map(op => ({
-          l: this.$t(`advanced_search.op_${op}`) || op,
-          v: op
-        }));
+        return f.operators.map(op => {
+          const key = opMap[op] || `op_${op}`;
+          return {
+            l: this.$t(`advanced_search.${key}`) || op,
+            v: op
+          };
+        });
       }
 
       const type = this.getFieldType(val);
@@ -769,15 +803,23 @@ export default {
           {l: this.$t('advanced_search.op_not_in'), v: 'not_in'}
         ];
       }
-      if (type === 'date') {
+      if (type === 'date' || type === 'datetime') {
         return [
           {l: this.$t('advanced_search.op_between'), v: 'between'},
           {l: this.$t('advanced_search.op_before'), v: 'lt'},
           {l: this.$t('advanced_search.op_after'), v: 'gt'}
         ];
       }
+      if (type === 'number') {
+        return [
+          {l: this.$t('advanced_search.op_equals'), v: '='},
+          {l: this.$t('advanced_search.op_not_equals'), v: '!='},
+          {l: this.$t('advanced_search.op_greater'), v: 'gt'},
+          {l: this.$t('advanced_search.op_less'), v: 'lt'}
+        ];
+      }
       return [
-        {l: this.$t('advanced_search.op_contains'), v: 'like'},
+        {l: this.$t('advanced_search.op_like'), v: 'like'},
         {l: this.$t('advanced_search.op_equals'), v: '='},
         {l: this.$t('advanced_search.op_not_equals'), v: '!='}
       ];
