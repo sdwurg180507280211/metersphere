@@ -63,42 +63,13 @@
         v-model="popoverVisible"
       >
         <div class="filter-popover-content">
-          <div class="popover-header">
-            <span class="popover-title">{{ $t('advanced_search.select_filter_field') }}</span>
-            <el-input
-              v-model="fieldSearchText"
-              size="mini"
-              prefix-icon="el-icon-search"
-              :placeholder="$t('advanced_search.search')"
-              style="width: 150px;"
-              clearable
-            />
-          </div>
-
           <div class="filter-groups-container">
-            <!-- 常用筛选 (快捷访问) -->
-            <div class="field-group quick-access" v-if="quickFields.length > 0">
-              <div class="field-group-title">🚀 {{ $t('advanced_search.jql_examples_title') }}</div>
-              <div class="field-group-items">
-                <el-tag
-                  v-for="field in quickFields"
-                  :key="field.field || field.value"
-                  size="small"
-                  class="field-tag quick-tag"
-                  effect="plain"
-                  @click="addFilter(field)"
-                >
-                  <i :class="field.icon || 'el-icon-star-off'"></i> {{ field.label || field.name }}
-                </el-tag>
-              </div>
-            </div>
-
             <!-- 基础信息 -->
-            <div class="field-group" v-if="filteredFields.basic.length > 0">
+            <div class="field-group" v-if="fieldsByGroup.basic.length > 0">
               <div class="field-group-title">📋 {{ $t('advanced_search.basic_info') }}</div>
               <div class="field-group-items">
                 <el-tag
-                  v-for="field in filteredFields.basic"
+                  v-for="field in fieldsByGroup.basic"
                   :key="field.field || field.value"
                   size="small"
                   class="field-tag"
@@ -111,11 +82,11 @@
             </div>
 
             <!-- 审计追踪 (人员与时间) -->
-            <div class="field-group" v-if="filteredFields.audit.length > 0">
+            <div class="field-group" v-if="fieldsByGroup.audit.length > 0">
               <div class="field-group-title">👤 {{ $t('advanced_search.audit_trail') }}</div>
               <div class="field-group-items">
                 <el-tag
-                  v-for="field in filteredFields.audit"
+                  v-for="field in fieldsByGroup.audit"
                   :key="field.field || field.value"
                   size="small"
                   class="field-tag"
@@ -128,11 +99,11 @@
             </div>
 
             <!-- 模块专属 -->
-            <div class="field-group" v-if="filteredFields.module.length > 0">
+            <div class="field-group" v-if="fieldsByGroup.module.length > 0">
               <div class="field-group-title">🔧 {{ currentModuleLabel }} {{ $t('advanced_search.basic_attributes') }}</div>
               <div class="field-group-items">
                 <el-tag
-                  v-for="field in filteredFields.module"
+                  v-for="field in fieldsByGroup.module"
                   :key="field.field || field.value"
                   size="small"
                   class="field-tag"
@@ -147,11 +118,11 @@
             </div>
 
             <!-- 自定义字段 -->
-            <div class="field-group" v-if="store.isSingleProjectMode && filteredFields.custom.length > 0">
+            <div class="field-group" v-if="store.isSingleProjectMode && fieldsByGroup.custom.length > 0">
               <div class="field-group-title">📝 {{ $t('advanced_search.custom_fields') }}</div>
               <div class="field-group-items">
                 <el-tag
-                  v-for="field in filteredFields.custom"
+                  v-for="field in fieldsByGroup.custom"
                   :key="field.field || field.value"
                   size="small"
                   class="field-tag"
@@ -553,25 +524,11 @@ export default {
       store: useAdvancedSearchStore(),
       popoverVisible: false,
       userLoading: false,
-      userList: [],
-      fieldSearchText: ''
+      userList: []
     };
   },
   
   computed: {
-    quickFields() {
-      const common = ['status', 'createUser', 'createTime'];
-      const moduleSpecific = {
-        'TEST_CASE': ['priority', 'maintainer', 'type'],
-        'ISSUE': ['severity', 'assignee', 'platform'],
-        'TEST_PLAN': ['principal', 'stage'],
-        'TEST_CASE_REVIEW': ['reviewer', 'reviewStatus']
-      };
-      
-      const names = [...common, ...(moduleSpecific[this.store.currentModule] || [])];
-      return this.getSafeFields().filter(f => names.includes(f.field || f.value));
-    },
-
     fieldsByGroup() {
       const fields = Array.isArray(this.store.availableFields) ? this.store.availableFields : [];
       const grouped = {
@@ -590,21 +547,6 @@ export default {
         }
       });
       return grouped;
-    },
-    
-    filteredFields() {
-      const groups = this.fieldsByGroup;
-      if (!this.fieldSearchText) return groups;
-      
-      const search = this.fieldSearchText.toLowerCase();
-      const filterFn = f => (f.label || f.name || '').toLowerCase().includes(search);
-      
-      return {
-        basic: groups.basic.filter(filterFn),
-        module: groups.module.filter(filterFn),
-        audit: groups.audit.filter(filterFn),
-        custom: groups.custom.filter(filterFn)
-      };
     },
     
     allColDefs() {
@@ -1034,21 +976,6 @@ export default {
 
 .filter-popover-content {
   padding: 4px;
-
-  .popover-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f0f0f0;
-
-    .popover-title {
-      font-weight: 600;
-      font-size: 14px;
-      color: #303133;
-    }
-  }
 }
 
 .filter-groups-container {
@@ -1063,25 +990,6 @@ export default {
   &::-webkit-scrollbar-thumb {
     background: #e8e8e8;
     border-radius: 3px;
-  }
-
-  .quick-access {
-    background: #fdf6ff;
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px dashed #78388750;
-    margin-bottom: 20px;
-
-    .quick-tag {
-      background: #fff;
-      border-color: #78388730;
-      color: #783887;
-      &:hover {
-        background: #783887;
-        color: #fff;
-        border-color: #783887;
-      }
-    }
   }
 }
 
@@ -1107,6 +1015,91 @@ export default {
     border-color: #783887;
     color: #783887;
     background: #fdf6ff;
+  }
+}
+
+.field-group {
+  margin-bottom: 24px;
+  padding: 0 4px;
+
+  &:last-child {
+    margin-bottom: 8px;
+  }
+}
+
+.field-group-title {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, #f0f0f0, transparent);
+  }
+}
+
+.field-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+
+  .field-tag {
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 6px;
+    padding: 0 10px;
+    height: 28px;
+    line-height: 26px;
+    font-size: 13px;
+    border: 1px solid #e4e7ed;
+    background: #fff;
+    color: #606266;
+
+    i {
+      margin-right: 4px;
+      font-size: 14px;
+      color: #909399;
+    }
+
+    &:hover {
+      color: #783887;
+      border-color: #783887;
+      background: #fdf6ff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(120, 56, 135, 0.12);
+
+      i {
+        color: #783887;
+      }
+    }
+
+    &:active {
+      transform: translateY(0) scale(0.95);
+    }
+
+    &.el-tag--dark {
+      background: linear-gradient(135deg, #783887 0%, #9b59b6 100%);
+      border-color: #783887;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(120, 56, 135, 0.25);
+
+      i {
+        color: #fff;
+      }
+
+      &:hover {
+        opacity: 0.9;
+        box-shadow: 0 4px 15px rgba(120, 56, 135, 0.35);
+      }
+    }
   }
 }
 
