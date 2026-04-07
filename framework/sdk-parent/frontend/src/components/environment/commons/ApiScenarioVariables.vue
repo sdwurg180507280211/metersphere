@@ -168,7 +168,7 @@
               v-if="scope.row.type !== 'CSV'"
               :placeholder="valueText(scope.row)"
               @change="changeVariableVal(scope.row)"
-              :maxlength="5000"
+              :maxlength="100000"
               :disabled="
                 scope.row.type === 'COUNTER' || scope.row.type === 'RANDOM'
               "
@@ -259,7 +259,7 @@
           <el-input
             v-model="rowEditorForm.value"
             :placeholder="valueText(rowEditorForm)"
-            :maxlength="5000"
+            :maxlength="100000"
             show-word-limit
             :disabled="
               rowEditorForm.type === 'COUNTER' || rowEditorForm.type === 'RANDOM'

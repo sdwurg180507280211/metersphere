@@ -65,7 +65,7 @@
             column-key="status"
             :field="item"
             :fields-width="fieldsWidth"
-            min-width="60px"
+            min-width="70px"
             :label="$t('test_track.plan.plan_status')"
         >
           <template v-slot:default="scope">

@@ -1,11 +1,11 @@
 <template>
   <el-dialog class="test-plan-export"
              v-loading="loading"
-             :title="$t('test_track.plan.export_test_plan')"
+             :title="$t('plan.export_test_plan')"
              :visible.sync="dialogVisible"
              @close="close">
     <div class="export-tip">
-      {{ $t('test_track.plan.export_test_plan_tip') }}
+      {{ $t('plan.export_test_plan_tip') }}
     </div>
 
     <span slot="footer" class="dialog-footer">
