@@ -249,6 +249,13 @@ export default {
       case_import_result_error_import_again:
         " , Import again after making the changes",
       click_preview_import_error_msg: "Click to preview the error",
+      success_result_summary:
+        "Import completed: created {0}, updated {1}, failed {2}",
+      success_root_path: "Import root: {0}",
+      success_root_excel_module: "Import root: derived from Excel module column",
+      success_root_unchanged: "Module location unchanged",
+      success_root_mixed_module:
+        "Import root: Excel module column, empty rows fallback to {0}",
     },
     export: {
       export: "Export cases",

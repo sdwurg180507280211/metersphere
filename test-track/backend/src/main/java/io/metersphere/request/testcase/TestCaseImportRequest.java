@@ -14,6 +14,7 @@ public class TestCaseImportRequest {
     private String userId;
     private String importType;
     private String versionId;
+    private String selectedModuleId;
     private boolean ignore;
 
     private Set<String> userIds;
