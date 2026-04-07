@@ -2514,6 +2514,18 @@ public class TestPlanService {
         for (TestPlanDTOWithMetric plan : exportTestPlans) {
             List<Object> row = new ArrayList<>();
             row.add(plan.getName());
+            row.add(StatusReference.statusMap.getOrDefault(plan.getStatus(), plan.getStatus()));
+            row.add(StatusReference.statusMap.getOrDefault(plan.getStage(), plan.getStage()));
+            row.add(ObjectUtils.defaultIfNull(plan.getTestRate(), 0));
+            row.add(ObjectUtils.defaultIfNull(plan.getProjectName(), ""));
+            row.add(ObjectUtils.defaultIfNull(plan.getNodePath(), ""));
+            row.add(getFormattedDateOrEmpty(plan.getPlannedStartTime()));
+            row.add(getFormattedDateOrEmpty(plan.getPlannedEndTime()));
+            row.add(getFormattedDateOrEmpty(plan.getActualStartTime()));
+            row.add(getFormattedDateOrEmpty(plan.getActualEndTime()));
+            row.add(ObjectUtils.defaultIfNull(plan.getTags(), ""));
+            row.add(getScheduleStatusText(plan.getScheduleStatus()));
+            row.add(ObjectUtils.defaultIfNull(plan.getPassRate(), ""));
             // 支持多个负责人，用逗号分隔
             String principalNames;
             if (plan.getPrincipalUsers() != null && !plan.getPrincipalUsers().isEmpty()) {
@@ -2523,21 +2535,13 @@ public class TestPlanService {
             } else {
                 principalNames = userMap.getOrDefault(plan.getCreateUser(), plan.getCreateUser());
             }
-            row.add(principalNames);
             row.add(userMap.getOrDefault(plan.getCreateUser(), plan.getCreateUser()));
-            row.add(StatusReference.statusMap.containsKey(plan.getStage()) ?
-                    StatusReference.statusMap.get(plan.getStage()) : plan.getStage());
-            row.add(StatusReference.statusMap.containsKey(plan.getStatus()) ?
-                    StatusReference.statusMap.get(plan.getStatus()) : plan.getStatus());
             row.add(plan.getTestPlanTestCaseCount());
             row.add(plan.getTestPlanApiCaseCount());
             row.add(plan.getTestPlanApiScenarioCount());
             row.add(plan.getTestPlanUiScenarioCount());
             row.add(plan.getTestPlanLoadCaseCount());
-            row.add(plan.getPassRate() != null ? plan.getPassRate() : "");
-            row.add(plan.getProjectName() != null ? plan.getProjectName() : "");
-            row.add(plan.getPlannedStartTime() != null ? DateUtils.getTimeString(plan.getPlannedStartTime()) : "");
-            row.add(plan.getPlannedEndTime() != null ? DateUtils.getTimeString(plan.getPlannedEndTime()) : "");
+            row.add(principalNames);
             row.add(plan.getCreateTime() != null ? DateUtils.getTimeString(plan.getCreateTime()) : "");
             row.add(plan.getUpdateTime() != null ? DateUtils.getTimeString(plan.getUpdateTime()) : "");
             data.add(row);
@@ -2557,19 +2561,25 @@ public class TestPlanService {
     private List<List<String>> buildExportHeads() {
         List<List<String>> heads = new ArrayList<>();
         heads.add(List.of(Translator.get("test_track.plan.plan_name")));
-        heads.add(List.of(Translator.get("test_track.plan.plan_principal")));
-        heads.add(List.of(Translator.get("test_track.plan.plan_creator")));
-        heads.add(List.of(Translator.get("test_track.plan.plan_stage")));
         heads.add(List.of(Translator.get("test_track.plan.plan_status")));
+        heads.add(List.of(Translator.get("test_track.plan.plan_stage")));
+        heads.add(List.of(Translator.get("test_track.plan.test_rate")));
+        heads.add(List.of(Translator.get("test_track.plan.plan_project")));
+        heads.add(List.of(Translator.get("test_track.test_case_module")));
+        heads.add(List.of(Translator.get("test_track.plan.planned_start_time")));
+        heads.add(List.of(Translator.get("test_track.plan.planned_end_time")));
+        heads.add(List.of(Translator.get("test_track.plan.actual_start_time")));
+        heads.add(List.of(Translator.get("test_track.plan.actual_end_time")));
+        heads.add(List.of(Translator.get("test_track.tags")));
+        heads.add(List.of(Translator.get("test_track.plan.schedule")));
+        heads.add(List.of(Translator.get("commons.pass_rate")));
+        heads.add(List.of(Translator.get("test_track.plan.plan_creator")));
         heads.add(List.of(Translator.get("test_track.plan.test_case_count")));
         heads.add(List.of(Translator.get("test_track.plan.api_case_count")));
         heads.add(List.of(Translator.get("test_track.plan.api_scenario_count")));
         heads.add(List.of(Translator.get("test_track.plan.ui_scenario_count")));
         heads.add(List.of(Translator.get("test_track.plan.load_case_count")));
-        heads.add(List.of(Translator.get("commons.pass_rate")));
-        heads.add(List.of(Translator.get("test_track.plan.plan_project")));
-        heads.add(List.of(Translator.get("test_track.plan.planned_start_time")));
-        heads.add(List.of(Translator.get("test_track.plan.planned_end_time")));
+        heads.add(List.of(Translator.get("test_track.plan.plan_principal")));
         heads.add(List.of(Translator.get("test_track.plan.create_time")));
         heads.add(List.of(Translator.get("test_track.plan.update_time")));
         return heads;
@@ -2584,6 +2594,23 @@ public class TestPlanService {
             return 0;
         }
         return Integer.parseInt(paramsDto.getValue());
+    }
+
+    /**
+     * Get formatted date string or empty if null
+     */
+    private String getFormattedDateOrEmpty(Long time) {
+        return time != null ? DateUtils.getTimeString(time) : "";
+    }
+
+    /**
+     * Get translated schedule status text
+     */
+    private String getScheduleStatusText(String scheduleStatus) {
+        if (scheduleStatus == null || "NOTSET".equals(scheduleStatus)) {
+            return Translator.get("schedule.not_set");
+        }
+        return Translator.get("schedule." + scheduleStatus.toLowerCase());
     }
 
     private List<TestPlanDTOWithMetric> getExportTestPlans(TestPlanExportRequest exportRequest) {
