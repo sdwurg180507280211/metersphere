@@ -1,101 +1,117 @@
 
 <template>
-  <el-dialog class="case-import" :title="name == 'excel' ? $t('test_track.case.import.import_by_excel') : $t('test_track.case.import.import_by_xmind')" :visible.sync="dialogVisible" @close="close" :width="'600px'">
-    <div class="case-import-div">
-      <el-row class="import-row">
-        <div class="download-tips">
-          <svg-icon icon-class="icon_info_colorful-2" style="float: left;position: relative;top: 11px;width: 1.3em;height: 1.3em;left: 20px;"/>
-          <span class="download-tips-content">
-            <label>{{$t('test_track.case.import.download_template_tips_please')}}</label>
-            <el-link type="primary" class="download-link" @click="downloadXmindTemplate">
-              {{ $t('test_track.case.import.download_template') }}
-            </el-link>
-            <label>{{$t('test_track.case.import.download_template_tips_fill_upload_tips')}}</label>
-          </span>
-        </div>
-      </el-row>
-
-      <el-row class="import-row">
-        <el-upload
-          v-loading="loading"
-          :element-loading-text="$t('test_track.case.import.importing')"
-          element-loading-spinner="el-icon-loading"
-          class="case-import-upload"
-          ref="caseUpload"
-          action=""
-          multiple :limit="1"
-          drag :show-file-list="false"
-          :beforeUpload="uploadValidateXmind"
-          :on-change="handleChange"
-          :on-exceed="handleExceed"
-          :on-error="handleError"
-          :http-request="addFile"
-          :on-remove="handleRemove"
-          :file-list="fileList">
-          <svg-icon v-if="!lastFile" icon-class="icon_uploadfile2_colorful" style="width: 2.7em;height: 2.7em;position: relative;top: 26px;"></svg-icon>
-          <svg-icon v-if="lastFile && name == 'excel'" icon-class="icon_file-excel_colorful" style="width: 2.7em;height: 2.7em;position: relative;top: 26px;"></svg-icon>
-          <svg-icon v-if="lastFile && name == 'xmind'" icon-class="icon_file-xmind_colorful" style="width: 2.7em;height: 2.7em;position: relative;top: 26px;"></svg-icon>
-          <div class="el-upload__text" v-if="progressFlag">
-            <div class="upload-drag-tips">{{$t('test_track.case.import.import_uploading_tips')}}</div>
-            <el-progress :percentage="loadProgress" class="case-upload-progress" :show-text="false"></el-progress>
+  <div>
+    <el-dialog class="case-import" :title="name == 'excel' ? $t('test_track.case.import.import_by_excel') : $t('test_track.case.import.import_by_xmind')" :visible.sync="dialogVisible" @close="close" :width="'600px'">
+      <div class="case-import-div">
+        <el-row class="import-row">
+          <div class="download-tips">
+            <svg-icon icon-class="icon_info_colorful-2" style="float: left;position: relative;top: 11px;width: 1.3em;height: 1.3em;left: 20px;"/>
+            <span class="download-tips-content">
+              <label>{{$t('test_track.case.import.download_template_tips_please')}}</label>
+              <el-link type="primary" class="download-link" @click="downloadXmindTemplate">
+                {{ $t('test_track.case.import.download_template') }}
+              </el-link>
+              <label>{{$t('test_track.case.import.download_template_tips_fill_upload_tips')}}</label>
+            </span>
           </div>
-          <div class="el-upload__text" v-if="!progressFlag">
-            <div class="upload-drag-tips">{{lastFile ? lastFile.name : $t('test_track.case.import.import_upload_drag_tips')}}</div>
-            <div v-if="isExcel && !lastFile" class="upload-file-tips">{{$t('test_track.case.import.upload_limit')}}</div>
-            <div v-if="isXmind && !lastFile" class="upload-file-tips">{{$t('test_track.case.import.upload_xmind')}}</div>
-            <div v-if="lastFile" class="change-file-content">{{$t('test_track.case.import.import_change_file')}}</div>
-          </div>
-        </el-upload>
-      </el-row>
+        </el-row>
 
-      <el-row class="import-row">
-        <span style="display: block; color: #1F2329; margin: 4px 0 10px;">{{$t('test_track.case.import.import_type')}}</span>
-        <el-radio v-model="importType" label="Create" style="color: #1F2329; margin-bottom: 10px">{{ $t('test_track.case.import.import_create') }}</el-radio>
-        <el-radio v-model="importType" label="Update" style="color: #1F2329; margin-bottom: 10px">{{ $t('test_track.case.import.import_update') }}</el-radio>
-        <div v-if="importType === 'Create'" style="color: #646A73">
-          {{ $t('test_track.case.import.import_tip1') }}
-        </div>
-        <div v-else style="color: #646A73">
-          {{ $t('test_track.case.import.import_tip2') }}
-        </div>
-      </el-row>
-
-      <el-row class="import-row">
-        <span style="display: block; color: #1F2329; margin: 4px 0 10px;">{{$t('test_track.case.import.import_select_version')}}</span>
-        <version-select v-xpack :project-id="projectId" @changeVersion="changeVersion" style="width: 100%"/>
-      </el-row>
-
-      <el-row style="text-align: right; margin-top: 25px">
-        <el-popover
-          v-show="showContinueBtn"
-          placement="right-end"
-          width="400"
-          class="error-popover"
-          trigger="click">
-          <el-scrollbar>
-            <div style="max-height: 150px" class="import-error-list-div">
-              <div v-for="errFile in errList" :key="errFile.num">
-                {{ errFile.errMsg }}
-              </div>
+        <el-row class="import-row">
+          <el-upload
+            v-loading="loading"
+            :element-loading-text="$t('test_track.case.import.importing')"
+            element-loading-spinner="el-icon-loading"
+            class="case-import-upload"
+            ref="caseUpload"
+            action=""
+            multiple :limit="1"
+            drag :show-file-list="false"
+            :beforeUpload="uploadValidateXmind"
+            :on-change="handleChange"
+            :on-exceed="handleExceed"
+            :on-error="handleError"
+            :http-request="addFile"
+            :on-remove="handleRemove"
+            :file-list="fileList">
+            <svg-icon v-if="!lastFile" icon-class="icon_uploadfile2_colorful" style="width: 2.7em;height: 2.7em;position: relative;top: 26px;"></svg-icon>
+            <svg-icon v-if="lastFile && name == 'excel'" icon-class="icon_file-excel_colorful" style="width: 2.7em;height: 2.7em;position: relative;top: 26px;"></svg-icon>
+            <svg-icon v-if="lastFile && name == 'xmind'" icon-class="icon_file-xmind_colorful" style="width: 2.7em;height: 2.7em;position: relative;top: 26px;"></svg-icon>
+            <div class="el-upload__text" v-if="progressFlag">
+              <div class="upload-drag-tips">{{$t('test_track.case.import.import_uploading_tips')}}</div>
+              <el-progress :percentage="loadProgress" class="case-upload-progress" :show-text="false"></el-progress>
             </div>
-          </el-scrollbar>
-          <el-link slot="reference" type="primary">{{$t('test_track.case.import.click_preview_import_error_msg')}}</el-link>
-        </el-popover>
-        <el-button @click="close" size="small">{{ $t('commons.cancel') }}</el-button>
-        <el-button v-if="showContinueBtn" type="primary" size="small" :disabled="loading" @click="upload(true)">
-          {{ $t('test_track.case.import.continue_upload') }}
-        </el-button>
-        <el-button v-if="!showContinueBtn" type="primary" size="small" :disabled="loading" @click="upload(false)">
-          {{ $t('commons.import') }}
-        </el-button>
-      </el-row>
-    </div>
-  </el-dialog>
+            <div class="el-upload__text" v-if="!progressFlag">
+              <div class="upload-drag-tips">{{lastFile ? lastFile.name : $t('test_track.case.import.import_upload_drag_tips')}}</div>
+              <div v-if="isExcel && !lastFile" class="upload-file-tips">{{$t('test_track.case.import.upload_limit')}}</div>
+              <div v-if="isXmind && !lastFile" class="upload-file-tips">{{$t('test_track.case.import.upload_xmind')}}</div>
+              <div v-if="lastFile" class="change-file-content">{{$t('test_track.case.import.import_change_file')}}</div>
+            </div>
+          </el-upload>
+        </el-row>
+
+        <el-row class="import-row">
+          <span style="display: block; color: #1F2329; margin: 4px 0 10px;">{{$t('test_track.case.import.import_type')}}</span>
+          <el-radio v-model="importType" label="Create" style="color: #1F2329; margin-bottom: 10px">{{ $t('test_track.case.import.import_create') }}</el-radio>
+          <el-radio v-model="importType" label="Update" style="color: #1F2329; margin-bottom: 10px">{{ $t('test_track.case.import.import_update') }}</el-radio>
+          <div v-if="importType === 'Create'" style="color: #646A73">
+            {{ $t('test_track.case.import.import_tip1') }}
+          </div>
+          <div v-else style="color: #646A73">
+            {{ $t('test_track.case.import.import_tip2') }}
+          </div>
+        </el-row>
+
+        <el-row class="import-row">
+          <span style="display: block; color: #1F2329; margin: 4px 0 10px;">{{$t('test_track.case.import.import_select_version')}}</span>
+          <version-select v-xpack :project-id="projectId" @changeVersion="changeVersion" style="width: 100%"/>
+        </el-row>
+
+        <el-row style="text-align: right; margin-top: 25px">
+          <el-popover
+            v-show="showContinueBtn"
+            placement="right-end"
+            width="400"
+            class="error-popover"
+            trigger="click">
+            <el-scrollbar>
+              <div style="max-height: 150px" class="import-error-list-div">
+                <div v-for="errFile in errList" :key="errFile.num">
+                  {{ errFile.errMsg }}
+                </div>
+              </div>
+            </el-scrollbar>
+            <el-link slot="reference" type="primary">{{$t('test_track.case.import.click_preview_import_error_msg')}}</el-link>
+          </el-popover>
+          <el-button @click="close" size="small">{{ $t('commons.cancel') }}</el-button>
+          <el-button v-if="showContinueBtn" type="primary" size="small" :disabled="loading" @click="upload(true)">
+            {{ $t('test_track.case.import.continue_upload') }}
+          </el-button>
+          <el-button v-if="!showContinueBtn" type="primary" size="small" :disabled="loading" @click="upload(false)">
+            {{ $t('commons.import') }}
+          </el-button>
+        </el-row>
+      </div>
+    </el-dialog>
+
+    <el-dialog
+      class="case-import-result"
+      :title="$t('test_track.case.import.case_import_result_success_title')"
+      :visible.sync="resultDialogVisible"
+      :close-on-click-modal="false"
+      append-to-body
+      :width="'520px'">
+      <div class="case-import-result-content">{{ resultMessage }}</div>
+      <span slot="footer">
+        <el-button size="small" @click="closeResultDialog">{{ $t('commons.cancel') }}</el-button>
+      </span>
+    </el-dialog>
+  </div>
 </template>
 
 <script>
 import {getCurrentProjectID, getCurrentUserId} from "metersphere-frontend/src/utils/token";
 import MxVersionSelect from "metersphere-frontend/src/components/version/MxVersionSelect";
+import {useStore} from "@/store";
 
 export default {
   name: "TestCaseCommonImport",
@@ -112,6 +128,8 @@ export default {
       versionId: null,
       name: "excel",
       dialogVisible: false,
+      resultDialogVisible: false,
+      resultMessage: '',
       progressFlag: false,
       loadProgress: 0
     }
@@ -131,6 +149,13 @@ export default {
     },
     projectId() {
       return getCurrentProjectID();
+    },
+    selectedModuleId() {
+      const selectNode = useStore().testCaseSelectNode;
+      if (selectNode && selectNode.data && selectNode.data.id && selectNode.data.id !== 'root') {
+        return selectNode.data.id;
+      }
+      return '';
     }
   },
   methods: {
@@ -222,6 +247,7 @@ export default {
         userId: getCurrentUserId(),
         importType: this.importType,
         versionId: this.versionId,
+        selectedModuleId: this.selectedModuleId,
         ignore: isIgnore
       };
       if (this.lastFile == null || this.lastFile == undefined) {
@@ -233,12 +259,12 @@ export default {
           this.loading = false;
           let res = response.data;
           if (isIgnore) {
-            this.$success(this.$t('test_track.case.import.success'), false);
+            this.showSuccessResult(res);
             this.close();
             this.$emit("refreshAll");
           } else {
             if (res.success) {
-              this.$success(this.$t('test_track.case.import.success'), false);
+              this.showSuccessResult(res);
               this.close();
               this.$emit("refreshAll");
             } else {
@@ -253,6 +279,39 @@ export default {
     },
     changeVersion(data) {
       this.versionId = data;
+    },
+    closeResultDialog() {
+      this.resultDialogVisible = false;
+      this.resultMessage = '';
+    },
+    showSuccessResult(res) {
+      this.resultMessage = this.buildSuccessMessage(res);
+      this.resultDialogVisible = true;
+    },
+    buildSuccessMessage(res) {
+      const createdCount = res.createdCount || 0;
+      const updatedCount = res.updatedCount || 0;
+      const failedCount = res.failedCount || 0;
+      let message = this.$t('test_track.case.import.success_result_summary')
+        .replace('{0}', createdCount)
+        .replace('{1}', updatedCount)
+        .replace('{2}', failedCount);
+
+      if (res.importRootType === 'EXCEL_MODULE') {
+        return message + '，' + this.$t('test_track.case.import.success_root_excel_module');
+      }
+      if (res.importRootType === 'MODULE_UNCHANGED') {
+        return message + '，' + this.$t('test_track.case.import.success_root_unchanged');
+      }
+      if (res.importRootType === 'MIXED_MODULE' && res.importRootPath) {
+        return message + '，' + this.$t('test_track.case.import.success_root_mixed_module')
+          .replace('{0}', res.importRootPath);
+      }
+      if (res.importRootPath) {
+        return message + '，' + this.$t('test_track.case.import.success_root_path')
+          .replace('{0}', res.importRootPath);
+      }
+      return message;
     }
   }
 }
@@ -261,6 +320,12 @@ export default {
 <style scoped>
 .case-import :deep(.el-dialog){
   height: 570px;
+}
+
+.case-import-result-content {
+  white-space: pre-wrap;
+  line-height: 22px;
+  color: #1F2329;
 }
 
 .download-template {

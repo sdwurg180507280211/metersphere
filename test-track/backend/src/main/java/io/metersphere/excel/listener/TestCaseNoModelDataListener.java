@@ -133,6 +133,11 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
     private Map<String, List<CustomFieldResourceDTO>> testCaseCustomFieldMap = new HashMap<>();
     private Map<String, String> pathMap = new HashMap<>();
     private List<TestCaseNodeDTO> nodeTrees;
+    private boolean hasModuleColumn;
+    private int createdCount;
+    private int updatedCount;
+    private String importRootPath;
+    private String importRootType;
 
     public boolean isUpdated() {
         return isUpdated;
@@ -226,6 +231,8 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
             LogUtil.error(e);
         }
         formatHeadMap();
+        hasModuleColumn = this.headMap.containsValue("nodePath");
+        initImportRoot();
         super.invokeHeadMap(headMap, context);
     }
 
@@ -405,11 +412,11 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
     }
 
     private void validateDbExist(TestCaseExcelData data, StringBuilder stringBuilder) {
-        //  校验模块是否存在，没有存在则新建一个模块
-        testCaseNodeService.createNodeByNodePath(data.getNodePath(), request.getProjectId(), nodeTrees, pathMap);
         if (isUpdateModel()) {
             return;
         }
+        //  校验模块是否存在，没有存在则新建一个模块
+        testCaseNodeService.createNodeByNodePath(data.getNodePath(), request.getProjectId(), nodeTrees, pathMap);
         // 去掉用例名称唯一性检查，直接检查用例是否真正重复（通过多个字段组合判断）
         TestCaseWithBLOBs testCase = new TestCaseWithBLOBs();
         BeanUtils.copyBean(testCase, data);
@@ -650,6 +657,7 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
                     .map(item -> convert2TestCase(item))
                     .collect(Collectors.toList());
             testCaseService.saveImportData(result, request, testCaseCustomFieldMap, pathMap);
+            createdCount += result.size();
             names = result.stream().map(TestCase::getName).collect(Collectors.toList());
             ids = result.stream().map(TestCase::getId).collect(Collectors.toList());
             isUpdated = true;
@@ -662,6 +670,7 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
                     .map(item -> convert2TestCaseForUpdate(item))
                     .collect(Collectors.toList());
             testCaseService.updateImportData(result2, request, testCaseCustomFieldMap);
+            updatedCount += result2.size();
             isUpdated = true;
             names = result2.stream().map(TestCase::getName).collect(Collectors.toList());
             ids = result2.stream().map(TestCase::getId).collect(Collectors.toList());
@@ -725,14 +734,15 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         testCase.setUpdateTime(System.currentTimeMillis());
 
         String nodePath = data.getNodePath();
-
-        if (!nodePath.startsWith("/")) {
-            nodePath = "/" + nodePath;
+        if (StringUtils.isNotBlank(nodePath)) {
+            if (!nodePath.startsWith("/")) {
+                nodePath = "/" + nodePath;
+            }
+            if (nodePath.endsWith("/")) {
+                nodePath = nodePath.substring(0, nodePath.length() - 1);
+            }
+            testCase.setNodePath(nodePath);
         }
-        if (nodePath.endsWith("/")) {
-            nodePath = nodePath.substring(0, nodePath.length() - 1);
-        }
-        testCase.setNodePath(nodePath);
 
         //将标签设置为前端可解析的格式
         String modifiedTags = modifyTagPattern(data);
@@ -923,6 +933,7 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
                 data.getCustomData().put(field, value);
             }
         }
+        String originalNodePath = data.getNodePath();
 
         // 如果编辑模式为空，根据模板设置默认值
         if (StringUtils.isBlank(data.getStepModel())) {
@@ -941,6 +952,8 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         if (templateHandler != null) {
             templateHandler.processData(data);
         }
+
+        resolveImportNodePath(data, originalNodePath);
 
         return data;
     }
@@ -967,6 +980,22 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
 
     public List<ExcelErrData<TestCaseExcelData>> getErrList() {
         return errList;
+    }
+
+    public int getCreatedCount() {
+        return createdCount;
+    }
+
+    public int getUpdatedCount() {
+        return updatedCount;
+    }
+
+    public String getImportRootPath() {
+        return importRootPath;
+    }
+
+    public String getImportRootType() {
+        return importRootType;
     }
 
     @Override
@@ -1048,5 +1077,62 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
     class RowInfo {
         public int index;
         public String rowInfo;
+    }
+
+    private void initImportRoot() {
+        if (isUpdateModel()) {
+            importRootType = "MODULE_UNCHANGED";
+            importRootPath = null;
+            return;
+        }
+        if (!hasModuleColumn) {
+            resolveFallbackImportRoot();
+        } else {
+            importRootType = "EXCEL_MODULE";
+            importRootPath = null;
+        }
+    }
+
+    private void resolveImportNodePath(TestCaseExcelData data, String originalNodePath) {
+        if (isUpdateModel()) {
+            data.setNodePath(null);
+            return;
+        }
+        if (!hasModuleColumn) {
+            resolveFallbackImportRoot();
+            data.setNodePath(importRootPath);
+            return;
+        }
+        if (StringUtils.isBlank(originalNodePath)) {
+            resolveFallbackImportRoot();
+            data.setNodePath(importRootPath);
+            importRootType = "MIXED_MODULE";
+        }
+    }
+
+    private void resolveFallbackImportRoot() {
+        if (StringUtils.isNotBlank(importRootPath) && StringUtils.isNotBlank(importRootType)
+                && !StringUtils.equals(importRootType, "EXCEL_MODULE")) {
+            return;
+        }
+        String selectedModuleId = request.getSelectedModuleId();
+        if (StringUtils.isNotBlank(selectedModuleId) && !StringUtils.equals(selectedModuleId, "root")) {
+            String selectedPath = testCaseNodeService.getNodePathById(selectedModuleId);
+            if (StringUtils.isNotBlank(selectedPath)) {
+                importRootPath = selectedPath;
+                if (!StringUtils.equals(importRootType, "MIXED_MODULE")) {
+                    importRootType = "SELECTED_MODULE";
+                }
+                return;
+            }
+        }
+        io.metersphere.base.domain.TestCaseNode testCaseDefaultNode = testCaseNodeService.checkDefaultNode(request.getProjectId());
+        if (testCaseDefaultNode != null) {
+            importRootPath = "/" + testCaseDefaultNode.getName();
+            if (!StringUtils.equals(importRootType, "MIXED_MODULE")) {
+                importRootType = "DEFAULT_MODULE";
+            }
+            nodeTrees = testCaseNodeService.getNodeTreeByProjectId(request.getProjectId());
+        }
     }
 }

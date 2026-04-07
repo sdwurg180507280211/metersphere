@@ -218,6 +218,11 @@ export default {
       case_import_result_error_please: "可 ",
       case_import_result_error_import_again: " , 修改後重新導入",
       click_preview_import_error_msg: "點擊預覽錯誤信息",
+      success_result_summary: "導入成功：新增 {0} 條，更新 {1} 條，失敗 {2} 條",
+      success_root_path: "導入根位置：{0}",
+      success_root_excel_module: "導入根位置：按 Excel 所屬模塊導入",
+      success_root_unchanged: "所屬模塊未變更",
+      success_root_mixed_module: "按 Excel 所屬模塊導入，空模塊回落：{0}",
     },
     export: {
       export: "導出用例",

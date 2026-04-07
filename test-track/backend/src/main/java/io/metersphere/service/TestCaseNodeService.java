@@ -704,6 +704,19 @@ public class TestCaseNodeService extends NodeTreeService<TestCaseNodeDTO> {
         return returnList;
     }
 
+    public String getNodePathById(String moduleId) {
+        if (StringUtils.isBlank(moduleId)) {
+            return null;
+        }
+        LinkedList<TestCaseNode> pathNodes = getPathNodeById(moduleId);
+        if (CollectionUtils.isEmpty(pathNodes)) {
+            return null;
+        }
+        return pathNodes.stream()
+                .map(node -> "/" + node.getName())
+                .collect(Collectors.joining());
+    }
+
     public long trashCount(String projectId) {
         return extTestCaseMapper.trashCount(projectId);
     }

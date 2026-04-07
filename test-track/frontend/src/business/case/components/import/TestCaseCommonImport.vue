@@ -79,6 +79,18 @@
       </el-button>
       <el-button @click="$emit('close')">{{ $t('commons.cancel') }}</el-button>
     </el-row>
+
+    <el-dialog
+      :title="$t('test_track.case.import.case_import_result_success_title')"
+      :visible.sync="resultDialogVisible"
+      :close-on-click-modal="false"
+      append-to-body
+      width="520px">
+      <div class="case-import-result-content">{{ resultMessage }}</div>
+      <span slot="footer">
+        <el-button size="small" @click="closeResultDialog">{{ $t('commons.cancel') }}</el-button>
+      </span>
+    </el-dialog>
   </div>
 
 </template>
@@ -86,6 +98,7 @@
 <script>
 import {getCurrentProjectID, getCurrentUserId} from "metersphere-frontend/src/utils/token";
 import MxVersionSelect from "metersphere-frontend/src/components/version/MxVersionSelect";
+import {useStore} from "@/store";
 
 export default {
   name: "TestCaseCommonImport",
@@ -100,7 +113,9 @@ export default {
       showContinueBtn: false,
       uploadIgnoreError: false,
       lastFile: null,
-      versionId: null
+      versionId: null,
+      resultDialogVisible: false,
+      resultMessage: ''
     }
   },
   created() {
@@ -118,6 +133,13 @@ export default {
     },
     projectId() {
       return getCurrentProjectID();
+    },
+    selectedModuleId() {
+      const selectNode = useStore().testCaseSelectNode;
+      if (selectNode && selectNode.data && selectNode.data.id && selectNode.data.id !== 'root') {
+        return selectNode.data.id;
+      }
+      return '';
     }
   },
   methods: {
@@ -175,6 +197,7 @@ export default {
         userId: getCurrentUserId(),
         importType: this.importType,
         versionId: this.versionId,
+        selectedModuleId: this.selectedModuleId,
         ignore: isIgnore
       };
       if (this.lastFile == null || this.lastFile == undefined) {
@@ -188,11 +211,11 @@ export default {
           this.loading = false;
           let res = response.data;
           if (isIgnore) {
-            this.$success(this.$t('test_track.case.import.success'));
+            this.showSuccessResult(res);
             this.$emit("close", res.isUpdated);
           } else {
             if (res.success) {
-              this.$success(this.$t('test_track.case.import.success'));
+              this.showSuccessResult(res);
               this.$emit("close", res.isUpdated);
             } else {
               this.errList = res.errList;
@@ -205,12 +228,50 @@ export default {
     },
     changeVersion(data) {
       this.versionId = data;
+    },
+    closeResultDialog() {
+      this.resultDialogVisible = false;
+      this.resultMessage = '';
+    },
+    showSuccessResult(res) {
+      this.resultMessage = this.buildSuccessMessage(res);
+      this.resultDialogVisible = true;
+    },
+    buildSuccessMessage(res) {
+      const createdCount = res.createdCount || 0;
+      const updatedCount = res.updatedCount || 0;
+      const failedCount = res.failedCount || 0;
+      let message = this.$t('test_track.case.import.success_result_summary')
+        .replace('{0}', createdCount)
+        .replace('{1}', updatedCount)
+        .replace('{2}', failedCount);
+
+      if (res.importRootType === 'EXCEL_MODULE') {
+        return message + '，' + this.$t('test_track.case.import.success_root_excel_module');
+      }
+      if (res.importRootType === 'MODULE_UNCHANGED') {
+        return message + '，' + this.$t('test_track.case.import.success_root_unchanged');
+      }
+      if (res.importRootType === 'MIXED_MODULE' && res.importRootPath) {
+        return message + '，' + this.$t('test_track.case.import.success_root_mixed_module')
+          .replace('{0}', res.importRootPath);
+      }
+      if (res.importRootPath) {
+        return message + '，' + this.$t('test_track.case.import.success_root_path')
+          .replace('{0}', res.importRootPath);
+      }
+      return message;
     }
   }
 }
 </script>
 
 <style scoped>
+.case-import-result-content {
+  white-space: pre-wrap;
+  line-height: 22px;
+  color: #1F2329;
+}
 
 .download-template {
   padding-top: 0px;
