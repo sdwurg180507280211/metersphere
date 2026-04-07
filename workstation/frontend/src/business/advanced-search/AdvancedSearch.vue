@@ -991,7 +991,7 @@ export default {
 .top-filter-bar {
   display: flex;
   gap: 12px;
-  padding: 12px 20px;
+  padding: 8px 20px;
   background: #fff;
   align-items: center;
   border-bottom: 1px solid #ebeef5;
@@ -1146,13 +1146,13 @@ export default {
 }
 
 .active-tags-bar {
-  padding: 8px 20px;
+  padding: 6px 20px;
   background: #f8f9fb;
   display: flex;
   align-items: center;
   gap: 16px;
   border-bottom: 1px solid #ebeef5;
-  min-height: 48px;
+  min-height: 40px;
 
   .active-tags-header {
     display: flex;
@@ -1299,13 +1299,13 @@ export default {
 }
 
 .result-toolbar {
-  padding: 12px 20px;
+  padding: 8px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: linear-gradient(to right, #fafbfc 0%, #ffffff 100%);
   border-bottom: 1px solid #ebeef5;
-  min-height: 52px;
+  min-height: 44px;
 }
 
 .col-config-group {

@@ -27,11 +27,15 @@ public class TestPlanExportWriteHandler implements SheetWriteHandler, RowWriteHa
             15,  // 创建人
             12,  // 计划阶段
             12,  // 状态
+            10,  // 通过率
             10,  // 用例总数
             10,  // 接口用例
             10,  // 接口场景
             10,  // UI场景
             10,  // 性能用例
+            25,  // 项目名称
+            20,  // 计划开始时间
+            20,  // 计划结束时间
             20,  // 创建时间
             20   // 更新时间
     };
