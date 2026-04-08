@@ -1,5 +1,8 @@
 import { post } from "metersphere-frontend/src/plugins/request";
-import { getCurrentProjectID, getCurrentWorkspaceId } from "metersphere-frontend/src/utils/token";
+
+export function addRequirement(param) {
+  return post("/requirement-pool/add", param);
+}
 
 /**
  * 需求池列表查询

@@ -562,11 +562,18 @@ export default {
           if (param.requirementNumber) {
             createTestPlanFromRequirement({
               dmpNum: param.requirementNumber,
-              projectId: param.projectId,
+              projectId: this.projectId,
+              workspaceId: getCurrentWorkspaceId(),
               principalId: param.principals && param.principals.length > 0 ? param.principals[0] : null,
+              stage: param.stage,
               plannedStartTime: param.plannedStartTime,
               plannedEndTime: param.plannedEndTime,
-              description: param.description
+              description: param.description,
+              automaticStatusUpdate: param.automaticStatusUpdate,
+              repeatCase: param.repeatCase,
+              nodeId: param.nodeId,
+              nodePath: param.nodePath,
+              tags: param.tags
             })
               .then(() => {
                 this.loading = false;
