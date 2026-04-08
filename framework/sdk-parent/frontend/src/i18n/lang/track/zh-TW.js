@@ -221,7 +221,7 @@ export default {
       success_result_summary: "導入成功：新增 {0} 條，更新 {1} 條，失敗 {2} 條",
       success_root_path: "導入根位置：{0}",
       success_root_excel_module: "導入根位置：按 Excel 所屬模塊導入",
-      success_root_unchanged: "所屬模塊未變更",
+      success_root_unchanged: "所屬模塊未變更（更新模式下所屬模塊不生效）",
       success_root_mixed_module: "按 Excel 所屬模塊導入，空模塊回落：{0}",
     },
     export: {

@@ -24,6 +24,8 @@ public class TestCaseExcelData {
     @ExcelIgnore
     private String nodePath;
     @ExcelIgnore
+    private String importModuleError;
+    @ExcelIgnore
     private String tags;
     @ExcelIgnore
     private String prerequisite;

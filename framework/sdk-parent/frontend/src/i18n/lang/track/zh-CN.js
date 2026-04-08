@@ -222,7 +222,7 @@ export default {
       success_result_summary: "导入成功：新增 {0} 条，更新 {1} 条，失败 {2} 条",
       success_root_path: "导入根位置：{0}",
       success_root_excel_module: "导入根位置：按 Excel 所属模块导入",
-      success_root_unchanged: "所属模块未变更",
+      success_root_unchanged: "所属模块未变更（更新模式下所属模块不生效）",
       success_root_mixed_module: "按 Excel 所属模块导入，空模块回落：{0}",
     },
     export: {
