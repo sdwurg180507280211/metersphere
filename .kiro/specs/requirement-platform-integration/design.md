@@ -6,8 +6,8 @@
 
 实现需求平台与 MeterSphere 测试平台的双向数据对接，通过 RocketMQ 消息队列实现异步通信。核心流程包括：需求同步入池、需求池管理、测试计划创建、状态回传。
 
-**文档版本**：V1.0
-**编制日期**：2026年3月12日
+**文档版本**：V1.1
+**修订日期**：2026年4月8日
 
 ## 核心设计目标
 
@@ -75,12 +75,14 @@
 **核心流程**：
 1. 需求平台通过RocketMQ发送需求消息
 2. MeterSphere消费消息，写入需求池
-3. 测试人员在需求池中点击创建测试计划（需求池入口）
-4. 测试计划状态变化时，通过RocketMQ回传给需求平台
+3. 测试人员可在需求池手工创建需求（补录入口）
+4. 测试人员在需求池中点击创建测试计划（需求池入口）
+5. 测试计划状态变化时，通过RocketMQ回传给需求平台
 
-**两个创建测试计划入口**：
-1. **需求池入口**：从需求池列表页点击"创建测试计划"按钮，自动关联需求，计划名称自动填充且只读
-2. **测试计划入口**：在测试计划模块点击"新建测试计划"按钮，不关联需求，计划名称由用户输入可编辑
+**关键入口**：
+1. **需求池补录入口**：从需求池列表页左上角点击"创建需求"按钮，手工补录需求数据，创建后默认状态为 `PENDING`
+2. **需求池建计划入口**：从需求池列表行点击"创建测试计划"按钮，自动关联需求，计划名称自动填充且只读
+3. **测试计划入口**：在测试计划模块点击"新建测试计划"按钮，不关联需求，计划名称由用户输入可编辑
 
 ### 模块设计
 
@@ -99,6 +101,7 @@
 #### 需求池模块
 **职责**：
 - 需求池数据管理
+- 支持手工创建需求
 - 需求列表查询、筛选、分页
 - 需求详情展示
 - 状态管理
@@ -116,9 +119,15 @@
 - 并发控制
 
 **核心类**：
-- `TestPlanController`：接口控制器（扩展）
-- `TestPlanService`：业务逻辑层（扩展）
+- `RequirementPoolController`：接口控制器（需求池入口）
+- `RequirementPoolService`：业务逻辑层（需求池入口）
+- `TestPlanService`：业务逻辑层（测试计划落库）
 - `RequirementPlanRelationService`：关联关系管理
+
+**说明**：
+- 以下代码片段为逻辑示意，实际落地包路径以当前仓库为准：
+  - 后端：`io.metersphere.requirement.pool.*`、`io.metersphere.base.domain.*`
+  - 前端：`test-track/frontend/src/business/requirement-pool/*`
 
 #### 状态回传模块
 **职责**：
@@ -170,6 +179,14 @@
 - INDEX: `idx_pool_status` ON `pool_status`
 - INDEX: `idx_system_name` ON `system_name`
 - INDEX: `idx_create_time` ON `create_time`
+
+**实现备注**:
+- 当前仓库已落地的 `V19__create_requirement_pool_table.sql` 为精简字段版本，已包含：
+  `id`、`dmp_num`、`requirement_name`、`pool_status`、`system_name`、`req_manager_name`、
+  `req_father_class`、`req_son_class`、`create_time`、`up_time`、`linked_plan_id`、
+  `linked_plan_name`、`trace_id`
+- 若要完全满足幂等与审计设计，还需要补充增量 Migration，将 `last_sync_time`、`event_time`、
+  `created_at`、`updated_at` 以及原始消息存储能力补齐
 
 ### 测试计划表扩展（test_plan）
 
@@ -263,10 +280,36 @@
 }
 ```
 
+### 2. 创建需求
+
+**接口路径**: `POST /requirement-pool/add`
+
+**请求参数**:
+```json
+{
+  "dmpNum": "REQ-2024-001",
+  "requirementName": "需求名称",
+  "systemName": "系统名称",
+  "reqManagerName": "张三",
+  "reqFatherClass": "功能需求",
+  "reqSonClass": "新增功能"
+}
+```
+
+**说明**:
+- `dmpNum`、`requirementName` 必填
+- 创建成功后默认写入 `PENDING` 状态
+- 该接口用于需求池手工补录，不替代 RocketMQ 同步主链路
+
+**异常情况**:
+- 需求编号为空：`message: "需求编号不能为空"`
+- 需求名称为空：`message: "需求名称不能为空"`
+- 需求编号重复：`message: "需求编号已存在"`
+
 
 ### 3. 从需求池创建测试计划
 
-**接口路径**: `POST /test-plan/create-from-requirement`
+**接口路径**: `POST /requirement-pool/create-test-plan`
 
 **请求参数**:
 ```json
@@ -305,7 +348,7 @@
 
 ### 4. 直接创建测试计划
 
-**接口路径**: `POST /test-plan/create`
+**接口路径**: `POST /test/plan/add`
 
 **请求参数**:
 ```json
@@ -536,23 +579,27 @@ public interface TestPlanService {
 
 ### 需求池列表页
 
-**页面路径**: `/requirement-pool`
+**页面路径**: `/track/requirement-pool/list`
 
 **页面布局**:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ 需求池                                                       │
 ├─────────────────────────────────────────────────────────────┤
-│ 高级搜索：                                                   │
-│ [ms-table-header 公共组件] （支持自定义字段搜索）            │
+│ [创建需求]                          [ms-table-header 公共搜索]│
 ├─────────────────────────────────────────────────────────────┤
 │ 需求编号 │ 需求名称 │ 状态 │ 系统 │ 负责人 │ 提出时间 │ 操作 │
 │─────────┼─────────┼─────┼─────┼───────┼─────────┼──────│
-│ REQ-001 │ 需求A   │ 未创建│ 系统A│ 张三   │ 2024-01-01│[创建]│
-│ REQ-002 │ 需求B   │ 已创建│ 系统B│ 李四   │ 2024-01-02│[创建]│
-│ REQ-003 │ 需求C   │ 已取消│ 系统C│ 王五   │ 2024-01-03│[创建]│
+│ REQ-001 │ 需求A   │ 未创建│ 系统A│ 张三   │ 2024-01-01│[创建测试计划]│
+│ REQ-002 │ 需求B   │ 已创建│ 系统B│ 李四   │ 2024-01-02│[创建测试计划]│
+│ REQ-003 │ 需求C   │ 已取消│ 系统C│ 王五   │ 2024-01-03│[创建测试计划]│
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**页面行为**:
+- 左上角主按钮为"创建需求"
+- 行内操作按钮为"创建测试计划"
+- 两者分别对应需求池 CRUD 新增和需求关联建计划两个不同动作
 
 **默认排序实现（按创建时间降序）**:
 
@@ -728,11 +775,11 @@ statusFilters: [
 
 | 文件路径 | 修改类型 | 说明 |
 |----------|----------|------|
-| `test-track/frontend/src/views/requirement-pool/` | 新增目录 | 需求池模块 |
-| `test-track/frontend/src/views/requirement-pool/list.vue` | 新增 | 需求池列表页 |
-| `test-track/frontend/src/views/requirement-pool/components/` | 新增目录 | 需求池模块组件（不创建单独的CreatePlanDialog） |
+| `test-track/frontend/src/business/requirement-pool/` | 新增目录 | 需求池模块 |
+| `test-track/frontend/src/business/requirement-pool/list.vue` | 新增 | 需求池列表页 |
+| `test-track/frontend/src/business/requirement-pool/components/` | 新增目录 | 需求池模块组件 |
 | `test-track/frontend/src/api/requirement-pool.js` | 新增 | 需求池API接口 |
-| `test-track/frontend/src/router/index.js` | 修改 | 添加需求池路由 |
+| `test-track/frontend/src/router/modules/track.js` | 修改 | 添加需求池路由 |
 
 ### 配置文件
 

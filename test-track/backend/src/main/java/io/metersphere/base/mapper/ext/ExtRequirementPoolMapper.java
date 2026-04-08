@@ -8,6 +8,8 @@ import java.util.List;
 
 public interface ExtRequirementPoolMapper {
 
+    int insert(RequirementPool requirementPool);
+
     List<RequirementPool> list(@Param("request") QueryRequirementPoolRequest request);
 
     RequirementPool selectByDmpNum(@Param("dmpNum") String dmpNum);

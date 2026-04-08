@@ -66,16 +66,19 @@
 ## 阶段 3：功能闭环 (W07-W10: 04/27 ~ 05/22)
 
 ### 3.1 需求池页面开发 (W07)
-- [x] 3.1.1 创建需求池列表页（/requirement-pool/list）
+- [x] 3.1.1 创建需求池列表页（`/track/requirement-pool/list`）
 - [x] 3.1.2 实现状态列筛选（使用 ms-table-column 的 :filters 属性，模仿测试计划状态字段）
 - [x] 3.1.3 定义状态筛选器 statusFilters（PENDING/CREATED/CANCELLED）
-- [x] 3.1.4 实现列表字段展示（编号、名称、状态、操作），高级搜索先不实现
+- [x] 3.1.4 实现列表字段展示（编号、名称、状态、操作）
 - [x] 3.1.5 设置默认排序（按创建时间降序，最新同步的最先显示）
-- [ ] 3.1.6 跑通"消息入池 → 页面可见"主链路
+- [x] 3.1.6 左上角按钮改为"创建需求"
+- [x] 3.1.7 新增创建需求弹窗和前端提交流程
+- [x] 3.1.8 实现创建需求接口（`POST /requirement-pool/add`）
+- [ ] 3.1.9 跑通"消息入池 → 页面可见"主链路
 
 ### 3.2 创建测试计划流程开发 (W08)
-- [ ] 3.2.1 复用测试计划页面的 TestPlanEdit 弹窗组件（不创建单独的 CreatePlanDialog）
-- [ ] 3.2.2 实现从需求池创建测试计划接口（/test-plan/create-from-requirement）
+- [x] 3.2.1 复用测试计划页面的 TestPlanEdit 弹窗组件（不创建单独的 CreatePlanDialog）
+- [ ] 3.2.2 实现从需求池创建测试计划接口（`/requirement-pool/create-test-plan`）
 - [ ] 3.2.3 实现需求编号绑定逻辑（requirementNumber = dmpNum）
 - [ ] 3.2.4 实现计划名称自动填充（只读，不可编辑）
 - [ ] 3.2.5 实现需求池状态更新（PENDING → CREATED）

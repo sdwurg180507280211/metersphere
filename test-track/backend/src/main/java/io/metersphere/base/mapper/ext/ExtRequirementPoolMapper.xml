@@ -18,6 +18,38 @@
         <result column="trace_id" property="traceId" jdbcType="VARCHAR"/>
     </resultMap>
 
+    <insert id="insert" parameterType="io.metersphere.base.domain.RequirementPool">
+        insert into requirement_pool (
+            id,
+            dmp_num,
+            requirement_name,
+            pool_status,
+            system_name,
+            req_manager_name,
+            req_father_class,
+            req_son_class,
+            create_time,
+            up_time,
+            linked_plan_id,
+            linked_plan_name,
+            trace_id
+        ) values (
+            #{id},
+            #{dmpNum},
+            #{requirementName},
+            #{poolStatus},
+            #{systemName},
+            #{reqManagerName},
+            #{reqFatherClass},
+            #{reqSonClass},
+            #{createTime},
+            #{upTime},
+            #{linkedPlanId},
+            #{linkedPlanName},
+            #{traceId}
+        )
+    </insert>
+
     <sql id="condition">
         <choose>
             <when test='${object}.operator == "like"'>

@@ -18,11 +18,25 @@ public class CreateTestPlanFromRequirementRequest implements Serializable {
 
     private String projectId;
 
+    private String workspaceId;
+
     private String principalId;
+
+    private String stage;
 
     private Long plannedStartTime;
 
     private Long plannedEndTime;
 
     private String description;
+
+    private Boolean automaticStatusUpdate;
+
+    private Boolean repeatCase;
+
+    private String nodeId;
+
+    private String nodePath;
+
+    private String tags;
 }

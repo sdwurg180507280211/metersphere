@@ -6,6 +6,8 @@
           <ms-table-header
               :condition.sync="page.condition"
               @search="search"
+              @create="handleCreateRequirement"
+              create-tip="创建需求"
               module-key="REQUIREMENT_POOL_LIST"
           >
           </ms-table-header>
@@ -130,6 +132,10 @@
       ref="testPlanEdit"
       @refresh="initTableData"
   />
+  <create-requirement-dialog
+      ref="createRequirementDialog"
+      @refresh="search"
+  />
 </ms-container>
 </template>
 
@@ -144,6 +150,7 @@ import MsTablePagination from "metersphere-frontend/src/components/pagination/Ta
 import MsContainer from "metersphere-frontend/src/components/MsContainer";
 import MsMainContainer from "metersphere-frontend/src/components/MsMainContainer";
 import TestPlanEdit from "@/business/plan/components/TestPlanEdit";
+import CreateRequirementDialog from "@/business/requirement-pool/components/CreateRequirementDialog";
 
 export default {
   name: 'RequirementPoolList',
@@ -154,7 +161,8 @@ export default {
     MsTablePagination,
     MsContainer,
     MsMainContainer,
-    TestPlanEdit
+    TestPlanEdit,
+    CreateRequirementDialog
   },
   data() {
     return {
@@ -183,6 +191,9 @@ export default {
     this.initTableData();
   },
   methods: {
+    handleCreateRequirement() {
+      this.$refs.createRequirementDialog.open();
+    },
     // 初始化表格数据
     initTableData() {
       this.page.loading = true;
