@@ -545,10 +545,6 @@ export default {
       if (this.$refs.table) this.$refs.table.reloadTable();
     },
     search() {
-      // 清除用户组权限过滤条件
-      // 用户进行搜索/筛选/重置时，应该能看到所有符合条件的缺陷
-      this.clearUserGroupFilter();
-
       // 添加搜索条件时，当前页设置成第一页
       this.page.currentPage = 1;
       this.pageRefresh = false;
