@@ -1,10 +1,12 @@
-# 小白也能用的 AI 编程终端：10 分钟上手 OpenCode（含 Chrome DevTools）
+# 🔥 小白也能用的 AI 编程终端：10 分钟上手 OpenCode（含 Chrome DevTools）
 
 想用 AI 帮你写代码、查问题、改脚本，但又不想折腾一堆复杂配置？
 这篇直接带你上手一个 AI 编程终端工具 OpenCode：不讲虚的，只讲怎么安装、怎么配置、怎么跑起来。
 
 官方文档：
 https://opencode.ai/docs/zh-cn
+
+---
 
 ## 一、先说结论：你将完成什么？
 
@@ -15,10 +17,15 @@ https://opencode.ai/docs/zh-cn
 - 把 opencode 加入系统 PATH（终端直接调用）
 - 接入 chrome-devtools 工具，增强网页调试能力
 
+---
+
 ## 二、初始化配置（新手直接复制）
 
 安装 OpenCode 最简单的方法是通过安装脚本。
+
+```bash
 curl -fsSL https://opencode.ai/install | bash
+```
 
 注意：下面示例中的 apiKey 请替换成你自己的，不要把真实 Key 发到公开平台。
 
@@ -83,6 +90,8 @@ echo "Done!"
 SETUP_SCRIPT
 ```
 
+---
+
 ## 三、启动 OpenCode（首次必做）
 
 ```bash
@@ -96,6 +105,8 @@ echo 'export PATH="$HOME/.opencode/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 opencode
 ```
+
+---
 
 ## 四、接入 Chrome DevTools 工具（进阶实用）
 
@@ -121,12 +132,16 @@ opencode
 }
 ```
 
+---
+
 ## 五、常见坑位提醒（帮你省时间）
 
 - apiKey 无效：优先检查 Key 是否正确、是否有额度
 - baseURL 报错：确认是完整的 OpenAI 兼容地址，并带 /v1
 - opencode: command not found：通常是 PATH 没生效，重新执行 source ~/.zshrc
 - npx 找不到：先确认 Node.js / npm 是否安装成功
+
+---
 
 ## 六、写在最后
 
