@@ -174,11 +174,11 @@ show_help() {
     -l, --list              列出所有可用模块
     -o, --output PATH       指定输出 tar 文件路径
     -p, --parallel          启用并行构建
-    -j, --jobs N            并行任务数（默认: ${MAX_JOBS:-4}）
+    -j, --jobs N            并行任务数(默认: ${MAX_JOBS:-4})
     -s, --skip-init         跳过 Maven 依赖初始化
     -b, --build-only        只构建镜像，不导出 tar 文件
     --no-cache              不使用 Docker 构建缓存
-    --registry URL          指定镜像仓库地址（默认: ${REGISTRY:-registry.fit2cloud.com/north})
+    --registry URL          指定镜像仓库地址(默认: ${REGISTRY:-registry.fit2cloud.com/north})
 
 模块:
     gateway                 网关服务
@@ -350,7 +350,7 @@ build_modules_parallel() {
     # 初始化临时目录
     TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ms-build.XXXXXX")
 
-    log_step "并行构建 ${#modules[@]} 个模块（最大并行数: $MAX_JOBS）"
+    log_step "并行构建 ${#modules[@]} 个模块(最大并行数: $MAX_JOBS)"
 
     local running=0
     local index=0
