@@ -894,15 +894,10 @@ export default {
     }
     this.buttonData = buttons(this);
 
-    Promise.all([
-      this.getApiScenario(),
-      this.getWsProjects(),
-      this.getMaintainerOptions(),
-      this.getDefaultVersion()
-    ]).catch(error => {
-      console.error('关键数据加载失败:', error);
-      this.$error(this.$t('commons.load_failed'));
-    });
+    this.getWsProjects();
+    this.getMaintainerOptions();
+    this.getApiScenario();
+    this.getDefaultVersion();
 
     this.getPlugins().then(() => {
       this.initPlugins();
@@ -1784,7 +1779,7 @@ export default {
       this.cancelBatchProcessing();
     },
     getMaintainerOptions() {
-      return getMaintainer().then((response) => {
+      getMaintainer().then((response) => {
         this.maintainerOptions = response.data;
       });
     },
@@ -2151,7 +2146,7 @@ export default {
         this.currentScenario.headers = [];
       }
       if (this.currentScenario && this.currentScenario.id) {
-        return this.result = getScenarioWithBLOBsById(this.currentScenario.id).then((response) => {
+        this.result = getScenarioWithBLOBsById(this.currentScenario.id).then((response) => {
           if (response.data) {
             this.currentScenario.apiScenarioModuleId = response.data.apiScenarioModuleId;
             this.currentScenario.modulePath = response.data.modulePath;
@@ -2513,7 +2508,7 @@ export default {
       this.environmentType = val;
     },
     getWsProjects() {
-      return getOwnerProjects().then((res) => {
+      getOwnerProjects().then((res) => {
         this.projectList = res.data;
       });
     },
@@ -2753,9 +2748,9 @@ export default {
     },
     getDefaultVersion() {
       if (!hasLicense()) {
-        return Promise.resolve();
+        return;
       }
-      return getDefaultVersion(this.projectId).then((response) => {
+      getDefaultVersion(this.projectId).then((response) => {
         this.latestVersionId = response.data;
         this.getVersionHistory();
       });

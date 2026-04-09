@@ -471,7 +471,6 @@ import ApiDeleteConfirm from '@/business/definition/components/list/ApiDeleteCon
 import MsShowReference from '@/business/definition/components/reference/ShowReference';
 import scheduleInfoInTable from '@/business/automation/schedule/ScheduleInfoInTable.vue';
 import { scheduleUpdate } from '@/api/schedule';
-import { debounce } from 'lodash-es';
 
 const performanceStore = usePerformanceStore();
 export default {
@@ -755,11 +754,7 @@ export default {
     }
     this.condition.filters = { status: ['Prepare', 'Underway', 'Completed'] };
 
-    this.debouncedNodeChange = debounce(this.nodeChange, 300);
-
-    this.$nextTick(() => {
-      this.initEnvironment();
-    });
+    this.initEnvironment();
     if (this.trashEnable) {
       this.condition.filters = { status: ['Trash'] };
       this.condition.moduleIds = [];
@@ -800,10 +795,6 @@ export default {
   },
   beforeDestroy() {
     this.$EventBus.$off('hide');
-    if (this.debouncedNodeChange && this.debouncedNodeChange.cancel) {
-      this.debouncedNodeChange.cancel();
-      this.debouncedNodeChange = null;
-    }
   },
   watch: {
     selectNodeIds() {
@@ -879,12 +870,8 @@ export default {
         });
       }
     },
-    search(projectId, immediate = false) {
-      if (immediate) {
-        this.nodeChange(projectId);
-      } else {
-        this.debouncedNodeChange(projectId);
-      }
+    search(projectId) {
+      this.nodeChange(projectId);
     },
     nodeChange(projectId) {
       if (this.needRefreshModule()) {
