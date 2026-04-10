@@ -138,7 +138,6 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
     private int updatedCount;
     private String importRootPath;
     private String importRootType;
-    private String selectedImportRootPath;
 
     public boolean isUpdated() {
         return isUpdated;
@@ -416,9 +415,6 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         if (isUpdateModel()) {
             return;
         }
-        if (StringUtils.isBlank(data.getNodePath())) {
-            return;
-        }
         //  校验模块是否存在，没有存在则新建一个模块
         testCaseNodeService.createNodeByNodePath(data.getNodePath(), request.getProjectId(), nodeTrees, pathMap);
         // 去掉用例名称唯一性检查，直接检查用例是否真正重复（通过多个字段组合判断）
@@ -564,17 +560,7 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
     }
 
     private void validateModule(TestCaseExcelData data, StringBuilder stringBuilder) {
-        if (StringUtils.isNotBlank(data.getImportModuleError())) {
-            stringBuilder.append(data.getImportModuleError())
-                    .append(ERROR_MSG_SEPARATOR);
-            return;
-        }
         String nodePath = data.getNodePath();
-        if (isCreateModel() && StringUtils.isBlank(nodePath)) {
-            stringBuilder.append(Translator.get("case_import_module_required"))
-                    .append(ERROR_MSG_SEPARATOR);
-            return;
-        }
         //校验”所属模块"
         if (nodePath != null) {
             String[] nodes = nodePath.split("/");
@@ -1094,23 +1080,16 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
     }
 
     private void initImportRoot() {
-        selectedImportRootPath = resolveSelectedImportRootPath();
         if (isUpdateModel()) {
             importRootType = "MODULE_UNCHANGED";
             importRootPath = null;
             return;
         }
         if (!hasModuleColumn) {
-            importRootPath = selectedImportRootPath;
-            importRootType = StringUtils.isNotBlank(selectedImportRootPath) ? "SELECTED_MODULE" : null;
+            resolveFallbackImportRoot();
         } else {
-            if (StringUtils.isNotBlank(selectedImportRootPath)) {
-                importRootType = "SELECTED_MODULE";
-                importRootPath = selectedImportRootPath;
-            } else {
-                importRootType = "EXCEL_MODULE";
-                importRootPath = null;
-            }
+            importRootType = "EXCEL_MODULE";
+            importRootPath = null;
         }
     }
 
@@ -1119,90 +1098,41 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
             data.setNodePath(null);
             return;
         }
-        data.setImportModuleError(null);
-        if (hasInvalidRawModulePath(originalNodePath)) {
-            data.setImportModuleError(Translator.get("module_not_null"));
-            data.setNodePath(null);
-            return;
-        }
         if (!hasModuleColumn) {
-            data.setNodePath(selectedImportRootPath);
+            resolveFallbackImportRoot();
+            data.setNodePath(importRootPath);
             return;
         }
         if (StringUtils.isBlank(originalNodePath)) {
-            data.setNodePath(selectedImportRootPath);
-            if (StringUtils.isNotBlank(selectedImportRootPath)) {
-                importRootPath = selectedImportRootPath;
-                importRootType = "MIXED_MODULE";
-            }
+            resolveFallbackImportRoot();
+            data.setNodePath(importRootPath);
+            importRootType = "MIXED_MODULE";
+        }
+    }
+
+    private void resolveFallbackImportRoot() {
+        if (StringUtils.isNotBlank(importRootPath) && StringUtils.isNotBlank(importRootType)
+                && !StringUtils.equals(importRootType, "EXCEL_MODULE")) {
             return;
         }
-        if (StringUtils.isNotBlank(selectedImportRootPath)) {
-            String normalizedOriginalPath = normalizeNodePath(originalNodePath);
-            if (StringUtils.equals(normalizedOriginalPath, selectedImportRootPath)
-                    || StringUtils.startsWith(normalizedOriginalPath, selectedImportRootPath + "/")) {
-                data.setImportModuleError(Translator.get("case_import_module_relative_path_required"));
-                data.setNodePath(null);
-                return;
-            }
-            data.setNodePath(mergeNodePath(selectedImportRootPath, normalizedOriginalPath));
-        }
-    }
-
-    private String resolveSelectedImportRootPath() {
         String selectedModuleId = request.getSelectedModuleId();
         if (StringUtils.isNotBlank(selectedModuleId) && !StringUtils.equals(selectedModuleId, "root")) {
-            return normalizeNodePath(testCaseNodeService.getNodePathById(selectedModuleId));
-        }
-        return null;
-    }
-
-    private String mergeNodePath(String rootPath, String subPath) {
-        String normalizedRootPath = normalizeNodePath(rootPath);
-        String normalizedSubPath = normalizeNodePath(subPath);
-        if (StringUtils.isBlank(normalizedRootPath)) {
-            return normalizedSubPath;
-        }
-        if (StringUtils.isBlank(normalizedSubPath)) {
-            return normalizedRootPath;
-        }
-        return normalizedRootPath + "/" + StringUtils.removeStart(normalizedSubPath, "/");
-    }
-
-    private String normalizeNodePath(String nodePath) {
-        if (StringUtils.isBlank(nodePath)) {
-            return null;
-        }
-        String[] pathItems = StringUtils.split(nodePath, "/");
-        if (pathItems == null || pathItems.length == 0) {
-            return null;
-        }
-        return Arrays.stream(pathItems)
-                .map(StringUtils::trim)
-                .filter(StringUtils::isNotBlank)
-                .map(item -> "/" + item)
-                .collect(Collectors.joining());
-    }
-
-    private boolean hasInvalidRawModulePath(String nodePath) {
-        if (nodePath == null) {
-            return false;
-        }
-        if (StringUtils.isBlank(nodePath)) {
-            return true;
-        }
-        String[] pathItems = nodePath.split("/", -1);
-        if (pathItems.length == 0) {
-            return true;
-        }
-        for (int i = 0; i < pathItems.length; i++) {
-            if (i == 0 && StringUtils.isEmpty(pathItems[i])) {
-                continue;
-            }
-            if (StringUtils.isBlank(pathItems[i])) {
-                return true;
+            String selectedPath = testCaseNodeService.getNodePathById(selectedModuleId);
+            if (StringUtils.isNotBlank(selectedPath)) {
+                importRootPath = selectedPath;
+                if (!StringUtils.equals(importRootType, "MIXED_MODULE")) {
+                    importRootType = "SELECTED_MODULE";
+                }
+                return;
             }
         }
-        return false;
+        io.metersphere.base.domain.TestCaseNode testCaseDefaultNode = testCaseNodeService.checkDefaultNode(request.getProjectId());
+        if (testCaseDefaultNode != null) {
+            importRootPath = "/" + testCaseDefaultNode.getName();
+            if (!StringUtils.equals(importRootType, "MIXED_MODULE")) {
+                importRootType = "DEFAULT_MODULE";
+            }
+            nodeTrees = testCaseNodeService.getNodeTreeByProjectId(request.getProjectId());
+        }
     }
 }
