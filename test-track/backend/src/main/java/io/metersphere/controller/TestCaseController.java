@@ -13,7 +13,6 @@ import io.metersphere.commons.utils.PageUtils;
 import io.metersphere.commons.utils.Pager;
 import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.dto.*;
-import io.metersphere.excel.domain.ExcelErrData;
 import io.metersphere.excel.domain.ExcelResponse;
 import io.metersphere.file.annotation.MsFileLimit;
 import io.metersphere.log.annotation.MsAuditLog;
@@ -43,7 +42,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -320,17 +318,6 @@ public class TestCaseController {
                 return (ExcelResponse) detail;
             }
             throw e;
-        } catch (Exception e) {
-            ExcelResponse response = new ExcelResponse();
-            response.setSuccess(false);
-            response.setIsUpdated(false);
-            response.setCreatedCount(0);
-            response.setUpdatedCount(0);
-            response.setFailedCount(1);
-            List<ExcelErrData<Object>> errList = new ArrayList<>();
-            errList.add(new ExcelErrData<>(null, 1, e.getMessage()));
-            response.setErrList(errList);
-            return response;
         }
     }
 
