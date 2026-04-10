@@ -219,11 +219,6 @@ export default {
       case_import_result_error_please: "可 ",
       case_import_result_error_import_again: " , 修改后重新导入",
       click_preview_import_error_msg: "点击预览错误信息",
-      success_result_summary: "导入成功：新增 {0} 条，更新 {1} 条，失败 {2} 条",
-      success_root_path: "导入根位置：{0}",
-      success_root_excel_module: "导入根位置：按 Excel 所属模块导入",
-      success_root_unchanged: "所属模块未变更",
-      success_root_mixed_module: "按 Excel 所属模块导入，空模块回落：{0}",
     },
     export: {
       export: "导出用例",

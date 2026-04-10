@@ -1164,20 +1164,9 @@ public class TestCaseService {
         return extTestCaseMapper.getTestCaseNames(queryTestCaseRequest);
     }
 
-    private ExcelResponse<TestCaseExcelData> getImportResponse(List<ExcelErrData<TestCaseExcelData>> errList,
-                                                               boolean isUpdated,
-                                                               boolean isIgnore,
-                                                               int createdCount,
-                                                               int updatedCount,
-                                                               String importRootPath,
-                                                               String importRootType) {
-        ExcelResponse<TestCaseExcelData> excelResponse = new ExcelResponse<>();
+    private ExcelResponse getImportResponse(List<ExcelErrData<TestCaseExcelData>> errList, boolean isUpdated, boolean isIgnore) {
+        ExcelResponse excelResponse = new ExcelResponse();
         excelResponse.setIsUpdated(isUpdated);
-        excelResponse.setCreatedCount(createdCount);
-        excelResponse.setUpdatedCount(updatedCount);
-        excelResponse.setFailedCount(errList.size());
-        excelResponse.setImportRootPath(importRootPath);
-        excelResponse.setImportRootType(importRootType);
         //如果包含错误信息就导出错误信息
         if (!errList.isEmpty()) {
             if (isIgnore) {
@@ -1198,8 +1187,6 @@ public class TestCaseService {
         List<ExcelErrData<TestCaseExcelData>> errList = new ArrayList<>();
         Project project = baseProjectService.getProjectById(projectId);
         boolean useCunstomId = trackProjectService.useCustomNum(project);
-        int createdCount = 0;
-        int updatedCount = 0;
 
         Set<String> testCaseNames = getTestCaseForImport(projectId).stream()
                 .map(TestCase::getName)
@@ -1234,13 +1221,11 @@ public class TestCaseService {
                     }
                     if (CollectionUtils.isNotEmpty(xmindParser.getTestCase())) {
                         saveImportData(testCase, request, null);
-                        createdCount = testCase.size();
                         names = testCase.stream().map(TestCase::getName).collect(Collectors.toList());
                         ids = testCase.stream().map(TestCase::getId).collect(Collectors.toList());
                     }
                     if (CollectionUtils.isNotEmpty(xmindParser.getUpdateTestCase())) {
                         updateImportData(xmindParser.getUpdateTestCase(), request, null);
-                        updatedCount = xmindParser.getUpdateTestCase().size();
                         names.addAll(xmindParser.getUpdateTestCase().stream().map(TestCase::getName).collect(Collectors.toList()));
                         ids.addAll(xmindParser.getUpdateTestCase().stream().map(TestCase::getId).collect(Collectors.toList()));
                     }
@@ -1253,7 +1238,6 @@ public class TestCaseService {
                     if (CollectionUtils.isNotEmpty(xmindParser.getUpdateTestCase())) {
                         continueCaseList.removeAll(xmindParser.getUpdateTestCase());
                         updateImportData(xmindParser.getUpdateTestCase(), request, null);
-                        updatedCount = xmindParser.getUpdateTestCase().size();
                         names = testCase.stream().map(TestCase::getName).collect(Collectors.toList());
                         ids = testCase.stream().map(TestCase::getId).collect(Collectors.toList());
                     }
@@ -1263,7 +1247,6 @@ public class TestCaseService {
                     }
                     if (CollectionUtils.isNotEmpty(continueCaseList)) {
                         saveImportData(continueCaseList, request, null);
-                        createdCount = continueCaseList.size();
                         names.addAll(continueCaseList.stream().map(TestCase::getName).collect(Collectors.toList()));
                         ids.addAll(continueCaseList.stream().map(TestCase::getId).collect(Collectors.toList()));
 
@@ -1286,7 +1269,7 @@ public class TestCaseService {
                 errData.setRowNum(errorNum++);
             }
         }
-        return getImportResponse(errList, true, request.isIgnore(), createdCount, updatedCount, null, null);
+        return getImportResponse(errList, true, request.isIgnore());
     }
 
     private ExcelResponse testCaseExcelImport(MultipartFile multipartFile, TestCaseImportRequest request,
@@ -1300,7 +1283,6 @@ public class TestCaseService {
         Set<String> testCaseNames = new HashSet<>();
         List<ExcelErrData<TestCaseExcelData>> errList = new ArrayList<>();
         boolean isUpdated = false;
-        TestCaseNoModelDataListener easyExcelListener = null;
 
         List<TestCase> testCases = getTestCaseForImport(projectId);
         for (TestCase testCase : testCases) {
@@ -1334,7 +1316,7 @@ public class TestCaseService {
             EasyExcel.read(multipartFile.getInputStream(), null, new TestCasePretreatmentListener(mergeInfoSet))
                     .extraRead(CellExtraTypeEnum.MERGE).sheet().doRead();
 
-            easyExcelListener = new TestCaseNoModelDataListener(request, clazz, mergeInfoSet);
+            TestCaseNoModelDataListener easyExcelListener = new TestCaseNoModelDataListener(request, clazz, mergeInfoSet);
             
             // 设置Excel文件名到模板处理器上下文（用于模板特定的处理逻辑）
             if (multipartFile.getOriginalFilename() != null) {
@@ -1352,13 +1334,7 @@ public class TestCaseService {
             LogUtil.error(e.getMessage(), e);
             MSException.throwException(e.getMessage());
         }
-        return getImportResponse(errList,
-                isUpdated,
-                request.isIgnore(),
-                easyExcelListener.getCreatedCount(),
-                easyExcelListener.getUpdatedCount(),
-                easyExcelListener.getImportRootPath(),
-                easyExcelListener.getImportRootType());
+        return getImportResponse(errList, isUpdated, request.isIgnore());
     }
 
     private static List<CustomFieldDao> getProjectCustomFields(String projectId) {
@@ -1456,12 +1432,7 @@ public class TestCaseService {
 
         String projectId = request.getProjectId();
         List<TestCase> insertCases = new ArrayList<>();
-        List<TestCaseWithBLOBs> moduleChangedCases = testCases.stream()
-                .filter(item -> StringUtils.isNotBlank(item.getNodePath()))
-                .collect(Collectors.toList());
-        Map<String, String> nodePathMap = CollectionUtils.isEmpty(moduleChangedCases)
-                ? new HashMap<>()
-                : testCaseNodeService.createNodeByTestCases(moduleChangedCases, projectId);
+        Map<String, String> nodePathMap = testCaseNodeService.createNodeByTestCases(testCases, projectId);
         SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
         TestCaseMapper mapper = sqlSession.getMapper(TestCaseMapper.class);
         CustomFieldTestCaseMapper customFieldTestCaseMapper = sqlSession.getMapper(CustomFieldTestCaseMapper.class);
@@ -1511,13 +1482,8 @@ public class TestCaseService {
                 boolean enAbleReReview = isEnAbleReReview(request.getProjectId());
                 testCases.forEach(testCase -> {
                     testCase.setUpdateTime(System.currentTimeMillis());
+                    testCase.setNodeId(nodePathMap.get(testCase.getNodePath()));
                     TestCase dbCase = request.isUseCustomId() ? customIdMap.get(testCase.getCustomNum()) : customIdMap.get(testCase.getNum());
-                    if (StringUtils.isNotBlank(testCase.getNodePath())) {
-                        testCase.setNodeId(nodePathMap.get(testCase.getNodePath()));
-                    } else {
-                        testCase.setNodeId(dbCase.getNodeId());
-                        testCase.setNodePath(dbCase.getNodePath());
-                    }
                     testCase.setId(dbCase.getId());
                     testCase.setRefId(dbCase.getRefId());
                     if (StringUtils.isBlank(request.getVersionId())) {
