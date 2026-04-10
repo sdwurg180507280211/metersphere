@@ -1,0 +1,8 @@
+{
+  "enabledMcpjsonServers": [
+    "chrome-devtools",
+    "gitee",
+    "exa"
+  ],
+  "disabledMcpjsonServers": []
+}
