@@ -200,6 +200,36 @@
                 <property name="object" value="${condition}.reqManagerName"/>
             </include>
         </if>
+        <if test="${condition}.poolStatus != null">
+            and requirement_pool.pool_status
+            <include refid="condition">
+                <property name="object" value="${condition}.poolStatus"/>
+            </include>
+        </if>
+        <if test="${condition}.systemName != null">
+            and requirement_pool.system_name
+            <include refid="condition">
+                <property name="object" value="${condition}.systemName"/>
+            </include>
+        </if>
+        <if test="${condition}.reqFatherClass != null">
+            and requirement_pool.req_father_class
+            <include refid="condition">
+                <property name="object" value="${condition}.reqFatherClass"/>
+            </include>
+        </if>
+        <if test="${condition}.reqSonClass != null">
+            and requirement_pool.req_son_class
+            <include refid="condition">
+                <property name="object" value="${condition}.reqSonClass"/>
+            </include>
+        </if>
+        <if test="${condition}.parentWfinstCode != null">
+            and requirement_pool.parent_wfinst_code
+            <include refid="condition">
+                <property name="object" value="${condition}.parentWfinstCode"/>
+            </include>
+        </if>
     </sql>
 
     <sql id="filter">
