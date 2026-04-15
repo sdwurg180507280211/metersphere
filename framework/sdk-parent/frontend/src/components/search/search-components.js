@@ -1162,6 +1162,16 @@ export const BUILTIN_ADV_SEARCH_KEYS = [
   'reqFatherClass', // 需求池：需求大类
   'reqSonClass',    // 需求池：需求子类
   'reqManagerName', // 需求池：需求负责人
+  'actName',         // 需求池：当前环节
+  'parentWfinstCode',// 需求池：主流程编码
+  'operationType',   // 需求池：操作类型
+  'assigneeName',    // 需求池：当前处理人
+  'createdDept',     // 需求池：需求申请部门
+  'createUser1',     // 需求池：需求申请人
+  'deptName',        // 需求池：需求负责人处室
+  'startUserName',   // 需求池：创建人
+  'operationType',   // 需求池：操作类型
+  'upTime',          // 需求池：预计上线时间
 ];
 
 // 需求池状态
@@ -1248,6 +1258,100 @@ export const REQUIREMENT_MANAGER_NAME = {
   },
 };
 
+// 当前环节
+export const REQUIREMENT_ACT_NAME = {
+  key: "actName",
+  name: 'MsTableSearchInput',
+  label: '当前环节',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 当前处理人
+export const REQUIREMENT_ASSIGNEE_NAME = {
+  key: "assigneeName",
+  name: 'MsTableSearchInput',
+  label: '当前处理人',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求申请部门
+export const REQUIREMENT_CREATED_DEPT = {
+  key: "createdDept",
+  name: 'MsTableSearchInput',
+  label: '需求申请部门',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求申请人
+export const REQUIREMENT_CREATE_USER = {
+  key: "createUser1",
+  name: 'MsTableSearchInput',
+  label: '需求申请人',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求负责人处室
+export const REQUIREMENT_DEPT_NAME = {
+  key: "deptName",
+  name: 'MsTableSearchInput',
+  label: '负责人处室',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 创建人
+export const REQUIREMENT_START_USER_NAME = {
+  key: "startUserName",
+  name: 'MsTableSearchInput',
+  label: '创建人',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 预计上线时间
+export const REQUIREMENT_UP_TIME = {
+  key: "upTime",
+  name: 'MsTableSearchDateTimePicker',
+  label: '预计上线时间',
+  operator: {
+    options: [OPERATORS.BETWEEN, OPERATORS.GT, OPERATORS.LT]
+  },
+};
+
+// 操作类型
+export const REQUIREMENT_OPERATION_TYPE = {
+  key: "operationType",
+  name: 'MsTableSearchSelect',
+  label: '操作类型',
+  operator: {
+    options: [OPERATORS.IN, OPERATORS.NOT_IN]
+  },
+  options: [
+    {label: '新建', value: 'CREATED'},
+    {label: '修改', value: 'UPDATED'},
+    {label: '取消', value: 'CANCELLED'}
+  ],
+  props: {
+    multiple: true
+  }
+};
+
 // 需求池列表高级搜索配置
 export const REQUIREMENT_POOL_LIST = [
   REQUIREMENT_DMP_NUM,
@@ -1257,6 +1361,14 @@ export const REQUIREMENT_POOL_LIST = [
   REQUIREMENT_FATHER_CLASS,
   REQUIREMENT_SON_CLASS,
   REQUIREMENT_MANAGER_NAME,
-  CREATE_TIME
+  REQUIREMENT_ACT_NAME,
+  REQUIREMENT_ASSIGNEE_NAME,
+  REQUIREMENT_CREATED_DEPT,
+  REQUIREMENT_CREATE_USER,
+  REQUIREMENT_DEPT_NAME,
+  REQUIREMENT_START_USER_NAME,
+  REQUIREMENT_OPERATION_TYPE,
+  CREATE_TIME,
+  REQUIREMENT_UP_TIME,
 ];
 

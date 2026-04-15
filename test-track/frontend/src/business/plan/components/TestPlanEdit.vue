@@ -520,22 +520,52 @@ export default {
           }
           param.tags = this.form.tags;
           this.loading = true;
-          let method = testPlanAdd;
-          if (this.operationType === "edit") {
-            method = testPlanEdit;
-          }
-          method(param)
-            .then((response) => {
-              this.loading = false;
-              if (this.operationType === "add") {
-                this.$success(this.$t("commons.save_success"));
-              }
-              this.dialogFormVisible = false;
-              this.$router.push("/track/plan/view/" + response.data.id);
+
+          // 如果是从需求池创建，调用需求池的创建接口
+          if (param.requirementNumber) {
+            createTestPlanFromRequirement({
+              dmpNum: param.requirementNumber,
+              projectId: this.projectId,
+              workspaceId: getCurrentWorkspaceId(),
+              principalId: param.principals && param.principals.length > 0 ? param.principals[0] : null,
+              stage: param.stage,
+              plannedStartTime: param.plannedStartTime,
+              plannedEndTime: param.plannedEndTime,
+              description: param.description,
+              automaticStatusUpdate: param.automaticStatusUpdate,
+              repeatCase: param.repeatCase,
+              nodeId: param.nodeId,
+              nodePath: param.nodePath,
+              tags: param.tags
             })
-            .catch(() => {
-              this.loading = false;
-            });
+              .then((response) => {
+                this.loading = false;
+                this.$success(this.$t("commons.save_success"));
+                this.dialogFormVisible = false;
+                this.$emit("refresh");
+                this.$router.push("/track/plan/view/" + response.data.id);
+              })
+              .catch(() => {
+                this.loading = false;
+              });
+          } else {
+            let method = testPlanAdd;
+            if (this.operationType === "edit") {
+              method = testPlanEdit;
+            }
+            method(param)
+              .then((response) => {
+                this.loading = false;
+                if (this.operationType === "add") {
+                  this.$success(this.$t("commons.save_success"));
+                }
+                this.dialogFormVisible = false;
+                this.$router.push("/track/plan/view/" + response.data.id);
+              })
+              .catch(() => {
+                this.loading = false;
+              });
+          }
         } else {
           return false;
         }

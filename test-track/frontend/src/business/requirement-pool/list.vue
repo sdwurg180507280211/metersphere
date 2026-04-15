@@ -103,6 +103,83 @@
               :min-width="item.minWidth"
           />
           <ms-table-column
+              v-if="item.id === 'actName'"
+              prop="actName"
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          />
+          <ms-table-column
+              v-if="item.id === 'parentWfinstCode'"
+              prop="parentWfinstCode"
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          />
+          <ms-table-column
+              v-if="item.id === 'operationType'"
+              prop="operationType"
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          />
+          <ms-table-column
+              v-if="item.id === 'assigneeName'"
+              prop="assigneeName"
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          />
+          <ms-table-column
+              v-if="item.id === 'createdDept'"
+              prop="createdDept"
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          />
+          <ms-table-column
+              v-if="item.id === 'createUser1'"
+              prop="createUser1"
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          />
+          <ms-table-column
+              v-if="item.id === 'deptName'"
+              prop="deptName"
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          />
+          <ms-table-column
+              v-if="item.id === 'startUserName'"
+              prop="startUserName"
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          />
+          <ms-table-column
+              v-if="item.id === 'upTime'"
+              prop="upTime"
+              sortable
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          >
+            <template v-slot:default="scope">
+              {{ scope.row.upTime | datetimeFormat }}
+            </template>
+          </ms-table-column>
+          <ms-table-column
               v-if="item.id === 'createTime'"
               prop="createTime"
               sortable
