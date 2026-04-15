@@ -1170,7 +1170,6 @@ export const BUILTIN_ADV_SEARCH_KEYS = [
   'createUser1',     // 需求池：需求申请人
   'deptName',        // 需求池：需求负责人处室
   'startUserName',   // 需求池：创建人
-  'operationType',   // 需求池：操作类型
   'upTime',          // 需求池：预计上线时间
 ];
 
@@ -1269,6 +1268,17 @@ export const REQUIREMENT_ACT_NAME = {
   },
 };
 
+// 主流程编码
+export const REQUIREMENT_PARENT_WFINST_CODE = {
+  key: "parentWfinstCode",
+  name: 'MsTableSearchInput',
+  label: '主流程编码',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
 // 当前处理人
 export const REQUIREMENT_ASSIGNEE_NAME = {
   key: "assigneeName",
@@ -1306,7 +1316,7 @@ export const REQUIREMENT_CREATE_USER = {
 export const REQUIREMENT_DEPT_NAME = {
   key: "deptName",
   name: 'MsTableSearchInput',
-  label: '负责人处室',
+  label: '需求负责人处室',
   operator: {
     value: OPERATORS.LIKE.value,
     options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
@@ -1362,6 +1372,7 @@ export const REQUIREMENT_POOL_LIST = [
   REQUIREMENT_SON_CLASS,
   REQUIREMENT_MANAGER_NAME,
   REQUIREMENT_ACT_NAME,
+  REQUIREMENT_PARENT_WFINST_CODE,
   REQUIREMENT_ASSIGNEE_NAME,
   REQUIREMENT_CREATED_DEPT,
   REQUIREMENT_CREATE_USER,
