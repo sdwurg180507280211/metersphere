@@ -14,9 +14,25 @@ public class RequirementPool implements Serializable {
 
     private String poolStatus;
 
+    private String parentWfinstCode;
+
+    private String actName;
+
+    private String operationType;
+
     private String systemName;
 
     private String reqManagerName;
+
+    private String assigneeName;
+
+    private String createdDept;
+
+    private String createUser1;
+
+    private String deptName;
+
+    private String startUserName;
 
     private String reqFatherClass;
 
@@ -30,7 +46,15 @@ public class RequirementPool implements Serializable {
 
     private String linkedPlanName;
 
+    private Long lastSyncTime;
+
+    private Long eventTime;
+
     private String traceId;
+
+    private Long createdAt;
+
+    private Long updatedAt;
 
     private static final long serialVersionUID = 1L;
 }

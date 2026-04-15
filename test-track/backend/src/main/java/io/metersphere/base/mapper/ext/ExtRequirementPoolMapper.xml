@@ -7,15 +7,27 @@
         <result column="dmp_num" property="dmpNum" jdbcType="VARCHAR"/>
         <result column="requirement_name" property="requirementName" jdbcType="VARCHAR"/>
         <result column="pool_status" property="poolStatus" jdbcType="VARCHAR"/>
+        <result column="parent_wfinst_code" property="parentWfinstCode" jdbcType="VARCHAR"/>
+        <result column="act_name" property="actName" jdbcType="VARCHAR"/>
+        <result column="operation_type" property="operationType" jdbcType="VARCHAR"/>
         <result column="system_name" property="systemName" jdbcType="VARCHAR"/>
         <result column="req_manager_name" property="reqManagerName" jdbcType="VARCHAR"/>
+        <result column="assignee_name" property="assigneeName" jdbcType="VARCHAR"/>
+        <result column="created_dept" property="createdDept" jdbcType="VARCHAR"/>
+        <result column="create_user1" property="createUser1" jdbcType="VARCHAR"/>
+        <result column="dept_name" property="deptName" jdbcType="VARCHAR"/>
+        <result column="start_user_name" property="startUserName" jdbcType="VARCHAR"/>
         <result column="req_father_class" property="reqFatherClass" jdbcType="VARCHAR"/>
         <result column="req_son_class" property="reqSonClass" jdbcType="VARCHAR"/>
         <result column="create_time" property="createTime" jdbcType="BIGINT"/>
         <result column="up_time" property="upTime" jdbcType="BIGINT"/>
         <result column="linked_plan_id" property="linkedPlanId" jdbcType="VARCHAR"/>
         <result column="linked_plan_name" property="linkedPlanName" jdbcType="VARCHAR"/>
+        <result column="last_sync_time" property="lastSyncTime" jdbcType="BIGINT"/>
+        <result column="event_time" property="eventTime" jdbcType="BIGINT"/>
         <result column="trace_id" property="traceId" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="BIGINT"/>
+        <result column="updated_at" property="updatedAt" jdbcType="BIGINT"/>
     </resultMap>
 
     <insert id="insert" parameterType="io.metersphere.base.domain.RequirementPool">
@@ -24,29 +36,53 @@
             dmp_num,
             requirement_name,
             pool_status,
+            parent_wfinst_code,
+            act_name,
+            operation_type,
             system_name,
             req_manager_name,
+            assignee_name,
+            created_dept,
+            create_user1,
+            dept_name,
+            start_user_name,
             req_father_class,
             req_son_class,
             create_time,
             up_time,
             linked_plan_id,
             linked_plan_name,
-            trace_id
+            last_sync_time,
+            event_time,
+            trace_id,
+            created_at,
+            updated_at
         ) values (
             #{id},
             #{dmpNum},
             #{requirementName},
             #{poolStatus},
+            #{parentWfinstCode},
+            #{actName},
+            #{operationType},
             #{systemName},
             #{reqManagerName},
+            #{assigneeName},
+            #{createdDept},
+            #{createUser1},
+            #{deptName},
+            #{startUserName},
             #{reqFatherClass},
             #{reqSonClass},
             #{createTime},
             #{upTime},
             #{linkedPlanId},
             #{linkedPlanName},
-            #{traceId}
+            #{lastSyncTime},
+            #{eventTime},
+            #{traceId},
+            #{createdAt},
+            #{updatedAt}
         )
     </insert>
 
@@ -116,6 +152,54 @@
                 <property name="object" value="${condition}.upTime"/>
             </include>
         </if>
+        <if test="${condition}.actName != null">
+            and requirement_pool.act_name
+            <include refid="condition">
+                <property name="object" value="${condition}.actName"/>
+            </include>
+        </if>
+        <if test="${condition}.operationType != null">
+            and requirement_pool.operation_type
+            <include refid="condition">
+                <property name="object" value="${condition}.operationType"/>
+            </include>
+        </if>
+        <if test="${condition}.assigneeName != null">
+            and requirement_pool.assignee_name
+            <include refid="condition">
+                <property name="object" value="${condition}.assigneeName"/>
+            </include>
+        </if>
+        <if test="${condition}.createdDept != null">
+            and requirement_pool.created_dept
+            <include refid="condition">
+                <property name="object" value="${condition}.createdDept"/>
+            </include>
+        </if>
+        <if test="${condition}.createUser1 != null">
+            and requirement_pool.create_user1
+            <include refid="condition">
+                <property name="object" value="${condition}.createUser1"/>
+            </include>
+        </if>
+        <if test="${condition}.deptName != null">
+            and requirement_pool.dept_name
+            <include refid="condition">
+                <property name="object" value="${condition}.deptName"/>
+            </include>
+        </if>
+        <if test="${condition}.startUserName != null">
+            and requirement_pool.start_user_name
+            <include refid="condition">
+                <property name="object" value="${condition}.startUserName"/>
+            </include>
+        </if>
+        <if test="${condition}.reqManagerName != null">
+            and requirement_pool.req_manager_name
+            <include refid="condition">
+                <property name="object" value="${condition}.reqManagerName"/>
+            </include>
+        </if>
     </sql>
 
     <sql id="filter">
@@ -141,6 +225,22 @@
                         </when>
                         <when test="key=='reqManagerName'">
                             and requirement_pool.req_manager_name in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='actName'">
+                            and requirement_pool.act_name in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='assigneeName'">
+                            and requirement_pool.assignee_name in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='createdDept'">
+                            and requirement_pool.created_dept in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='operationType'">
+                            and requirement_pool.operation_type in
                             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
                         </when>
                     </choose>
@@ -186,7 +286,8 @@
         update requirement_pool
         set pool_status = #{poolStatus},
             linked_plan_id = #{linkedPlanId},
-            linked_plan_name = #{linkedPlanName}
+            linked_plan_name = #{linkedPlanName},
+            updated_at = UNIX_TIMESTAMP(NOW()) * 1000
         where dmp_num = #{dmpNum}
     </update>
 
