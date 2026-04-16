@@ -21,6 +21,7 @@ const TRACK_HEADER = {
   //测试计划
   TEST_PLAN_LIST: [
     {id: 'name', key: '1', label: 'commons.name'},
+    {id: 'requirementNumber', key: '2', label: 'test_track.plan.requirement_number'},
     {id: 'status', key: '3', label: 'test_track.plan.plan_status'},
     {id: 'stage', key: '4', label: 'test_track.plan.plan_stage'},
     {id: 'testRate', key: '5', label: 'test_track.home.test_rate'},

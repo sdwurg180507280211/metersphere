@@ -42,6 +42,14 @@
         >
         </ms-table-column>
         <ms-table-column
+            prop="requirementNumber"
+            :field="item"
+            :fields-width="fieldsWidth"
+            :label="$t('test_track.plan.requirement_number')"
+            min-width="120px"
+        >
+        </ms-table-column>
+        <ms-table-column
             prop="principalName"
             :field="item"
             :fields-width="fieldsWidth"
