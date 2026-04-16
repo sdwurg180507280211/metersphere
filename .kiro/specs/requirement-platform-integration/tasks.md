@@ -85,11 +85,11 @@
 - [ ] 3.2.6 实现并发控制（数据库唯一索引）
 
 ### 3.3 测试计划扩展开发 (W09)
-- [ ] 3.3.1 扩展 test_plan 表（添加 requirement_number 字段）
-- [ ] 3.3.2 添加 uk_requirement_number 唯一索引
-- [ ] 3.3.3 在 TestPlan 实体类添加 requirementNumber 字段
+- [x] 3.3.1 扩展 test_plan 表（添加 requirement_number 字段）
+- [x] 3.3.2 添加 uk_requirement_number 唯一索引
+- [x] 3.3.3 在 TestPlan 实体类添加 requirementNumber 字段
 - [ ] 3.3.4 修改直接创建测试计划逻辑（requirementNumber = null）
-- [ ] 3.3.5 在测试计划列表展示关联需求编号（如需要）
+- [x] 3.3.5 在测试计划列表展示关联需求编码（TestPlanList.vue 添加 requirementNumber 列，search-components.js 添加搜索配置，ExtTestPlanMapper.xml 添加 combine 条件）
 
 ### 3.4 回传能力开发 (W10)
 - [ ] 3.4.1 创建 RequirementCallbackMessage DTO

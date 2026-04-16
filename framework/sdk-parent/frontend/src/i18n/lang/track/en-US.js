@@ -290,6 +290,7 @@ export default {
     regression_test: "Regression test",
     version_validation: "Version validation",
     plan_principal: "Principal",
+    requirement_number: "Requirement Number",
     input_plan_name: "Please input plan name",
     input_plan_principal: "Please select principal",
     input_plan_project: "Please select project",

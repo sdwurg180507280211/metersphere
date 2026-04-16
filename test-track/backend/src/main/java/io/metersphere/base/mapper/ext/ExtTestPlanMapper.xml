@@ -152,6 +152,12 @@
                 <property name="object" value="${condition}.moduleIds"/>
             </include>
         </if>
+        <if test="${condition}.requirementNumber != null">
+            and test_plan.requirement_number
+            <include refid="condition">
+                <property name="object" value="${condition}.requirementNumber"/>
+            </include>
+        </if>
     </sql>
 
     <select id="list" resultType="io.metersphere.dto.TestPlanDTOWithMetric"
