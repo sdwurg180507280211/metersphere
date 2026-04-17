@@ -22,6 +22,20 @@
         v-if="isStepTableAlive"
       >
         <el-row type="flex" :gutter="20">
+          <el-col :span="12" v-if="form.requirementNumber">
+            <el-form-item
+              label="需求编号"
+              :label-width="formLabelWidth"
+            >
+              <el-input
+                v-model="form.requirementNumber"
+                :size="itemSize"
+                readonly
+                disabled
+              />
+            </el-form-item>
+          </el-col>
+
           <el-col :span="12">
             <el-form-item
               :label="$t('test_track.plan.plan_name')"
@@ -39,21 +53,7 @@
             </el-form-item>
           </el-col>
 
-          <el-col :span="12" v-if="form.requirementNumber">
-            <el-form-item
-              label="需求编号"
-              :label-width="formLabelWidth"
-            >
-              <el-input
-                v-model="form.requirementNumber"
-                :size="itemSize"
-                readonly
-                disabled
-              />
-            </el-form-item>
-          </el-col>
-
-          <el-col :span="12" v-else>
+          <el-col :span="12" v-if="!form.requirementNumber">
             <el-form-item
               prop="nodeId"
               :label="$t('test_track.case.module')"
