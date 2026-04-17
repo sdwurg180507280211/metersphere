@@ -1197,6 +1197,7 @@ public class TestPlanService {
             targetPlan.setName(testPlan.getName().substring(0, 116) + "_" + UUID.randomUUID().toString().substring(0, 5) + "_COPY");
         }
         targetPlan.setStatus(TestPlanStatus.Prepare.name());
+        targetPlan.setRequirementNumber(null);
         targetPlan.setCreator(SessionUtils.getUserId());
         targetPlan.setCreateTime(System.currentTimeMillis());
         targetPlan.setUpdateTime(System.currentTimeMillis());
@@ -2514,6 +2515,7 @@ public class TestPlanService {
         for (TestPlanDTOWithMetric plan : exportTestPlans) {
             List<Object> row = new ArrayList<>();
             row.add(plan.getName());
+            row.add(ObjectUtils.defaultIfNull(plan.getRequirementNumber(), ""));
             row.add(StatusReference.statusMap.getOrDefault(plan.getStatus(), plan.getStatus()));
             row.add(StatusReference.statusMap.getOrDefault(plan.getStage(), plan.getStage()));
             row.add(ObjectUtils.defaultIfNull(plan.getTestRate(), 0));
@@ -2561,6 +2563,7 @@ public class TestPlanService {
     private List<List<String>> buildExportHeads() {
         List<List<String>> heads = new ArrayList<>();
         heads.add(List.of(Translator.get("test_track.plan.plan_name")));
+        heads.add(List.of(Translator.get("test_track.plan.requirement_number")));
         heads.add(List.of(Translator.get("test_track.plan.plan_status")));
         heads.add(List.of(Translator.get("test_track.plan.plan_stage")));
         heads.add(List.of(Translator.get("test_track.plan.test_rate")));
