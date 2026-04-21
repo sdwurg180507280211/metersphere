@@ -892,17 +892,19 @@ export default {
     if (this.stepFilter) {
       this.operatingElements = this.stepFilter.get('ALL');
     }
+    this.buttonData = buttons(this);
+
     this.getWsProjects();
     this.getMaintainerOptions();
     this.getApiScenario();
-    this.buttonData = buttons(this);
+    this.getDefaultVersion();
+
     this.getPlugins().then(() => {
       this.initPlugins();
     });
     this.result = getEnvironmentByProjectId(this.projectId).then((response) => {
       this.environments = response.data;
     });
-    this.getDefaultVersion();
   },
   mounted() {
     this.$nextTick(() => {

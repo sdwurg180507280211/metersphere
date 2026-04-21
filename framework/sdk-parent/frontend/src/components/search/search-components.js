@@ -1005,7 +1005,18 @@ export const UI_CUSTOM_COMMAND_CONFIGS_TRASH = [NAME, CREATE_TIME, PROJECT_CREAT
 // 测试跟踪-测试用例 列表
 export const TEST_CASE_CONFIGS = [ID, NAME, TAGS, TEST_CASE_MODULE_TREE, CREATE_TIME, UPDATE_TIME, CREATOR, CASE_REVIEW_STATUS, FOLLOW_PEOPLE, CASE_DEMAND, TEST_CASE_STATUS, TEST_CASE_PRIORITY, TEST_CASE_MAINTAINER];
 
-export const TEST_PLAN_CONFIGS = [NAME, UPDATE_TIME, CREATE_TIME, TEST_PLAN_MODULE_TREE, PRINCIPAL, TEST_PLAN_STATUS, STAGE, TAGS, FOLLOW_PEOPLE, ACTUAL_START_TIME, ACTUAL_END_TIME, PLAN_START_TIME, PLAN_END_TIME];
+// 测试计划-需求编号
+export const TEST_PLAN_REQUIREMENT_NUMBER = {
+  key: "requirementNumber",
+  name: 'MsTableSearchInput',
+  label: 'test_track.plan.requirement_number',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+export const TEST_PLAN_CONFIGS = [NAME, UPDATE_TIME, CREATE_TIME, TEST_PLAN_MODULE_TREE, PRINCIPAL, TEST_PLAN_STATUS, STAGE, TAGS, FOLLOW_PEOPLE, ACTUAL_START_TIME, ACTUAL_END_TIME, PLAN_START_TIME, PLAN_END_TIME, TEST_PLAN_REQUIREMENT_NUMBER];
 
 // 测试跟踪 测试评审列表
 export const TEST_REVIEW = [NAME, CREATOR, TAGS, TEST_CASE_REVIEW_MODULE_TREE, TEST_PLAN_STATUS, FOLLOW_PEOPLE, CREATE_TIME, UPDATE_TIME, END_TIME];
@@ -1155,5 +1166,232 @@ export const BUILTIN_ADV_SEARCH_KEYS = [
   'moduleIds',
   'workspaceIds',  // 新增：所属工作空间
   'projectIds',    // 新增：所属项目
+  'dmpNum',        // 需求池：需求编号
+  'requirementName', // 需求池：需求名称
+  'poolStatus',    // 需求池：需求池状态
+  'systemName',    // 需求池：所属系统
+  'reqFatherClass', // 需求池：需求大类
+  'reqSonClass',    // 需求池：需求子类
+  'reqManagerName', // 需求池：需求负责人
+  'actName',         // 需求池：当前环节
+  'parentWfinstCode',// 需求池：主流程编码
+  'operationType',   // 需求池：操作类型
+  'assigneeName',    // 需求池：当前处理人
+  'createdDept',     // 需求池：需求申请部门
+  'createUser1',     // 需求池：需求申请人
+  'deptName',        // 需求池：需求负责人处室
+  'startUserName',   // 需求池：创建人
+  'upTime',          // 需求池：预计上线时间
+  'requirementNumber', // 测试计划：需求编号
+];
+
+// 需求池状态
+export const REQUIREMENT_POOL_STATUS = {
+  key: "poolStatus",
+  name: 'MsTableSearchSelect',
+  label: '需求池状态',
+  operator: {
+    options: [OPERATORS.IN, OPERATORS.NOT_IN]
+  },
+  options: [
+    {label: '未创建', value: 'PENDING'},
+    {label: '已创建', value: 'CREATED'},
+    {label: '已取消', value: 'CANCELLED'}
+  ],
+  props: {
+    multiple: true
+  }
+};
+
+// 需求编号
+export const REQUIREMENT_DMP_NUM = {
+  key: "dmpNum",
+  name: 'MsTableSearchInput',
+  label: '需求编号',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求名称
+export const REQUIREMENT_NAME = {
+  key: "requirementName",
+  name: 'MsTableSearchInput',
+  label: '需求名称',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 所属系统
+export const REQUIREMENT_SYSTEM_NAME = {
+  key: "systemName",
+  name: 'MsTableSearchInput',
+  label: '所属系统',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求大类
+export const REQUIREMENT_FATHER_CLASS = {
+  key: "reqFatherClass",
+  name: 'MsTableSearchInput',
+  label: '需求大类',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求子类
+export const REQUIREMENT_SON_CLASS = {
+  key: "reqSonClass",
+  name: 'MsTableSearchInput',
+  label: '需求子类',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求负责人
+export const REQUIREMENT_MANAGER_NAME = {
+  key: "reqManagerName",
+  name: 'MsTableSearchInput',
+  label: '需求负责人',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 当前环节
+export const REQUIREMENT_ACT_NAME = {
+  key: "actName",
+  name: 'MsTableSearchInput',
+  label: '当前环节',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 主流程编码
+export const REQUIREMENT_PARENT_WFINST_CODE = {
+  key: "parentWfinstCode",
+  name: 'MsTableSearchInput',
+  label: '主流程编码',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 当前处理人
+export const REQUIREMENT_ASSIGNEE_NAME = {
+  key: "assigneeName",
+  name: 'MsTableSearchInput',
+  label: '当前处理人',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求申请部门
+export const REQUIREMENT_CREATED_DEPT = {
+  key: "createdDept",
+  name: 'MsTableSearchInput',
+  label: '需求申请部门',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求申请人
+export const REQUIREMENT_CREATE_USER = {
+  key: "createUser1",
+  name: 'MsTableSearchInput',
+  label: '需求申请人',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 需求负责人处室
+export const REQUIREMENT_DEPT_NAME = {
+  key: "deptName",
+  name: 'MsTableSearchInput',
+  label: '需求负责人处室',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 创建人
+export const REQUIREMENT_START_USER_NAME = {
+  key: "startUserName",
+  name: 'MsTableSearchInput',
+  label: '创建人',
+  operator: {
+    value: OPERATORS.LIKE.value,
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
+  },
+};
+
+// 预计上线时间
+export const REQUIREMENT_UP_TIME = {
+  key: "upTime",
+  name: 'MsTableSearchDateTimePicker',
+  label: '预计上线时间',
+  operator: {
+    options: [OPERATORS.BETWEEN, OPERATORS.GT, OPERATORS.LT]
+  },
+};
+
+// 操作类型
+export const REQUIREMENT_OPERATION_TYPE = {
+  key: "operationType",
+  name: 'MsTableSearchSelect',
+  label: '操作类型',
+  operator: {
+    options: [OPERATORS.IN, OPERATORS.NOT_IN]
+  },
+  options: [
+    {label: '新建', value: 'CREATED'},
+    {label: '修改', value: 'UPDATED'},
+    {label: '取消', value: 'CANCELLED'}
+  ],
+  props: {
+    multiple: true
+  }
+};
+
+// 需求池列表高级搜索配置
+export const REQUIREMENT_POOL_LIST = [
+  REQUIREMENT_DMP_NUM,
+  REQUIREMENT_NAME,
+  REQUIREMENT_POOL_STATUS,
+  REQUIREMENT_SYSTEM_NAME,
+  REQUIREMENT_FATHER_CLASS,
+  REQUIREMENT_SON_CLASS,
+  REQUIREMENT_MANAGER_NAME,
+  REQUIREMENT_ACT_NAME,
+  REQUIREMENT_PARENT_WFINST_CODE,
+  REQUIREMENT_ASSIGNEE_NAME,
+  REQUIREMENT_CREATED_DEPT,
+  REQUIREMENT_CREATE_USER,
+  REQUIREMENT_DEPT_NAME,
+  REQUIREMENT_START_USER_NAME,
+  REQUIREMENT_OPERATION_TYPE,
+  CREATE_TIME,
+  REQUIREMENT_UP_TIME,
 ];
 

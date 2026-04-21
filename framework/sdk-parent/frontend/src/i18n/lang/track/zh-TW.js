@@ -260,6 +260,7 @@ export default {
     system_test: "繫統測試",
     version_validation: "版本驗證",
     plan_principal: "責任人",
+    requirement_number: "需求編號",
     input_plan_name: "請輸入測試計劃名稱",
     input_plan_principal: "請選擇負責人",
     input_plan_project: "請選擇所屬項目",

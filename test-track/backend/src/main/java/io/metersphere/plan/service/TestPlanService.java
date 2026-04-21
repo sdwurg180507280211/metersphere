@@ -44,10 +44,14 @@ import io.metersphere.plan.service.remote.api.PlanTestPlanScenarioCaseService;
 import io.metersphere.plan.service.remote.performance.PlanTestPlanLoadCaseService;
 import io.metersphere.plan.service.remote.ui.PlanTestPlanUiScenarioCaseService;
 import io.metersphere.plan.service.remote.ui.PlanUiAutomationService;
+import io.metersphere.plan.request.TestPlanExportRequest;
 import io.metersphere.plan.utils.TestPlanReportUtil;
 import io.metersphere.plan.utils.TestPlanRequestUtil;
 import io.metersphere.request.OrderRequest;
 import io.metersphere.request.ScheduleRequest;
+import io.metersphere.service.BaseUserService;
+import io.metersphere.excel.handler.TestPlanExportWriteHandler;
+import io.metersphere.excel.utils.EasyExcelExporter;
 import io.metersphere.service.*;
 import io.metersphere.utils.DiscoveryUtil;
 import io.metersphere.utils.LoggerUtil;
@@ -1193,6 +1197,7 @@ public class TestPlanService {
             targetPlan.setName(testPlan.getName().substring(0, 116) + "_" + UUID.randomUUID().toString().substring(0, 5) + "_COPY");
         }
         targetPlan.setStatus(TestPlanStatus.Prepare.name());
+        targetPlan.setRequirementNumber(null);
         targetPlan.setCreator(SessionUtils.getUserId());
         targetPlan.setCreateTime(System.currentTimeMillis());
         targetPlan.setUpdateTime(System.currentTimeMillis());
@@ -2309,7 +2314,7 @@ public class TestPlanService {
     }
 
     public void batchMove(TestPlanBatchMoveRequest request) {
-        if (request.getCondition().getSelectAll()) {
+        if (request.getCondition().isSelectAll()) {
             // 全选则重新设置MoveIds
             request.getCondition().setProjectId(request.getProjectId());
             List<TestPlanDTOWithMetric> movePlans = listTestPlan(request.getCondition());
@@ -2441,5 +2446,188 @@ public class TestPlanService {
     public boolean checkTestPlanIsRunning(String testPlanId) {
         String status = testPlanReportService.selectLastReportByTestPlanId(testPlanId);
         return StringUtils.equalsIgnoreCase(status, TestPlanReportStatus.RUNNING.name());
+    }
+
+    public void testPlanExport(TestPlanExportRequest request, HttpServletResponse response) {
+        // 重置单元格最大文本长度，避免长文本被截断
+        EasyExcelExporter.resetCellMaxTextLength();
+
+        // 获取用户信息 - 如果跨项目导出，需要获取工作空间所有用户
+        List<User> allUsers;
+        if (request.getWorkspaceId() != null) {
+            // 跨项目导出时获取工作空间下所有用户，确保能找到所有用户名
+            allUsers = baseUserService.getWorkspaceMemberList(request.getWorkspaceId());
+        } else if (request.getProjectId() != null) {
+            // 单项目导出只获取项目成员
+            allUsers = baseUserService.getProjectMemberOption(request.getProjectId());
+        } else {
+            allUsers = new ArrayList<>();
+        }
+        Map<String, String> userMap = allUsers.stream()
+                .collect(Collectors.toMap(User::getId, User::getName, (existing, replacement) -> existing));
+
+        // 根据条件获取测试计划列表
+        List<TestPlanDTOWithMetric> exportTestPlans = getExportTestPlans(request);
+
+        // 填充负责人信息（与 listTestPlan 保持一致）
+        if (CollectionUtils.isNotEmpty(exportTestPlans)) {
+            for (TestPlanDTOWithMetric plan : exportTestPlans) {
+                List<User> planPrincipal = getPlanPrincipal(plan.getId());
+                plan.setPrincipalUsers(planPrincipal);
+            }
+        }
+
+        if (CollectionUtils.isEmpty(exportTestPlans)) {
+            // 导出空文件
+            List<List<String>> heads = buildExportHeads();
+            new EasyExcelExporter(null)
+                    .exportByCustomWriteHandler(response, heads, new ArrayList<>(),
+                            Translator.get("test_track.plan.test_plan_export_excel"),
+                            Translator.get("test_track.plan.test_plan_export_excel_sheet"),
+                            new TestPlanExportWriteHandler());
+            return;
+        }
+
+        // 填充用例计数统计（和listTestPlan保持一致，需要单独查询各个类型用例数量）
+        List<String> testPlanIdList = exportTestPlans.stream()
+                .map(TestPlanDTOWithMetric::getId)
+                .collect(Collectors.toList());
+        Map<String, ParamsDTO> planTestCaseCountMap = extTestPlanMapper.testPlanTestCaseCount(testPlanIdList);
+        Map<String, ParamsDTO> planApiCaseMap = extTestPlanMapper.testPlanApiCaseCount(testPlanIdList);
+        Map<String, ParamsDTO> planApiScenarioMap = extTestPlanMapper.testPlanApiScenarioCount(testPlanIdList);
+        Map<String, ParamsDTO> planUiScenarioMap = extTestPlanMapper.testPlanUiScenarioCount(testPlanIdList);
+        Map<String, ParamsDTO> planLoadCaseMap = extTestPlanMapper.testPlanLoadCaseCount(testPlanIdList);
+
+        // 将查询到的计数填充到DTO中
+        for (TestPlanDTOWithMetric testPlanMetric : exportTestPlans) {
+            testPlanMetric.setTestPlanTestCaseCount(parseCountValue(planTestCaseCountMap, testPlanMetric.getId()));
+            testPlanMetric.setTestPlanApiCaseCount(parseCountValue(planApiCaseMap, testPlanMetric.getId()));
+            testPlanMetric.setTestPlanApiScenarioCount(parseCountValue(planApiScenarioMap, testPlanMetric.getId()));
+            testPlanMetric.setTestPlanUiScenarioCount(parseCountValue(planUiScenarioMap, testPlanMetric.getId()));
+            testPlanMetric.setTestPlanLoadCaseCount(parseCountValue(planLoadCaseMap, testPlanMetric.getId()));
+        }
+
+        // 构建表头
+        List<List<String>> heads = buildExportHeads();
+
+        // 构建数据
+        List<List<Object>> data = new ArrayList<>();
+        for (TestPlanDTOWithMetric plan : exportTestPlans) {
+            List<Object> row = new ArrayList<>();
+            row.add(plan.getName());
+            row.add(ObjectUtils.defaultIfNull(plan.getRequirementNumber(), ""));
+            row.add(StatusReference.statusMap.getOrDefault(plan.getStatus(), plan.getStatus()));
+            row.add(StatusReference.statusMap.getOrDefault(plan.getStage(), plan.getStage()));
+            row.add(ObjectUtils.defaultIfNull(plan.getTestRate(), 0));
+            row.add(ObjectUtils.defaultIfNull(plan.getProjectName(), ""));
+            row.add(ObjectUtils.defaultIfNull(plan.getNodePath(), ""));
+            row.add(getFormattedDateOrEmpty(plan.getPlannedStartTime()));
+            row.add(getFormattedDateOrEmpty(plan.getPlannedEndTime()));
+            row.add(getFormattedDateOrEmpty(plan.getActualStartTime()));
+            row.add(getFormattedDateOrEmpty(plan.getActualEndTime()));
+            row.add(ObjectUtils.defaultIfNull(plan.getTags(), ""));
+            row.add(getScheduleStatusText(plan.getScheduleStatus()));
+            row.add(ObjectUtils.defaultIfNull(plan.getPassRate(), ""));
+            // 支持多个负责人，用逗号分隔
+            String principalNames;
+            if (plan.getPrincipalUsers() != null && !plan.getPrincipalUsers().isEmpty()) {
+                principalNames = plan.getPrincipalUsers().stream()
+                        .map(user -> userMap.getOrDefault(user.getId(), user.getId()))
+                        .collect(Collectors.joining(", "));
+            } else {
+                principalNames = userMap.getOrDefault(plan.getCreateUser(), plan.getCreateUser());
+            }
+            row.add(userMap.getOrDefault(plan.getCreateUser(), plan.getCreateUser()));
+            row.add(plan.getTestPlanTestCaseCount());
+            row.add(plan.getTestPlanApiCaseCount());
+            row.add(plan.getTestPlanApiScenarioCount());
+            row.add(plan.getTestPlanUiScenarioCount());
+            row.add(plan.getTestPlanLoadCaseCount());
+            row.add(principalNames);
+            row.add(plan.getCreateTime() != null ? DateUtils.getTimeString(plan.getCreateTime()) : "");
+            row.add(plan.getUpdateTime() != null ? DateUtils.getTimeString(plan.getUpdateTime()) : "");
+            data.add(row);
+        }
+
+        // 导出Excel - 使用TestPlanExportWriteHandler设置列宽
+        new EasyExcelExporter(null)
+                .exportByCustomWriteHandler(response, heads, data,
+                        Translator.get("test_track.plan.test_plan_export_excel"),
+                        Translator.get("test_track.plan.test_plan_export_excel_sheet"),
+                        new TestPlanExportWriteHandler());
+    }
+
+    /**
+     * 构建导出表头
+     */
+    private List<List<String>> buildExportHeads() {
+        List<List<String>> heads = new ArrayList<>();
+        heads.add(List.of(Translator.get("test_track.plan.plan_name")));
+        heads.add(List.of(Translator.get("test_track.plan.requirement_number")));
+        heads.add(List.of(Translator.get("test_track.plan.plan_status")));
+        heads.add(List.of(Translator.get("test_track.plan.plan_stage")));
+        heads.add(List.of(Translator.get("test_track.plan.test_rate")));
+        heads.add(List.of(Translator.get("test_track.plan.plan_project")));
+        heads.add(List.of(Translator.get("test_track.test_case_module")));
+        heads.add(List.of(Translator.get("test_track.plan.planned_start_time")));
+        heads.add(List.of(Translator.get("test_track.plan.planned_end_time")));
+        heads.add(List.of(Translator.get("test_track.plan.actual_start_time")));
+        heads.add(List.of(Translator.get("test_track.plan.actual_end_time")));
+        heads.add(List.of(Translator.get("test_track.tags")));
+        heads.add(List.of(Translator.get("test_track.plan.schedule")));
+        heads.add(List.of(Translator.get("commons.pass_rate")));
+        heads.add(List.of(Translator.get("test_track.plan.plan_creator")));
+        heads.add(List.of(Translator.get("test_track.plan.test_case_count")));
+        heads.add(List.of(Translator.get("test_track.plan.api_case_count")));
+        heads.add(List.of(Translator.get("test_track.plan.api_scenario_count")));
+        heads.add(List.of(Translator.get("test_track.plan.ui_scenario_count")));
+        heads.add(List.of(Translator.get("test_track.plan.load_case_count")));
+        heads.add(List.of(Translator.get("test_track.plan.plan_principal")));
+        heads.add(List.of(Translator.get("test_track.plan.create_time")));
+        heads.add(List.of(Translator.get("test_track.plan.update_time")));
+        return heads;
+    }
+
+    /**
+     * 从计数Map中解析计数值，处理null情况
+     */
+    private int parseCountValue(Map<String, ParamsDTO> countMap, String testPlanId) {
+        ParamsDTO paramsDto = countMap.get(testPlanId);
+        if (paramsDto == null || paramsDto.getValue() == null) {
+            return 0;
+        }
+        return Integer.parseInt(paramsDto.getValue());
+    }
+
+    /**
+     * Get formatted date string or empty if null
+     */
+    private String getFormattedDateOrEmpty(Long time) {
+        return time != null ? DateUtils.getTimeString(time) : "";
+    }
+
+    /**
+     * Get translated schedule status text
+     */
+    private String getScheduleStatusText(String scheduleStatus) {
+        if (scheduleStatus == null || "NOTSET".equals(scheduleStatus)) {
+            return Translator.get("schedule.not_set");
+        }
+        return Translator.get("schedule." + scheduleStatus.toLowerCase());
+    }
+
+    private List<TestPlanDTOWithMetric> getExportTestPlans(TestPlanExportRequest exportRequest) {
+        // 由于TestPlanExportRequest继承了QueryTestPlanRequest，直接使用它
+        exportRequest.setUserId(SessionUtils.getUserId());
+        io.metersphere.request.BaseQueryRequest baseQueryRequest = exportRequest;
+        ServiceUtils.setBaseQueryRequestCustomMultipleFields(baseQueryRequest);
+        exportRequest.setOrders(ServiceUtils.getDefaultOrderByField(exportRequest.getOrders(), "create_time"));
+
+        // 统一设置 selectAll 字段（BaseQueryRequest 中的字段）
+        if (exportRequest.getIsSelectAll() != null) {
+            exportRequest.setSelectAll(exportRequest.getIsSelectAll());
+        }
+
+        return extTestPlanMapper.list(exportRequest);
     }
 }

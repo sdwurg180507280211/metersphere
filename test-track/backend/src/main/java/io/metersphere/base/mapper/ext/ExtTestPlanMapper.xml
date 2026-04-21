@@ -152,6 +152,12 @@
                 <property name="object" value="${condition}.moduleIds"/>
             </include>
         </if>
+        <if test="${condition}.requirementNumber != null">
+            and test_plan.requirement_number
+            <include refid="condition">
+                <property name="object" value="${condition}.requirementNumber"/>
+            </include>
+        </if>
     </sql>
 
     <select id="list" resultType="io.metersphere.dto.TestPlanDTOWithMetric"
@@ -197,6 +203,12 @@
                 and test_plan.id not in
                 <foreach collection="request.unSelectIds" item="id" separator="," open="(" close=")">
                     #{id}
+                </foreach>
+            </if>
+            <if test="!request.selectAll and request.exportIds != null and request.exportIds.size > 0">
+                and test_plan.id in
+                <foreach collection="request.exportIds" item="value" separator="," open="(" close=")">
+                    #{value}
                 </foreach>
             </if>
             <include refid="filter"/>

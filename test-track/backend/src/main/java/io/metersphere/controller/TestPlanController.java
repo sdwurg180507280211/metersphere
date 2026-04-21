@@ -472,4 +472,10 @@ public class TestPlanController {
     public void batchMove(@RequestBody TestPlanBatchMoveRequest request) {
         testPlanService.batchMove(request);
     }
+
+    @PostMapping("/export")
+    @RequiresPermissions(PermissionConstants.PROJECT_TRACK_PLAN_READ)
+    public void exportTestPlan(@RequestBody TestPlanExportRequest exportRequest, HttpServletResponse response) {
+        testPlanService.testPlanExport(exportRequest, response);
+    }
 }

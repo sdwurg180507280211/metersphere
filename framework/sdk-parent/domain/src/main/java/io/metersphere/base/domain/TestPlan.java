@@ -45,5 +45,7 @@ public class TestPlan implements Serializable {
 
     private String nodePath;
 
+    private String requirementNumber;
+
     private static final long serialVersionUID = 1L;
 }
