@@ -271,6 +271,7 @@ export default {
     plan_status_finished: "已結束",
     plan_status_completed: "已完成",
     plan_status_archived: "已歸檔",
+    plan_status_cancelled: "已取消",
     plan_status_trash: "廢棄",
     planned_start_time: "計劃開始",
     planned_end_time: "計劃結束",

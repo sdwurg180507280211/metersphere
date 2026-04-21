@@ -664,7 +664,8 @@ export const TEST_PLAN_STATUS = {
     {label: 'test_track.plan.plan_status_running', value: 'Underway'},
     {label: 'test_track.plan.plan_status_completed', value: 'Completed'},
     {label: 'test_track.plan.plan_status_finished', value: 'Finished'},
-    {label: 'test_track.plan.plan_status_archived', value: 'Archived'}
+    {label: 'test_track.plan.plan_status_archived', value: 'Archived'},
+    {label: 'test_track.plan.plan_status_cancelled', value: 'Cancelled'}
   ],
   props: {
     multiple: true
