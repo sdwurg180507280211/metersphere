@@ -18,6 +18,9 @@
       <el-tag v-if="value === 'Archived'" class="status-label archived">
         {{ $t('test_track.plan.plan_status_archived') }}
       </el-tag>
+      <el-tag v-if="value === 'Cancelled'" class="status-label cancelled">
+        {{ $t('test_track.plan.plan_status_cancelled') }}
+      </el-tag>
 
     <!--Api首页中的两种定时任务-->
     <el-tag v-if="value === 'API_SCENARIO_TEST'" class="status-label schedule-task-scenario">
@@ -81,6 +84,11 @@ export default {
 .archived {
   background-color: rgba(255, 136, 0, 0.2);
   color: #DE7802;
+}
+
+.cancelled {
+  background-color: rgba(245, 74, 69, 0.2);
+  color: #D83931;
 }
 
 .schedule-task-scenario {

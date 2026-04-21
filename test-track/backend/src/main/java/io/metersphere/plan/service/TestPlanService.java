@@ -316,6 +316,11 @@ public class TestPlanService {
                     TestPlanStatus.Finished.name().equals(testPlan.getStatus())) {
                 testPlan.setActualEndTime(System.currentTimeMillis());
             }   //  非已结束->已结束，更新结束时间
+            else if (TestPlanStatus.Cancelled.name().equals(testPlan.getStatus())) {
+                // ->已取消，清除实际时间
+                testPlan.setActualStartTime(null);
+                testPlan.setActualEndTime(null);
+            }
         }
 
         // 如果状态是未开始，设置时间为null
@@ -336,8 +341,8 @@ public class TestPlanService {
             testPlan.setActualEndTime(null);
         }
 
-        // 如果当前状态不是未开始，并且没有开始时间，设置开始时间
-        if (!StringUtils.equals(testPlan.getStatus(), TestPlanStatus.Prepare.name())
+        // 如果当前状态不是未开始/已取消，并且没有开始时间，设置开始时间
+        if (!StringUtils.equalsAnyIgnoreCase(testPlan.getStatus(), TestPlanStatus.Prepare.name(), TestPlanStatus.Cancelled.name())
                 && res.getActualStartTime() == null) {
             testPlan.setActualStartTime(System.currentTimeMillis());
         }
@@ -665,8 +670,9 @@ public class TestPlanService {
         }
 
         TestPlanWithBLOBs testPlanWithBLOBs = testPlanMapper.selectByPrimaryKey(testPlanId);
-        //如果测试计划是已归档状态，不处理
-        if (testPlanWithBLOBs.getStatus().equals(TestPlanStatus.Archived.name())) {
+        //如果测试计划是已归档或已取消状态，不处理
+        if (testPlanWithBLOBs.getStatus().equals(TestPlanStatus.Archived.name()) ||
+                testPlanWithBLOBs.getStatus().equals(TestPlanStatus.Cancelled.name())) {
             return;
         }
         testPlanWithBLOBs.setId(testPlanId);
