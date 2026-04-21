@@ -2,7 +2,30 @@
 
 > 最后更新：2026-04-21
 
-```
+## 分支合并方法论
+
+合并 develop 分支代码到 master 时，按文件后缀分类处理，避免全量 merge 带来的文档/脚本冲突：
+
+| 类别 | 后缀 | 处理方式 |
+|------|------|---------|
+| **代码** | `.java` `.vue` `.js` `.xml` `.properties` `.sql`(仅Flyway) | 从 develop 检出同步 |
+| **文档** | `.md` `.html` `.docx` | 按 master 保留，不同步 |
+| **脚本/配置** | `.sh` `.yml` `.example` Makefile `.css` | 按 master 保留，不同步 |
+| **构建产物** | `dist/` `static/js/` 下的 JS/CSS | 不同步，各分支自行构建 |
+
+**操作步骤：**
+
+1. `git diff --name-only -z master...develop` 获取差异文件列表
+2. 按后缀筛选出代码文件
+3. `git checkout develop -- <code_files>` 逐个检出
+4. `git diff --cached` 验证暂存区仅含代码后缀
+5. 提交
+
+**优势：** 避免 `git merge` 的 rename/delete 冲突、中文路径 unstage 难题，以及 develop 新增文档污染 master 目录结构。
+
+---
+
+## 目录树
 docs/
 ├── README.md
 ├── INDEX.md

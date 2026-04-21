@@ -1,14 +1,10 @@
 import Layout from "metersphere-frontend/src/business/app-layout";
-import {isMicroAppEnv} from "metersphere-frontend/src/utils/micro-app-env";
-
-// 微前端环境下用透传组件替换 Layout，避免子应用渲染重复的侧边栏
-const PassThrough = {render: h => h('router-view')};
 
 export default {
   path: "/track",
   name: "track",
   redirect: "/track/home",
-  component: isMicroAppEnv() ? PassThrough : Layout,
+  component: Layout,
   children: [
     {
       path: 'home',
@@ -70,6 +66,11 @@ export default {
       name: "testCaseReviewView",
       component: () => import('@/business/review/view/TestCaseReviewView')
     },
+    {
+      path: "requirement-pool/list",
+      name: "requirementPool",
+      component: () => import('@/business/requirement-pool/list.vue')
+    }
   ]
 };
 

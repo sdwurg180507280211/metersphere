@@ -222,4 +222,25 @@ export let CUSTOM_TABLE_HEADER = {
     },
     { id: "status", key: "l", label: "commons.status" },
   ],
+
+  // 需求池列表
+  REQUIREMENT_POOL_LIST: [
+    { id: "dmpNum", key: "1", label: "需求编号", minWidth: 150, sortable: true },
+    { id: "requirementName", key: "2", label: "需求名称", minWidth: 200, sortable: true },
+    { id: "poolStatus", key: "3", label: "需求池状态", minWidth: 120, filters: [{text: '未创建', value: 'PENDING'}, {text: '已创建', value: 'CREATED'}, {text: '已取消', value: 'CANCELLED'}], columnKey: 'poolStatus' },
+    { id: "actName", key: "4", label: "当前环节", minWidth: 120 },
+    { id: "parentWfinstCode", key: "g", label: "主流程编码", minWidth: 150 },
+    { id: "operationType", key: "h", label: "操作类型", minWidth: 100 },
+    { id: "systemName", key: "5", label: "所属系统", minWidth: 150, sortable: true },
+    { id: "reqManagerName", key: "6", label: "需求负责人", minWidth: 120 },
+    { id: "assigneeName", key: "7", label: "当前处理人", minWidth: 120 },
+    { id: "reqFatherClass", key: "8", label: "需求大类", minWidth: 120 },
+    { id: "reqSonClass", key: "9", label: "需求子类", minWidth: 120 },
+    { id: "createdDept", key: "a", label: "需求申请部门", minWidth: 150 },
+    { id: "createUser1", key: "b", label: "需求申请人", minWidth: 120 },
+    { id: "deptName", key: "c", label: "需求负责人处室", minWidth: 150 },
+    { id: "startUserName", key: "d", label: "创建人", minWidth: 120 },
+    { id: "upTime", key: "e", label: "预计上线时间", minWidth: 180, sortable: true },
+    { id: "createTime", key: "f", label: "需求提出时间", minWidth: 180, sortable: true },
+  ],
 };

@@ -1,38 +1,37 @@
 package io.metersphere.plan.request;
 
 import io.metersphere.base.domain.TestPlan;
-import io.metersphere.request.OrderRequest;
+import io.metersphere.request.BaseQueryRequest;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.io.Serial;
 import java.util.List;
-import java.util.Map;
 
 @Getter
 @Setter
-public class QueryTestPlanRequest extends TestPlan {
+public class QueryTestPlanRequest extends BaseQueryRequest {
 
     @Serial
     private static final long serialVersionUID = -9022330526265056106L;
 
+    private String id;
+    private String userId;
+
     private boolean recent = false;
 
     private List<String> planIds;
+
+    /**
+     * 导出时选中的ID列表
+     */
+    private List<String> exportIds;
 
     private String scenarioId;
 
     private String apiId;
 
     private String loadId;
-
-    private List<OrderRequest> orders;
-
-    private Map<String, List<String>> filters;
-
-    private Map<String, Object> combine;
-
-    private String projectId;
 
     private String projectName;
 
@@ -52,6 +51,4 @@ public class QueryTestPlanRequest extends TestPlan {
      * @since 2.10.10 添加模块树条件, 批量移动条件
      */
     private List<String> nodeIds;
-    private Boolean selectAll;
-    private List<String> unSelectIds;
 }

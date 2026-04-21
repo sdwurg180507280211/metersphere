@@ -38,7 +38,15 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('commons.name')"
-            min-width="200px"
+            min-width="120px"
+        >
+        </ms-table-column>
+        <ms-table-column
+            prop="requirementNumber"
+            :field="item"
+            :fields-width="fieldsWidth"
+            :label="$t('test_track.plan.requirement_number')"
+            min-width="120px"
         >
         </ms-table-column>
         <ms-table-column
@@ -55,7 +63,7 @@
             :filters="userFilter"
             :fields-width="fieldsWidth"
             :label="$t('commons.create_user')"
-            min-width="200px"
+            min-width="120px"
         >
         </ms-table-column>
         <ms-table-column
@@ -65,7 +73,7 @@
             column-key="status"
             :field="item"
             :fields-width="fieldsWidth"
-            min-width="120px"
+            min-width="70px"
             :label="$t('test_track.plan.plan_status')"
         >
           <template v-slot:default="scope">
@@ -116,7 +124,7 @@
             column-key="scheduleStatus"
             :field="item"
             :fields-width="fieldsWidth"
-            min-width="200px"
+            min-width="100px"
             :label="$t('commons.trigger_mode.schedule')"
         >
           <template v-slot="scope">
@@ -166,7 +174,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('test_track.plan.follow_people')"
-            min-width="200px"
+            min-width="120px"
         >
         </ms-table-column>
         <ms-table-column
@@ -177,7 +185,7 @@
             sortable
             :filters="stageFilters"
             :label="$t('test_track.plan.plan_stage')"
-            min-width="120px"
+            min-width="115px"
         >
           <template v-slot:default="scope">
             <plan-stage-table-item
@@ -191,7 +199,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.home.test_rate')"
-            min-width="120px"
+            min-width="80px"
         >
           <template v-slot:default="scope">
             <el-progress
@@ -206,7 +214,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.plan_project')"
-            min-width="200px"
+            min-width="120px"
         >
         </ms-table-column>
 
@@ -215,7 +223,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.case.module')"
-            min-width="150px">
+            min-width="120px">
           <template v-slot:default="scope">
             <span>{{ nodePathMap.get(scope.row.nodeId) }}</span>
           </template>
@@ -228,7 +236,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.test_plan_test_case_count')"
-            min-width="200px"
+            min-width="100px"
         >
         </ms-table-column>
         <ms-table-column
@@ -236,7 +244,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.test_plan_api_case_count')"
-            min-width="200px"
+            min-width="100px"
         >
         </ms-table-column>
         <ms-table-column
@@ -244,7 +252,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.test_plan_api_scenario_count')"
-            min-width="200px"
+            min-width="100px"
         >
         </ms-table-column>
         <ms-table-column
@@ -252,7 +260,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.test_plan_ui_scenario_count')"
-            min-width="200px"
+            min-width="100px"
         >
         </ms-table-column>
         <ms-table-column
@@ -260,7 +268,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('test_track.plan.test_plan_load_case_count')"
-            min-width="200px"
+            min-width="100px"
         >
         </ms-table-column>
         <ms-table-column
@@ -268,7 +276,7 @@
             :field="item"
             :fields-width="fieldsWidth"
             :label="$t('commons.pass_rate')"
-            min-width="120px"
+            min-width="80px"
         >
           <template v-slot:default="scope">
             <span v-if="scope.row.isMetricLoadOver">{{
@@ -283,7 +291,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('test_track.plan.planned_start_time')"
-            min-width="200px"
+            min-width="120px"
         >
           <template v-slot:default="scope">
             <span>{{ scope.row.plannedStartTime | datetimeFormat }}</span>
@@ -295,7 +303,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('test_track.plan.planned_end_time')"
-            min-width="160px"
+            min-width="120px"
         >
           <template v-slot:default="scope">
             <span>{{ scope.row.plannedEndTime | datetimeFormat }}</span>
@@ -307,7 +315,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('test_track.plan.actual_start_time')"
-            min-width="200px"
+            min-width="120px"
         >
           <template v-slot:default="scope">
             <span>{{ scope.row.actualStartTime | datetimeFormat }}</span>
@@ -319,7 +327,7 @@
             :fields-width="fieldsWidth"
             sortable
             :label="$t('test_track.plan.actual_end_time')"
-            min-width="200px"
+            min-width="120px"
         >
           <template v-slot:default="scope">
             <span>{{ scope.row.actualEndTime | datetimeFormat }}</span>
@@ -476,6 +484,7 @@
     </el-dialog>
 
     <review-or-plan-batch-move @refresh="refresh" @moveSave="moveSave" ref="testReviewBatchMove"/>
+    <test-plan-export @export="exportTestPlan" ref="testPlanExport"/>
   </el-card>
 </template>
 
@@ -533,11 +542,14 @@ import TestPlanReportReview from "@/business/report/components/TestPlanReportRev
 import {mapState} from "pinia";
 import {useStore} from "@/store";
 import ReviewOrPlanBatchMove from "@/business/case/components/ReviewOrPlanBatchMove.vue";
+import TestPlanExport from "@/business/plan/components/export/TestPlanExport.vue";
+import {getCurrentWorkspaceId} from "metersphere-frontend/src/utils/token";
 
 export default {
   name: "TestPlanList",
   components: {
     ReviewOrPlanBatchMove,
+    TestPlanExport,
     MsTagsColumn,
     TestPlanReportReview,
     MsTag,
@@ -640,6 +652,11 @@ export default {
           handleClick: this.handleBatchDelete,
           permissions: ["PROJECT_TRACK_PLAN:READ+BATCH_DELETE"],
         },
+        {
+          name: this.$t("commons.export"),
+          handleClick: this.handleExport,
+          permissions: ["PROJECT_TRACK_PLAN:READ"],
+        },
       ],
       simpleOperators: [
         {
@@ -665,6 +682,13 @@ export default {
   watch: {
     $route(to, from) {
       if (to.path.indexOf("/track/plan/all") >= 0) {
+        // 重置 condition 中的选择相关字段
+        this.condition.selectAll = false;
+        this.condition.unSelectIds = [];
+        this.condition.name = "";
+        this.condition.combine = null;
+        // 重置页码
+        this.currentPage = 1;
         this.initTableData();
       }
     },
@@ -1252,18 +1276,27 @@ export default {
         return;
       }
     },
-    // haveUIScenario() {
-    //   if (hasLicense()) {
-    //     return new Promise((resolve) => {
-    //       testPlanHaveUiCase(this.currentPlanId).then((r) => {
-    //         this.haveUICase = r.data;
-    //         resolve();
-    //       });
-    //     });
-    //   } else {
-    //     return new Promise((resolve) => resolve());
-    //   }
-    // },
+    handleExport() {
+      let exportIds = this.$refs.testPlanLitTable.selectIds;
+      if (exportIds.length === 0) {
+        this.$warning(this.$t("test_track.issue.check_select"));
+        return;
+      }
+      this.$refs.testPlanExport.open();
+    },
+    exportTestPlan() {
+      let param = {
+        "projectId": getCurrentProjectID(),
+        "workspaceId": getCurrentWorkspaceId(),
+        "isSelectAll": this.condition.selectAll,
+        "exportIds": this.$refs.testPlanLitTable.selectIds,
+        "orders": getLastTableSortField(this.tableHeaderKey),
+        "combine": this.condition.combine,
+        "name": this.condition.name,
+        "unSelectIds": this.condition.unSelectIds
+      }
+      this.$fileDownloadPost("/test/plan/export", param);
+    },
   },
 };
 </script>

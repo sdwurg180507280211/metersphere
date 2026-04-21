@@ -261,6 +261,7 @@ export default {
     system_test: "系统测试",
     version_validation: "版本验证",
     plan_principal: "责任人",
+    requirement_number: "需求编号",
     input_plan_name: "请输入测试计划名称",
     input_plan_principal: "请选择负责人",
     input_plan_project: "请选择所属项目",

@@ -753,6 +753,7 @@ export default {
       this.getProjectName();
     }
     this.condition.filters = { status: ['Prepare', 'Underway', 'Completed'] };
+
     this.initEnvironment();
     if (this.trashEnable) {
       this.condition.filters = { status: ['Trash'] };

@@ -1,8 +1,113 @@
 import el from "metersphere-frontend/src/i18n/lang/ele-zh-CN"; // 加载element的内容
 import fu from "fit2cloud-ui/src/locale/lang/zh-CN"; // 加载fit2cloud的内容
 import mf from "metersphere-frontend/src/i18n/lang/zh-CN"
+import advancedSearch from "./zh-CN-advanced-search";
 
-const message = {}
+const message = {
+  advanced_search: {
+    // 导航和标题
+    query_center: '查询中心',
+    advanced_search: '高级检索',
+    my_favorites: '我的收藏',
+    recent_views: '最近浏览',
+    shared_views: '共享视图',
+    no_shared_views: '暂无共享视图',
+
+    // 业务模块
+    test_case: '测试用例',
+    issue: '缺陷',
+    test_plan: '测试计划',
+    test_case_review: '用例评审',
+
+    // 筛选条件
+    select_workspace: '选择工作空间',
+    select_project: '选择项目',
+    add_filter: '添加筛选条件',
+    search_field: '搜索字段',
+    clear_all: '清空',
+
+    // 查询模式
+    visual_mode: '可视化',
+    jql_mode: 'JQL',
+    jql_placeholder: '输入 JQL 查询，例如：project = "电商平台" AND status IN ("Pass", "Prepare")',
+    syntax_help: '语法帮助',
+    execute_query: '执行查询',
+    fix_syntax_error: '请先修复语法错误',
+
+    // JQL 帮助
+    jql_help_title: 'JQL 语法帮助',
+    jql_help_content: `
+      <h4>基础语法</h4>
+      <p>project = "电商平台" AND status IN ("Pass", "Prepare")</p>
+      <h4>支持的操作符</h4>
+      <ul>
+        <li>= : 等于</li>
+        <li>!= : 不等于</li>
+        <li>~ : 模糊匹配</li>
+        <li>IN : 包含于列表</li>
+        <li>NOT IN : 不包含于列表</li>
+        <li>&gt;, &gt;=, &lt;, &lt;= : 比较操作符</li>
+        <li>AND, OR : 逻辑操作符</li>
+      </ul>
+    `,
+
+    // 跨项目提示
+    cross_project_tip: '跨项目查询仅支持系统字段筛选，如需使用自定义字段请选择单个项目',
+
+    // 字段分组
+    basic_info: '基础信息',
+    module_specific: '模块专属',
+    audit_trail: '审计追踪',
+    custom_fields: '自定义字段',
+
+    // 字段名称
+    id: 'ID',
+    name: '名称',
+    title: '标题',
+    status: '状态',
+    priority: '优先级',
+    creator: '创建人',
+    create_time: '创建时间',
+    update_time: '更新时间',
+    description: '描述',
+
+    // 结果展示
+    total_results: '共 {count} 条结果',
+    list_view: '列表视图',
+    split_view: '分屏视图',
+    column_config: '列配置',
+    select_columns: '选择显示列',
+    reset_default: '恢复默认',
+    export: '导出',
+    select_item_to_view: '选择一条记录查看详情',
+
+    // 操作提示
+    search: '查询',
+    query_failed: '查询失败',
+    export_success: '导出成功',
+    export_failed: '导出失败',
+    load_fields_failed: '加载字段失败',
+    load_users_failed: '加载用户列表失败',
+    load_workspaces_failed: '加载工作空间列表失败',
+    load_projects_failed: '加载项目列表失败',
+
+    // 用户选择器
+    select_users: '选择用户',
+    current_user: '我自己',
+    enter_value: '请输入',
+    select_value: '请选择',
+    to: '至',
+    start_date: '开始日期',
+    end_date: '结束日期',
+    select_date: '选择日期',
+    select_module: '选择模块'
+  }
+}
+
+// 合并 advanced-search 翻译
+if (advancedSearch && advancedSearch.advanced_search) {
+  message.advanced_search = { ...message.advanced_search, ...advancedSearch.advanced_search };
+}
 
 export default {
   ...el,

@@ -1,155 +1,140 @@
 <template>
   <!--
-    公告设置组件（改版）
-    主体：上线内容管理表格
-    横幅公告：通过右上角按钮打开弹窗配置
+    公告设置组件
+    功能：管理员可以在此配置页面顶部公告栏的内容和样式
+    包含：公告开关、公告内容输入框、样式选择器、实时预览区域、编辑/保存/取消按钮
+    权限：需要 SYSTEM_SETTING:READ 权限查看，SYSTEM_SETTING:READ+EDIT 权限编辑
   -->
-  <div>
-    <!-- 主体内容：上线记录管理（横幅公告按钮已移入 ReleaseNoteManager 同一行） -->
-    <release-note-manager @openBanner="openBannerDialog" />
+  <div v-loading="loading">
+    <!-- 公告内容表单 -->
+    <el-form :model="form" ref="form" :disabled="!isEditing" size="small" label-width="100px">
+      <!-- 公告开关 -->
+      <el-form-item :label="$t('announcement.enabled')">
+        <el-switch v-model="form.enabled" />
+      </el-form-item>
 
-    <!-- 横幅公告设置弹窗（美化版） -->
-    <el-dialog
-      title="横幅公告设置"
-      :visible.sync="bannerDialogVisible"
-      width="960px"
-      :close-on-click-modal="false"
-      custom-class="banner-dialog"
-      append-to-body>
+      <!-- 公告内容输入框 -->
+      <el-form-item :label="$t('announcement.content')" prop="content">
+        <el-input
+          type="textarea"
+          v-model="form.content"
+          :rows="4"
+          :placeholder="$t('announcement.content_placeholder')"
+          maxlength="2000"
+          show-word-limit
+        />
+      </el-form-item>
 
-      <div v-loading="bannerLoading" class="banner-dialog-body">
-        <!-- 第一行：公告开关 / 样式设置 / 滚动效果 三卡片并列 -->
-        <div class="banner-row">
-          <!-- 公告开关 -->
-          <div class="banner-section banner-section-sm">
-            <div class="banner-section-header">
-              <i class="el-icon-open banner-section-icon" style="color: #67C23A"></i>
-              <span>公告开关</span>
-            </div>
-            <div class="banner-section-content" style="display: flex; align-items: center; justify-content: center; min-height: 60px;">
-              <el-switch v-model="form.enabled" active-text="启用" inactive-text="关闭" />
-            </div>
-          </div>
+      <!-- 样式选择 -->
+      <el-form-item :label="$t('announcement.style')">
+        <el-radio-group v-model="form.styleType" @change="onStyleTypeChange">
+          <el-radio-button label="info">{{ $t('announcement.style_info') }}</el-radio-button>
+          <el-radio-button label="warning">{{ $t('announcement.style_warning') }}</el-radio-button>
+          <el-radio-button label="danger">{{ $t('announcement.style_danger') }}</el-radio-button>
+          <el-radio-button label="success">{{ $t('announcement.style_success') }}</el-radio-button>
+          <el-radio-button label="custom">{{ $t('announcement.style_custom') }}</el-radio-button>
+        </el-radio-group>
+      </el-form-item>
 
-          <!-- 样式设置 -->
-          <div class="banner-section banner-section-md">
-            <div class="banner-section-header">
-              <i class="el-icon-magic-stick banner-section-icon" style="color: #E6A23C"></i>
-              <span>样式设置</span>
-            </div>
-            <div class="banner-section-content">
-              <div class="style-selector">
-                <div
-                  v-for="item in styleOptions"
-                  :key="item.value"
-                  class="style-option"
-                  :class="{ 'style-option-active': form.styleType === item.value }"
-                  :style="{ backgroundColor: item.bg, color: item.text }"
-                  @click="selectStyle(item.value)">
-                  <i :class="item.icon"></i>
-                  <span>{{ item.label }}</span>
-                </div>
-              </div>
-              <div v-if="form.styleType === 'custom'" class="custom-color-row">
-                <span class="color-label">背景色</span>
-                <el-color-picker v-model="form.backgroundColor" size="small" />
-                <span class="color-label" style="margin-left: 12px;">文字色</span>
-                <el-color-picker v-model="form.textColor" size="small" />
-              </div>
-            </div>
-          </div>
-
-          <!-- 字体大小 -->
-          <div class="banner-section banner-section-sm">
-            <div class="banner-section-header">
-              <i class="el-icon-font-size banner-section-icon" style="color: #F56C6C"></i>
-              <span>字体大小</span>
-            </div>
-            <div class="banner-section-content" style="min-height: 60px;">
-              <div class="font-size-selector">
-                <div
-                  v-for="opt in fontSizeOptions"
-                  :key="opt.value"
-                  class="font-size-option"
-                  :class="{ 'font-size-option-active': form.fontSize === opt.value }"
-                  @click="form.fontSize = opt.value">
-                  <span :style="{ fontSize: opt.value + 'px' }">A</span>
-                  <span class="font-size-label">{{ opt.label }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 滚动效果 -->
-          <div class="banner-section banner-section-sm">
-            <div class="banner-section-header">
-              <i class="el-icon-d-arrow-right banner-section-icon" style="color: #783887"></i>
-              <span>滚动效果</span>
-            </div>
-            <div class="banner-section-content" style="min-height: 60px;">
-              <el-switch v-model="form.scroll" active-text="滚动" inactive-text="静态" />
-              <div v-if="form.scroll" style="margin-top: 8px;">
-                <el-slider
-                  v-model="form.scrollSpeed"
-                  :min="40"
-                  :max="80"
-                  :step="1"
-                  :format-tooltip="val => val + '秒/轮'" />
-              </div>
-            </div>
-          </div>
+      <!-- 自定义颜色选择器（仅自定义模式显示） -->
+      <el-form-item v-if="form.styleType === 'custom'" :label="$t('announcement.custom_colors')">
+        <div class="color-picker-group">
+          <span class="color-label">{{ $t('announcement.background_color') }}:</span>
+          <el-color-picker v-model="form.backgroundColor" size="small" />
+          <span class="color-label" style="margin-left: 20px;">{{ $t('announcement.text_color') }}:</span>
+          <el-color-picker v-model="form.textColor" size="small" />
         </div>
+      </el-form-item>
 
-        <!-- 第二行：公告内容（全宽） -->
-        <div class="banner-section" style="margin-top: 12px;">
-          <div class="banner-section-header">
-            <i class="el-icon-edit-outline banner-section-icon" style="color: #409EFF"></i>
-            <span>公告内容</span>
-          </div>
-          <div class="banner-section-content">
-            <el-input
-              type="textarea"
-              v-model="form.content"
-              :rows="3"
-              placeholder="请输入横幅公告内容..."
-              maxlength="2000"
-              show-word-limit />
-          </div>
+      <!-- 滚动效果开关 -->
+      <el-form-item :label="$t('announcement.scroll')">
+        <el-switch v-model="form.scroll" />
+        <span class="scroll-hint">{{ $t('announcement.scroll_hint') }}</span>
+      </el-form-item>
+
+      <!-- 滚动速度调节（仅滚动开启时显示） -->
+      <el-form-item v-if="form.scroll" :label="$t('announcement.scroll_speed')">
+        <el-slider
+          v-model="form.scrollSpeed"
+          :min="40"
+          :max="80"
+          :step="1"
+          :marks="scrollSpeedMarks"
+          show-input
+          :format-tooltip="formatSpeedTooltip"
+          style="width: 400px;"
+        />
+        <span class="scroll-hint">{{ $t('announcement.scroll_speed_hint') }}</span>
+      </el-form-item>
+
+      <!-- 实时预览区域 -->
+      <el-form-item :label="$t('announcement.preview')">
+        <!-- 启用且有内容时显示预览 -->
+        <div
+          class="announcement-preview"
+          :class="{ 'announcement-scroll': form.scroll }"
+          v-if="form.content && form.enabled"
+          :style="previewStyle">
+          <span class="announcement-text" :style="scrollAnimationStyle">{{ form.content }}</span>
         </div>
-
-        <!-- 第三行：实时预览（全宽） -->
-        <div class="banner-section" style="margin-top: 12px;">
-          <div class="banner-section-header">
-            <i class="el-icon-view banner-section-icon" style="color: #909399"></i>
-            <span>实时预览</span>
-          </div>
-          <div class="banner-section-content">
-            <div
-              v-if="form.content && form.enabled"
-              class="banner-preview"
-              :class="{ 'banner-preview-scroll': form.scroll }"
-              :style="previewStyle">
-              <span class="banner-preview-text" :style="scrollAnimStyle">{{ form.content }}</span>
-            </div>
-            <div v-else-if="!form.enabled" class="banner-preview-empty">
-              公告已关闭
-            </div>
-            <div v-else class="banner-preview-empty">
-              请输入公告内容后预览
-            </div>
-          </div>
+        <!-- 禁用时显示提示 -->
+        <div class="announcement-preview-empty" v-else-if="!form.enabled">
+          {{ $t('announcement.disabled_hint') }}
         </div>
-      </div>
+        <!-- 无内容时显示空提示 -->
+        <div class="announcement-preview-empty" v-else>
+          {{ $t('announcement.no_content') }}
+        </div>
+      </el-form-item>
+    </el-form>
 
-      <template #footer>
-        <el-button size="small" @click="bannerDialogVisible = false">取 消</el-button>
-        <el-button size="small" type="primary" @click="saveBanner">保 存</el-button>
-      </template>
-    </el-dialog>
+    <!-- 操作按钮组 -->
+    <div class="button-group">
+      <!-- 编辑按钮：非编辑模式时显示，需要编辑权限 -->
+      <el-button
+        v-if="showEdit"
+        @click="edit"
+        size="small"
+        v-permission="['SYSTEM_SETTING:READ+EDIT']">
+        {{ $t('commons.edit') }}
+      </el-button>
+      <!-- 保存按钮：编辑模式时显示 -->
+      <el-button
+        v-if="showSave"
+        type="success"
+        @click="save"
+        size="small">
+        {{ $t('commons.save') }}
+      </el-button>
+      <!-- 取消按钮：编辑模式时显示 -->
+      <el-button
+        v-if="showCancel"
+        type="info"
+        @click="cancel"
+        size="small">
+        {{ $t('commons.cancel') }}
+      </el-button>
+    </div>
   </div>
 </template>
 
 <script>
+/**
+ * AnnouncementSetting 组件
+ *
+ * 用于管理系统公告栏内容和样式的配置组件
+ *
+ * 功能特性：
+ * 1. 加载并显示当前公告内容、启用状态、样式配置
+ * 2. 实时预览公告效果（支持动态样式）
+ * 3. 预设样式选择（通知/警告/紧急/成功/自定义）
+ * 4. 自定义颜色选择器（背景色、文字颜色）
+ * 5. 公告开关控制
+ * 6. 编辑/保存/取消操作
+ * 7. 保存成功后通过 EventBus 通知页面顶部更新
+ * 8. 权限控制：仅具有编辑权限的用户可修改
+ */
+
 import {
   getAnnouncementContent,
   saveAnnouncementContent,
@@ -160,324 +145,379 @@ import {
   getAnnouncementScroll,
   saveAnnouncementScroll,
   getAnnouncementScrollSpeed,
-  saveAnnouncementScrollSpeed,
-  getAnnouncementFontSize,
-  saveAnnouncementFontSize
+  saveAnnouncementScrollSpeed
 } from "../../../api/system";
-import ReleaseNoteManager from './ReleaseNoteManager';
 
-/** 预设样式配置 */
+// 预设样式配置
 const PRESET_STYLES = {
-  info:    { backgroundColor: '#409EFF', textColor: '#FFFFFF' },
-  warning: { backgroundColor: '#E6A23C', textColor: '#FFFFFF' },
-  danger:  { backgroundColor: '#F56C6C', textColor: '#FFFFFF' },
-  success: { backgroundColor: '#67C23A', textColor: '#FFFFFF' },
-  custom:  { backgroundColor: '#E6A23C', textColor: '#FFFFFF' }
+  info: {
+    name: '通知',
+    backgroundColor: '#409EFF',  // Element UI primary blue
+    textColor: '#FFFFFF'
+  },
+  warning: {
+    name: '警告',
+    backgroundColor: '#E6A23C',  // Element UI warning orange
+    textColor: '#FFFFFF'
+  },
+  danger: {
+    name: '紧急',
+    backgroundColor: '#F56C6C',  // Element UI danger red
+    textColor: '#FFFFFF'
+  },
+  success: {
+    name: '成功',
+    backgroundColor: '#67C23A',  // Element UI success green
+    textColor: '#FFFFFF'
+  },
+  custom: {
+    name: '自定义',
+    backgroundColor: '#E6A23C',  // 默认同警告
+    textColor: '#FFFFFF'
+  }
 };
 
 export default {
   name: "AnnouncementSetting",
-  components: { ReleaseNoteManager },
   data() {
     return {
-      bannerDialogVisible: false,
-      bannerLoading: false,
+      // 表单数据
       form: {
-        content: '',
-        enabled: true,
-        styleType: 'warning',
-        backgroundColor: '#E6A23C',
-        textColor: '#FFFFFF',
-        scroll: false,
-        scrollSpeed: 15,
-        fontSize: 14       // 字体大小，默认 14px
+        content: '',           // 公告内容
+        enabled: true,         // 是否启用
+        styleType: 'warning',  // 样式类型: info/warning/danger/success/custom
+        backgroundColor: '#E6A23C',  // 背景色（自定义模式）
+        textColor: '#FFFFFF',  // 文字颜色（自定义模式）
+        scroll: false,         // 是否启用滚动效果
+        scrollSpeed: 15        // 滚动速度（秒），范围 5-30，默认 15
       },
-      /** 字体大小选项 */
-      fontSizeOptions: [
-        { value: 12, label: '小' },
-        { value: 14, label: '中' },
-        { value: 16, label: '大' },
-        { value: 20, label: '特大' }
-      ],
-      /** 样式选择器选项 */
-      styleOptions: [
-        { value: 'info',    label: '通知', bg: '#409EFF', text: '#fff', icon: 'el-icon-info' },
-        { value: 'warning', label: '警告', bg: '#E6A23C', text: '#fff', icon: 'el-icon-warning' },
-        { value: 'danger',  label: '紧急', bg: '#F56C6C', text: '#fff', icon: 'el-icon-error' },
-        { value: 'success', label: '成功', bg: '#67C23A', text: '#fff', icon: 'el-icon-success' },
-        { value: 'custom',  label: '自定义', bg: '#f0f0f0', text: '#333', icon: 'el-icon-brush' }
-      ]
+      // 加载状态
+      loading: false,
+      // 是否处于编辑模式
+      isEditing: false,
+      // 原始表单数据（用于取消时恢复）
+      originalForm: null,
+      // 滚动速度刻度标记
+      scrollSpeedMarks: {
+        40: this.$t('announcement.speed_fast'),
+        60: this.$t('announcement.speed_normal'),
+        80: this.$t('announcement.speed_slow')
+      }
     };
   },
   computed: {
-    /** 预览区域的动态样式（含字体大小） */
-    previewStyle() {
-      const base = { fontSize: this.form.fontSize + 'px', lineHeight: (this.form.fontSize + 16) + 'px' };
-      if (this.form.styleType === 'custom') {
-        return { ...base, backgroundColor: this.form.backgroundColor, color: this.form.textColor };
-      }
-      const s = PRESET_STYLES[this.form.styleType] || PRESET_STYLES.warning;
-      return { ...base, backgroundColor: s.backgroundColor, color: s.textColor };
+    /**
+     * 是否显示编辑按钮
+     * 非编辑模式时显示
+     */
+    showEdit() {
+      return !this.isEditing;
     },
-    /** 滚动动画样式 */
-    scrollAnimStyle() {
-      return this.form.scroll ? { animationDuration: `${this.form.scrollSpeed}s` } : {};
+    /**
+     * 是否显示保存按钮
+     * 编辑模式时显示
+     */
+    showSave() {
+      return this.isEditing;
+    },
+    /**
+     * 是否显示取消按钮
+     * 编辑模式时显示
+     */
+    showCancel() {
+      return this.isEditing;
+    },
+    /**
+     * 预览样式
+     * 根据样式类型返回对应的背景色和文字颜色
+     */
+    previewStyle() {
+      if (this.form.styleType === 'custom') {
+        return {
+          backgroundColor: this.form.backgroundColor,
+          color: this.form.textColor
+        };
+      }
+      const style = PRESET_STYLES[this.form.styleType] || PRESET_STYLES.warning;
+      return {
+        backgroundColor: style.backgroundColor,
+        color: style.textColor
+      };
+    },
+    /**
+     * 滚动动画样式
+     * 根据滚动速度动态设置动画时长
+     */
+    scrollAnimationStyle() {
+      if (this.form.scroll) {
+        return {
+          animationDuration: `${this.form.scrollSpeed}s`
+        };
+      }
+      return {};
     }
   },
+  created() {
+    // 组件创建时加载公告配置
+    this.loadAnnouncement();
+    // 初始化滚动速度刻度标记（需要在 created 中初始化以使用 $t）
+    this.scrollSpeedMarks = {
+      40: this.$t('announcement.speed_fast') || '快',
+      60: this.$t('announcement.speed_normal') || '正常',
+      80: this.$t('announcement.speed_slow') || '慢'
+    };
+  },
   methods: {
-    /** 打开横幅公告弹窗，同时加载最新配置 */
-    openBannerDialog() {
-      this.bannerDialogVisible = true;
-      this.loadBanner();
+    /**
+     * 格式化速度提示文本
+     * @param {number} value - 速度值（秒）
+     * @returns {string} 格式化后的提示文本
+     */
+    formatSpeedTooltip(value) {
+      return `${value}${this.$t('announcement.speed_unit') || '秒'}`;
     },
-    /** 选择预设样式 */
-    selectStyle(type) {
-      this.form.styleType = type;
-      if (type !== 'custom') {
-        const s = PRESET_STYLES[type];
-        this.form.backgroundColor = s.backgroundColor;
-        this.form.textColor = s.textColor;
-      }
-    },
-    /** 从后端加载横幅公告配置 */
-    loadBanner() {
-      this.bannerLoading = true;
+    /**
+     * 从后端加载公告配置（内容、启用状态、样式、滚动速度）
+     */
+    loadAnnouncement() {
+      this.loading = true;
+
+      // 并行加载五个配置
       Promise.all([
         getAnnouncementContent().catch(() => ({ data: null })),
         getAnnouncementEnabled().catch(() => ({ data: null })),
         getAnnouncementStyle().catch(() => ({ data: null })),
         getAnnouncementScroll().catch(() => ({ data: null })),
-        getAnnouncementScrollSpeed().catch(() => ({ data: null })),
-        getAnnouncementFontSize().catch(() => ({ data: null }))
-      ]).then(([cRes, eRes, sRes, scrRes, spdRes, fsRes]) => {
-        this.form.content = (cRes.data && cRes.data.paramValue) || '';
-        this.form.enabled = eRes.data && eRes.data.paramValue ? eRes.data.paramValue === 'true' : true;
-        if (sRes.data && sRes.data.paramValue) {
-          try {
-            const cfg = JSON.parse(sRes.data.paramValue);
-            this.form.styleType = cfg.styleType || 'warning';
-            this.form.backgroundColor = cfg.backgroundColor || '#E6A23C';
-            this.form.textColor = cfg.textColor || '#FFFFFF';
-          } catch (e) { /* 解析失败用默认值 */ }
+        getAnnouncementScrollSpeed().catch(() => ({ data: null }))
+      ]).then(([contentRes, enabledRes, styleRes, scrollRes, scrollSpeedRes]) => {
+        // 加载内容
+        if (contentRes.data && contentRes.data.paramValue) {
+          this.form.content = contentRes.data.paramValue;
+        } else {
+          this.form.content = '';
         }
-        this.form.scroll = scrRes.data && scrRes.data.paramValue ? scrRes.data.paramValue === 'true' : false;
-        this.form.scrollSpeed = spdRes.data && spdRes.data.paramValue ? parseInt(spdRes.data.paramValue) || 15 : 15;
-        this.form.fontSize = fsRes.data && fsRes.data.paramValue ? parseInt(fsRes.data.paramValue) || 14 : 14;
-      }).finally(() => { this.bannerLoading = false; });
+
+        // 加载启用状态
+        if (enabledRes.data && enabledRes.data.paramValue) {
+          this.form.enabled = enabledRes.data.paramValue === 'true';
+        } else {
+          this.form.enabled = true;  // 默认启用
+        }
+
+        // 加载样式配置
+        if (styleRes.data && styleRes.data.paramValue) {
+          try {
+            const styleConfig = JSON.parse(styleRes.data.paramValue);
+            this.form.styleType = styleConfig.styleType || 'warning';
+            this.form.backgroundColor = styleConfig.backgroundColor || '#E6A23C';
+            this.form.textColor = styleConfig.textColor || '#FFFFFF';
+          } catch (e) {
+            // JSON 解析失败，使用默认值
+            this.form.styleType = 'warning';
+            this.form.backgroundColor = '#E6A23C';
+            this.form.textColor = '#FFFFFF';
+          }
+        }
+
+        // 加载滚动配置
+        if (scrollRes.data && scrollRes.data.paramValue) {
+          this.form.scroll = scrollRes.data.paramValue === 'true';
+        } else {
+          this.form.scroll = false;  // 默认不滚动
+        }
+
+        // 加载滚动速度配置
+        if (scrollSpeedRes.data && scrollSpeedRes.data.paramValue) {
+          this.form.scrollSpeed = parseInt(scrollSpeedRes.data.paramValue) || 15;
+        } else {
+          this.form.scrollSpeed = 15;  // 默认速度 15 秒
+        }
+
+        // 保存原始表单数据
+        this.originalForm = JSON.parse(JSON.stringify(this.form));
+      }).finally(() => {
+        this.loading = false;
+      });
     },
-    /** 保存横幅公告配置到后端 */
-    saveBanner() {
-      this.bannerLoading = true;
+
+    /**
+     * 样式类型切换时更新颜色
+     * 切换到预设样式时，自动应用对应的颜色
+     */
+    onStyleTypeChange(type) {
+      if (type !== 'custom') {
+        const style = PRESET_STYLES[type];
+        if (style) {
+          this.form.backgroundColor = style.backgroundColor;
+          this.form.textColor = style.textColor;
+        }
+      }
+    },
+
+    /**
+     * 进入编辑模式
+     * 保存当前表单数据作为原始数据，以便取消时恢复
+     */
+    edit() {
+      this.originalForm = JSON.parse(JSON.stringify(this.form));
+      this.isEditing = true;
+    },
+
+    /**
+     * 保存公告配置到后端
+     * 保存成功后通知页面顶部公告栏更新
+     */
+    save() {
+      this.loading = true;
+
+      // 构建样式配置对象
       const styleConfig = {
         styleType: this.form.styleType,
-        backgroundColor: this.form.styleType === 'custom' ? this.form.backgroundColor : PRESET_STYLES[this.form.styleType].backgroundColor,
-        textColor: this.form.styleType === 'custom' ? this.form.textColor : PRESET_STYLES[this.form.styleType].textColor
+        backgroundColor: this.form.styleType === 'custom'
+          ? this.form.backgroundColor
+          : PRESET_STYLES[this.form.styleType].backgroundColor,
+        textColor: this.form.styleType === 'custom'
+          ? this.form.textColor
+          : PRESET_STYLES[this.form.styleType].textColor
       };
+
+      // 并行保存五个配置
       Promise.all([
         saveAnnouncementContent(this.form.content),
         saveAnnouncementEnabled(this.form.enabled),
         saveAnnouncementStyle(styleConfig),
         saveAnnouncementScroll(this.form.scroll),
-        saveAnnouncementScrollSpeed(this.form.scrollSpeed),
-        saveAnnouncementFontSize(this.form.fontSize)
-      ]).then(([c, e, s, sc, sp, fs]) => {
-        if (c.success && e.success && s.success && sc.success && sp.success && fs.success) {
+        saveAnnouncementScrollSpeed(this.form.scrollSpeed)
+      ]).then(([contentRes, enabledRes, styleRes, scrollRes, scrollSpeedRes]) => {
+        // 检查所有保存是否成功
+        if (contentRes.success && enabledRes.success && styleRes.success && scrollRes.success && scrollSpeedRes.success) {
+          // 保存成功提示
           this.$success(this.$t('commons.save_success'));
-          this.bannerDialogVisible = false;
-          this.$EventBus.$emit('announcement-updated');
+          // 更新原始表单数据
+          this.originalForm = JSON.parse(JSON.stringify(this.form));
+          // 退出编辑模式
+          this.isEditing = false;
+          // 通知页面顶部公告栏更新
+          this.notifyAnnouncementUpdate();
         } else {
+          // 保存失败提示
           this.$error(this.$t('commons.save_failed'));
         }
-      }).catch(err => {
-        this.$error(err.message || this.$t('commons.save_failed'));
-      }).finally(() => { this.bannerLoading = false; });
+      }).catch(error => {
+        // 网络或服务器错误
+        this.$error(error.message || this.$t('commons.save_failed'));
+      }).finally(() => {
+        this.loading = false;
+      });
+    },
+
+    /**
+     * 取消编辑
+     * 恢复原始表单数据，退出编辑模式
+     */
+    cancel() {
+      if (this.originalForm) {
+        this.form = JSON.parse(JSON.stringify(this.originalForm));
+      }
+      this.isEditing = false;
+    },
+
+    /**
+     * 通过 EventBus 通知页面顶部公告栏更新
+     * 发送 'announcement-updated' 事件
+     */
+    notifyAnnouncementUpdate() {
+      // 使用 EventBus 发送事件，通知 AppLayout 更新公告栏
+      this.$EventBus.$emit('announcement-updated');
     }
   }
 };
 </script>
 
 <style scoped>
-/* ========== 弹窗整体 ========== */
-:deep(.banner-dialog) {
-  border-radius: 8px;
-}
-:deep(.banner-dialog .el-dialog__header) {
-  background: linear-gradient(135deg, #783887 0%, #409EFF 100%);
-  border-radius: 8px 8px 0 0;
-  padding: 16px 20px;
-}
-:deep(.banner-dialog .el-dialog__title) {
-  color: #fff;
-  font-weight: 600;
-}
-:deep(.banner-dialog .el-dialog__headerbtn .el-dialog__close) {
-  color: #fff;
-}
-:deep(.banner-dialog .el-dialog__body) {
-  padding: 16px 20px;
-}
-:deep(.banner-dialog .el-dialog__footer) {
-  padding: 12px 20px;
-  border-top: 1px solid #ebeef5;
-}
-
-/* ========== 分区卡片 ========== */
-.banner-dialog-body {
-  max-height: 520px;
-  overflow-y: auto;
-}
-
-/* 横向并列行容器 */
-.banner-row {
-  display: flex;
-  gap: 12px;
-}
-
-/* 小卡片（公告开关、滚动效果）：固定宽度 */
-.banner-section-sm {
-  flex: 0 0 180px;
-}
-
-/* 中卡片（样式设置）：自适应填充剩余空间 */
-.banner-section-md {
-  flex: 1;
-}
-
-.banner-section {
-  background: #fafafa;
-  border: 1px solid #ebeef5;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.banner-section-header {
-  display: flex;
-  align-items: center;
-  padding: 10px 16px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #ebeef5;
-  font-size: 14px;
-  font-weight: 500;
-  color: #303133;
-}
-.banner-section-icon {
-  margin-right: 8px;
-  font-size: 16px;
-}
-.banner-section-content {
-  padding: 14px 16px;
-}
-
-/* ========== 样式选择器 ========== */
-.style-selector {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.style-option {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s;
-  border: 2px solid transparent;
-  user-select: none;
-}
-.style-option:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-.style-option-active {
-  border-color: #303133;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-  transform: translateY(-1px);
-}
-.custom-color-row {
-  display: flex;
-  align-items: center;
-  margin-top: 12px;
-}
-.color-label {
-  font-size: 13px;
-  color: #606266;
-  margin-right: 8px;
-}
-
-/* ========== 字体大小选择器 ========== */
-.font-size-selector {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.font-size-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  border: 2px solid #dcdfe6;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  user-select: none;
-}
-.font-size-option:hover {
-  border-color: #409EFF;
-  background: #ecf5ff;
-}
-.font-size-option-active {
-  border-color: #409EFF;
-  background: #ecf5ff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-}
-.font-size-option span:first-child {
-  font-weight: 600;
-  color: #303133;
-  line-height: 1;
-}
-.font-size-label {
-  font-size: 11px;
-  color: #909399;
-  margin-top: 2px;
-}
-
-/* ========== 预览区域 ========== */
-.banner-preview {
-  min-height: 36px;
-  line-height: 36px;
+/**
+ * 公告预览区域样式
+ * 支持动态背景色和文字颜色
+ */
+.announcement-preview {
+  min-height: 30px;
+  text-align: left;
+  line-height: 30px;
   padding: 0 20px;
-  border-radius: 4px;
   word-wrap: break-word;
   word-break: break-all;
-  font-size: 14px;
+  border-radius: 4px;
 }
-.banner-preview-empty {
-  min-height: 36px;
-  line-height: 36px;
-  text-align: center;
-  color: #909399;
+
+/**
+ * 空预览区域样式
+ * 灰色边框和文字，提示用户当前无公告内容或已禁用
+ */
+.announcement-preview-empty {
+  min-height: 30px;
   background: #f5f7fa;
+  text-align: center;
+  line-height: 30px;
+  color: #909399;
+  padding: 0 20px;
   border: 1px dashed #dcdfe6;
   border-radius: 4px;
-  font-size: 13px;
 }
-.banner-preview-scroll {
+
+/**
+ * 颜色选择器组样式
+ */
+.color-picker-group {
+  display: flex;
+  align-items: center;
+}
+
+.color-label {
+  color: #606266;
+  font-size: 14px;
+}
+
+/**
+ * 滚动提示文字样式
+ */
+.scroll-hint {
+  margin-left: 10px;
+  color: #909399;
+  font-size: 12px;
+}
+
+/**
+ * 公告滚动动画样式
+ */
+.announcement-scroll {
   overflow: hidden;
   white-space: nowrap;
 }
-.banner-preview-scroll .banner-preview-text {
+
+.announcement-scroll .announcement-text {
   display: inline-block;
   padding-left: 100%;
-  animation-name: banner-scroll;
+  animation-name: scroll-left;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
+  /* 动画时长通过内联样式动态设置 */
 }
-@keyframes banner-scroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-100%); }
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/**
+ * 按钮组样式
+ * 与其他设置组件保持一致的间距
+ */
+.button-group {
+  margin-top: 20px;
+  margin-left: 100px;
 }
 </style>

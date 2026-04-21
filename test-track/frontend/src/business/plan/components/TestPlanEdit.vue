@@ -22,6 +22,20 @@
         v-if="isStepTableAlive"
       >
         <el-row type="flex" :gutter="20">
+          <el-col :span="12" v-if="form.requirementNumber">
+            <el-form-item
+              label="需求编号"
+              :label-width="formLabelWidth"
+            >
+              <el-input
+                v-model="form.requirementNumber"
+                :size="itemSize"
+                readonly
+                disabled
+              />
+            </el-form-item>
+          </el-col>
+
           <el-col :span="12">
             <el-form-item
               :label="$t('test_track.plan.plan_name')"
@@ -32,12 +46,35 @@
                 v-model="form.name"
                 :placeholder="$t('test_track.plan.input_plan_name')"
                 :size="itemSize"
+                :readonly="!!form.requirementNumber"
                 maxlength="128"
                 show-word-limit
               />
             </el-form-item>
           </el-col>
 
+          <el-col :span="12" v-if="!form.requirementNumber">
+            <el-form-item
+              prop="nodeId"
+              :label="$t('test_track.case.module')"
+              :label-width="formLabelWidth"
+            >
+              <ms-select-tree
+                class="plan-node-tree"
+                :disabled="false"
+                :data="treeNodes"
+                :obj="moduleObj"
+                :default-key="form.nodeId"
+                checkStrictly
+                @getValue="setModule"
+                size="small"
+                ref="moduleTree"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row type="flex" :gutter="20" v-if="form.requirementNumber">
           <el-col :span="12">
             <el-form-item
               prop="nodeId"
@@ -273,6 +310,7 @@ import {
 } from "@/api/remote/plan/test-plan";
 import { buildTree, getProjectMemberOption } from "@/business/utils/sdk-utils";
 import { getTestPlanNodes } from "@/api/test-plan-node";
+import { createTestPlanFromRequirement } from "@/api/requirement-pool";
 
 export default {
   name: "TestPlanEdit",
@@ -301,6 +339,7 @@ export default {
         follows: [],
         nodeId: "",
         nodePath: "",
+        requirementNumber: "",
       },
       rules: {
         name: [
@@ -440,6 +479,19 @@ export default {
       this.dialogFormVisible = true;
       this.reload();
     },
+    openFromRequirement(requirement) {
+      this.resetForm();
+      this.getNodeTrees();
+      this.setPrincipalOptions();
+      this.operationType = "add";
+      this.form.name = requirement.requirementName;
+      this.form.requirementNumber = requirement.dmpNum;
+      this.form.tags = [];
+      listenGoBack(this.close);
+      this.setEmptyStage();
+      this.dialogFormVisible = true;
+      this.reload();
+    },
     setEmptyStage() {
       // 如果测试阶段选项中没有当前值，则置空
       let hasOptions = false;
@@ -468,22 +520,52 @@ export default {
           }
           param.tags = this.form.tags;
           this.loading = true;
-          let method = testPlanAdd;
-          if (this.operationType === "edit") {
-            method = testPlanEdit;
-          }
-          method(param)
-            .then((response) => {
-              this.loading = false;
-              if (this.operationType === "add") {
-                this.$success(this.$t("commons.save_success"));
-              }
-              this.dialogFormVisible = false;
-              this.$router.push("/track/plan/view/" + response.data.id);
+
+          // 如果是从需求池创建，调用需求池的创建接口
+          if (param.requirementNumber) {
+            createTestPlanFromRequirement({
+              dmpNum: param.requirementNumber,
+              projectId: this.projectId,
+              workspaceId: getCurrentWorkspaceId(),
+              principalId: param.principals && param.principals.length > 0 ? param.principals[0] : null,
+              stage: param.stage,
+              plannedStartTime: param.plannedStartTime,
+              plannedEndTime: param.plannedEndTime,
+              description: param.description,
+              automaticStatusUpdate: param.automaticStatusUpdate,
+              repeatCase: param.repeatCase,
+              nodeId: param.nodeId,
+              nodePath: param.nodePath,
+              tags: param.tags
             })
-            .catch(() => {
-              this.loading = false;
-            });
+              .then((response) => {
+                this.loading = false;
+                this.$success(this.$t("commons.save_success"));
+                this.dialogFormVisible = false;
+                this.$emit("refresh");
+                this.$router.push("/track/plan/view/" + response.data.id);
+              })
+              .catch(() => {
+                this.loading = false;
+              });
+          } else {
+            let method = testPlanAdd;
+            if (this.operationType === "edit") {
+              method = testPlanEdit;
+            }
+            method(param)
+              .then((response) => {
+                this.loading = false;
+                if (this.operationType === "add") {
+                  this.$success(this.$t("commons.save_success"));
+                }
+                this.dialogFormVisible = false;
+                this.$router.push("/track/plan/view/" + response.data.id);
+              })
+              .catch(() => {
+                this.loading = false;
+              });
+          }
         } else {
           return false;
         }
@@ -505,20 +587,50 @@ export default {
           param.tags = this.form.tags;
 
           this.loading = true;
-          let method = testPlanAdd;
-          if (this.operationType === "edit") {
-            method = testPlanEdit;
-          }
-          method(param)
-            .then(() => {
-              this.loading = false;
-              this.$success(this.$t("commons.save_success"));
-              this.dialogFormVisible = false;
-              this.$emit("refresh");
+
+          // 如果是从需求池创建，调用需求池的创建接口
+          if (param.requirementNumber) {
+            createTestPlanFromRequirement({
+              dmpNum: param.requirementNumber,
+              projectId: this.projectId,
+              workspaceId: getCurrentWorkspaceId(),
+              principalId: param.principals && param.principals.length > 0 ? param.principals[0] : null,
+              stage: param.stage,
+              plannedStartTime: param.plannedStartTime,
+              plannedEndTime: param.plannedEndTime,
+              description: param.description,
+              automaticStatusUpdate: param.automaticStatusUpdate,
+              repeatCase: param.repeatCase,
+              nodeId: param.nodeId,
+              nodePath: param.nodePath,
+              tags: param.tags
             })
-            .catch(() => {
-              this.loading = false;
-            });
+              .then(() => {
+                this.loading = false;
+                this.$success(this.$t("commons.save_success"));
+                this.dialogFormVisible = false;
+                this.$emit("refresh");
+              })
+              .catch(() => {
+                this.loading = false;
+              });
+          } else {
+            // 正常创建或编辑
+            let method = testPlanAdd;
+            if (this.operationType === "edit") {
+              method = testPlanEdit;
+            }
+            method(param)
+              .then(() => {
+                this.loading = false;
+                this.$success(this.$t("commons.save_success"));
+                this.dialogFormVisible = false;
+                this.$emit("refresh");
+              })
+              .catch(() => {
+                this.loading = false;
+              });
+          }
         } else {
           return false;
         }

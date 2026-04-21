@@ -206,6 +206,26 @@
 
     <sql id="queryWhereCondition">
         <where>
+            <!-- 用户组权限过滤：开发人员组和测试人员组只能看到创建人或处理人是自己的缺陷 -->
+            <if test="request.userGroupId != null and request.currentUserId != null">
+                <if test="request.userGroupId == 'developer' or request.userGroupId == 'tester'">
+                    and (
+                        issues.creator = #{request.currentUserId}
+                        or exists (
+                            select 1 from custom_field_issues cfi
+                            inner join custom_field cf on cfi.field_id = cf.id
+                            where cfi.resource_id = issues.id
+                              and cf.name = '处理人'
+                              and cf.scene = 'ISSUE'
+                              and cf.system = 1
+                              and (cf.project_id = issues.project_id or cf.global = 1)
+                              <!-- 注意：自定义字段值使用 JSON 格式存储，字符串类型会带双引号，这是 MeterSphere 的统一设计，所有自定义字段都是如此-->
+                              and trim(both '"' from cfi.value) = #{request.currentUserId}
+                        )
+                    )
+                </if>
+            </if>
+
             <if test="request.combine != null">
                 <include refid="combine">
                     <property name="condition" value="request.combine"/>
@@ -225,6 +245,16 @@
             </if>
             <if test="request.projectId != null and request.projectId != ''">
                 and issues.project_id = #{request.projectId}
+            </if>
+            <!-- 跨项目搜索时：确保只能看到当前用户有权限的项目 -->
+            <if test="request.projectId == null or request.projectId == ''">
+                and issues.project_id in (
+                    select ug.source_id
+                    from user_group ug
+                    join `group` g on ug.group_id = g.id
+                    where g.type = 'PROJECT'
+                      and ug.user_id = #{request.userId}
+                )
             </if>
 
             <if test="request.resourceId != null and request.resourceId != ''">
@@ -346,6 +376,8 @@
             </include>
         </if>
         <!--  我的待办中替换过滤条件platformStatus为doneStatus, 单独过滤出待办的缺陷-->
+        <!--  注意：跨项目搜索时，Local 平台的 doneStatus 筛选只使用单个项目的 statusFieldId -->
+        <!--  如需支持多项目 Local 平台 doneStatus 筛选，需要重构 SQL 为每个项目查找对应 statusFieldId -->
         <if test="${condition}.doneStatus != null">
             and (
                 (
@@ -386,20 +418,6 @@
             and issues.update_time
             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
                 <property name="object" value="${condition}.updateTime"/>
-            </include>
-        </if>
-        <!-- 高级搜索：按所属工作空间筛选（多选，支持 in / not in） -->
-        <if test="${condition}.workspaceIds != null">
-            and project.workspace_id
-            <include refid="condition">
-                <property name="object" value="${condition}.workspaceIds"/>
-            </include>
-        </if>
-        <!-- 高级搜索：按所属项目筛选（多选，支持 in / not in） -->
-        <if test="${condition}.projectIds != null">
-            and issues.project_id
-            <include refid="condition">
-                <property name="object" value="${condition}.projectIds"/>
             </include>
         </if>
         <if test="${condition}.customs != null and ${condition}.customs.size() > 0">

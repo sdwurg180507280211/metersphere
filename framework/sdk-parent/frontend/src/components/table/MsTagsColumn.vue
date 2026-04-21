@@ -6,7 +6,7 @@
     :fields-width="fieldsWidth"
     :show-overflow-tooltip="false"
     :label="$t('api_test.automation.tag')"
-    min-width="200px">
+    min-width="100px">
     <template v-slot:default="scope">
       <span v-if="scope.row.tags && scope.row.tags.length === 1">
         <ms-tag

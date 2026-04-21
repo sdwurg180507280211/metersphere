@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="io.metersphere.base.mapper.ext.ExtRequirementPoolMapper">
+
+    <resultMap id="BaseResultMap" type="io.metersphere.base.domain.RequirementPool">
+        <id column="id" property="id" jdbcType="VARCHAR"/>
+        <result column="dmp_num" property="dmpNum" jdbcType="VARCHAR"/>
+        <result column="requirement_name" property="requirementName" jdbcType="VARCHAR"/>
+        <result column="pool_status" property="poolStatus" jdbcType="VARCHAR"/>
+        <result column="parent_wfinst_code" property="parentWfinstCode" jdbcType="VARCHAR"/>
+        <result column="act_name" property="actName" jdbcType="VARCHAR"/>
+        <result column="operation_type" property="operationType" jdbcType="VARCHAR"/>
+        <result column="system_name" property="systemName" jdbcType="VARCHAR"/>
+        <result column="req_manager_name" property="reqManagerName" jdbcType="VARCHAR"/>
+        <result column="assignee_name" property="assigneeName" jdbcType="VARCHAR"/>
+        <result column="created_dept" property="createdDept" jdbcType="VARCHAR"/>
+        <result column="create_user1" property="createUser1" jdbcType="VARCHAR"/>
+        <result column="dept_name" property="deptName" jdbcType="VARCHAR"/>
+        <result column="start_user_name" property="startUserName" jdbcType="VARCHAR"/>
+        <result column="req_father_class" property="reqFatherClass" jdbcType="VARCHAR"/>
+        <result column="req_son_class" property="reqSonClass" jdbcType="VARCHAR"/>
+        <result column="create_time" property="createTime" jdbcType="BIGINT"/>
+        <result column="up_time" property="upTime" jdbcType="BIGINT"/>
+        <result column="linked_plan_id" property="linkedPlanId" jdbcType="VARCHAR"/>
+        <result column="linked_plan_name" property="linkedPlanName" jdbcType="VARCHAR"/>
+        <result column="last_sync_time" property="lastSyncTime" jdbcType="BIGINT"/>
+        <result column="event_time" property="eventTime" jdbcType="BIGINT"/>
+        <result column="trace_id" property="traceId" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="BIGINT"/>
+        <result column="updated_at" property="updatedAt" jdbcType="BIGINT"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="io.metersphere.base.domain.RequirementPool">
+        insert into requirement_pool (
+            id,
+            dmp_num,
+            requirement_name,
+            pool_status,
+            parent_wfinst_code,
+            act_name,
+            operation_type,
+            system_name,
+            req_manager_name,
+            assignee_name,
+            created_dept,
+            create_user1,
+            dept_name,
+            start_user_name,
+            req_father_class,
+            req_son_class,
+            create_time,
+            up_time,
+            linked_plan_id,
+            linked_plan_name,
+            last_sync_time,
+            event_time,
+            trace_id,
+            created_at,
+            updated_at
+        ) values (
+            #{id},
+            #{dmpNum},
+            #{requirementName},
+            #{poolStatus},
+            #{parentWfinstCode},
+            #{actName},
+            #{operationType},
+            #{systemName},
+            #{reqManagerName},
+            #{assigneeName},
+            #{createdDept},
+            #{createUser1},
+            #{deptName},
+            #{startUserName},
+            #{reqFatherClass},
+            #{reqSonClass},
+            #{createTime},
+            #{upTime},
+            #{linkedPlanId},
+            #{linkedPlanName},
+            #{lastSyncTime},
+            #{eventTime},
+            #{traceId},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <sql id="condition">
+        <choose>
+            <when test='${object}.operator == "like"'>
+                like CONCAT('%', #{${object}.value},'%')
+            </when>
+            <when test='${object}.operator == "not like"'>
+                not like CONCAT('%', #{${object}.value},'%')
+            </when>
+            <when test='${object}.operator == "in"'>
+                in
+                <foreach collection="${object}.value" item="v" separator="," open="(" close=")">
+                    #{v}
+                </foreach>
+            </when>
+            <when test='${object}.operator == "not in"'>
+                not in
+                <foreach collection="${object}.value" item="v" separator="," open="(" close=")">
+                    #{v}
+                </foreach>
+            </when>
+            <when test='${object}.operator == "between"'>
+                between #{${object}.value[0]} and #{${object}.value[1]}
+            </when>
+            <when test='${object}.operator == "gt"'>
+                &gt; #{${object}.value}
+            </when>
+            <when test='${object}.operator == "lt"'>
+                &lt; #{${object}.value}
+            </when>
+            <when test='${object}.operator == "ge"'>
+                &gt;= #{${object}.value}
+            </when>
+            <when test='${object}.operator == "le"'>
+                &lt;= #{${object}.value}
+            </when>
+            <otherwise>
+                = #{${object}.value}
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="combine">
+        <if test="${condition}.dmpNum != null">
+            and requirement_pool.dmp_num
+            <include refid="condition">
+                <property name="object" value="${condition}.dmpNum"/>
+            </include>
+        </if>
+        <if test="${condition}.requirementName != null">
+            and requirement_pool.requirement_name
+            <include refid="condition">
+                <property name="object" value="${condition}.requirementName"/>
+            </include>
+        </if>
+        <if test="${condition}.createTime != null">
+            and requirement_pool.create_time
+            <include refid="condition">
+                <property name="object" value="${condition}.createTime"/>
+            </include>
+        </if>
+        <if test="${condition}.upTime != null">
+            and requirement_pool.up_time
+            <include refid="condition">
+                <property name="object" value="${condition}.upTime"/>
+            </include>
+        </if>
+        <if test="${condition}.actName != null">
+            and requirement_pool.act_name
+            <include refid="condition">
+                <property name="object" value="${condition}.actName"/>
+            </include>
+        </if>
+        <if test="${condition}.operationType != null">
+            and requirement_pool.operation_type
+            <include refid="condition">
+                <property name="object" value="${condition}.operationType"/>
+            </include>
+        </if>
+        <if test="${condition}.assigneeName != null">
+            and requirement_pool.assignee_name
+            <include refid="condition">
+                <property name="object" value="${condition}.assigneeName"/>
+            </include>
+        </if>
+        <if test="${condition}.createdDept != null">
+            and requirement_pool.created_dept
+            <include refid="condition">
+                <property name="object" value="${condition}.createdDept"/>
+            </include>
+        </if>
+        <if test="${condition}.createUser1 != null">
+            and requirement_pool.create_user1
+            <include refid="condition">
+                <property name="object" value="${condition}.createUser1"/>
+            </include>
+        </if>
+        <if test="${condition}.deptName != null">
+            and requirement_pool.dept_name
+            <include refid="condition">
+                <property name="object" value="${condition}.deptName"/>
+            </include>
+        </if>
+        <if test="${condition}.startUserName != null">
+            and requirement_pool.start_user_name
+            <include refid="condition">
+                <property name="object" value="${condition}.startUserName"/>
+            </include>
+        </if>
+        <if test="${condition}.reqManagerName != null">
+            and requirement_pool.req_manager_name
+            <include refid="condition">
+                <property name="object" value="${condition}.reqManagerName"/>
+            </include>
+        </if>
+        <if test="${condition}.poolStatus != null">
+            and requirement_pool.pool_status
+            <include refid="condition">
+                <property name="object" value="${condition}.poolStatus"/>
+            </include>
+        </if>
+        <if test="${condition}.systemName != null">
+            and requirement_pool.system_name
+            <include refid="condition">
+                <property name="object" value="${condition}.systemName"/>
+            </include>
+        </if>
+        <if test="${condition}.reqFatherClass != null">
+            and requirement_pool.req_father_class
+            <include refid="condition">
+                <property name="object" value="${condition}.reqFatherClass"/>
+            </include>
+        </if>
+        <if test="${condition}.reqSonClass != null">
+            and requirement_pool.req_son_class
+            <include refid="condition">
+                <property name="object" value="${condition}.reqSonClass"/>
+            </include>
+        </if>
+        <if test="${condition}.parentWfinstCode != null">
+            and requirement_pool.parent_wfinst_code
+            <include refid="condition">
+                <property name="object" value="${condition}.parentWfinstCode"/>
+            </include>
+        </if>
+    </sql>
+
+    <sql id="filter">
+        <if test="request.filters != null and request.filters.size() > 0">
+            <foreach collection="request.filters.entrySet()" index="key" item="values">
+                <if test="values != null and values.size() > 0">
+                    <choose>
+                        <when test="key=='poolStatus'">
+                            and requirement_pool.pool_status in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='systemName'">
+                            and requirement_pool.system_name in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='reqFatherClass'">
+                            and requirement_pool.req_father_class in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='reqSonClass'">
+                            and requirement_pool.req_son_class in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='reqManagerName'">
+                            and requirement_pool.req_manager_name in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='actName'">
+                            and requirement_pool.act_name in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='assigneeName'">
+                            and requirement_pool.assignee_name in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='createdDept'">
+                            and requirement_pool.created_dept in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                        <when test="key=='operationType'">
+                            and requirement_pool.operation_type in
+                            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
+                        </when>
+                    </choose>
+                </if>
+            </foreach>
+        </if>
+    </sql>
+
+    <select id="list" resultMap="BaseResultMap" parameterType="io.metersphere.requirement.pool.request.QueryRequirementPoolRequest">
+        select requirement_pool.*
+        from requirement_pool
+        <where>
+            <if test="request.name != null and request.name != ''">
+                and requirement_pool.requirement_name like CONCAT('%', #{request.name}, '%')
+            </if>
+            <if test="request.combine != null">
+                <include refid="combine">
+                    <property name="condition" value="request.combine"/>
+                </include>
+            </if>
+            <include refid="filter"/>
+        </where>
+        <choose>
+            <when test="request.orders != null and request.orders.size() > 0">
+                order by
+                <foreach collection="request.orders" separator="," item="order">
+                    ${order.name} ${order.type}
+                </foreach>
+            </when>
+            <otherwise>
+                order by create_time DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectByDmpNum" resultMap="BaseResultMap">
+        select requirement_pool.*
+        from requirement_pool
+        where requirement_pool.dmp_num = #{dmpNum}
+    </select>
+
+    <update id="updatePoolStatusAndLinkedPlan">
+        update requirement_pool
+        set pool_status = #{poolStatus},
+            linked_plan_id = #{linkedPlanId},
+            linked_plan_name = #{linkedPlanName},
+            updated_at = UNIX_TIMESTAMP(NOW()) * 1000
+        where dmp_num = #{dmpNum}
+    </update>
+
+</mapper>

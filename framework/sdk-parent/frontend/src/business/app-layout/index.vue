@@ -32,22 +32,7 @@
       <el-main class="container">
         <div :class="isFixed ? 'ms-left-fixed': 'ms-aside-left'"/>
         <div :class="isFixed ? 'ms-right-fixed': 'ms-main-view ms-aside-right'">
-          <micro-app
-            v-if="currentApp"
-            :key="currentApp.name"
-            :name="currentApp.name"
-            :url="currentApp.entry"
-            :data="appData"
-            :destroy="false"
-            :fiber="true"
-            :iframe="currentApp.isViteApp || false"
-            :inline="true"
-            :disable-memory-router="true"
-            :disable-scopecss="true"
-            @datachange="handleDataChange"
-            @error="handleError"
-          />
-          <router-view v-else-if="isShow"/>
+          <router-view v-if="isShow"/>
         </div>
       </el-main>
       <mx-theme/>
@@ -69,7 +54,6 @@ import {ORIGIN_COLOR} from "../../utils/constants";
 import {getDisplayInfo, getSystemTheme, isLogin, getSystemParameter} from "../../api/user";
 import {useUserStore} from "@/store";
 import {getModuleList} from "../../api/module";
-import {MIGRATED_MODULES} from "../../micro-app-config";
 
 
 export default {
@@ -99,7 +83,6 @@ export default {
       },
       announcementScroll: false,
       announcementScrollSpeed: 15,  // 滚动速度（秒），默认15秒
-      announcementFontSize: 14,     // 字体大小（px），默认14px
     };
   },
   created() {
@@ -150,29 +133,6 @@ export default {
     };
   },
   computed: {
-    currentModuleName() {
-      const path = this.$route.path || '';
-      const match = path.match(/^\/([^/]+)/);
-      return match ? match[1] : '';
-    },
-    currentApp() {
-      const name = this.currentModuleName;
-      if (!name || !MIGRATED_MODULES[name]) {
-        return null;
-      }
-      const config = MIGRATED_MODULES[name];
-      return {
-        name: name,
-        entry: this.getEntryUrl(name),
-        migrated: config.migrated,
-        isViteApp: config.isViteApp,
-      };
-    },
-    appData() {
-      return {
-        defaultPath: this.$route.path,
-      };
-    },
     /**
      * 公告栏动态样式
      * 根据样式配置返回背景色和文字颜色
@@ -180,9 +140,7 @@ export default {
     announcementStyle() {
       return {
         backgroundColor: this.announcementStyleConfig.backgroundColor,
-        color: this.announcementStyleConfig.textColor,
-        fontSize: this.announcementFontSize + 'px',
-        lineHeight: (this.announcementFontSize + 16) + 'px'
+        color: this.announcementStyleConfig.textColor
       };
     },
     /**
@@ -199,46 +157,6 @@ export default {
     }
   },
   methods: {
-    getEntryUrl(name) {
-      const microPorts = JSON.parse(sessionStorage.getItem('micro_ports') || '{}');
-      if (process.env.NODE_ENV === 'development') {
-        return '//127.0.0.1:' + (microPorts[name] - 4000);
-      }
-      return window.location.origin + '/' + name;
-    },
-    handleDataChange(e) {
-      console.log('[Layout] 收到子应用数据:', e.detail.data);
-    },
-    async handleError(e) {
-      console.error('[Layout] 子应用加载出错:', e.detail.name, e.detail.error);
-
-      // 子应用加载失败时，尝试跳转到可用服务
-      const redirectKey = 'micro_app_redirect_attempted';
-      const redirectTTL = 5000;
-      const timestamp = Number(sessionStorage.getItem(redirectKey) || 0);
-
-      if (timestamp && Date.now() - timestamp < redirectTTL) {
-        return;
-      }
-
-      try {
-        sessionStorage.setItem(redirectKey, String(Date.now()));
-        const response = await this.$get('/services');
-        const services = response.data || [];
-        const currentService = e.detail.name;
-
-        const availableServices = services
-          .map(s => s?.serviceId)
-          .filter(serviceId => serviceId && MIGRATED_MODULES[serviceId]);
-
-        const targetService = availableServices.find(s => s !== currentService);
-        if (targetService) {
-          window.location.replace(`/#/${targetService}`);
-        }
-      } catch (err) {
-        sessionStorage.removeItem(redirectKey);
-      }
-    },
     loadAnnouncement() {
       // 获取公告内容
       getSystemParameter('announcement.content').then(response => {
@@ -302,17 +220,6 @@ export default {
         }
       }).catch(() => {
         this.announcementScrollSpeed = 15;
-      });
-
-      // 获取公告字体大小配置
-      getSystemParameter('announcement.font.size').then(response => {
-        if (response.data && response.data.paramValue) {
-          this.announcementFontSize = parseInt(response.data.paramValue) || 14;
-        } else {
-          this.announcementFontSize = 14;
-        }
-      }).catch(() => {
-        this.announcementFontSize = 14;
       });
     },
     updateHeaderHeight() {
