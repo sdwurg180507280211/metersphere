@@ -6,8 +6,8 @@
 
 实现需求平台与 MeterSphere 测试平台的双向数据对接，通过 RocketMQ 消息队列实现异步通信。核心流程包括：需求同步入池、需求池管理、测试计划创建、状态回传。
 
-**文档版本**：V1.1
-**修订日期**：2026年4月8日
+**文档版本**：V1.2
+**修订日期**：2026年4月16日
 
 ## 核心设计目标
 
@@ -125,8 +125,8 @@
 - `RequirementPlanRelationService`：关联关系管理
 
 **说明**：
-- 以下代码片段为逻辑示意，实际落地包路径以当前仓库为准：
-  - 后端：`io.metersphere.requirement.pool.*`、`io.metersphere.base.domain.*`
+- 实际落地的包路径：
+  - 后端：`io.metersphere.requirement.pool.*`（controller/service/request）、`io.metersphere.base.domain.*`（实体）、`io.metersphere.base.mapper.ext.*`（Mapper）
   - 前端：`test-track/frontend/src/business/requirement-pool/*`
 
 #### 状态回传模块
@@ -149,27 +149,29 @@
 
 | 字段名 | 类型 | 长度 | 是否必填 | 说明 |
 |--------|------|------|----------|------|
-| id | VARCHAR | 50 | 是 | 主键 |
-| dmp_num | VARCHAR | 100 | 是 | 需求编号（唯一索引） |
-| requirement_name | VARCHAR | 500 | 是 | 需求名称 |
-| pool_status | VARCHAR | 20 | 是 | 需求池状态：PENDING/CREATED/CANCELLED |
+| id | VARCHAR | 32 | 是 | 主键 |
+| dmp_num | VARCHAR | 64 | 是 | 需求编号（唯一索引） |
+| requirement_name | VARCHAR | 255 | 是 | 需求名称 |
+| pool_status | VARCHAR | 32 | 是 | 需求池状态：PENDING/CREATED/CANCELLED |
 | parent_wfinst_code | VARCHAR | 100 | 否 | 主流程编码 |
-| req_father_class | VARCHAR | 100 | 否 | 需求大类 |
-| req_son_class | VARCHAR | 100 | 否 | 需求子类 |
-| system_name | VARCHAR | 200 | 否 | 所属系统 |
 | act_name | VARCHAR | 100 | 否 | 当前环节 |
-| req_manager_name | VARCHAR | 100 | 否 | 需求负责人 |
-| assignee_name | VARCHAR | 100 | 否 | 当前处理人 |
-| created_dept | VARCHAR | 200 | 否 | 需求申请部门 |
-| create_user | VARCHAR | 100 | 否 | 需求申请人 |
-| dept_name | VARCHAR | 200 | 否 | 需求负责人处室 |
-| start_user_name | VARCHAR | 100 | 否 | 创建人 |
+| operation_type | VARCHAR | 32 | 否 | 操作类型：CREATED/UPDATED/CANCELLED |
+| system_name | VARCHAR | 255 | 否 | 所属系统 |
+| req_manager_name | VARCHAR | 64 | 否 | 需求负责人 |
+| assignee_name | VARCHAR | 64 | 否 | 当前处理人 |
+| created_dept | VARCHAR | 255 | 否 | 需求申请部门 |
+| create_user1 | VARCHAR | 64 | 否 | 需求申请人 |
+| dept_name | VARCHAR | 255 | 否 | 需求负责人处室 |
+| start_user_name | VARCHAR | 64 | 否 | 创建人 |
+| req_father_class | VARCHAR | 255 | 否 | 需求大类 |
+| req_son_class | VARCHAR | 255 | 否 | 需求子类 |
 | create_time | BIGINT | - | 否 | 需求提出时间（时间戳） |
 | up_time | BIGINT | - | 否 | 预计上线时间（时间戳） |
 | linked_plan_id | VARCHAR | 50 | 否 | 关联的测试计划ID |
+| linked_plan_name | VARCHAR | 255 | 否 | 关联的测试计划名称 |
 | last_sync_time | BIGINT | - | 是 | 最后同步时间（时间戳） |
 | event_time | BIGINT | - | 否 | 消息事件时间（时间戳） |
-| trace_id | VARCHAR | 100 | 否 | 追踪ID |
+| trace_id | VARCHAR | 64 | 否 | 追踪ID |
 | created_at | BIGINT | - | 是 | 创建时间（时间戳） |
 | updated_at | BIGINT | - | 是 | 更新时间（时间戳） |
 
@@ -181,12 +183,10 @@
 - INDEX: `idx_create_time` ON `create_time`
 
 **实现备注**:
-- 当前仓库已落地的 `V19__create_requirement_pool_table.sql` 为精简字段版本，已包含：
-  `id`、`dmp_num`、`requirement_name`、`pool_status`、`system_name`、`req_manager_name`、
-  `req_father_class`、`req_son_class`、`create_time`、`up_time`、`linked_plan_id`、
-  `linked_plan_name`、`trace_id`
-- 若要完全满足幂等与审计设计，还需要补充增量 Migration，将 `last_sync_time`、`event_time`、
-  `created_at`、`updated_at` 以及原始消息存储能力补齐
+- 字段 `create_user1`：需求平台字段名为 `createUser1`，数据库列名为 `create_user1`（注意不是 `create_user`，避免与系统内置字段冲突）
+- 字段 `created_dept`：需求平台字段名为 `createdept`（无下划线），Mapper XML 映射为 `createdDept`
+- 字段 `operation_type`：用于区分消息操作类型（CREATED/UPDATED/CANCELLED），与 `actName`（当前环节）是不同概念
+- 当前仓库已落地的 `V19__create_requirement_pool_table.sql` 为完整版本，包含所有字段和测试数据
 
 ### 测试计划表扩展（test_plan）
 
@@ -221,11 +221,28 @@
   "filters": {
     "poolStatus": ["PENDING", "CREATED"],
     "systemName": ["系统A", "系统B"],
-    "reqFatherClass": ["功能需求"]
+    "reqFatherClass": ["功能需求"],
+    "actName": ["测试待处理"],
+    "assigneeName": ["张三"],
+    "createdDept": ["产品部"],
+    "operationType": ["CREATED"]
   },
   "combine": {
     "dmpNum": { "operator": "like", "value": "REQ-2024" },
     "requirementName": { "operator": "like", "value": "需求" },
+    "poolStatus": { "operator": "in", "value": ["PENDING", "CREATED"] },
+    "systemName": { "operator": "in", "value": ["系统A"] },
+    "reqFatherClass": { "operator": "in", "value": ["功能需求"] },
+    "reqSonClass": { "operator": "in", "value": ["新增功能"] },
+    "parentWfinstCode": { "operator": "like", "value": "WF-" },
+    "actName": { "operator": "like", "value": "测试" },
+    "operationType": { "operator": "like", "value": "CREATED" },
+    "assigneeName": { "operator": "like", "value": "张" },
+    "createdDept": { "operator": "like", "value": "产品" },
+    "createUser1": { "operator": "like", "value": "王" },
+    "deptName": { "operator": "like", "value": "一部" },
+    "startUserName": { "operator": "like", "value": "赵" },
+    "reqManagerName": { "operator": "like", "value": "李" },
     "createTime": {
       "operator": "between",
       "value": [1704067200000, 1735689599000]
@@ -246,20 +263,6 @@
 - 当前端未指定排序时，后端默认按 `create_time DESC` 排序
 - 最新同步过来的需求最先显示
 
-**后端实现示例**:
-```xml
-<!-- Mapper XML 中的默认排序处理 -->
-<if test="request.orders == null or request.orders.size() == 0">
-  ORDER BY create_time DESC
-</if>
-<if test="request.orders != null and request.orders.size() > 0">
-  ORDER BY
-  <foreach collection="request.orders" item="order" separator=",">
-    ${order.name} ${order.type}
-  </foreach>
-</if>
-```
-
 **响应结果**（标准分页格式）:
 ```json
 {
@@ -270,9 +273,20 @@
       "dmpNum": "REQ-2024-001",
       "requirementName": "需求名称",
       "poolStatus": "PENDING",
+      "actName": "测试待处理",
+      "parentWfinstCode": "WF-001",
+      "operationType": "CREATED",
       "systemName": "系统名称",
       "reqManagerName": "张三",
+      "assigneeName": "李四",
+      "createdDept": "产品部",
+      "createUser1": "王五",
+      "deptName": "产品一部",
+      "startUserName": "赵六",
+      "reqFatherClass": "功能需求",
+      "reqSonClass": "新增功能",
       "createTime": 1234567890000,
+      "upTime": 1234567890000,
       "linkedPlanId": null,
       "linkedPlanName": null
     }
@@ -289,15 +303,24 @@
 {
   "dmpNum": "REQ-2024-001",
   "requirementName": "需求名称",
-  "systemName": "系统名称",
-  "reqManagerName": "张三",
+  "systemName": "未指定",
+  "reqManagerName": "待分配",
   "reqFatherClass": "功能需求",
-  "reqSonClass": "新增功能"
+  "reqSonClass": "新增功能",
+  "actName": "测试待处理",
+  "parentWfinstCode": "-",
+  "operationType": "CREATED",
+  "assigneeName": "待分配",
+  "createdDept": "-",
+  "createUser1": "-",
+  "deptName": "-",
+  "startUserName": "-"
 }
 ```
 
 **说明**:
 - `dmpNum`、`requirementName` 必填
+- 其余字段有默认值（创建弹窗中预填充）
 - 创建成功后默认写入 `PENDING` 状态
 - 该接口用于需求池手工补录，不替代 RocketMQ 同步主链路
 
@@ -417,6 +440,11 @@
 - `UPDATED`: 更新需求
 - `CANCELLED`: 取消需求
 
+**字段映射说明**:
+- `name1`（需求平台） → `requirementName`（MeterSphere 需求池）
+- `createdept`（需求平台，无下划线） → `createdDept`（MeterSphere 需求池）
+- `createUser1`（需求平台，注意后缀1） → `createUser1`（MeterSphere 需求池，数据库列名 `create_user1`）
+
 ### 状态回传消息（MeterSphere → 需求平台）
 
 **Topic**: `topic-metersphere-to-requirement`
@@ -454,7 +482,7 @@
 ### 实体类
 
 ```java
-// RequirementPool.java
+// RequirementPool.java — 实际包路径: io.metersphere.base.domain
 @Data
 public class RequirementPool {
     private String id;
@@ -462,19 +490,21 @@ public class RequirementPool {
     private String requirementName;     // 需求名称
     private String poolStatus;          // PENDING/CREATED/CANCELLED
     private String parentWfinstCode;    // 主流程编码
-    private String reqFatherClass;      // 需求大类
-    private String reqSonClass;         // 需求子类
-    private String systemName;          // 所属系统
     private String actName;             // 当前环节
+    private String operationType;       // 操作类型：CREATED/UPDATED/CANCELLED
+    private String systemName;          // 所属系统
     private String reqManagerName;      // 需求负责人
     private String assigneeName;        // 当前处理人
     private String createdDept;         // 需求申请部门
-    private String createUser;          // 需求申请人
+    private String createUser1;         // 需求申请人（注意：字段名为createUser1，非createUser）
     private String deptName;            // 需求负责人处室
     private String startUserName;       // 创建人
+    private String reqFatherClass;      // 需求大类
+    private String reqSonClass;         // 需求子类
     private Long createTime;            // 需求提出时间
     private Long upTime;                // 预计上线时间
     private String linkedPlanId;        // 关联的测试计划ID
+    private String linkedPlanName;      // 关联的测试计划名称
     private Long lastSyncTime;          // 最后同步时间
     private Long eventTime;             // 消息事件时间
     private String traceId;             // 追踪ID
@@ -501,8 +531,8 @@ public class RequirementSyncMessage {
     private String systemName;          // 所属系统
     private Long upTime;                // 预计上线时间
     private String assigneeName;        // 当前处理人
-    private String createdept;          // 需求申请部门
-    private String createUser1;         // 需求申请人
+    private String createdept;          // 需求申请部门（注意：需求平台字段名无下划线）
+    private String createUser1;         // 需求申请人（注意：后缀为1）
     private String deptName;            // 需求负责人处室
     private String startUserName;       // 创建人
     private Long eventTime;             // 消息事件时间
@@ -524,18 +554,15 @@ public class RequirementCallbackMessage {
     private String traceId;              // 追踪ID
 }
 
-// RequirementPoolQueryCondition.java
+// QueryRequirementPoolRequest.java — 实际包路径: io.metersphere.requirement.pool.request
 @Data
-public class RequirementPoolQueryCondition {
-    private Integer pageNum = 1;
-    private Integer pageSize = 20;
-    private String dmpNum;
-    private String requirementName;
-    private String poolStatus;
-    private String systemName;
-    private String reqFatherClass;
-    private Long createTimeStart;
-    private Long createTimeEnd;
+public class QueryRequirementPoolRequest extends RequirementPool {
+    private List<OrderRequest> orders;    // 排序指令
+    private Map<String, List<String>> filters;  // 列头快速筛选
+    private Map<String, Object> combine;  // 高级搜索条件
+    private String projectId;
+    private String workspaceId;
+    private String name;                  // 快速搜索（按需求名称）
 }
 ```
 
@@ -551,10 +578,10 @@ public interface RequirementSyncService {
     boolean isDuplicate(String dmpNum, Long eventTime);
 }
 
-// RequirementPoolService.java
+// RequirementPoolService.java — 实际包路径: io.metersphere.requirement.pool.service
 public interface RequirementPoolService {
     // 分页查询需求池
-    Page<RequirementPool> listRequirements(RequirementPoolQueryCondition query);
+    List<RequirementPool> listRequirements(QueryRequirementPoolRequest request);
 
     // 获取需求详情
     RequirementPool getByDmpNum(String dmpNum);
@@ -583,23 +610,49 @@ public interface TestPlanService {
 
 **页面布局**:
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ 需求池                                                       │
-├─────────────────────────────────────────────────────────────┤
-│ [创建需求]                          [ms-table-header 公共搜索]│
-├─────────────────────────────────────────────────────────────┤
-│ 需求编号 │ 需求名称 │ 状态 │ 系统 │ 负责人 │ 提出时间 │ 操作 │
-│─────────┼─────────┼─────┼─────┼───────┼─────────┼──────│
-│ REQ-001 │ 需求A   │ 未创建│ 系统A│ 张三   │ 2024-01-01│[创建测试计划]│
-│ REQ-002 │ 需求B   │ 已创建│ 系统B│ 李四   │ 2024-01-02│[创建测试计划]│
-│ REQ-003 │ 需求C   │ 已取消│ 系统C│ 王五   │ 2024-01-03│[创建测试计划]│
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 需求池                                                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ [创建需求]                                           [ms-table-header 搜索]│
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 需求编号│需求名称│需求池状态│当前环节│主流程编码│操作类型│所属系统│需求负责人││
+│────────┼───────┼─────────┼───────┼─────────┼───────┼───────┼─────────│
+│ 当前处理人│需求大类│需求子类│需求申请部门│需求申请人│需求负责人处室│创建人│操作│
+│─────────┼───────┼───────┼──────────┼──────────┼────────────┼─────┼────│
+│ 预计上线时间│需求提出时间│                                                  │
+│───────────┼───────────┤                                                  │
+│ REQ-001 │ 需求A │ 未创建  │测试待处理│ WF-001  │CREATED│ 系统A │ 张三   │
+│ ...     │       │         │        │         │       │       │        │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **页面行为**:
 - 左上角主按钮为"创建需求"
 - 行内操作按钮为"创建测试计划"
 - 两者分别对应需求池 CRUD 新增和需求关联建计划两个不同动作
+- 列表支持17个字段列，用户可通过表头设置自定义显示列
+
+**列表字段完整清单（17项，与字段确认清单对齐）**:
+
+| 序号 | 字段ID | 列标签 | 类型 | 可排序 | 可筛选 |
+|------|--------|--------|------|--------|--------|
+| 1 | dmpNum | 需求编号 | 文本 | 是 | 高级搜索 |
+| 2 | requirementName | 需求名称 | 文本 | 是 | 高级搜索 |
+| 3 | poolStatus | 需求池状态 | Tag+筛选 | - | 列头筛选+高级搜索 |
+| 4 | actName | 当前环节 | 文本 | - | 列头筛选+高级搜索 |
+| 5 | parentWfinstCode | 主流程编码 | 文本 | - | 高级搜索 |
+| 6 | operationType | 操作类型 | 文本 | - | 列头筛选+高级搜索 |
+| 7 | systemName | 所属系统 | 文本 | 是 | 列头筛选+高级搜索 |
+| 8 | reqManagerName | 需求负责人 | 文本 | - | 高级搜索 |
+| 9 | assigneeName | 当前处理人 | 文本 | - | 列头筛选+高级搜索 |
+| 10 | reqFatherClass | 需求大类 | 文本 | - | 列头筛选+高级搜索 |
+| 11 | reqSonClass | 需求子类 | 文本 | - | 列头筛选+高级搜索 |
+| 12 | createdDept | 需求申请部门 | 文本 | - | 列头筛选+高级搜索 |
+| 13 | createUser1 | 需求申请人 | 文本 | - | 高级搜索 |
+| 14 | deptName | 需求负责人处室 | 文本 | - | 高级搜索 |
+| 15 | startUserName | 创建人 | 文本 | - | 高级搜索 |
+| 16 | upTime | 预计上线时间 | 时间戳 | 是 | 高级搜索(日期范围) |
+| 17 | createTime | 需求提出时间 | 时间戳 | 是 | 高级搜索(日期范围) |
 
 **默认排序实现（按创建时间降序）**:
 
@@ -610,56 +663,30 @@ public interface TestPlanService {
 ORDER BY create_time DESC
 ```
 
-在前端，通过 page.condition 的 orders 参数设置默认排序：
-
-```javascript
-// 需求池查询默认排序
-this.page.condition.orders = [
-  { name: 'create_time', type: 'desc' }
-];
-```
-
-**状态列实现（模仿测试计划状态字段）**:
+**状态列实现**:
 
 ```vue
 <!-- 需求池列表页状态列 -->
 <ms-table-column
     prop="poolStatus"
-    :filters="statusFilters"  <!-- 状态筛选器，模仿测试计划 -->
-    :filtered-value="['PENDING', 'CREATED']"  <!-- 默认筛选值 -->
+    :filters="[{text: '未创建', value: 'PENDING'}, {text: '已创建', value: 'CREATED'}, {text: '已取消', value: 'CANCELLED'}]"
     column-key="poolStatus"
-    :label="$t('requirement.pool.status')"
-    min-width="80px"
+    label="需求池状态"
+    min-width="120px"
 >
   <template v-slot:default="scope">
-    <span :class="getStatusClass(scope.row.poolStatus)">
+    <el-tag :type="getStatusType(scope.row.poolStatus)" size="mini">
       {{ getStatusText(scope.row.poolStatus) }}
-    </span>
+    </el-tag>
   </template>
 </ms-table-column>
-
-<!-- 状态筛选器数据 -->
-statusFilters: [
-  {
-    text: this.$t('requirement.pool.status.pending'),
-    value: 'PENDING'
-  },
-  {
-    text: this.$t('requirement.pool.status.created'),
-    value: 'CREATED'
-  },
-  {
-    text: this.$t('requirement.pool.status.cancelled'),
-    value: 'CANCELLED'
-  }
-]
 ```
 
 **字段说明**:
 - 状态：PENDING（未创建）、CREATED（已创建）、CANCELLED（已取消）
 - 操作列：
   - 未创建状态：显示可点击的"创建测试计划"按钮
-  - 已创建状态：显示**置灰不可点击的"创建测试计划"按钮**（不显示查看链接）
+  - 已创建状态：显示**置灰不可点击的"创建测试计划"按钮**
   - 已取消状态：显示**置灰不可点击的"创建测试计划"按钮**
 
 **高级搜索 UI 组件**:
@@ -667,39 +694,38 @@ statusFilters: [
 - 支持配置化的高级搜索功能
 - 使用 page.condition 机制处理搜索条件
 
-### 需求池操作优化
+### 创建需求弹窗
 
-**简化操作流程**：
-- 不需要需求详情页
-- 需求编号不再作为链接，直接在列表页操作
-- 操作列按钮根据状态动态显示
+**触发方式**: 点击需求池列表页左上角"创建需求"按钮
 
-**列表页操作优化**：
+**弹窗布局（双列布局，宽度960px）**:
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ 需求池                                                       │
-├─────────────────────────────────────────────────────────────┤
-│ 筛选条件：                                                   │
-│ [需求编号] [需求名称] [状态▼] [所属系统▼] [需求大类▼] [搜索]│
-├─────────────────────────────────────────────────────────────┤
-│ 需求编号 │ 需求名称 │ 状态 │ 系统 │ 负责人 │ 提出时间 │ 操作 │
-│─────────┼─────────┼─────┼─────┼───────┼─────────┼──────│
-│ REQ-001 │ 需求A   │ 未创建│ 系统A│ 张三   │ 2024-01-01│[创建]│
-│ REQ-002 │ 需求B   │ 已创建│ 系统B│ 李四   │ 2024-01-02│[创建]│
-│ REQ-003 │ 需求C   │ 已取消│ 系统C│ 王五   │ 2024-01-03│[创建]│
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│ 创建需求                                                    [×]      │
+├──────────────────────────────────────────────────────────────────────┤
+│ 需求编号：[REQ-2024-001*]      │ 需求名称：[需求名称*]             │
+│ 所属系统：[未指定]              │ 需求负责人：[待分配]               │
+│ 需求大类：[功能需求]            │ 需求子类：[新增功能]               │
+│ 预计上线时间：[日期选择器]      │ 主流程编码：[-]                    │
+│ 当前环节：[测试待处理]          │ 当前处理人：[待分配]               │
+│ 需求申请部门：[-]              │ 需求申请人：[-]                    │
+│ 需求负责人处室：[-]            │ 创建人：[-]                        │
+│                                                                    │
+│                                           [取消]  [保存]           │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-**操作列按钮状态说明**：
-- 未创建状态 →「创建测试计划」按钮**可点击**
-- 已创建状态 →「创建测试计划」按钮**置灰不可点击**
-- 已取消状态 →「创建测试计划」按钮**置灰不可点击**
+**交互说明**:
+- 需求编号、需求名称为必填项（带*标记）
+- 其余字段均预填充默认值
+- 保存时校验 dmpNum 唯一性
+- 创建成功后默认状态为 PENDING
 
 ### 创建测试计划弹窗
 
 #### 从需求池创建测试计划
 
-**触发方式**: 在需求池列表或详情页点击"创建测试计划"按钮
+**触发方式**: 在需求池列表行点击"创建测试计划"按钮
 
 **弹窗布局**:
 ```
@@ -751,35 +777,40 @@ statusFilters: [
 
 ## 涉及文件清单
 
-### 后端文件
+### 后端文件（已落地）
 
 | 文件路径 | 修改类型 | 说明 |
 |----------|----------|------|
-| `test-track/backend/src/main/resources/db/migration/2.10.23.ddl/V19__requirement_pool.sql` | 新增 | 数据库迁移脚本 |
-| `test-track/backend/src/main/java/io/metersphere/track/domain/RequirementPool.java` | 新增 | 需求池实体类 |
+| `test-track/backend/src/main/resources/db/migration/2.10.23.ddl/V19__create_requirement_pool_table.sql` | 新增 | 数据库迁移脚本（含建表、test_plan扩展、测试数据） |
+| `test-track/backend/src/main/java/io/metersphere/base/domain/RequirementPool.java` | 新增 | 需求池实体类 |
+| `test-track/backend/src/main/java/io/metersphere/base/mapper/ext/ExtRequirementPoolMapper.java` | 新增 | 扩展Mapper接口 |
+| `test-track/backend/src/main/java/io/metersphere/base/mapper/ext/ExtRequirementPoolMapper.xml` | 新增 | Mapper XML（含高级搜索combine/filter/condition） |
+| `test-track/backend/src/main/java/io/metersphere/requirement/pool/controller/RequirementPoolController.java` | 新增 | 需求池控制器 |
+| `test-track/backend/src/main/java/io/metersphere/requirement/pool/service/RequirementPoolService.java` | 新增 | 需求池业务逻辑层 |
+| `test-track/backend/src/main/java/io/metersphere/requirement/pool/request/CreateRequirementPoolRequest.java` | 新增 | 创建需求请求DTO |
+| `test-track/backend/src/main/java/io/metersphere/requirement/pool/request/QueryRequirementPoolRequest.java` | 新增 | 查询需求请求DTO |
+
+### 后端文件（待开发）
+
+| 文件路径 | 修改类型 | 说明 |
+|----------|----------|------|
 | `test-track/backend/src/main/java/io/metersphere/track/dto/RequirementSyncMessage.java` | 新增 | 同步消息DTO |
 | `test-track/backend/src/main/java/io/metersphere/track/dto/RequirementCallbackMessage.java` | 新增 | 回传消息DTO |
-| `test-track/backend/src/main/java/io/metersphere/track/dto/RequirementPoolQueryCondition.java` | 新增 | 查询条件DTO |
-| `test-track/backend/src/main/java/io/metersphere/track/mapper/RequirementPoolMapper.java` | 新增 | Mapper接口 |
-| `test-track/backend/src/main/java/io/metersphere/track/mapper/RequirementPoolMapper.xml` | 新增 | Mapper XML |
-| `test-track/backend/src/main/java/io/metersphere/track/service/RequirementSyncService.java` | 新增 | 同步服务 |
-| `test-track/backend/src/main/java/io/metersphere/track/service/RequirementPoolService.java` | 新增 | 需求池服务 |
 | `test-track/backend/src/main/java/io/metersphere/track/consumer/RequirementSyncConsumer.java` | 新增 | MQ消费者 |
 | `test-track/backend/src/main/java/io/metersphere/track/producer/RequirementCallbackProducer.java` | 新增 | MQ生产者 |
-| `test-track/backend/src/main/java/io/metersphere/track/controller/RequirementPoolController.java` | 新增 | 需求池控制器 |
-| `test-track/backend/src/main/java/io/metersphere/track/service/TestPlanService.java` | 修改 | 扩展创建方法 |
-| `test-track/backend/src/main/java/io/metersphere/track/domain/TestPlan.java` | 修改 | 添加requirementNumber字段 |
 | `test-track/backend/pom.xml` | 修改 | 添加RocketMQ依赖 |
 
-### 前端文件
+### 前端文件（已落地）
 
 | 文件路径 | 修改类型 | 说明 |
 |----------|----------|------|
-| `test-track/frontend/src/business/requirement-pool/` | 新增目录 | 需求池模块 |
-| `test-track/frontend/src/business/requirement-pool/list.vue` | 新增 | 需求池列表页 |
-| `test-track/frontend/src/business/requirement-pool/components/` | 新增目录 | 需求池模块组件 |
+| `test-track/frontend/src/business/requirement-pool/list.vue` | 新增 | 需求池列表页（17列+状态Tag+操作按钮） |
+| `test-track/frontend/src/business/requirement-pool/components/CreateRequirementDialog.vue` | 新增 | 创建需求弹窗（双列布局+默认值） |
 | `test-track/frontend/src/api/requirement-pool.js` | 新增 | 需求池API接口 |
 | `test-track/frontend/src/router/modules/track.js` | 修改 | 添加需求池路由 |
+| `framework/sdk-parent/frontend/src/utils/default-table-header.js` | 修改 | 添加REQUIREMENT_POOL_LIST列配置（17列） |
+| `framework/sdk-parent/frontend/src/components/search/search-components.js` | 修改 | 添加17个高级搜索配置+BUILTIN_ADV_SEARCH_KEYS |
+| `test-track/frontend/src/business/plan/components/TestPlanEdit.vue` | 修改 | 支持openFromRequirement()从需求池创建 |
 
 ### 配置文件
 
@@ -800,319 +831,130 @@ statusFilters: [
 | **orders** | 排序规则 | Array | 列排序 |
 | **components** | 搜索组件配置 | Array | 高级搜索UI |
 
-### 高级搜索组件配置（components）
+### BUILTIN_ADV_SEARCH_KEYS 路由机制
 
-**前端配置文件**：`test-track/frontend/src/components/search/search-components.js`
+`BUILTIN_ADV_SEARCH_KEYS` 是一个前端白名单数组，决定搜索字段的值放入 `combine[key]`（直接SQL处理）还是 `combine.customs[]`（自定义字段系统处理）。
+
+**需求池已注册的 BUILTIN_ADV_SEARCH_KEYS**:
+```javascript
+'dmpNum', 'requirementName', 'poolStatus', 'systemName', 'reqFatherClass',
+'reqSonClass', 'reqManagerName', 'actName', 'parentWfinstCode', 'operationType',
+'assigneeName', 'createdDept', 'createUser1', 'deptName', 'startUserName',
+'upTime'
+```
+
+**路由逻辑**（在 `MsTableAdvSearchBar.vue` / `MsTableAdvSearch.vue` 中）:
+```javascript
+setCondition(condition, component) {
+  const key = component && component.key ? String(component.key) : '';
+  const isBuiltin = BUILTIN_ADV_SEARCH_KEY_SET.has(key);
+  if (!isBuiltin) {
+    // 非内置字段 → combine.customs[]（自定义字段查询）
+    this.handleCustomField(condition, component);
+    return;
+  }
+  // 内置字段 → combine[key] = { operator, value }（直接SQL条件）
+  condition[key] = {
+    operator: component.operator.value,
+    value: component.value,
+  };
+}
+```
+
+### 高级搜索组件配置（17项，完整版）
+
+**前端配置文件**：`framework/sdk-parent/frontend/src/components/search/search-components.js`
 
 ```javascript
-import { OPERATORS } from './search-operators';
-
 export const REQUIREMENT_POOL_LIST = [
-  // 需求编号：文本输入，模糊匹配
-  {
-    key: "dmpNum",
-    name: 'MsTableSearchInput',
-    label: '需求编号',
-    operator: {
-      value: OPERATORS.LIKE.value,
-      options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
-    }
-  },
-  // 需求名称：文本输入，模糊匹配
-  {
-    key: "requirementName",
-    name: 'MsTableSearchInput',
-    label: '需求名称',
-    operator: {
-      value: OPERATORS.LIKE.value,
-      options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
-    }
-  },
-  // 需求状态：下拉选择，多选
-  {
-    key: "poolStatus",
-    name: 'MsTableSearchSelect',
-    label: '需求状态',
-    operator: {
-      options: [OPERATORS.IN, OPERATORS.NOT_IN]
-    },
-    options: [
-      { label: '未创建', value: 'PENDING' },
-      { label: '已创建', value: 'CREATED' },
-      { label: '已取消', value: 'CANCELLED' }
-    ],
-    props: {
-      multiple: true
-    }
-  },
-  // 所属系统：下拉选择，多选（动态选项）
-  {
-    key: "systemName",
-    name: 'MsTableSearchSelect',
-    label: '所属系统',
-    operator: {
-      options: [OPERATORS.IN, OPERATORS.NOT_IN]
-    },
-    options: [],  // 从后端获取所有 systemName 去重列表
-    props: {
-      multiple: true
-    }
-  },
-  // 需求大类：下拉选择，多选（动态选项）
-  {
-    key: "reqFatherClass",
-    name: 'MsTableSearchSelect',
-    label: '需求大类',
-    operator: {
-      options: [OPERATORS.IN, OPERATORS.NOT_IN]
-    },
-    options: [],  // 从后端获取所有 reqFatherClass 去重列表
-    props: {
-      multiple: true
-    }
-  },
-  // 需求提出时间：日期时间选择器
-  {
-    key: "createTime",
-    name: 'MsTableSearchDateTimePicker',
-    label: '需求提出时间',
-    operator: {
-      options: [OPERATORS.BETWEEN, OPERATORS.GT, OPERATORS.LT]
-    }
-  },
-  // 预计上线时间：日期时间选择器
-  {
-    key: "upTime",
-    name: 'MsTableSearchDateTimePicker',
-    label: '预计上线时间',
-    operator: {
-      options: [OPERATORS.BETWEEN, OPERATORS.GT, OPERATORS.LT]
-    }
-  },
-  // 需求负责人：文本输入，模糊匹配
-  {
-    key: "reqManagerName",
-    name: 'MsTableSearchInput',
-    label: '需求负责人',
-    operator: {
-      value: OPERATORS.LIKE.value,
-      options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE]
-    }
-  }
+  REQUIREMENT_DMP_NUM,           // 需求编号 - 文本模糊
+  REQUIREMENT_NAME,              // 需求名称 - 文本模糊
+  REQUIREMENT_POOL_STATUS,       // 需求池状态 - 下拉多选
+  REQUIREMENT_SYSTEM_NAME,       // 所属系统 - 下拉多选
+  REQUIREMENT_FATHER_CLASS,      // 需求大类 - 下拉多选
+  REQUIREMENT_SON_CLASS,         // 需求子类 - 下拉多选
+  REQUIREMENT_MANAGER_NAME,      // 需求负责人 - 文本模糊
+  REQUIREMENT_ACT_NAME,          // 当前环节 - 文本模糊
+  REQUIREMENT_PARENT_WFINST_CODE,// 主流程编码 - 文本模糊
+  REQUIREMENT_ASSIGNEE_NAME,     // 当前处理人 - 文本模糊
+  REQUIREMENT_CREATED_DEPT,      // 需求申请部门 - 文本模糊
+  REQUIREMENT_CREATE_USER,       // 需求申请人 - 文本模糊
+  REQUIREMENT_DEPT_NAME,         // 需求负责人处室 - 文本模糊
+  REQUIREMENT_START_USER_NAME,   // 创建人 - 文本模糊
+  REQUIREMENT_OPERATION_TYPE,    // 操作类型 - 文本模糊
+  CREATE_TIME,                   // 需求提出时间 - 日期范围
+  REQUIREMENT_UP_TIME,           // 预计上线时间 - 日期范围
 ];
 ```
 
-### 前端使用示例（RequirementPoolList.vue）
+### 后端 Mapper XML 处理（ExtRequirementPoolMapper.xml）
 
-**注意**：`ms-table-header` 是 `framework/sdk-parent` 提供的公共组件，不需要重新开发。
-
-```vue
-<template>
-  <el-card class="table-card" v-loading="cardLoading">
-    <template v-slot:header>
-      <!-- 使用公共组件 MsTableHeader -->
-      <ms-table-header
-        :condition.sync="page.condition"
-        @search="search"
-      />
-    </template>
-
-    <ms-table
-      :data="page.data"
-      :total="page.total"
-      :condition.sync="page.condition"
-      @handlePageChange="handlePageChange"
-      @order="search"
-      :screen-height="screenHeight"
-    >
-      <!-- 表格列定义 -->
-    </ms-table>
-  </el-card>
-</template>
-
-<script>
-import { REQUIREMENT_POOL_LIST } from '@/components/search/search-components';
-import { getPageInfo } from '@/utils/pageInfo';
-
-export default {
-  data() {
-    return {
-      page: getPageInfo({
-        components: REQUIREMENT_POOL_LIST,  // 初始化高级搜索组件配置
-        custom: false
-      }),
-      tableHeaderKey: 'REQUIREMENT_POOL_LIST'
-    };
-  },
-  methods: {
-    search() {
-      this.page.currentPage = 1;
-      this.getRequirementList();
-    },
-    handlePageChange() {
-      this.getRequirementList();
-    },
-    getRequirementList() {
-      // 恢复上次排序
-      this.page.condition.orders = getLastTableSortField(this.tableHeaderKey);
-
-      getRequirementPoolList(
-        this.page.currentPage,
-        this.page.pageSize,
-        this.page.condition
-      ).then(response => {
-        this.page.data = response.data.listObject;
-        this.page.total = response.data.itemCount;
-      });
-    }
-  }
-};
-</script>
-```
-
-### 后端 Mapper XML 处理（RequirementPoolMapper.xml）
-
+**combine SQL片段**（高级搜索条件，17个字段全部支持）:
 ```xml
-<!-- 需求池列表查询 - 高级搜索 -->
-<select id="selectByPageCondition" resultMap="BaseResultMap">
-  SELECT * FROM requirement_pool
-  <where>
-    <!-- 处理 filters（精确匹配） -->
-    <if test="request.filters != null and request.filters.size() > 0">
-      <foreach collection="request.filters.entrySet()" index="key" item="values">
-        <if test="values != null and values.size() > 0">
-          <!-- 需求状态 -->
-          <if test="key == 'poolStatus'">
-            AND pool_status IN
-            <foreach collection="values" item="value" open="(" close=")" separator=",">
-              #{value}
-            </foreach>
-          </if>
-          <!-- 所属系统 -->
-          <if test="key == 'systemName'">
-            AND system_name IN
-            <foreach collection="values" item="value" open="(" close=")" separator=",">
-              #{value}
-            </foreach>
-          </if>
-          <!-- 需求大类 -->
-          <if test="key == 'reqFatherClass'">
-            AND req_father_class IN
-            <foreach collection="values" item="value" open="(" close=")" separator=",">
-              #{value}
-            </foreach>
-          </if>
-        </if>
-      </foreach>
+<sql id="combine">
+    <!-- 文本模糊搜索字段 -->
+    <if test="${condition}.dmpNum != null">
+        and requirement_pool.dmp_num <include refid="condition"><property name="object" value="${condition}.dmpNum"/></include>
     </if>
-
-    <!-- 处理 combine（模糊匹配） -->
-    <if test="request.combine != null">
-      <foreach collection="request.combine.entrySet()" index="key" item="condition">
-        <!-- 需求编号 -->
-        <if test="key == 'dmpNum'">
-          <if test="condition.operator == 'like'">
-            AND dmp_num LIKE CONCAT('%', #{condition.value}, '%')
-          </if>
-          <if test="condition.operator == 'not like'">
-            AND dmp_num NOT LIKE CONCAT('%', #{condition.value}, '%')
-          </if>
-        </if>
-        <!-- 需求名称 -->
-        <if test="key == 'requirementName'">
-          <if test="condition.operator == 'like'">
-            AND requirement_name LIKE CONCAT('%', #{condition.value}, '%')
-          </if>
-          <if test="condition.operator == 'not like'">
-            AND requirement_name NOT LIKE CONCAT('%', #{condition.value}, '%')
-          </if>
-        </if>
-        <!-- 需求提出时间 -->
-        <if test="key == 'createTime'">
-          <if test="condition.operator == 'between'">
-            AND create_time BETWEEN #{condition.value[0]} AND #{condition.value[1]}
-          </if>
-          <if test="condition.operator == 'gt'">
-            AND create_time > #{condition.value}
-          </if>
-          <if test="condition.operator == 'lt'">
-            AND create_time < #{condition.value}
-          </if>
-        </if>
-        <!-- 预计上线时间 -->
-        <if test="key == 'upTime'">
-          <if test="condition.operator == 'between'">
-            AND up_time BETWEEN #{condition.value[0]} AND #{condition.value[1]}
-          </if>
-          <if test="condition.operator == 'gt'">
-            AND up_time > #{condition.value}
-          </if>
-          <if test="condition.operator == 'lt'">
-            AND up_time < #{condition.value}
-          </if>
-        </if>
-        <!-- 需求负责人 -->
-        <if test="key == 'reqManagerName'">
-          <if test="condition.operator == 'like'">
-            AND req_manager_name LIKE CONCAT('%', #{condition.value}, '%')
-          </if>
-          <if test="condition.operator == 'not like'">
-            AND req_manager_name NOT LIKE CONCAT('%', #{condition.value}, '%')
-          </if>
-        </if>
-      </foreach>
+    <if test="${condition}.requirementName != null">
+        and requirement_pool.requirement_name <include refid="condition"><property name="object" value="${condition}.requirementName"/></include>
     </if>
-  </where>
-
-  <!-- 处理 orders（排序） -->
-  <if test="request.orders != null and request.orders.size() > 0">
-    ORDER BY
-    <foreach collection="request.orders" item="order" separator=",">
-      ${order.name} ${order.type}
-    </foreach>
-  </if>
-  <if test="request.orders == null or request.orders.size() == 0">
-    ORDER BY create_time DESC
-  </if>
-</select>
+    <if test="${condition}.reqManagerName != null">
+        and requirement_pool.req_manager_name <include refid="condition"><property name="object" value="${condition}.reqManagerName"/></include>
+    </if>
+    <if test="${condition}.actName != null">
+        and requirement_pool.act_name <include refid="condition"><property name="object" value="${condition}.actName"/></include>
+    </if>
+    <if test="${condition}.operationType != null">
+        and requirement_pool.operation_type <include refid="condition"><property name="object" value="${condition}.operationType"/></include>
+    </if>
+    <if test="${condition}.assigneeName != null">
+        and requirement_pool.assignee_name <include refid="condition"><property name="object" value="${condition}.assigneeName"/></include>
+    </if>
+    <if test="${condition}.createdDept != null">
+        and requirement_pool.created_dept <include refid="condition"><property name="object" value="${condition}.createdDept"/></include>
+    </if>
+    <if test="${condition}.createUser1 != null">
+        and requirement_pool.create_user1 <include refid="condition"><property name="object" value="${condition}.createUser1"/></include>
+    </if>
+    <if test="${condition}.deptName != null">
+        and requirement_pool.dept_name <include refid="condition"><property name="object" value="${condition}.deptName"/></include>
+    </if>
+    <if test="${condition}.startUserName != null">
+        and requirement_pool.start_user_name <include refid="condition"><property name="object" value="${condition}.startUserName"/></include>
+    </if>
+    <!-- 精确/多选搜索字段 -->
+    <if test="${condition}.poolStatus != null">
+        and requirement_pool.pool_status <include refid="condition"><property name="object" value="${condition}.poolStatus"/></include>
+    </if>
+    <if test="${condition}.systemName != null">
+        and requirement_pool.system_name <include refid="condition"><property name="object" value="${condition}.systemName"/></include>
+    </if>
+    <if test="${condition}.reqFatherClass != null">
+        and requirement_pool.req_father_class <include refid="condition"><property name="object" value="${condition}.reqFatherClass"/></include>
+    </if>
+    <if test="${condition}.reqSonClass != null">
+        and requirement_pool.req_son_class <include refid="condition"><property name="object" value="${condition}.reqSonClass"/></include>
+    </if>
+    <if test="${condition}.parentWfinstCode != null">
+        and requirement_pool.parent_wfinst_code <include refid="condition"><property name="object" value="${condition}.parentWfinstCode"/></include>
+    </if>
+    <!-- 日期范围搜索字段 -->
+    <if test="${condition}.createTime != null">
+        and requirement_pool.create_time <include refid="condition"><property name="object" value="${condition}.createTime"/></include>
+    </if>
+    <if test="${condition}.upTime != null">
+        and requirement_pool.up_time <include refid="condition"><property name="object" value="${condition}.upTime"/></include>
+    </if>
+</sql>
 ```
 
-### 后端 Request 类（RequirementPoolRequest.java）
-
-```java
-package io.metersphere.track.dto;
-
-import lombok.Data;
-import java.util.List;
-import java.util.Map;
-
-@Data
-public class RequirementPoolRequest {
-    private Map<String, List<String>> filters;
-    private Map<String, CombineCondition> combine;
-    private List<OrderCondition> orders;
-    private List<ComponentConfig> components;
-
-    @Data
-    public static class CombineCondition {
-        private String operator;
-        private Object value;
-    }
-
-    @Data
-    public static class OrderCondition {
-        private String name;
-        private String type;
-    }
-
-    @Data
-    public static class ComponentConfig {
-        private String key;
-        private String name;
-        private String label;
-        // ... 其他组件配置字段
-    }
-}
+**filter SQL片段**（列头快速筛选，9个字段支持）:
+```xml
+<sql id="filter">
+    poolStatus, systemName, reqFatherClass, reqSonClass, reqManagerName,
+    actName, assigneeName, createdDept, operationType
+</sql>
 ```
 
 ---
@@ -1158,6 +1000,14 @@ ALTER TABLE `test_plan` ADD UNIQUE KEY `uk_requirement_number` (`requirement_num
     ↓
 状态回传
 ```
+
+### 5. 自定义表头机制
+
+需求池列表使用 MeterSphere 的自定义表头系统：
+- `default-table-header.js` 中定义 `REQUIREMENT_POOL_LIST` 列配置（id, key, label, minWidth, sortable, filters）
+- `getCustomTableHeader()` 读取默认配置 + localStorage 用户自定义列显隐
+- 每列通过 `key`（单字符）进行 localStorage 序列化
+- 列表页 `list.vue` 通过 `v-if="item.id === 'xxx'"` 逐列渲染
 
 ---
 
@@ -1221,34 +1071,36 @@ rocketmq.topic.status-callback=topic-metersphere-to-requirement
 
 **步骤1：创建 Migration 文件**
 
-文件路径：`test-track/backend/src/main/resources/db/migration/2.10.23.ddl/V19__requirement_pool.sql`
+文件路径：`test-track/backend/src/main/resources/db/migration/2.10.23.ddl/V19__create_requirement_pool_table.sql`
 
 ```sql
 SET SESSION innodb_lock_wait_timeout = 7200;
 
 -- 创建需求池表
 CREATE TABLE IF NOT EXISTS `requirement_pool` (
-  `id` VARCHAR(50) NOT NULL COMMENT '主键',
-  `dmp_num` VARCHAR(100) NOT NULL COMMENT '需求编号（唯一）',
-  `requirement_name` VARCHAR(500) NOT NULL COMMENT '需求名称',
-  `pool_status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '需求池状态：PENDING/CREATED/CANCELLED',
+  `id` VARCHAR(32) NOT NULL COMMENT '主键',
+  `dmp_num` VARCHAR(64) NOT NULL COMMENT '需求编号（唯一）',
+  `requirement_name` VARCHAR(255) NOT NULL COMMENT '需求名称',
+  `pool_status` VARCHAR(32) NOT NULL DEFAULT 'PENDING' COMMENT '需求池状态：PENDING/CREATED/CANCELLED',
   `parent_wfinst_code` VARCHAR(100) DEFAULT NULL COMMENT '主流程编码',
-  `req_father_class` VARCHAR(100) DEFAULT NULL COMMENT '需求大类',
-  `req_son_class` VARCHAR(100) DEFAULT NULL COMMENT '需求子类',
-  `system_name` VARCHAR(200) DEFAULT NULL COMMENT '所属系统',
   `act_name` VARCHAR(100) DEFAULT NULL COMMENT '当前环节',
-  `req_manager_name` VARCHAR(100) DEFAULT NULL COMMENT '需求负责人',
-  `assignee_name` VARCHAR(100) DEFAULT NULL COMMENT '当前处理人',
-  `created_dept` VARCHAR(200) DEFAULT NULL COMMENT '需求申请部门',
-  `create_user` VARCHAR(100) DEFAULT NULL COMMENT '需求申请人',
-  `dept_name` VARCHAR(200) DEFAULT NULL COMMENT '需求负责人处室',
-  `start_user_name` VARCHAR(100) DEFAULT NULL COMMENT '创建人',
+  `operation_type` VARCHAR(32) DEFAULT NULL COMMENT '操作类型：CREATED/UPDATED/CANCELLED',
+  `system_name` VARCHAR(255) DEFAULT NULL COMMENT '所属系统',
+  `req_manager_name` VARCHAR(64) DEFAULT NULL COMMENT '需求负责人',
+  `assignee_name` VARCHAR(64) DEFAULT NULL COMMENT '当前处理人',
+  `created_dept` VARCHAR(255) DEFAULT NULL COMMENT '需求申请部门',
+  `create_user1` VARCHAR(64) DEFAULT NULL COMMENT '需求申请人',
+  `dept_name` VARCHAR(255) DEFAULT NULL COMMENT '需求负责人处室',
+  `start_user_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人',
+  `req_father_class` VARCHAR(255) DEFAULT NULL COMMENT '需求大类',
+  `req_son_class` VARCHAR(255) DEFAULT NULL COMMENT '需求子类',
   `create_time` BIGINT DEFAULT NULL COMMENT '需求提出时间（时间戳）',
   `up_time` BIGINT DEFAULT NULL COMMENT '预计上线时间（时间戳）',
   `linked_plan_id` VARCHAR(50) DEFAULT NULL COMMENT '关联的测试计划ID',
+  `linked_plan_name` VARCHAR(255) DEFAULT NULL COMMENT '关联的测试计划名称',
   `last_sync_time` BIGINT NOT NULL COMMENT '最后同步时间（时间戳）',
   `event_time` BIGINT DEFAULT NULL COMMENT '消息事件时间（时间戳）',
-  `trace_id` VARCHAR(100) DEFAULT NULL COMMENT '追踪ID',
+  `trace_id` VARCHAR(64) DEFAULT NULL COMMENT '追踪ID',
   `created_at` BIGINT NOT NULL COMMENT '创建时间（时间戳）',
   `updated_at` BIGINT NOT NULL COMMENT '更新时间（时间戳）',
   PRIMARY KEY (`id`),
@@ -1265,135 +1117,9 @@ ALTER TABLE `test_plan` ADD UNIQUE KEY `uk_requirement_number` (`requirement_num
 SET SESSION innodb_lock_wait_timeout = DEFAULT;
 ```
 
-### 实体类和Mapper实现
-
-**步骤2：创建实体类**
-
-文件路径：`test-track/backend/src/main/java/io/metersphere/track/domain/RequirementPool.java`
-
-```java
-package io.metersphere.track.domain;
-
-import lombok.Data;
-import java.io.Serializable;
-
-@Data
-public class RequirementPool implements Serializable {
-    private String id;
-    private String dmpNum;
-    private String requirementName;
-    private String poolStatus;
-    private String parentWfinstCode;
-    private String reqFatherClass;
-    private String reqSonClass;
-    private String systemName;
-    private String actName;
-    private String reqManagerName;
-    private String assigneeName;
-    private String createdDept;
-    private String createUser;
-    private String deptName;
-    private String startUserName;
-    private Long createTime;
-    private Long upTime;
-    private String linkedPlanId;
-    private Long lastSyncTime;
-    private Long eventTime;
-    private String traceId;
-    private Long createdAt;
-    private Long updatedAt;
-}
-```
-
-**步骤3：创建Mapper接口**
-
-文件路径：`test-track/backend/src/main/java/io/metersphere/track/mapper/RequirementPoolMapper.java`
-
-```java
-package io.metersphere.track.mapper;
-
-import io.metersphere.track.domain.RequirementPool;
-import org.apache.ibatis.annotations.Param;
-import java.util.List;
-
-public interface RequirementPoolMapper {
-    int insert(RequirementPool record);
-    int updateByPrimaryKey(RequirementPool record);
-    RequirementPool selectByPrimaryKey(String id);
-    RequirementPool selectByDmpNum(String dmpNum);
-    List<RequirementPool> selectByCondition(@Param("condition") RequirementPoolQueryCondition condition);
-    int updateStatusByDmpNum(@Param("dmpNum") String dmpNum,
-                             @Param("status") String status,
-                             @Param("linkedPlanId") String linkedPlanId,
-                             @Param("updatedAt") Long updatedAt);
-}
-```
-
-**步骤4：创建Mapper XML**
-
-文件路径：`test-track/backend/src/main/java/io/metersphere/track/mapper/RequirementPoolMapper.xml`
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="io.metersphere.track.mapper.RequirementPoolMapper">
-    <resultMap id="BaseResultMap" type="io.metersphere.track.domain.RequirementPool">
-        <id column="id" property="id"/>
-        <result column="dmp_num" property="dmpNum"/>
-        <result column="requirement_name" property="requirementName"/>
-        <result column="pool_status" property="poolStatus"/>
-        <result column="parent_wfinst_code" property="parentWfinstCode"/>
-        <result column="req_father_class" property="reqFatherClass"/>
-        <result column="req_son_class" property="reqSonClass"/>
-        <result column="system_name" property="systemName"/>
-        <result column="act_name" property="actName"/>
-        <result column="req_manager_name" property="reqManagerName"/>
-        <result column="assignee_name" property="assigneeName"/>
-        <result column="created_dept" property="createdDept"/>
-        <result column="create_user" property="createUser"/>
-        <result column="dept_name" property="deptName"/>
-        <result column="start_user_name" property="startUserName"/>
-        <result column="create_time" property="createTime"/>
-        <result column="up_time" property="upTime"/>
-        <result column="linked_plan_id" property="linkedPlanId"/>
-        <result column="last_sync_time" property="lastSyncTime"/>
-        <result column="event_time" property="eventTime"/>
-        <result column="trace_id" property="traceId"/>
-        <result column="created_at" property="createdAt"/>
-        <result column="updated_at" property="updatedAt"/>
-    </resultMap>
-
-    <insert id="insert">
-        INSERT INTO requirement_pool (
-            id, dmp_num, requirement_name, pool_status, parent_wfinst_code,
-            req_father_class, req_son_class, system_name, act_name, req_manager_name,
-            assignee_name, created_dept, create_user, dept_name, start_user_name,
-            create_time, up_time, last_sync_time, event_time, trace_id,
-            created_at, updated_at
-        ) VALUES (
-            #{id}, #{dmpNum}, #{requirementName}, #{poolStatus}, #{parentWfinstCode},
-            #{reqFatherClass}, #{reqSonClass}, #{systemName}, #{actName}, #{reqManagerName},
-            #{assigneeName}, #{createdDept}, #{createUser}, #{deptName}, #{startUserName},
-            #{createTime}, #{upTime}, #{lastSyncTime}, #{eventTime}, #{traceId},
-            #{createdAt}, #{updatedAt}
-        )
-    </insert>
-
-    <select id="selectByDmpNum" resultMap="BaseResultMap">
-        SELECT * FROM requirement_pool WHERE dmp_num = #{dmpNum}
-    </select>
-
-    <update id="updateStatusByDmpNum">
-        UPDATE requirement_pool
-        SET pool_status = #{status}, linked_plan_id = #{linkedPlanId}, updated_at = #{updatedAt}
-        WHERE dmp_num = #{dmpNum}
-    </update>
-</mapper>
-```
-
 ### RocketMQ消费者实现
 
-**步骤5：创建消息DTO**
+**步骤2：创建消息DTO**
 
 文件路径：`test-track/backend/src/main/java/io/metersphere/track/dto/RequirementSyncMessage.java`
 
@@ -1405,27 +1131,27 @@ import lombok.Data;
 @Data
 public class RequirementSyncMessage {
     private String dmpNum;
-    private String name1;
-    private String operationType; // CREATED/UPDATED/CANCELLED
-    private String reqManagerName;
-    private String actName;
-    private Long createTime;
-    private String parentWfinstCode;
-    private String reqFatherClass;
-    private String reqSonClass;
-    private String systemName;
-    private Long upTime;
-    private String assigneeName;
-    private String createdept;
-    private String createUser1;
-    private String deptName;
-    private String startUserName;
-    private Long eventTime;
-    private String traceId;
+    private String name1;               // 需求名称
+    private String operationType;       // CREATED/UPDATED/CANCELLED
+    private String reqManagerName;      // 需求负责人
+    private String actName;             // 当前环节
+    private Long createTime;            // 需求提出时间
+    private String parentWfinstCode;    // 主流程编码
+    private String reqFatherClass;      // 需求大类
+    private String reqSonClass;         // 需求子类
+    private String systemName;          // 所属系统
+    private Long upTime;                // 预计上线时间
+    private String assigneeName;        // 当前处理人
+    private String createdept;          // 需求申请部门（注意：需求平台字段名无下划线）
+    private String createUser1;         // 需求申请人（注意：后缀为1）
+    private String deptName;            // 需求负责人处室
+    private String startUserName;       // 创建人
+    private Long eventTime;             // 消息事件时间
+    private String traceId;             // 追踪ID
 }
 ```
 
-**步骤6：创建消费者**
+**步骤3：创建消费者**
 
 文件路径：`test-track/backend/src/main/java/io/metersphere/track/consumer/RequirementSyncConsumer.java`
 
@@ -1490,16 +1216,16 @@ public class RequirementSyncConsumer {
 
 ### 业务服务层实现
 
-**步骤7：创建同步服务**
+**步骤4：创建同步服务**
 
 文件路径：`test-track/backend/src/main/java/io/metersphere/track/service/RequirementSyncService.java`
 
 ```java
 package io.metersphere.track.service;
 
-import io.metersphere.track.domain.RequirementPool;
+import io.metersphere.base.domain.RequirementPool;
 import io.metersphere.track.dto.RequirementSyncMessage;
-import io.metersphere.track.mapper.RequirementPoolMapper;
+import io.metersphere.base.mapper.ext.ExtRequirementPoolMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
@@ -1508,12 +1234,12 @@ import java.util.UUID;
 @Service
 public class RequirementSyncService {
     @Resource
-    private RequirementPoolMapper requirementPoolMapper;
+    private ExtRequirementPoolMapper extRequirementPoolMapper;
 
     @Transactional
     public void handleSyncMessage(RequirementSyncMessage message) {
         // 幂等检查
-        RequirementPool existing = requirementPoolMapper.selectByDmpNum(message.getDmpNum());
+        RequirementPool existing = extRequirementPoolMapper.selectByDmpNum(message.getDmpNum());
         if (existing != null && existing.getEventTime() >= message.getEventTime()) {
             return; // 已处理过更新的消息
         }
@@ -1528,7 +1254,7 @@ public class RequirementSyncService {
 
     private void saveOrUpdate(RequirementSyncMessage message, RequirementPool existing) {
         RequirementPool pool = new RequirementPool();
-        pool.setId(existing != null ? existing.getId() : UUID.randomUUID().toString());
+        pool.setId(existing != null ? existing.getId() : UUID.randomUUID().toString().replace("-", ""));
         pool.setDmpNum(message.getDmpNum());
         pool.setRequirementName(message.getName1());
         pool.setReqManagerName(message.getReqManagerName());
@@ -1541,9 +1267,10 @@ public class RequirementSyncService {
         pool.setUpTime(message.getUpTime());
         pool.setAssigneeName(message.getAssigneeName());
         pool.setCreatedDept(message.getCreatedept());
-        pool.setCreateUser(message.getCreateUser1());
+        pool.setCreateUser1(message.getCreateUser1());
         pool.setDeptName(message.getDeptName());
         pool.setStartUserName(message.getStartUserName());
+        pool.setOperationType(message.getOperationType());
         pool.setEventTime(message.getEventTime());
         pool.setTraceId(message.getTraceId());
         pool.setLastSyncTime(System.currentTimeMillis());
@@ -1552,163 +1279,21 @@ public class RequirementSyncService {
         if (existing == null) {
             pool.setPoolStatus("PENDING");
             pool.setCreatedAt(System.currentTimeMillis());
-            requirementPoolMapper.insert(pool);
+            extRequirementPoolMapper.insert(pool);
         } else {
-            requirementPoolMapper.updateByPrimaryKey(pool);
+            extRequirementPoolMapper.updateByPrimaryKey(pool);
         }
     }
 
     private void cancelRequirement(String dmpNum) {
-        requirementPoolMapper.updateStatusByDmpNum(dmpNum, "CANCELLED", null, System.currentTimeMillis());
+        extRequirementPoolMapper.updatePoolStatusAndLinkedPlan(dmpNum, "CANCELLED", null, null);
     }
-}
-```
-
-**步骤8：创建需求池查询服务**
-
-文件路径：`test-track/backend/src/main/java/io/metersphere/track/dto/RequirementPoolQueryCondition.java`
-
-```java
-package io.metersphere.track.dto;
-
-import lombok.Data;
-
-@Data
-public class RequirementPoolQueryCondition {
-    private Integer pageNum = 1;
-    private Integer pageSize = 20;
-    private String dmpNum;
-    private String requirementName;
-    private String poolStatus;
-    private String systemName;
-    private String reqFatherClass;
-    private Long createTimeStart;
-    private Long createTimeEnd;
-}
-```
-
-文件路径：`test-track/backend/src/main/java/io/metersphere/track/service/RequirementPoolService.java`
-
-```java
-package io.metersphere.track.service;
-
-import io.metersphere.track.domain.RequirementPool;
-import io.metersphere.track.dto.RequirementPoolQueryCondition;
-import io.metersphere.track.mapper.RequirementPoolMapper;
-import org.springframework.stereotype.Service;
-import javax.annotation.Resource;
-import java.util.List;
-
-@Service
-public class RequirementPoolService {
-    @Resource
-    private RequirementPoolMapper requirementPoolMapper;
-
-    public List<RequirementPool> list(RequirementPoolQueryCondition condition) {
-        return requirementPoolMapper.selectByCondition(condition);
-    }
-
-    public RequirementPool getByDmpNum(String dmpNum) {
-        return requirementPoolMapper.selectByDmpNum(dmpNum);
-    }
-
-    public void updateStatus(String dmpNum, String status, String linkedPlanId) {
-        requirementPoolMapper.updateStatusByDmpNum(dmpNum, status, linkedPlanId, System.currentTimeMillis());
-    }
-}
-```
-
-**步骤9：创建控制器**
-
-文件路径：`test-track/backend/src/main/java/io/metersphere/track/controller/RequirementPoolController.java`
-
-```java
-package io.metersphere.track.controller;
-
-import io.metersphere.track.domain.RequirementPool;
-import io.metersphere.track.dto.RequirementPoolQueryCondition;
-import io.metersphere.track.service.RequirementPoolService;
-import org.springframework.web.bind.annotation.*;
-import javax.annotation.Resource;
-import java.util.List;
-
-@RestController
-@RequestMapping("/requirement-pool")
-public class RequirementPoolController {
-    @Resource
-    private RequirementPoolService requirementPoolService;
-
-    @PostMapping("/list")
-    public List<RequirementPool> list(@RequestBody RequirementPoolQueryCondition condition) {
-        return requirementPoolService.list(condition);
-    }
-
-    @GetMapping("/{dmpNum}")
-    public RequirementPool getDetail(@PathVariable String dmpNum) {
-        return requirementPoolService.getByDmpNum(dmpNum);
-    }
-}
-```
-
-### 测试计划扩展实现
-
-**步骤10：扩展测试计划服务**
-
-在 `TestPlanService` 中添加方法：
-
-```java
-// 从需求池创建测试计划
-@Transactional
-public TestPlan createFromRequirement(CreateFromRequirementRequest request) {
-    // 检查需求是否存在
-    RequirementPool requirement = requirementPoolService.getByDmpNum(request.getDmpNum());
-    if (requirement == null) {
-        throw new RuntimeException("需求不存在");
-    }
-    if ("CANCELLED".equals(requirement.getPoolStatus())) {
-        throw new RuntimeException("需求已取消");
-    }
-    if (requirement.getLinkedPlanId() != null) {
-        throw new RuntimeException("该需求已创建测试计划");
-    }
-
-    // 创建测试计划
-    TestPlan plan = new TestPlan();
-    plan.setId(UUID.randomUUID().toString());
-    plan.setName(requirement.getRequirementName()); // 使用需求名称，不可编辑
-    plan.setProjectId(request.getProjectId());
-    plan.setPrincipal(request.getPrincipalId());
-    plan.setRequirementNumber(request.getDmpNum()); // 设置需求编号（非null）
-    plan.setStatus("PENDING");
-    plan.setCreateTime(System.currentTimeMillis());
-    testPlanMapper.insert(plan);
-
-    // 更新需求池状态
-    requirementPoolService.updateStatus(request.getDmpNum(), "CREATED", plan.getId());
-
-    return plan;
-}
-
-// 直接创建测试计划
-@Transactional
-public TestPlan create(CreateTestPlanRequest request) {
-    TestPlan plan = new TestPlan();
-    plan.setId(UUID.randomUUID().toString());
-    plan.setName(request.getName()); // 用户输入的名称
-    plan.setProjectId(request.getProjectId());
-    plan.setPrincipal(request.getPrincipalId());
-    plan.setRequirementNumber(null); // 设置为null，表示非需求关联
-    plan.setStatus("PENDING");
-    plan.setCreateTime(System.currentTimeMillis());
-    testPlanMapper.insert(plan);
-
-    return plan;
 }
 ```
 
 ### 状态回传实现
 
-**步骤11：创建回传消息DTO**
+**步骤5：创建回传消息DTO**
 
 文件路径：`test-track/backend/src/main/java/io/metersphere/track/dto/RequirementCallbackMessage.java`
 
@@ -1732,7 +1317,7 @@ public class RequirementCallbackMessage {
 }
 ```
 
-**步骤12：创建回传生产者**
+**步骤6：创建回传生产者**
 
 文件路径：`test-track/backend/src/main/java/io/metersphere/track/producer/RequirementCallbackProducer.java`
 
@@ -1780,7 +1365,7 @@ public class RequirementCallbackProducer {
 }
 ```
 
-**步骤13：在测试计划状态更新时触发回传**
+**步骤7：在测试计划状态更新时触发回传**
 
 在 `TestPlanService` 的状态更新方法中添加：
 
@@ -1886,3 +1471,5 @@ public void updateStatus(String planId, String status) {
 3. **一对一关联**: test_plan.requirement_number唯一索引保证
 4. **消息可靠性**: RocketMQ事务消息 + 失败重试
 5. **数据追溯**: traceId + 操作日志 + 审计字段
+6. **自定义表头**: REQUIREMENT_POOL_LIST 17列配置 + localStorage 列显隐
+7. **高级搜索**: 17个字段全部注册BUILTIN_ADV_SEARCH_KEYS，combine片段完整覆盖
