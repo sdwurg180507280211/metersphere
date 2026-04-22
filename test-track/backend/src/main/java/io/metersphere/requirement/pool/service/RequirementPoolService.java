@@ -147,7 +147,7 @@ public class RequirementPoolService {
         testPlanNodeService.checkDefaultNode(projectId);
         TestPlanNode defaultNode = testPlanNodeService.getDefaultNode(projectId);
         if (defaultNode == null) {
-            MSException.throwException("默认测试计划模块不存在");
+            MSException.throwException("默认测试计划系统不存在");
         }
         return defaultNode.getId();
     }
@@ -159,7 +159,7 @@ public class RequirementPoolService {
         testPlanNodeService.checkDefaultNode(projectId);
         TestPlanNode defaultNode = testPlanNodeService.getDefaultNode(projectId);
         if (defaultNode == null) {
-            MSException.throwException("默认测试计划模块不存在");
+            MSException.throwException("默认测试计划系统不存在");
         }
         return defaultNode.getName();
     }

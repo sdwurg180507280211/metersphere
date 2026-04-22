@@ -10,7 +10,7 @@
       :delete-permission="['PROJECT_TRACK_REVIEW:READ+DELETE']"
       :add-permission="['PROJECT_TRACK_REVIEW:READ+CREATE']"
       :update-permission="['PROJECT_TRACK_REVIEW:READ+EDIT']"
-      default-label="未规划模块"
+      default-label="未规划系统"
       local-suffix="ui_module"
       :hide-node-operator="hideNodeOperator"
       @add="add"

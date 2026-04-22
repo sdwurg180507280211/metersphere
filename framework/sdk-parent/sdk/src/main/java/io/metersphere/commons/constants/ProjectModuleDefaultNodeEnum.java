@@ -30,7 +30,11 @@ public enum ProjectModuleDefaultNodeEnum {
     /**
      * 未规划模块(评审, 计划)
      */
-    DEFAULT_NODE("未规划模块", "node");
+    DEFAULT_NODE("未规划模块", "node"),
+    /**
+     * 测试跟踪默认节点(评审, 计划)
+     */
+    TRACK_DEFAULT_NODE("未规划系统", "node");
 
     private String nodeName;
     private String tableName;

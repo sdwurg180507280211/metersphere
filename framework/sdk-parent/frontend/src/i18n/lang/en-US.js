@@ -520,7 +520,7 @@ const message = {
       api_scenario: 'default',
       ui_element: 'default',
       ui_scenario: 'default',
-      ui_module: 'default',
+      ui_module: 'Unplanned System',
     },
     other: 'Other',
     function_introduction: 'Function introduction',
