@@ -520,7 +520,7 @@ const message = {
       api_scenario: '未规划场景',
       ui_element: '未规划元素',
       ui_scenario: '未规划场景',
-      ui_module: '未规划模块',
+      ui_module: '未规划系统',
     },
     template_delete: '模版删除',
     scope: '应用场景',
