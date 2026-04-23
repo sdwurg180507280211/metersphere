@@ -37,63 +37,95 @@ function changeTitleColor(targetR, targetG, targetB) {
 }
 
 function processTitleShapes(slide, titleThreshold, targetRGB) {
-    let changed = 0;
-    // 先收集所有标题形状
-    let titleShapes = [];
+    // 先收集所有符合位置条件的标题
+    let candidates = [];
     for (let i = 1; i <= slide.Shapes.Count; i++) {
         const shape = slide.Shapes.Item(i);
-        if (isTitleShape(shape, titleThreshold)) {
-            titleShapes.push(shape);
+        if (isTitleCandidate(shape, titleThreshold)) {
+            candidates.push(shape);
         }
     }
-    // 只处理宽度最大的那个标题
-    if (titleShapes.length > 0) {
-        // 找出宽度最大的
-        let maxWidthShape = titleShapes[0];
-        for (let j = 1; j < titleShapes.length; j++) {
-            if (titleShapes[j].Width > maxWidthShape.Width) {
-                maxWidthShape = titleShapes[j];
-            }
-        }
-        // 处理这个标题
-        changed += processTitleShape(maxWidthShape, titleThreshold, targetRGB);
-        // 删除横线
-        let titleBottoms = [maxWidthShape.Top + maxWidthShape.Height];
-        removeLinesBelowTitles(slide, titleBottoms);
+
+    // 没有找到标题
+    if (candidates.length === 0) {
+        return 0;
     }
-    return changed;
+
+    // 找到宽度最大的那个
+    let maxWidth = -1;
+    let selectedShape = null;
+    for (let i = 0; i < candidates.length; i++) {
+        const shape = candidates[i];
+        if (shape.Width > maxWidth) {
+            maxWidth = shape.Width;
+            selectedShape = shape;
+        }
+    }
+
+    // 只处理选中的那个标题
+    if (selectedShape) {
+        return applyTitleFormat(selectedShape, targetRGB);
+    }
+
+    return 0;
 }
 
-function isTitleShape(shape, titleThreshold) {
+/**
+ * 判断是否为标题候选（位置符合条件）
+ */
+function isTitleCandidate(shape, titleThreshold) {
     try {
-        if (shape.Type === 6) return false; // 跳过组合，内部已处理
-        if (!shape.HasTextFrame || !shape.TextFrame.HasText) return false;
+        // 处理组合
+        if (shape.Type === 6) {
+            for (let i = 1; i <= shape.GroupItems.Count; i++) {
+                if (isTitleCandidate(shape.GroupItems.Item(i), titleThreshold)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 检查文本
+        if (!shape.HasTextFrame || !shape.TextFrame.HasText) {
+            return false;
+        }
+
+        // 位置判断：≤ 2.5cm
         return shape.Top <= titleThreshold;
     } catch (e) {
         return false;
     }
 }
 
-function removeLinesBelowTitles(slide, titleBottoms) {
-    // 从后往前遍历，防止删除导致索引问题
-    for (let i = slide.Shapes.Count; i >= 1; i--) {
-        try {
-            const shape = slide.Shapes.Item(i);
-            // 判断是否是横线：比较扁（高度小），比较宽
-            if (shape.Height < 20 && shape.Width > 100) {
-                // 检查位置是否在某个标题下方
-                for (let j = 0; j < titleBottoms.length; j++) {
-                    const titleBottom = titleBottoms[j];
-                    // 横线在标题下方 0-2.5cm 范围内
-                    if (shape.Top >= titleBottom && shape.Top <= titleBottom + 71) {
-                        shape.Delete();
-                        break;
-                    }
+/**
+ * 对标题应用格式修改
+ */
+function applyTitleFormat(shape, targetRGB) {
+    try {
+        // 处理组合
+        if (shape.Type === 6) {
+            for (let i = 1; i <= shape.GroupItems.Count; i++) {
+                if (applyTitleFormat(shape.GroupItems.Item(i), targetRGB)) {
+                    return 1;
                 }
             }
-        } catch (e) {
-            // 忽略错误
+            return 0;
         }
+
+        // 修改颜色
+        shape.TextFrame.TextRange.Font.Color.RGB = targetRGB;
+
+        // 如果字体大小 > 24，改成 24
+        if (shape.TextFrame.TextRange.Font.Size > 24) {
+            shape.TextFrame.TextRange.Font.Size = 24;
+        }
+
+        // 调整位置和大小
+        adjustTitleLayout(shape);
+
+        return 1;
+    } catch (e) {
+        return 0;
     }
 }
 
@@ -113,45 +145,6 @@ function adjustTitleLayout(shape) {
         // 设置文本框大小自适应（只适应高度，宽度固定）
         shape.TextFrame.AutoSize = 1;  // 1 = ppAutoSizeShapeToFitText
     }
-}
-
-function processTitleShape(shape, titleThreshold, targetRGB) {
-    let changed = 0;
-
-    try {
-        // 处理组合
-        if (shape.Type === 6) {
-            for (let i = 1; i <= shape.GroupItems.Count; i++) {
-                changed += processTitleShape(shape.GroupItems.Item(i), titleThreshold, targetRGB);
-            }
-            return changed;
-        }
-
-        // 检查文本
-        if (!shape.HasTextFrame || !shape.TextFrame.HasText) {
-            return 0;
-        }
-
-        // 位置判断：≤ 2.5cm 就是标题
-        if (shape.Top <= titleThreshold) {
-            // 修改颜色
-            shape.TextFrame.TextRange.Font.Color.RGB = targetRGB;
-
-            // 如果字体大小 > 24，改成 24
-            if (shape.TextFrame.TextRange.Font.Size > 24) {
-                shape.TextFrame.TextRange.Font.Size = 24;
-            }
-
-            // 调整位置和大小
-            adjustTitleLayout(shape);
-
-            changed = 1;
-        }
-    } catch (e) {
-        // 忽略错误
-    }
-
-    return changed;
 }
 
 // ============================================
