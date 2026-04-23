@@ -52,6 +52,14 @@ function adjustTitleLayout(shape) {
     shape.Left = 96.4;    // 3.40cm
     shape.Top = 25.5;     // 0.90cm
     shape.Width = 850.5;  // 30cm
+
+    // 设置自动换行
+    if (shape.TextFrame) {
+        // 打开自动换行
+        shape.TextFrame.WordWrap = true;
+        // 设置文本框大小自适应（只适应高度，宽度固定）
+        shape.TextFrame.AutoSize = 1;  // 1 = ppAutoSizeShapeToFitText
+    }
 }
 
 function processTitleShape(shape, titleThreshold, targetRGB) {
