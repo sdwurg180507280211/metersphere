@@ -38,10 +38,53 @@ function changeTitleColor(targetR, targetG, targetB) {
 
 function processTitleShapes(slide, titleThreshold, targetRGB) {
     let changed = 0;
+    // 先收集所有标题位置
+    let titleBottoms = [];
     for (let i = 1; i <= slide.Shapes.Count; i++) {
-        changed += processTitleShape(slide.Shapes.Item(i), titleThreshold, targetRGB);
+        const shape = slide.Shapes.Item(i);
+        if (isTitleShape(shape, titleThreshold)) {
+            titleBottoms.push(shape.Top + shape.Height);
+            changed += processTitleShape(shape, titleThreshold, targetRGB);
+        }
+    }
+    // 再删除标题下方的横线
+    if (titleBottoms.length > 0) {
+        removeLinesBelowTitles(slide, titleBottoms);
     }
     return changed;
+}
+
+function isTitleShape(shape, titleThreshold) {
+    try {
+        if (shape.Type === 6) return false; // 跳过组合，内部已处理
+        if (!shape.HasTextFrame || !shape.TextFrame.HasText) return false;
+        return shape.Top <= titleThreshold;
+    } catch (e) {
+        return false;
+    }
+}
+
+function removeLinesBelowTitles(slide, titleBottoms) {
+    // 从后往前遍历，防止删除导致索引问题
+    for (let i = slide.Shapes.Count; i >= 1; i--) {
+        try {
+            const shape = slide.Shapes.Item(i);
+            // 判断是否是横线：比较扁（高度小），比较宽
+            if (shape.Height < 20 && shape.Width > 100) {
+                // 检查位置是否在某个标题下方
+                for (let j = 0; j < titleBottoms.length; j++) {
+                    const titleBottom = titleBottoms[j];
+                    // 横线在标题下方 0-2cm 范围内
+                    if (shape.Top >= titleBottom && shape.Top <= titleBottom + 57) {
+                        shape.Delete();
+                        break;
+                    }
+                }
+            }
+        } catch (e) {
+            // 忽略错误
+        }
+    }
 }
 
 /**
@@ -84,9 +127,9 @@ function processTitleShape(shape, titleThreshold, targetRGB) {
             // 修改颜色
             shape.TextFrame.TextRange.Font.Color.RGB = targetRGB;
 
-            // 如果字体大小 > 28，改成 28
-            if (shape.TextFrame.TextRange.Font.Size > 28) {
-                shape.TextFrame.TextRange.Font.Size = 28;
+            // 如果字体大小 > 24，改成 24
+            if (shape.TextFrame.TextRange.Font.Size > 24) {
+                shape.TextFrame.TextRange.Font.Size = 24;
             }
 
             // 调整位置和大小
