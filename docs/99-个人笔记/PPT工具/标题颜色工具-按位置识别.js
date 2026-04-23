@@ -76,6 +76,11 @@ function processTitleShape(shape, titleThreshold, targetRGB) {
             // 修改颜色
             shape.TextFrame.TextRange.Font.Color.RGB = targetRGB;
 
+            // 如果字体大小 > 28，改成 28
+            if (shape.TextFrame.TextRange.Font.Size > 28) {
+                shape.TextFrame.TextRange.Font.Size = 28;
+            }
+
             // 调整位置和大小
             adjustTitleLayout(shape);
 
