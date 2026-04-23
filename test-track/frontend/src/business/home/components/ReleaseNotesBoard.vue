@@ -24,8 +24,23 @@
           </div>
         </div>
       </div>
-      <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="600px" :close-on-click-modal="true" append-to-body>
-        <div class="release-note-content" v-html="formattedContent"></div>
+      <el-dialog :visible.sync="dialogVisible" width="60%" :close-on-click-modal="true" append-to-body class="release-note-dialog" :show-close="true">
+        <div slot="title" class="release-note-dialog-header">
+          <span class="release-note-dialog-title">{{ dialogTitle }}</span>
+        </div>
+        <div class="release-note-dialog-body">
+          <div class="release-note-info-bar">
+            <div class="release-note-info-left">
+              <span class="info-item">创建时间：{{ formatDate(currentItem.createTime) }}</span>
+              <span class="info-item">创建者：{{ currentItem.creator }}</span>
+            </div>
+            <div class="release-note-info-right">
+              <span class="info-type">【类型：公告】</span>
+            </div>
+          </div>
+          <div class="release-note-divider"></div>
+          <div class="release-note-content" v-html="formattedContent"></div>
+        </div>
       </el-dialog>
     </el-card>
   </div>
@@ -43,7 +58,8 @@ export default {
       loadError: false,
       dialogVisible: false,
       dialogTitle: "",
-      currentContent: ""
+      currentContent: "",
+      currentItem: {}
     };
   },
   computed: {
@@ -66,6 +82,7 @@ export default {
     showDetail(item) {
       this.dialogTitle = this.formatDateChinese(item.createTime) + "上线公告";
       this.currentContent = item.content || "";
+      this.currentItem = item;
       this.dialogVisible = true;
     },
     formatDateChinese(timestamp) {
@@ -88,6 +105,66 @@ export default {
 .release-note-title { font-size: 14px; font-weight: 500; color: #1f2329; line-height: 22px; }
 .release-note-meta { font-size: 12px; color: #646a73; line-height: 20px; margin-top: 4px; }
 .release-note-content { font-size: 14px; color: #1f2329; line-height: 24px; word-break: break-word; white-space: pre-wrap; }
+
+/* 对话框样式 */
+.release-note-dialog :deep(.el-dialog__header) {
+  padding: 20px 20px 10px;
+  text-align: center;
+}
+.release-note-dialog-header {
+  text-align: center;
+}
+.release-note-dialog-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1890ff;
+}
+.release-note-dialog-body {
+  padding: 0 20px 20px;
+}
+.release-note-info-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+}
+.release-note-info-left {
+  font-size: 14px;
+  color: #646a73;
+}
+.release-note-info-right {
+  font-size: 14px;
+  color: #1f2329;
+  font-weight: 500;
+}
+.info-item {
+  margin-right: 20px;
+}
+.info-type {
+  font-weight: 500;
+}
+.release-note-divider {
+  height: 1px;
+  background-color: #dcdfe6;
+  margin: 10px 0 20px;
+}
+.release-note-content {
+  font-size: 14px;
+  color: #1f2329;
+  line-height: 32px;
+  word-break: break-word;
+}
+.release-note-content >>> p {
+  margin: 0 0 16px;
+}
+.release-note-content >>> ol,
+.release-note-content >>> ul {
+  padding-left: 24px;
+  margin: 0 0 16px;
+}
+.release-note-content >>> li {
+  margin: 8px 0;
+}
 
 /* 对齐上方卡片的 header 样式 */
 .el-card :deep(.el-card__header) {
