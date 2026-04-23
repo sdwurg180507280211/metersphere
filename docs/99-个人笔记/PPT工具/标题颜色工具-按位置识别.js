@@ -74,8 +74,8 @@ function removeLinesBelowTitles(slide, titleBottoms) {
                 // 检查位置是否在某个标题下方
                 for (let j = 0; j < titleBottoms.length; j++) {
                     const titleBottom = titleBottoms[j];
-                    // 横线在标题下方 0-2cm 范围内
-                    if (shape.Top >= titleBottom && shape.Top <= titleBottom + 57) {
+                    // 横线在标题下方 0-2.5cm 范围内
+                    if (shape.Top >= titleBottom && shape.Top <= titleBottom + 71) {
                         shape.Delete();
                         break;
                     }
