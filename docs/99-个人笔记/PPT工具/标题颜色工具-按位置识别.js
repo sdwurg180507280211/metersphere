@@ -129,6 +129,9 @@ function titleToDarkBlue() { changeTitleColor(0, 32, 96); }
 // 标题改为橙色
 function titleToOrange() { changeTitleColor(255, 192, 0); }
 
+// 标题改为紫色
+function titleToPurple() { changeTitleColor(112, 48, 160); }
+
 /**
  * 批量替换文本内容（所有位置）
  * @param {Array} rules - 替换规则数组 [[from, to], ...]
