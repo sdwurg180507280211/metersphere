@@ -38,17 +38,27 @@ function changeTitleColor(targetR, targetG, targetB) {
 
 function processTitleShapes(slide, titleThreshold, targetRGB) {
     let changed = 0;
-    // 先收集所有标题位置
-    let titleBottoms = [];
+    // 先收集所有标题形状
+    let titleShapes = [];
     for (let i = 1; i <= slide.Shapes.Count; i++) {
         const shape = slide.Shapes.Item(i);
         if (isTitleShape(shape, titleThreshold)) {
-            titleBottoms.push(shape.Top + shape.Height);
-            changed += processTitleShape(shape, titleThreshold, targetRGB);
+            titleShapes.push(shape);
         }
     }
-    // 再删除标题下方的横线
-    if (titleBottoms.length > 0) {
+    // 只处理宽度最大的那个标题
+    if (titleShapes.length > 0) {
+        // 找出宽度最大的
+        let maxWidthShape = titleShapes[0];
+        for (let j = 1; j < titleShapes.length; j++) {
+            if (titleShapes[j].Width > maxWidthShape.Width) {
+                maxWidthShape = titleShapes[j];
+            }
+        }
+        // 处理这个标题
+        changed += processTitleShape(maxWidthShape, titleThreshold, targetRGB);
+        // 删除横线
+        let titleBottoms = [maxWidthShape.Top + maxWidthShape.Height];
         removeLinesBelowTitles(slide, titleBottoms);
     }
     return changed;
