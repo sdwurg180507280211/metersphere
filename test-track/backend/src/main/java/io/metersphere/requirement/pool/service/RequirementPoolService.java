@@ -3,6 +3,8 @@ package io.metersphere.requirement.pool.service;
 import io.metersphere.base.domain.RequirementPool;
 import io.metersphere.base.domain.TestPlan;
 import io.metersphere.base.domain.TestPlanNode;
+import io.metersphere.base.domain.TestPlanNodeExample;
+import io.metersphere.base.mapper.TestPlanNodeMapper;
 import io.metersphere.base.mapper.ext.ExtRequirementPoolMapper;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.SessionUtils;
@@ -30,6 +32,8 @@ public class RequirementPoolService {
     private TestPlanService testPlanService;
     @Resource
     private TestPlanNodeService testPlanNodeService;
+    @Resource
+    private TestPlanNodeMapper testPlanNodeMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public RequirementPool addRequirement(CreateRequirementPoolRequest request) {
@@ -132,35 +136,92 @@ public class RequirementPoolService {
         testPlanRequest.setRepeatCase(request.getRepeatCase());
         testPlanRequest.setTags(request.getTags());
         testPlanRequest.setRequirementNumber(requirement.getDmpNum());
-        testPlanRequest.setNodeId(getNodeId(request, projectId));
-        testPlanRequest.setNodePath(getNodePath(request, projectId));
+        String[] nodeInfo = resolveSubModuleNode(request, requirement.getDmpNum(), requirement.getRequirementName(), projectId);
+        testPlanRequest.setNodeId(nodeInfo[0]);
+        testPlanRequest.setNodePath(nodeInfo[1]);
         if (StringUtils.isNotBlank(request.getPrincipalId())) {
             testPlanRequest.setPrincipals(Collections.singletonList(request.getPrincipalId()));
         }
         return testPlanRequest;
     }
 
-    private String getNodeId(CreateTestPlanFromRequirementRequest request, String projectId) {
-        if (StringUtils.isNotBlank(request.getNodeId())) {
-            return request.getNodeId();
-        }
-        testPlanNodeService.checkDefaultNode(projectId);
-        TestPlanNode defaultNode = testPlanNodeService.getDefaultNode(projectId);
-        if (defaultNode == null) {
-            MSException.throwException("默认测试计划系统不存在");
-        }
-        return defaultNode.getId();
-    }
+    // private String getNodeId(CreateTestPlanFromRequirementRequest request, String projectId) {
+    //     if (StringUtils.isNotBlank(request.getNodeId())) {
+    //         return request.getNodeId();
+    //     }
+    //     testPlanNodeService.checkDefaultNode(projectId);
+    //     TestPlanNode defaultNode = testPlanNodeService.getDefaultNode(projectId);
+    //     if (defaultNode == null) {
+    //         MSException.throwException("默认测试计划系统不存在");
+    //     }
+    //     return defaultNode.getId();
+    // }
+    //
+    // private String getNodePath(CreateTestPlanFromRequirementRequest request, String projectId) {
+    //     if (StringUtils.isNotBlank(request.getNodePath())) {
+    //         return request.getNodePath();
+    //     }
+    //     testPlanNodeService.checkDefaultNode(projectId);
+    //     TestPlanNode defaultNode = testPlanNodeService.getDefaultNode(projectId);
+    //     if (defaultNode == null) {
+    //         MSException.throwException("默认测试计划系统不存在");
+    //     }
+    //     return defaultNode.getName();
+    // }
 
-    private String getNodePath(CreateTestPlanFromRequirementRequest request, String projectId) {
-        if (StringUtils.isNotBlank(request.getNodePath())) {
-            return request.getNodePath();
+    /**
+     * 解析测试计划所属模块：在用户选择的模块下自动创建 "需求编号+需求名称" 子模块
+     * 例如：用户选择模块"系统X"，需求编号001，需求名称"需求1"，则创建子模块"001需求1"
+     *
+     * @return String[0]=nodeId, String[1]=nodePath
+     */
+    private String[] resolveSubModuleNode(CreateTestPlanFromRequirementRequest request, String dmpNum, String requirementName, String projectId) {
+        String parentNodeId = request.getNodeId();
+        String parentNodePath = request.getNodePath();
+
+        // 未选择模块，使用默认节点
+        if (StringUtils.isBlank(parentNodeId)) {
+            testPlanNodeService.checkDefaultNode(projectId);
+            TestPlanNode defaultNode = testPlanNodeService.getDefaultNode(projectId);
+            if (defaultNode == null) {
+                MSException.throwException("默认测试计划系统不存在");
+            }
+            return new String[]{defaultNode.getId(), defaultNode.getName()};
         }
-        testPlanNodeService.checkDefaultNode(projectId);
-        TestPlanNode defaultNode = testPlanNodeService.getDefaultNode(projectId);
-        if (defaultNode == null) {
-            MSException.throwException("默认测试计划系统不存在");
+
+        // 查询父节点信息
+        TestPlanNode parentNode = testPlanNodeMapper.selectByPrimaryKey(parentNodeId);
+        if (parentNode == null) {
+            MSException.throwException("所选模块不存在");
         }
-        return defaultNode.getName();
+
+        // 构造子模块名：需求编号+需求名称
+        String subModuleName = dmpNum + requirementName;
+
+        // 查找是否已存在同名子模块
+        TestPlanNodeExample example = new TestPlanNodeExample();
+        example.createCriteria()
+                .andProjectIdEqualTo(projectId)
+                .andParentIdEqualTo(parentNodeId)
+                .andNameEqualTo(subModuleName);
+        List<TestPlanNode> existingNodes = testPlanNodeMapper.selectByExample(example);
+
+        if (!existingNodes.isEmpty()) {
+            // 子模块已存在，直接复用
+            TestPlanNode existingNode = existingNodes.get(0);
+            String subNodePath = parentNodePath + "/" + subModuleName;
+            return new String[]{existingNode.getId(), subNodePath};
+        }
+
+        // 创建新子模块
+        TestPlanNode subNode = new TestPlanNode();
+        subNode.setProjectId(projectId);
+        subNode.setName(subModuleName);
+        subNode.setParentId(parentNodeId);
+        subNode.setLevel(parentNode.getLevel() + 1);
+        String subNodeId = testPlanNodeService.addNode(subNode);
+
+        String subNodePath = parentNodePath + "/" + subModuleName;
+        return new String[]{subNodeId, subNodePath};
     }
 }
