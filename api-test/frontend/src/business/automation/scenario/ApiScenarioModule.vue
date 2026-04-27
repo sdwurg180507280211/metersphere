@@ -58,6 +58,27 @@ import {
   postModuleByTrash,
 } from '@/api/scenario-module';
 
+/**
+ * 简易防抖函数
+ */
+function debounce(fn, delay) {
+  let timer = null;
+  const debounced = function (...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      fn.apply(this, args);
+      timer = null;
+    }, delay);
+  };
+  debounced.cancel = function () {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  return debounced;
+}
+
 export default {
   name: 'MsApiScenarioModule',
   components: {
@@ -154,14 +175,18 @@ export default {
     }
   },
   watch: {
-    'condition.filterText'() {
-      this.filter();
+    'condition.filterText': {
+      handler() {
+        this.filter();
+      },
     },
     relevanceProjectId() {
       this.list();
     },
   },
   created() {
+    // 树搜索防抖，避免每次按键都触发 el-tree.filter 导致卡顿
+    this.filter = debounce(this._filter, 300);
     this.$EventBus.$on('scenarioConditionBus', (param) => {
       this.param = param;
       if(this.$route.params && this.$route.params.versionId) {
@@ -173,6 +198,10 @@ export default {
     this.$EventBus.$off('scenarioConditionBus', (param) => {
       this.param = param;
     });
+    // 清理防抖函数
+    if (this.filter && this.filter.cancel) {
+      this.filter.cancel();
+    }
   },
   methods: {
     handleImport() {
@@ -182,7 +211,8 @@ export default {
       }
       this.$refs.apiImport.open(this.currentModule);
     },
-    filter() {
+    // 实际执行过滤的方法
+    _filter() {
       this.$refs.nodeTree.filter(this.condition.filterText);
     },
     list(projectId) {

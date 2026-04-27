@@ -271,7 +271,7 @@
             </el-row>
             <el-row>
               <!-- 场景步骤内容 -->
-              <div ref="stepInfo" v-if="stepCount <= 200">
+              <div ref="stepInfo" v-if="stepCount <= 50">
                 <el-tree
                   node-key="resourceId"
                   :props="props"
