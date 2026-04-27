@@ -5,25 +5,25 @@
     <el-row style="margin-bottom: 10px;" type="flex" justify="space-between" align="middle">
       <el-col :span="12">
         <el-button icon="el-icon-circle-plus-outline" plain size="mini" v-permission="['SYSTEM_SETTING:READ+EDIT']" @click="handleAdd">
-          新增上线记录
+          {{ $t('announcement.release_note_add') }}
         </el-button>
       </el-col>
       <el-col :span="12" style="text-align: right;">
         <el-button type="primary" icon="el-icon-s-flag" size="mini" v-permission="['SYSTEM_SETTING:READ+EDIT']" @click="$emit('openBanner')">
-          横幅公告设置
+          {{ $t('announcement.banner_setting') }}
         </el-button>
       </el-col>
     </el-row>
 
     <el-table border class="adjust-table" :data="tableData" style="width: 100%">
-      <el-table-column prop="title" label="标题" show-overflow-tooltip />
-      <el-table-column prop="creator" label="创建人" width="160" show-overflow-tooltip />
-      <el-table-column prop="createTime" label="创建时间" width="180">
+      <el-table-column prop="title" :label="$t('announcement.release_note_title')" show-overflow-tooltip />
+      <el-table-column prop="creator" :label="$t('announcement.release_note_creator')" width="160" show-overflow-tooltip />
+      <el-table-column prop="createTime" :label="$t('announcement.release_note_create_time')" width="180">
         <template v-slot:default="scope">
           <span>{{ scope.row.createTime | datetimeFormat }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150">
+      <el-table-column :label="$t('commons.operating')" width="150">
         <template v-slot:default="scope">
           <el-button type="primary" icon="el-icon-edit" size="mini" circle v-permission="['SYSTEM_SETTING:READ+EDIT']" @click="handleEdit(scope.row)" />
           <el-button type="danger" icon="el-icon-delete" size="mini" circle v-permission="['SYSTEM_SETTING:READ+EDIT']" @click="handleDelete(scope.row)" />
