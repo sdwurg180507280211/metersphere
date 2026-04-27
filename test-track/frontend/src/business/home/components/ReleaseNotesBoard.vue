@@ -13,8 +13,13 @@
         </div>
         <div v-if="!loadError">
           <div v-if="releaseNotes.length > 0" class="release-notes-list">
-            <div v-for="item in releaseNotes" :key="item.id" class="release-note-item" @click="showDetail(item)">
-              <div class="release-note-title">{{ formatDateChinese(item.createTime) }}上线公告</div>
+            <div v-for="item in releaseNotes" :key="item.id" class="release-note-item" :class="{ 'is-unread': !isRead(item.id) }" @click="showDetail(item)">
+              <div class="release-note-row">
+                <div class="release-note-title">
+                  {{ formatDateChinese(item.createTime) }}上线公告
+                </div>
+                <span :class="isRead(item.id) ? 'read-tag' : 'unread-tag'">{{ isRead(item.id) ? '已读' : '未读' }}</span>
+              </div>
               <div class="release-note-meta">创建时间: {{ formatDate(item.createTime) }}&nbsp;&nbsp;创建者: {{ item.creator }}</div>
             </div>
           </div>
@@ -48,6 +53,7 @@
 
 <script>
 import { getRecentReleaseNotes } from "@/api/release-note";
+import { getCurrentUserId } from "metersphere-frontend/src/utils/token";
 
 export default {
   name: "ReleaseNotesBoard",
@@ -80,10 +86,30 @@ export default {
         .catch(() => { this.loading = false; this.loadError = true; });
     },
     showDetail(item) {
+      this.markAsRead(item.id);
       this.dialogTitle = this.formatDateChinese(item.createTime) + "上线公告";
       this.currentContent = item.content || "";
       this.currentItem = item;
       this.dialogVisible = true;
+    },
+    isRead(noteId) {
+      const readIds = this.getReadSet();
+      return readIds.has(noteId);
+    },
+    markAsRead(noteId) {
+      const readIds = this.getReadSet();
+      readIds.add(noteId);
+      const key = 'release_note_read_' + getCurrentUserId();
+      localStorage.setItem(key, JSON.stringify([...readIds]));
+    },
+    getReadSet() {
+      try {
+        const key = 'release_note_read_' + getCurrentUserId();
+        const stored = localStorage.getItem(key);
+        return new Set(stored ? JSON.parse(stored) : []);
+      } catch (e) {
+        return new Set();
+      }
     },
     formatDateChinese(timestamp) {
       const d = new Date(timestamp);
@@ -102,7 +128,11 @@ export default {
 .release-note-item { padding: 12px 0; border-bottom: 1px solid rgba(31, 35, 41, 0.15); cursor: pointer; transition: background-color 0.2s; }
 .release-note-item:hover { background-color: #f5f6f7; }
 .release-note-item:last-child { border-bottom: none; }
+.release-note-row { display: flex; justify-content: space-between; align-items: center; }
 .release-note-title { font-size: 14px; font-weight: 500; color: #1f2329; line-height: 22px; }
+.release-note-item.is-unread .release-note-title { font-weight: 600; }
+.read-tag { font-size: 12px; color: #909399; flex-shrink: 0; }
+.unread-tag { font-size: 12px; color: #e6a23c; font-weight: 500; flex-shrink: 0; }
 .release-note-meta { font-size: 12px; color: #646a73; line-height: 20px; margin-top: 4px; }
 .release-note-content { font-size: 14px; color: #1f2329; line-height: 24px; word-break: break-word; white-space: pre-wrap; }
 
