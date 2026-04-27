@@ -14,24 +14,20 @@
 
           <el-row :gutter="16" style="margin-top: 16px">
             <el-col :span="12">
-              <bug-count-card @redirectPage="redirectPage" />
+              <release-notes-board />
             </el-col>
             <el-col :span="12">
               <case-maintenance />
             </el-col>
           </el-row>
 
-          <!-- 需求上线内容 与 失败用例 TOP10 左右各占一半 -->
+          <!-- 遗留缺陷统计 与 失败用例 TOP10 左右各占一半 -->
           <el-row :gutter="16" style="margin-top: 16px">
             <el-col :span="12">
-              <div style="background-color: #ffffff; height: 100%">
-                <release-notes-board />
-              </div>
+              <bug-count-card @redirectPage="redirectPage" />
             </el-col>
             <el-col :span="12">
-              <div style="background-color: #ffffff; height: 100%">
-                <ms-failure-test-case-list @redirectPage="redirectPage" />
-              </div>
+              <ms-failure-test-case-list @redirectPage="redirectPage" />
             </el-col>
           </el-row>
 

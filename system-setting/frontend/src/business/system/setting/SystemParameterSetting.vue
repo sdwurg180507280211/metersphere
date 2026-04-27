@@ -55,7 +55,7 @@ export default {
   },
   data() {
     return {
-      activeName: 'base',
+      activeName: this.$route.query.tab || 'base',
     };
   },
   methods: {

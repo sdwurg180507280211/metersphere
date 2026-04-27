@@ -4,6 +4,9 @@
     <el-card shadow="never" class="box-card" style="height: 100%">
       <div slot="header" class="clearfix">
         <span class="dashboard-title">需求上线内容</span>
+        <span class="release-note-more" @click="goToSetting">
+          更多 <i class="el-icon-arrow-right"></i>
+        </span>
       </div>
       <div v-loading="loading" element-loading-background="#FFFFFF">
         <div v-if="loadError"
@@ -54,6 +57,7 @@
 <script>
 import { getRecentReleaseNotes } from "@/api/release-note";
 import { getCurrentUserId } from "metersphere-frontend/src/utils/token";
+import { hasPermission } from "metersphere-frontend/src/utils/permission";
 
 export default {
   name: "ReleaseNotesBoard",
@@ -118,6 +122,17 @@ export default {
     formatDate(timestamp) {
       const d = new Date(timestamp);
       return d.getFullYear() + "-" + (d.getMonth() + 1).toString().padStart(2, "0") + "-" + d.getDate().toString().padStart(2, "0");
+    },
+    /**
+     * 跳转到系统设置-系统参数设置-公告设置 tab 页
+     * 无权限时提示用户
+     */
+    goToSetting() {
+      if (!hasPermission('SYSTEM_SETTING:READ')) {
+        this.$warning(this.$t('announcement.no_setting_permission') || '暂无系统设置权限，请联系管理员');
+        return;
+      }
+      this.$router.push({ path: '/setting/systemparametersetting', query: { tab: 'announcement' } });
     }
   }
 };
@@ -134,6 +149,9 @@ export default {
 .read-tag { font-size: 12px; color: #909399; flex-shrink: 0; }
 .unread-tag { font-size: 12px; color: #e6a23c; font-weight: 500; flex-shrink: 0; }
 .release-note-meta { font-size: 12px; color: #646a73; line-height: 20px; margin-top: 4px; }
+.release-note-more { float: right; font-size: 14px; color: #409EFF; cursor: pointer; font-weight: 400; }
+.release-note-more:hover { color: #66b1ff; }
+.release-note-more i { font-size: 12px; }
 .release-note-content { font-size: 14px; color: #1f2329; line-height: 24px; word-break: break-word; white-space: pre-wrap; }
 
 /* 对话框样式 */
