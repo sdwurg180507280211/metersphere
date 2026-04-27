@@ -1,1 +1,0 @@
-"use strict";(window["webpackJsonp_analytics"]=window["webpackJsonp_analytics"]||[]).push([[214,745],{61266:function(n,t,s){s.d(t,{j:function(){return a}});var i=s(97238);function a(){return(0,i.Jt)("/system/base/info")}}}]);
