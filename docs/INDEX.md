@@ -1,6 +1,6 @@
 # 文档目录索引
 
-> 最后更新：2026-04-21
+> 最后更新：2026-04-28
 
 ## 分支合并方法论
 
@@ -8,20 +8,60 @@
 
 | 类别 | 后缀 | 处理方式 |
 |------|------|---------|
-| **代码** | `.java` `.vue` `.js` `.xml` `.properties` `.sql`(仅Flyway) | 从 develop 检出同步 |
+| **代码** | `.java` `.vue` `.js` `.ts` `.xml` `.properties` `.sql`(仅Flyway) | 从 develop 检出同步 |
 | **文档** | `.md` `.html` `.docx` | 按 master 保留，不同步 |
 | **脚本/配置** | `.sh` `.yml` `.example` Makefile `.css` | 按 master 保留，不同步 |
 | **构建产物** | `dist/` `static/js/` 下的 JS/CSS | 不同步，各分支自行构建 |
 
 **操作步骤：**
 
-1. `git diff --name-only -z master...develop` 获取差异文件列表
-2. 按后缀筛选出代码文件
-3. `git checkout develop -- <code_files>` 逐个检出
-4. `git diff --cached` 验证暂存区仅含代码后缀
-5. 提交
+1. `git fetch origin` 更新远程分支
+2. `git checkout develop-v2.10.26 && git pull` 更新本地 develop 分支
+3. `git checkout master` 切回 master
+4. `git diff --name-only master...develop-v2.10.26` 获取差异文件列表
+5. 按后缀筛选出代码文件（排除 dist/、static/、docs/）
+6. `git checkout develop-v2.10.26 -- <code_files>` 逐个检出
+7. **检查 master-only 代码是否被覆盖**（见下方注意事项）
+8. `git diff --cached` 验证暂存区仅含代码后缀
+9. 提交
 
 **优势：** 避免 `git merge` 的 rename/delete 冲突、中文路径 unstage 难题，以及 develop 新增文档污染 master 目录结构。
+
+### master-only 代码保护清单
+
+以下文件包含 master 分支独有的 micro-app 微前端代码，develop 分支没有，checkout 后**必须恢复**：
+
+| 文件 | master 独有内容 |
+|------|----------------|
+| `framework/sdk-parent/frontend/src/business/app-layout/index.vue` | `<micro-app>` 标签、currentApp/appData 计算属性、handleDataChange/handleError |
+| `framework/sdk-parent/frontend/src/micro-app-config.js` | 完整文件（MIGRATED_MODULES、getEntryUrl、toShortName 等） |
+| `framework/sdk-parent/frontend/src/micro-app-setup.js` | 完整文件（microApp.start 配置、preFetchApps） |
+| `framework/sdk-parent/frontend/src/utils/micro-app-env.js` | `__MICRO_APP_PROXY_WINDOW__` 双窗口检查 |
+| `framework/sdk-parent/frontend/src/utils/micro-app-event-bus.js` | 完整文件（createEventBusAdapter、broadcastEvent） |
+| `framework/sdk-parent/frontend/src/plugins/request.js` | `__MICRO_APP_PROXY_WINDOW__` 双窗口检查 |
+| `framework/sdk-parent/frontend/src/components/MicroAppWrapper.vue` | 完整文件（按需加载子应用组件） |
+| `framework/sdk-parent/frontend/src/router/index.js` | microAppRoutes 占位路由、beforeEach 子应用直接放行 |
+| `test-track/frontend/src/router/modules/track.js` | PassThrough 替代 Layout（micro-app 环境下） |
+| `workstation/frontend/src/router/modules/workstation.js` | PassThrough 替代 Layout（micro-app 环境下） |
+| `analytics-stat/frontend/src/micro-app-env.ts` | `__MICRO_APP_PROXY_WINDOW__` 双窗口检查 |
+| `analytics-stat/frontend/src/main.ts` | UMD 生命周期 + Pinia PersistedState |
+| `api-test/frontend/src/main.js` | addDataListener 内存泄漏修复 |
+| `performance-test/frontend/src/main.js` | addDataListener 内存泄漏修复 |
+
+**恢复命令（checkout 后立即执行）：**
+```bash
+git checkout HEAD -- \
+  framework/sdk-parent/frontend/src/business/app-layout/index.vue \
+  framework/sdk-parent/frontend/src/micro-app-config.js \
+  framework/sdk-parent/frontend/src/micro-app-setup.js \
+  framework/sdk-parent/frontend/src/utils/micro-app-env.js \
+  framework/sdk-parent/frontend/src/utils/micro-app-event-bus.js \
+  framework/sdk-parent/frontend/src/plugins/request.js \
+  framework/sdk-parent/frontend/src/components/MicroAppWrapper.vue \
+  framework/sdk-parent/frontend/src/router/index.js \
+  test-track/frontend/src/router/modules/track.js \
+  workstation/frontend/src/router/modules/workstation.js
+```
 
 ---
 
