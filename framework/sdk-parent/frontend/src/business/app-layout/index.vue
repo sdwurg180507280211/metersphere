@@ -32,7 +32,22 @@
       <el-main class="container">
         <div :class="isFixed ? 'ms-left-fixed': 'ms-aside-left'"/>
         <div :class="isFixed ? 'ms-right-fixed': 'ms-main-view ms-aside-right'">
-          <router-view v-if="isShow"/>
+          <micro-app
+            v-if="currentApp"
+            :key="currentApp.name"
+            :name="currentApp.name"
+            :url="currentApp.entry"
+            :data="appData"
+            :destroy="false"
+            :fiber="true"
+            :iframe="currentApp.isViteApp || false"
+            :inline="true"
+            :disable-memory-router="true"
+            :disable-scopecss="true"
+            @datachange="handleDataChange"
+            @error="handleError"
+          />
+          <router-view v-else-if="isShow"/>
         </div>
       </el-main>
       <mx-theme/>
@@ -54,6 +69,7 @@ import {ORIGIN_COLOR} from "../../utils/constants";
 import {getDisplayInfo, getSystemTheme, isLogin, getSystemParameter} from "../../api/user";
 import {useUserStore} from "@/store";
 import {getModuleList} from "../../api/module";
+import {MIGRATED_MODULES} from "../../micro-app-config";
 
 
 export default {
@@ -134,6 +150,43 @@ export default {
   },
   computed: {
     /**
+     * 从当前 hash 路由中提取模块名称
+     * MeterSphere 使用 hash 路由，格式为 #/{moduleName}/...
+     * 例如 #/api/definition → 模块名为 'api'
+     */
+    currentModuleName() {
+      const path = this.$route.path || '';
+      const match = path.match(/^\/([^/]+)/);
+      return match ? match[1] : '';
+    },
+    /**
+     * 当前激活的子应用配置
+     * 根据模块名从配置表中获取迁移状态和技术栈信息
+     * 返回 null 表示当前路由不对应任何子应用（如主应用自身页面）
+     */
+    currentApp() {
+      const name = this.currentModuleName;
+      if (!name || !MIGRATED_MODULES[name]) {
+        return null;
+      }
+      const config = MIGRATED_MODULES[name];
+      return {
+        name: name,
+        entry: this.getEntryUrl(name),
+        migrated: config.migrated,
+        isViteApp: config.isViteApp,
+      };
+    },
+    /**
+     * 传递给子应用的数据
+     * 通过 <micro-app :data="appData"> 传入，子应用在 window.mount(data) 中接收
+     */
+    appData() {
+      return {
+        defaultPath: this.$route.path,
+      };
+    },
+    /**
      * 公告栏动态样式
      * 根据样式配置返回背景色和文字颜色
      */
@@ -157,6 +210,26 @@ export default {
     }
   },
   methods: {
+    /**
+     * 计算子应用入口 URL
+     * 开发环境：//127.0.0.1:{port-4000}
+     * 生产环境：{origin}/{serviceId}
+     */
+    getEntryUrl(name) {
+      const microPorts = JSON.parse(sessionStorage.getItem('micro_ports') || '{}');
+      if (process.env.NODE_ENV === 'development') {
+        return '//127.0.0.1:' + (microPorts[name] - 4000);
+      }
+      return window.location.origin + '/' + name;
+    },
+    /** 处理子应用通过 dispatch 发送的数据 */
+    handleDataChange(e) {
+      // console.log('[Layout] 收到子应用数据:', e.detail.data);
+    },
+    /** 处理子应用加载错误 */
+    handleError(e) {
+      console.error('[Layout] 子应用加载出错:', e.detail.name, e.detail.error);
+    },
     loadAnnouncement() {
       // 获取公告内容
       getSystemParameter('announcement.content').then(response => {

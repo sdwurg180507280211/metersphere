@@ -14,6 +14,7 @@
 /** 判断是否在 micro-app 微前端环境中 */
 export function isMicroAppEnv(): boolean {
   return !!window.__MICRO_APP_ENVIRONMENT__
+    || !!(window.__MICRO_APP_PROXY_WINDOW__ && (window.__MICRO_APP_PROXY_WINDOW__ as any).__MICRO_APP_ENVIRONMENT__)
 }
 
 /** 获取 micro-app 注入的子应用公共路径 */

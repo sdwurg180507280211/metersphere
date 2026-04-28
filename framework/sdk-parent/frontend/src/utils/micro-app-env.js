@@ -12,10 +12,15 @@
 /**
  * 判断当前是否运行在 micro-app 子应用环境中
  *
+ * 【关键】micro-app inline 模式下，子应用 JS 在主应用 window 上执行，
+ * __MICRO_APP_ENVIRONMENT__ 不在 window 上，而在 __MICRO_APP_PROXY_WINDOW__ 中。
+ * 需要同时检查两个位置。
+ *
  * @returns {boolean} 是否在 micro-app 环境中
  */
 export function isMicroAppEnv() {
-  return !!window.__MICRO_APP_ENVIRONMENT__;
+  return !!window.__MICRO_APP_ENVIRONMENT__
+    || !!(window.__MICRO_APP_PROXY_WINDOW__ && window.__MICRO_APP_PROXY_WINDOW__.__MICRO_APP_ENVIRONMENT__);
 }
 
 /**
