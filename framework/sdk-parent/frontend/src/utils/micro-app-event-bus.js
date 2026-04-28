@@ -73,6 +73,9 @@ export function broadcastEvent(eventData) {
     payload: eventData,          // 完整的事件数据作为 payload 传递
   };
 
-  // setGlobalData 会通知所有已注册 addGlobalDataListener 的子应用
-  microApp.setGlobalData(wrappedData);
+  // 非微前端环境下 microApp 可能不可用，静默降级
+  if (typeof microApp !== 'undefined' && microApp.setGlobalData) {
+    // setGlobalData 会通知所有已注册 addGlobalDataListener 的子应用
+    microApp.setGlobalData(wrappedData);
+  }
 }

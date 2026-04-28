@@ -24,7 +24,7 @@
 </template>
 
 <script>
-import { MIGRATED_MODULES } from '../micro-app-config';
+import { MIGRATED_MODULES, getEntryUrl } from '../micro-app-config';
 
 /**
  * MicroAppWrapper - 按需加载子应用组件
@@ -64,17 +64,10 @@ export default {
     },
 
     /**
-     * 计算子应用入口 URL
-     *
-     * 开发环境：使用本地端口（后端端口 - 4000 = 前端端口）
-     * 生产环境：通过网关反向代理访问（/{serviceId}/）
+     * 计算子应用入口 URL（委托给 micro-app-config 中的共享实现）
      */
     appUrl() {
-      const microPorts = JSON.parse(sessionStorage.getItem('micro_ports'));
-      if (process.env.NODE_ENV === 'development') {
-        return `//127.0.0.1:${microPorts[this.service] - 4000}`;
-      }
-      return `${window.location.origin}/${this.service}`;
+      return getEntryUrl(this.service);
     },
 
     /**

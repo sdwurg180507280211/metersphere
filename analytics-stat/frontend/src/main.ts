@@ -16,6 +16,7 @@
 import { createApp } from 'vue'
 import type { App as VueApp } from 'vue'
 import { createPinia } from 'pinia'
+import PersistedState from 'pinia-plugin-persistedstate'
 
 import App from './App.vue'
 import { createAppRouter } from './router'
@@ -45,9 +46,12 @@ function mount() {
   // 每次 mount 创建新的 router 实例，避免微前端环境下路由状态残留
   router = createAppRouter()
 
+  const pinia = createPinia()
+  pinia.use(PersistedState)
+
   app = createApp(App)
   app.use(router)
-  app.use(createPinia())
+  app.use(pinia)
   app.use(i18n)
   app.mount('#app')
 }

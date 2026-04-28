@@ -124,6 +124,9 @@ function mount(data) {
 // micro-app UMD 生命周期模式
 // micro-app 会在子应用渲染时自动调用 window.mount(data)
 // data 参数由主应用通过 <micro-app :data="appData"> 传入
+// 保存数据监听器引用，unmount 时清理
+let dataListener = null;
+
 window.mount = (data) => {
   // 确保挂载点 #app 存在（micro-app 沙箱可能丢弃空 div）
   let appEl = document.querySelector('#app');
@@ -138,7 +141,11 @@ window.mount = (data) => {
   // 典型场景：MicroAppWrapper 组件的 to/routeParams 属性变化时，
   // 主应用通过 setData 发送新的路由参数，子应用通过 addDataListener 接收并跳转
   if (isMicroAppEnv()) {
-    window.microApp?.addDataListener((newData) => {
+    // 清除旧监听器，防止重复注册导致内存泄漏
+    if (dataListener) {
+      window.microApp?.removeDataListener(dataListener);
+    }
+    dataListener = (newData) => {
       if (newData && (newData.defaultPath || newData.routeName)) {
         // micro-app 模式下使用完整路由（instance.$router 即 router）
         const targetRouter = instance?.$router || router;
@@ -148,11 +155,17 @@ window.mount = (data) => {
           name: newData.routeName,
         }).catch(() => {});
       }
-    });
+    };
+    window.microApp?.addDataListener(dataListener);
   }
 };
 
 window.unmount = () => {
+  // 清理数据监听器，防止内存泄漏
+  if (dataListener) {
+    window.microApp?.removeDataListener(dataListener);
+    dataListener = null;
+  }
   if (instance) {
     instance.$destroy();
     instance.$el.innerHTML = ''; // 清空 DOM 内容，防止残留

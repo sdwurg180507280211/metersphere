@@ -10,8 +10,8 @@
  */
 import microApp from '@micro-zoe/micro-app';
 import Vue from 'vue';
-// 引入模块配置表，用于预加载时判断 Vite 子应用是否需要 iframe 沙箱
-import { MIGRATED_MODULES } from './micro-app-config';
+// 引入模块配置表和共享工具函数
+import { MIGRATED_MODULES, getEntryUrl } from './micro-app-config';
 
 // 【关键】Vue 2 必须忽略 micro-app 自定义元素
 // 否则 Vue 会对 <micro-app> 标签报 "Unknown custom element" 警告
@@ -53,13 +53,13 @@ microApp.start({
       try {
         const urlObj = new URL(url, window.location.origin);
         const pathname = urlObj.pathname;
-        // 检测绝对路径的静态资源：/js/xxx、/css/xxx、/fonts/xxx、/img/xxx
+        // 检测绝对路径的静态资源：/js/xxx、/css/xxx
+        // 注意：fonts/img 等二进制资源由浏览器原生加载，此处不拦截
         // 且路径中尚未包含 /{appName}/ 前缀（避免重复补全）
-        if (/^\/(js|css|fonts|img)\//.test(pathname) && !pathname.startsWith('/' + appName + '/')) {
+        if (/^\/(js|css)\//.test(pathname) && !pathname.startsWith('/' + appName + '/')) {
           // 补全路径前缀：/js/xxx → /{appName}/js/xxx
           urlObj.pathname = '/' + appName + pathname;
           const newUrl = urlObj.toString();
-          // console.log('[micro-app] 资源路径修正:', url, '→', newUrl);
           return window.fetch(newUrl, options).then(res => res.text());
         }
       } catch (e) {
@@ -90,28 +90,6 @@ microApp.start({
 });
 
 /**
- * 根据服务信息和当前环境计算子应用入口 URL
- *
- * - 开发环境：使用本地地址 //127.0.0.1:{port-4000}
- *   （前端端口约定为后端端口减 4000，例如后端 8004 → 前端 4004）
- * - 生产环境：使用当前域名 + 服务路径 {origin}/{serviceId}
- *   （通过网关反向代理访问各子应用静态资源）
- *
- * @param {Object} svc - 服务信息对象，来自 GET /services 接口
- * @param {string} svc.serviceId - 服务标识，如 'api-test'
- * @param {number} svc.port - 后端端口号，如 8004
- * @returns {string} 子应用入口 URL
- */
-function getEntryUrl(svc) {
-  if (process.env.NODE_ENV === 'development') {
-    // 开发环境：前端端口 = 后端端口 - 4000
-    return '//127.0.0.1:' + (svc.port - 4000);
-  }
-  // 生产环境：通过网关反向代理，路径规则 /{serviceId}/
-  return window.location.origin + '/' + svc.serviceId;
-}
-
-/**
  * 预加载子应用资源
  *
  * 在获取服务列表后调用，利用 micro-app 的 preFetch API
@@ -128,7 +106,7 @@ export function preFetchApps(services) {
     .filter(svc => svc.serviceId !== 'gateway')
     .map(svc => ({
       name: svc.serviceId,
-      url: getEntryUrl(svc),
+      url: getEntryUrl(svc.serviceId),
       // Vite 子应用预加载时也需设置 iframe: true
       // 因为 Vite 输出的 ES Module 需要 iframe 沙箱才能正确加载
       ...(MIGRATED_MODULES[svc.serviceId]?.isViteApp ? { iframe: true } : {}),
