@@ -149,7 +149,9 @@ export default {
       }
     },
     activeAnalyticsStat() {
-      this.$router.push('/analytics').catch(() => {});
+      if (this.activeIndex === '/analytics') {
+        this.$router.push('/analytics/knowledge/chat').catch(() => {});
+      }
     },
     check(key) {
       if (key === 'ui' && !hasLicense()) {

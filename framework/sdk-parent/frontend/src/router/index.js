@@ -113,9 +113,9 @@ router.beforeEach(async (to, from, next) => {
     const {useUserStore} = await import('@/store');
     store = useUserStore();
   }
-  let formModule = from.path.split('/')[1];
+  let fromModule = from.path.split('/')[1];
   let toModule = to.path.split('/')[1];
-  if (to.path !== '/login' && formModule && toModule !== formModule) {
+  if (to.path !== '/login' && fromModule && toModule !== fromModule) {
     try {
       await checkLoginWithCache(store);
     } catch (e) {
@@ -128,16 +128,21 @@ router.beforeEach(async (to, from, next) => {
     return;
   }
 
-  // 二级菜单权限控制
-  let changedPath = getDefaultSecondLevelMenu(to.fullPath);
-  sessionStorage.setItem('redirectUrl', changedPath);
-  if (changedPath === to.fullPath) {
-    // 有权限则放行
-    next();
-  } else {
-    // 未通过校验，放行至有权限路由
-    next({path: changedPath});
+  // 二级菜单权限控制（仅对主应用自身路由生效，micro-app 子应用由子应用自行控制权限）
+  if (!MIGRATED_MODULES[toModule]) {
+    let changedPath = getDefaultSecondLevelMenu(to.fullPath);
+    sessionStorage.setItem('redirectUrl', changedPath);
+    if (changedPath === to.fullPath) {
+      next();
+    } else {
+      next({path: changedPath});
+    }
+    return;
   }
+
+  // micro-app 子应用路由直接放行
+  sessionStorage.setItem('redirectUrl', to.fullPath);
+  next();
 });
 
 export function getDefaultSecondLevelMenu(toPath) {
