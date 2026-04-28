@@ -21,9 +21,10 @@
 4. `git diff --name-only master...develop-v2.10.26` 获取差异文件列表
 5. 按后缀筛选出代码文件（排除 dist/、static/、docs/）
 6. `git checkout develop-v2.10.26 -- <code_files>` 逐个检出
-7. **检查 master-only 代码是否被覆盖**（见下方注意事项）
+7. **恢复 master-only 保护文件**（见下方清单和命令）
 8. `git diff --cached` 验证暂存区仅含代码后缀
-9. 提交
+9. **验证无遗漏**：`diff <(git show master:f) <(git show develop-v2.10.26:f)` 对比保护文件，确认差异仅为 master 独有的 micro-app 代码，没有丢失 develop 业务逻辑
+10. 提交
 
 **优势：** 避免 `git merge` 的 rename/delete 冲突、中文路径 unstage 难题，以及 develop 新增文档污染 master 目录结构。
 
@@ -47,6 +48,9 @@
 | `analytics-stat/frontend/src/main.ts` | UMD 生命周期 + Pinia PersistedState |
 | `api-test/frontend/src/main.js` | addDataListener 内存泄漏修复 |
 | `performance-test/frontend/src/main.js` | addDataListener 内存泄漏修复 |
+| `framework/sdk-parent/frontend/src/i18n/lang/zh-CN.js` | `analytics_stat: '分析统计'` |
+| `framework/sdk-parent/frontend/src/i18n/lang/en-US.js` | `analytics_stat: 'Analytics'` |
+| `framework/sdk-parent/frontend/src/i18n/lang/zh-TW.js` | `analytics_stat: '分析統計'` |
 
 **恢复命令（checkout 后立即执行）：**
 ```bash
@@ -60,8 +64,13 @@ git checkout HEAD -- \
   framework/sdk-parent/frontend/src/components/MicroAppWrapper.vue \
   framework/sdk-parent/frontend/src/router/index.js \
   test-track/frontend/src/router/modules/track.js \
-  workstation/frontend/src/router/modules/workstation.js
+  workstation/frontend/src/router/modules/workstation.js \
+  framework/sdk-parent/frontend/src/i18n/lang/zh-CN.js \
+  framework/sdk-parent/frontend/src/i18n/lang/en-US.js \
+  framework/sdk-parent/frontend/src/i18n/lang/zh-TW.js
 ```
+
+**注意：** `git checkout HEAD --` 恢复的是 master 最新 commit 版本。由于保护文件中的 develop 业务代码（如 requirement-pool 路由、AdvancedSearch 路由）已在更早的 commit 中合入，恢复不会丢失这些内容。但仍需用 `diff` 命令验证，防止 develop 新增的业务改动被回退。
 
 ---
 
