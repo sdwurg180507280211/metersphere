@@ -11,7 +11,7 @@
 import microApp from '@micro-zoe/micro-app';
 import Vue from 'vue';
 // 引入模块配置表和共享工具函数
-import { MIGRATED_MODULES, getEntryUrl } from './micro-app-config';
+import { MIGRATED_MODULES, getEntryUrl, isViteApp } from './micro-app-config';
 
 // 【关键】Vue 2 必须忽略 micro-app 自定义元素
 // 否则 Vue 会对 <micro-app> 标签报 "Unknown custom element" 警告
@@ -109,7 +109,7 @@ export function preFetchApps(services) {
       url: getEntryUrl(svc.serviceId),
       // Vite 子应用预加载时也需设置 iframe: true
       // 因为 Vite 输出的 ES Module 需要 iframe 沙箱才能正确加载
-      ...(MIGRATED_MODULES[svc.serviceId]?.isViteApp ? { iframe: true } : {}),
+      ...(isViteApp(svc.serviceId) ? { iframe: true } : {}),
     }));
 
   // 延迟 3 秒执行预加载，避免影响首屏渲染

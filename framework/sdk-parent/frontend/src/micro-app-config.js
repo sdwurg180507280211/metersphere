@@ -96,10 +96,14 @@ export { MIGRATED_MODULES, isMigrated, isViteApp };
  * @returns {string} 子应用入口 URL
  */
 export function getEntryUrl(name) {
-  const shortName = MIGRATED_MODULES[name] ? name : toShortName(name);
   const microPorts = JSON.parse(sessionStorage.getItem('micro_ports') || '{}');
+  // 端口查找：原名优先（API 返回的原始 serviceId），降级到短名
+  const lookupName = microPorts[name] != null ? name : toShortName(name);
+  // 路径：配置表 key 优先（短名），降级到短名
+  const pathName = MIGRATED_MODULES[name] ? name : toShortName(name);
+
   if (process.env.NODE_ENV === 'development') {
-    return '//127.0.0.1:' + (microPorts[shortName] - 4000);
+    return '//127.0.0.1:' + (microPorts[lookupName] - 4000);
   }
-  return window.location.origin + '/' + shortName;
+  return window.location.origin + '/' + pathName;
 }
