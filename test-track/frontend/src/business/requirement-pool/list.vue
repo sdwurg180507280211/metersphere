@@ -15,7 +15,7 @@
 
         <ms-table
             v-loading="page.loading"
-            operator-width="120px"
+            operator-width="160px"
             row-key="dmpNum"
             :data="page.data"
             :condition="page.condition"
@@ -217,7 +217,7 @@
 </template>
 
 <script>
-import {getRequirementPoolList} from '@/api/requirement-pool';
+import {getRequirementPoolList, rollbackTestPlan} from '@/api/requirement-pool';
 import {getCustomTableHeader, getCustomTableWidth, getPageInfo} from "metersphere-frontend/src/utils/tableUtils";
 import {REQUIREMENT_POOL_LIST} from "metersphere-frontend/src/components/search/search-components";
 import MsTable from "metersphere-frontend/src/components/table/MsTable";
@@ -259,6 +259,13 @@ export default {
           exec: this.handleCreatePlan,
           isDisable: this.isCreateDisabled,
           permissions: ['PROJECT_TRACK_PLAN:READ+CREATE']
+        },
+        {
+          tip: '回退',
+          icon: 'el-icon-refresh-left',
+          exec: this.handleRollback,
+          isDisable: this.isRollbackDisabled,
+          permissions: ['PROJECT_TRACK_PLAN:READ+DELETE']
         }
       ]
     };
@@ -317,6 +324,29 @@ export default {
     // 判断创建按钮是否禁用
     isCreateDisabled(row) {
       return row.poolStatus !== 'PENDING';
+    },
+    // 回退测试计划
+    handleRollback(row) {
+      if (row.poolStatus !== 'CREATED') {
+        this.$warning('只有已创建状态的需求才能回退');
+        return;
+      }
+      this.$confirm('回退将删除关联的测试计划及其所属模块节点，是否继续？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        rollbackTestPlan(row.dmpNum).then(() => {
+          this.$success('回退成功');
+          this.search();
+        }).catch(() => {
+          this.$error('回退失败');
+        });
+      }).catch(() => {});
+    },
+    // 判断回退按钮是否禁用
+    isRollbackDisabled(row) {
+      return row.poolStatus !== 'CREATED';
     },
     // 获取状态类型
     getStatusType(status) {
