@@ -271,7 +271,7 @@
             </el-row>
             <el-row>
               <!-- 场景步骤内容 -->
-              <div ref="stepInfo" v-if="stepCount <= 200">
+              <div ref="stepInfo" v-if="stepCount <= 50">
                 <el-tree
                   node-key="resourceId"
                   :props="props"
@@ -2103,29 +2103,6 @@ export default {
         }
       });
     },
-    getEnv(definition) {
-      return new Promise((resolve) => {
-        this.projectIds = new Set();
-        const regex = /"projectId"\s*:\s*"([^"]+)"/g;
-        let match;
-        while ((match = regex.exec(definition)) !== null) {
-          this.projectIds.add(match[1]);
-        }
-        this.projectIds.add(this.projectId);
-        if (this.projectIds.size > 1) {
-          let projects = new Set();
-          this.projectIds.forEach((item) => {
-            if (this.projectList.filter((project) => project.id === item).length > 0) {
-              projects.add(item);
-            }
-          });
-          this.projectIds = projects;
-          resolve();
-        } else {
-          resolve();
-        }
-      });
-    },
     getApiScenario(isRefresh) {
       this.loading = true;
       this.isBatchProcess = false;
@@ -2530,31 +2507,44 @@ export default {
       this.drawer = false;
       this.$emit('closePage', name);
     },
-    deleteEnableStep(hashTree) {
-      for (let i in hashTree) {
-        if (hashTree[i] && !hashTree[i].enable) {
-          delete hashTree[i];
-        }
-      }
-    },
     showPopover() {
-      let test = JSON.parse(JSON.stringify(this.scenarioDefinition));
-      try {
-        for (let i in test) {
-          if (test[i] && !test[i].enable) {
-            delete test[i];
-          } else if (test[i] && test[i].hashTree) {
-            this.deleteEnableStep(test[i].hashTree);
-          }
-        }
-      } catch (e) {
-        this.envResult.loading = true;
-      }
       this.envResult.loading = true;
-      this.getEnv(JSON.stringify(test)).then(() => {
+      // 直接递归遍历对象提取 projectId，避免 JSON 序列化 + 正则匹配导致的 CPU 飙升
+      this.projectIds = this._collectProjectIds(this.scenarioDefinition);
+      this.projectIds.add(this.projectId);
+
+      // 过滤掉当前用户无权限的项目（用 Set 做 O(1) 查找）
+      if (this.projectIds.size > 1 && this.projectList.length > 0) {
+        const projectSet = new Set(this.projectList.map((p) => p.id));
+        const filtered = new Set();
+        this.projectIds.forEach((id) => {
+          if (projectSet.has(id)) filtered.add(id);
+        });
+        this.projectIds = filtered;
+      }
+
+      // 等待 projectIds props 传递到子组件后再打开弹窗
+      this.$nextTick(() => {
         this.$refs.envPopover.openEnvSelect();
         this.envResult.loading = false;
       });
+    },
+    /**
+     * 递归收集场景步骤中所有 projectId，跳过禁用步骤
+     * 替代原来的 JSON.parse(JSON.stringify) + deleteEnableStep + JSON.stringify + regex
+     */
+    _collectProjectIds(steps) {
+      const ids = new Set();
+      if (!steps || !Array.isArray(steps)) return ids;
+      for (const step of steps) {
+        if (!step || !step.enable) continue;
+        if (step.projectId) ids.add(step.projectId);
+        if (step.hashTree && step.hashTree.length > 0) {
+          const childIds = this._collectProjectIds(step.hashTree);
+          childIds.forEach((id) => ids.add(id));
+        }
+      }
+      return ids;
     },
     changeNodeStatus(resourceIds, nodes) {
       for (let i in nodes) {

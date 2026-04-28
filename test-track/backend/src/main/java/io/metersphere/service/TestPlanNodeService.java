@@ -262,7 +262,7 @@ public class TestPlanNodeService extends NodeTreeService<TestPlanNodeDTO>{
 
     public TestPlanNode getDefaultNode(String projectId) {
         TestPlanNodeExample example = new TestPlanNodeExample();
-        example.createCriteria().andProjectIdEqualTo(projectId).andNameEqualTo(ProjectModuleDefaultNodeEnum.DEFAULT_NODE.getNodeName()).andParentIdIsNull();
+        example.createCriteria().andProjectIdEqualTo(projectId).andNameEqualTo(ProjectModuleDefaultNodeEnum.TRACK_DEFAULT_NODE.getNodeName()).andParentIdIsNull();
         List<TestPlanNode> defaultNodes = testPlanNodeMapper.selectByExample(example);
         if (CollectionUtils.isEmpty(defaultNodes)) {
             return null;
@@ -285,7 +285,7 @@ public class TestPlanNodeService extends NodeTreeService<TestPlanNodeDTO>{
                 TestPlanNode defaultNode = new TestPlanNode();
                 defaultNode.setId(UUID.randomUUID().toString());
                 defaultNode.setCreateUser(SessionUtils.getUserId());
-                defaultNode.setName(ProjectModuleDefaultNodeEnum.DEFAULT_NODE.getNodeName());
+                defaultNode.setName(ProjectModuleDefaultNodeEnum.TRACK_DEFAULT_NODE.getNodeName());
                 defaultNode.setPos(1.0);
                 defaultNode.setLevel(1);
                 defaultNode.setCreateTime(System.currentTimeMillis());

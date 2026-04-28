@@ -25,6 +25,11 @@
                  :icon="status == 'Archived' ? 'el-icon-check' : ''"
                  @click="setStatus('Archived')"> {{$t('test_track.plan.plan_status_archived')}}</el-button>
     </el-col>
+    <el-col>
+      <el-button type="danger" round size="mini" plain
+                 :icon="status == 'Cancelled' ? 'el-icon-check' : ''"
+                 @click="setStatus('Cancelled')"> {{$t('test_track.plan.plan_status_cancelled')}}</el-button>
+    </el-col>
   </el-row>
 </template>
 
