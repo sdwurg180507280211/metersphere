@@ -161,6 +161,7 @@ const message = {
     view_settings: '顯示設置',
     functional: '功能測試',
     my_workstation: '工作臺',
+    analytics_stat: '分析統計',
     ui_test: 'UI測試',
     input_content: '請輸入內容',
     input_un_pass_reason: '請輸入不通過原因',
