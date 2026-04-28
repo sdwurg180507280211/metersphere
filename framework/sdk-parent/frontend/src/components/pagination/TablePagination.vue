@@ -50,7 +50,7 @@ export default {
         this.change();
       }
       if (this.changeSize) {
-        this.changeSize();
+        this.changeSize(size);
       }
     },
     handleCurrentChange(current) {
@@ -59,7 +59,7 @@ export default {
         this.change();
       }
       if (this.changeCurrent) {
-        this.changeCurrent();
+        this.changeCurrent(current);
       }
     }
   }
