@@ -1025,13 +1025,10 @@ export default {
       this.reload();
     },
     initProjectIds() {
-      // 加载环境配置
+      // 直接递归遍历对象提取 projectId，避免 jsonPath.query 的性能开销
       this.$nextTick(() => {
         this.projectIds.clear();
-        this.scenarioDefinition.forEach((data) => {
-          let arr = jsonPath.query(data, '$..projectId');
-          arr.forEach((a) => this.projectIds.add(a));
-        });
+        this._collectProjectIds(this.scenarioDefinition).forEach((id) => this.projectIds.add(id));
       });
     },
     detailRefresh(result) {
@@ -1258,32 +1255,44 @@ export default {
     },
 
     showPopover() {
-      let definition = JSON.parse(JSON.stringify(this.currentScenario));
-      definition.hashTree = this.scenarioDefinition;
       this.envResult.loading = true;
-      this.getEnv(JSON.stringify(definition)).then(() => {
-        this.$refs.envPopover.openEnvSelect();
-        this.envResult.loading = false;
-      });
-    },
-    getEnv(definition) {
-      return new Promise((resolve) => {
-        this.projectIds = new Set();
-        const regex = /"projectId"\s*:\s*"([^"]+)"/g;
-        let match;
-        while ((match = regex.exec(definition)) !== null) {
-          this.projectIds.add(match[1]);
-        }
-        this.projectIds.add(this.projectId);
-        if (this.projectIds.size > 1) {
-          getApiScenarioEnv(Array.from(this.projectIds)).then((res) => {
-            this.$emit('update:projectIds', new Set(res.data.projectIds));
-            resolve();
+      // 直接递归遍历对象提取 projectId，避免 JSON 序列化 + 正则匹配导致的 CPU 飙升
+      this.projectIds = this._collectProjectIds(this.scenarioDefinition);
+      this.projectIds.add(this.projectId);
+
+      if (this.projectIds.size > 1) {
+        getApiScenarioEnv(Array.from(this.projectIds)).then((res) => {
+          this.$emit('update:projectIds', new Set(res.data.projectIds));
+          // 等待 projectIds props 传递到子组件后再打开弹窗
+          this.$nextTick(() => {
+            this.$refs.envPopover.openEnvSelect();
+            this.envResult.loading = false;
           });
-        } else {
-          resolve();
+        });
+      } else {
+        // 等待 projectIds props 传递到子组件后再打开弹窗
+        this.$nextTick(() => {
+          this.$refs.envPopover.openEnvSelect();
+          this.envResult.loading = false;
+        });
+      }
+    },
+    /**
+     * 递归收集场景步骤中所有 projectId，跳过禁用步骤
+     * 替代原来的 JSON.parse(JSON.stringify) + JSON.stringify + regex 以及 jsonPath.query
+     */
+    _collectProjectIds(steps) {
+      const ids = new Set();
+      if (!steps || !Array.isArray(steps)) return ids;
+      for (const step of steps) {
+        if (!step || !step.enable) continue;
+        if (step.projectId) ids.add(step.projectId);
+        if (step.hashTree && step.hashTree.length > 0) {
+          const childIds = this._collectProjectIds(step.hashTree);
+          childIds.forEach((id) => ids.add(id));
         }
-      });
+      }
+      return ids;
     },
   },
 };

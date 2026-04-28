@@ -263,7 +263,7 @@ public class TestCaseReviewNodeService extends NodeTreeService<TestCaseReviewNod
 
     public TestCaseReviewNode getDefaultNode(String projectId) {
         TestCaseReviewNodeExample example = new TestCaseReviewNodeExample();
-        example.createCriteria().andProjectIdEqualTo(projectId).andNameEqualTo(ProjectModuleDefaultNodeEnum.DEFAULT_NODE.getNodeName()).andParentIdIsNull();
+        example.createCriteria().andProjectIdEqualTo(projectId).andNameEqualTo(ProjectModuleDefaultNodeEnum.TRACK_DEFAULT_NODE.getNodeName()).andParentIdIsNull();
         List<TestCaseReviewNode> defaultNodes = testCaseReviewNodeMapper.selectByExample(example);
         if (CollectionUtils.isEmpty(defaultNodes)) {
             return null;
@@ -286,7 +286,7 @@ public class TestCaseReviewNodeService extends NodeTreeService<TestCaseReviewNod
                 TestCaseReviewNode defaultNode = new TestCaseReviewNode();
                 defaultNode.setId(UUID.randomUUID().toString());
                 defaultNode.setCreateUser(SessionUtils.getUserId());
-                defaultNode.setName(ProjectModuleDefaultNodeEnum.DEFAULT_NODE.getNodeName());
+                defaultNode.setName(ProjectModuleDefaultNodeEnum.TRACK_DEFAULT_NODE.getNodeName());
                 defaultNode.setPos(1.0);
                 defaultNode.setLevel(1);
                 defaultNode.setCreateTime(System.currentTimeMillis());

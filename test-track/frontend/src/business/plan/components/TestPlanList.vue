@@ -69,7 +69,7 @@
         <ms-table-column
             prop="status"
             :filters="statusFilters"
-            :filtered-value="['Prepare', 'Underway', 'Finished', 'Completed']"
+            :filtered-value="['Prepare', 'Underway', 'Finished', 'Completed', 'Cancelled']"
             column-key="status"
             :field="item"
             :fields-width="fieldsWidth"
@@ -112,6 +112,12 @@
                       :command="{ item: scope.row, status: 'Archived' }"
                   >
                     {{ $t("test_track.plan.plan_status_archived") }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                      :disabled="!hasEditPermission"
+                      :command="{ item: scope.row, status: 'Cancelled' }"
+                  >
+                    {{ $t("test_track.plan.plan_status_cancelled") }}
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </el-dropdown>
@@ -339,9 +345,9 @@
             :tip="$t('api_test.run')"
             icon="el-icon-video-play"
             :class="[
-            scope.row.status === 'Archived' ? 'disable-run' : 'run-button',
+            scope.row.status === 'Archived' || scope.row.status === 'Cancelled' ? 'disable-run' : 'run-button',
           ]"
-            :disabled="scope.row.status === 'Archived'"
+            :disabled="scope.row.status === 'Archived' || scope.row.status === 'Cancelled'"
             @exec="handleRun(scope.row)"
             v-permission="['PROJECT_TRACK_PLAN:READ+RUN']"
         />
@@ -350,7 +356,7 @@
             icon="el-icon-edit"
             @exec="handleEdit(scope.row)"
             v-permission="['PROJECT_TRACK_PLAN:READ+EDIT']"
-            :disabled="scope.row.status === 'Archived'"
+            :disabled="scope.row.status === 'Archived' || scope.row.status === 'Cancelled'"
         />
       </template>
       <template v-slot:opt-behind="scope">
@@ -417,7 +423,7 @@
             <el-dropdown-item
                 command="schedule_task"
                 v-permission="['PROJECT_TRACK_PLAN:READ+SCHEDULE']"
-                :disabled="scope.row.status === 'Archived'"
+                :disabled="scope.row.status === 'Archived' || scope.row.status === 'Cancelled'"
             >
               {{ $t("commons.trigger_mode.schedule") }}
             </el-dropdown-item>
@@ -611,6 +617,10 @@ export default {
         {
           text: this.$t("test_track.plan.plan_status_archived"),
           value: "Archived",
+        },
+        {
+          text: this.$t("test_track.plan.plan_status_cancelled"),
+          value: "Cancelled",
         },
       ],
       stageFilters: [
@@ -1045,6 +1055,10 @@ export default {
                   i
                   ].actualEndTime = "";
             } //  非未开始->未开始，结束时间=null
+            else if (newStatus === "Cancelled") {
+              this.tableData[i].actualStartTime = "";
+              this.tableData[i].actualEndTime = "";
+            } //  ->已取消，清除实际时间
             this.tableData[i].status = newStatus;
             break;
           }

@@ -12,6 +12,7 @@ public class StatusReference {
         statusMap.put("Underway", "进行中");
         statusMap.put("Completed", "已完成");
         statusMap.put("Finished", "已结束");
+        statusMap.put("Cancelled", "已取消");
         statusMap.put("Saved", "已保存");
         statusMap.put("Starting", "已开始");
         statusMap.put("Running", "运行中");
