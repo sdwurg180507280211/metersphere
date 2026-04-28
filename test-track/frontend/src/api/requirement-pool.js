@@ -23,3 +23,12 @@ export function getRequirementPoolList(goPage, pageSize, condition) {
 export function createTestPlanFromRequirement(param) {
   return post('/requirement-pool/create-test-plan', param);
 }
+
+/**
+ * 回退需求池：撤销已创建的测试计划
+ * @param dmpNum 需求编号
+ * @returns {Promise<any>}
+ */
+export function rollbackTestPlan(dmpNum) {
+  return post('/requirement-pool/rollback-test-plan', {dmpNum: dmpNum});
+}

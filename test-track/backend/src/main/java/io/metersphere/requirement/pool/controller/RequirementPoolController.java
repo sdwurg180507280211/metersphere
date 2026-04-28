@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.annotation.Resource;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/requirement-pool")
@@ -43,5 +44,10 @@ public class RequirementPoolController {
     @PostMapping("/create-test-plan")
     public TestPlan createTestPlanFromRequirement(@RequestBody CreateTestPlanFromRequirementRequest request) {
         return requirementPoolService.createTestPlanFromRequirement(request);
+    }
+
+    @PostMapping("/rollback-test-plan")
+    public void rollbackTestPlan(@RequestBody Map<String, String> request) {
+        requirementPoolService.rollbackTestPlan(request.get("dmpNum"));
     }
 }
