@@ -72,6 +72,27 @@ git checkout HEAD -- \
 
 **注意：** `git checkout HEAD --` 恢复的是 master 最新 commit 版本。由于保护文件中的 develop 业务代码（如 requirement-pool 路由、AdvancedSearch 路由）已在更早的 commit 中合入，恢复不会丢失这些内容。但仍需用 `diff` 命令验证，防止 develop 新增的业务改动被回退。
 
+### master → develop 反向合并
+
+将 master 的代码同步回 develop 时，方向相反，但原则相同——只同步代码文件，不同步文档/配置：
+
+**操作步骤：**
+
+1. `git fetch origin` 更新远程分支
+2. `git checkout master && git pull` 确保 master 最新
+3. `git checkout develop-v2.10.26` 切到 develop
+4. `git diff --name-only develop-v2.10.26...master` 获取差异文件列表
+5. 按后缀筛选出代码文件（排除 dist/、static/、docs/）
+6. `git checkout master -- <code_files>` 逐个检出
+7. `git diff --cached` 验证暂存区仅含代码后缀
+8. 提交
+
+**需要注意：**
+
+- **micro-app 相关文件会随代码一起同步到 develop**，这是预期行为——develop 应该具备微前端能力，避免未来合并时覆盖 master 的 micro-app 代码
+- 如果 develop 暂时不需要 micro-app 功能，可以不同步保护清单中的文件，但下次 develop → master 合并时需再次恢复
+- **推荐做法**：将 micro-app 代码也同步到 develop，保持两个分支前端代码一致，减少合并冲突
+
 ---
 
 ## 目录树
