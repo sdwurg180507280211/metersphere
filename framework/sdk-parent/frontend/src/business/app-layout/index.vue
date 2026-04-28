@@ -69,7 +69,7 @@ import {ORIGIN_COLOR} from "../../utils/constants";
 import {getDisplayInfo, getSystemTheme, isLogin, getSystemParameter} from "../../api/user";
 import {useUserStore} from "@/store";
 import {getModuleList} from "../../api/module";
-import {MIGRATED_MODULES} from "../../micro-app-config";
+import {MIGRATED_MODULES, getEntryUrl} from "../../micro-app-config";
 
 
 export default {
@@ -211,17 +211,9 @@ export default {
   },
   methods: {
     /**
-     * 计算子应用入口 URL
-     * 开发环境：//127.0.0.1:{port-4000}
-     * 生产环境：{origin}/{serviceId}
+     * 计算子应用入口 URL（委托给 micro-app-config 中的共享实现）
      */
-    getEntryUrl(name) {
-      const microPorts = JSON.parse(sessionStorage.getItem('micro_ports') || '{}');
-      if (process.env.NODE_ENV === 'development') {
-        return '//127.0.0.1:' + (microPorts[name] - 4000);
-      }
-      return window.location.origin + '/' + name;
-    },
+    getEntryUrl,
     /** 处理子应用通过 dispatch 发送的数据 */
     handleDataChange(e) {
       // console.log('[Layout] 收到子应用数据:', e.detail.data);
