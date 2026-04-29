@@ -52,8 +52,35 @@
               />
             </el-form-item>
           </el-col>
+        </el-row>
 
-          <el-col :span="12" v-if="!form.requirementNumber">
+        <el-row type="flex" :gutter="20" v-if="form.requirementNumber">
+          <el-col :span="12">
+            <el-form-item
+              :label="$t('test_track.plan.plan_project')"
+              :label-width="formLabelWidth"
+              prop="projectId"
+            >
+              <el-select
+                v-model="form.projectId"
+                :placeholder="$t('test_track.plan.input_plan_project')"
+                style="width: 100%"
+                filterable
+                :size="itemSize"
+                @change="handleProjectChange"
+              >
+                <el-option
+                  v-for="item in projectOptions"
+                  :key="item.id"
+                  :label="item.name"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row type="flex" :gutter="20" v-if="!form.requirementNumber">
             <el-form-item
               prop="nodeId"
               :label="$t('test_track.case.module')"
@@ -314,6 +341,7 @@ import TestPlanStatusButton from "../common/TestPlanStatusButton";
 import {
   getCurrentProjectID,
   getCurrentWorkspaceId,
+  setCurrentProjectID,
 } from "metersphere-frontend/src/utils/token";
 import {
   listenGoBack,
@@ -326,10 +354,11 @@ import {
   testPlanAdd,
   testPlanEdit,
 } from "@/api/remote/plan/test-plan";
-import { buildTree, getProjectMemberOption } from "@/business/utils/sdk-utils";
+import { buildTree, getProjectMemberOption, getProjectMemberById } from "@/business/utils/sdk-utils";
 import { getTestPlanNodes } from "@/api/test-plan-node";
 import { createTestPlanFromRequirement } from "@/api/requirement-pool";
 import { testCaseNodeListProject } from "@/api/test-case-node";
+import { getOwnerProjects } from "@/business/utils/sdk-utils";
 
 export default {
   name: "TestPlanEdit",
@@ -361,6 +390,7 @@ export default {
         requirementNumber: "",
         caseModuleId: "",
         caseModulePath: "",
+        projectId: "",
       },
       rules: {
         name: [
@@ -411,6 +441,7 @@ export default {
       defaultNode: null,
       treeNodes: null,
       caseTreeNodes: [],
+      projectOptions: [],
       moduleObj: {
         id: "id",
         label: "name",
@@ -503,24 +534,42 @@ export default {
     },
     openFromRequirement(requirement) {
       this.resetForm();
-      this.getNodeTrees();
-      this.getCaseNodeTrees();
-      this.setPrincipalOptions();
       this.operationType = "add";
       this.form.name = requirement.requirementName;
       this.form.requirementNumber = requirement.dmpNum;
+      this.form.projectId = this.projectId;
       this.form.tags = [];
       listenGoBack(this.close);
       this.setEmptyStage();
+      // 加载项目列表
+      getOwnerProjects().then((r) => {
+        this.projectOptions = r.data;
+      });
+      this.loadTreesByProject(this.projectId);
+      this.setPrincipalOptions();
       this.dialogFormVisible = true;
       this.reload();
     },
-    getCaseNodeTrees() {
-      testCaseNodeListProject({projectId: this.projectId}).then((r) => {
+    // 项目切换时重新加载两个所属系统树和负责人
+    handleProjectChange(projectId) {
+      this.form.nodeId = "";
+      this.form.nodePath = "";
+      this.form.caseModuleId = "";
+      this.form.caseModulePath = "";
+      this.loadTreesByProject(projectId);
+      this.setPrincipalOptions(projectId);
+    },
+    // 根据项目ID加载计划模块树和用例模块树
+    loadTreesByProject(projectId) {
+      getTestPlanNodes(projectId, {}).then((r) => {
         let treeNodes = r.data;
-        treeNodes.forEach((node) => {
-          buildTree(node, {path: ""});
-        });
+        treeNodes.forEach((node) => { buildTree(node, {path: ""}); });
+        this.treeNodes = treeNodes;
+        this.setDefaultModule();
+      });
+      testCaseNodeListProject({projectId: projectId}).then((r) => {
+        let treeNodes = r.data;
+        treeNodes.forEach((node) => { buildTree(node, {path: ""}); });
         this.caseTreeNodes = treeNodes;
       });
     },
@@ -557,7 +606,7 @@ export default {
           if (param.requirementNumber) {
             createTestPlanFromRequirement({
               dmpNum: param.requirementNumber,
-              projectId: this.projectId,
+              projectId: param.projectId || this.projectId,
               workspaceId: getCurrentWorkspaceId(),
               principalId: param.principals && param.principals.length > 0 ? param.principals[0] : null,
               stage: param.stage,
@@ -577,6 +626,11 @@ export default {
                 this.$success(this.$t("commons.save_success"));
                 this.dialogFormVisible = false;
                 this.$emit("refresh");
+                // 切换到弹窗选择的项目
+                let selectedProjectId = param.projectId || this.projectId;
+                if (selectedProjectId !== this.projectId) {
+                  setCurrentProjectID(selectedProjectId);
+                }
                 this.$router.push("/track/plan/view/" + response.data.id);
               })
               .catch(() => {
@@ -626,7 +680,7 @@ export default {
           if (param.requirementNumber) {
             createTestPlanFromRequirement({
               dmpNum: param.requirementNumber,
-              projectId: this.projectId,
+              projectId: param.projectId || this.projectId,
               workspaceId: getCurrentWorkspaceId(),
               principalId: param.principals && param.principals.length > 0 ? param.principals[0] : null,
               stage: param.stage,
@@ -683,10 +737,16 @@ export default {
       }
       return true;
     },
-    setPrincipalOptions() {
-      getProjectMemberOption().then((response) => {
-        this.principalOptions = response.data;
-      });
+    setPrincipalOptions(projectId) {
+      if (projectId) {
+        getProjectMemberById(projectId).then((response) => {
+          this.principalOptions = response.data;
+        });
+      } else {
+        getProjectMemberOption().then((response) => {
+          this.principalOptions = response.data;
+        });
+      }
     },
     statusChange(status) {
       this.form.status = status;
@@ -716,6 +776,7 @@ export default {
           this.form.requirementNumber = "";
           this.form.caseModuleId = "";
           this.form.caseModulePath = "";
+          this.form.projectId = "";
           return true;
         });
       }

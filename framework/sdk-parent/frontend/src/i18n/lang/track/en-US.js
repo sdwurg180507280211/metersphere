@@ -94,6 +94,8 @@ export default {
     name: "Name",
     module: "System",
     plan_module: "Plan System",
+    plan_project: "Project",
+    input_plan_project: "Please select project",
     case_module: "Case System",
     project: "Project",
     maintainer: "Maintainer",
