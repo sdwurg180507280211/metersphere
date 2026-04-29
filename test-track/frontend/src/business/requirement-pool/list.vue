@@ -31,7 +31,7 @@
             @handlePageChange="handlePageChange"
             @order="initTableData"
             ref="requirementPoolTable"
-            @filter="search"
+            @filter="filter"
             class="requirement-pool-table"
         >
         <span v-for="item in fields" :key="item.key">
@@ -218,7 +218,7 @@
 
 <script>
 import {getRequirementPoolList, rollbackTestPlan} from '@/api/requirement-pool';
-import {getCustomTableHeader, getCustomTableWidth, getPageInfo} from "metersphere-frontend/src/utils/tableUtils";
+import {getCustomTableHeader, getCustomTableWidth, getPageInfo, _filter} from "metersphere-frontend/src/utils/tableUtils";
 import {REQUIREMENT_POOL_LIST} from "metersphere-frontend/src/components/search/search-components";
 import MsTable from "metersphere-frontend/src/components/table/MsTable";
 import MsTableColumn from "metersphere-frontend/src/components/table/MsTableColumn";
@@ -297,6 +297,11 @@ export default {
     search() {
       this.page.currentPage = 1;
       this.initTableData();
+    },
+    // 列头筛选
+    filter(filters) {
+      _filter(filters, this.page.condition);
+      this.search();
     },
     // 分页
     handlePageChange(page) {
