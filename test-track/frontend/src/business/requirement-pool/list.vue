@@ -331,7 +331,7 @@ export default {
         this.$warning('只有已创建状态的需求才能回退');
         return;
       }
-      this.$confirm('回退将删除关联的测试计划及其所属模块节点，是否继续？', '提示', {
+      this.$confirm('回退将删除关联的测试计划及自动创建的模块节点，需求状态恢复为未创建，是否继续？', '回退确认', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'

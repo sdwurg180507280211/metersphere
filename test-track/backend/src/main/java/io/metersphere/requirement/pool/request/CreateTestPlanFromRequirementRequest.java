@@ -39,4 +39,10 @@ public class CreateTestPlanFromRequirementRequest implements Serializable {
     private String nodePath;
 
     private String tags;
+
+    /** 用例所属系统节点ID */
+    private String caseModuleId;
+
+    /** 用例所属系统节点路径 */
+    private String caseModulePath;
 }
