@@ -16,7 +16,7 @@ export {generateColumnKey, getAdvSearchCustomField} from "metersphere-frontend/s
 export {TEST_CASE_RELEVANCE_ISSUE_LIST, OPERATORS} from "metersphere-frontend/src/components/search/search-components";
 
 
-export {getProjectMemberOption, getProjectMemberById} from "metersphere-frontend/src/api/user";
+export {getProjectMemberOption} from "metersphere-frontend/src/api/user";
 export {deleteMarkDownImgByName, saveMarkDownImg} from "metersphere-frontend/src/api/img";
 export {getApiDefinitionById, getApiTestCasePages} from "metersphere-frontend/src/api/environment";
 export {getOwnerProjects, getProjectListAll} from "metersphere-frontend/src/api/project";

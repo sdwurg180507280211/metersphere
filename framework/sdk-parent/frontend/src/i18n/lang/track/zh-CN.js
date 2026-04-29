@@ -81,8 +81,6 @@ export default {
     name: "用例名称",
     module: "所属系统",
     plan_module: "计划所属系统",
-    plan_project: "所属项目",
-    input_plan_project: "请选择项目",
     case_module: "用例所属系统",
     project: "所属项目",
     maintainer: "责任人",
