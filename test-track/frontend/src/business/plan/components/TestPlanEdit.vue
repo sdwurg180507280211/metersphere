@@ -78,8 +78,8 @@
           <el-col :span="12">
             <el-form-item
               prop="nodeId"
-              :label="$t('test_track.case.module')"
-              :label-width="formLabelWidth"
+              :label="$t('test_track.case.plan_module')"
+              label-width="120px"
             >
               <ms-select-tree
                 class="plan-node-tree"
@@ -91,6 +91,24 @@
                 @getValue="setModule"
                 size="small"
                 ref="moduleTree"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item
+              :label="$t('test_track.case.case_module')"
+              label-width="120px"
+            >
+              <ms-select-tree
+                class="plan-node-tree"
+                :disabled="false"
+                :data="caseTreeNodes"
+                :obj="moduleObj"
+                :default-key="form.caseModuleId"
+                checkStrictly
+                @getValue="setCaseModule"
+                size="small"
+                ref="caseModuleTree"
               />
             </el-form-item>
           </el-col>
@@ -311,6 +329,7 @@ import {
 import { buildTree, getProjectMemberOption } from "@/business/utils/sdk-utils";
 import { getTestPlanNodes } from "@/api/test-plan-node";
 import { createTestPlanFromRequirement } from "@/api/requirement-pool";
+import { testCaseNodeListProject } from "@/api/test-case-node";
 
 export default {
   name: "TestPlanEdit",
@@ -340,6 +359,8 @@ export default {
         nodeId: "",
         nodePath: "",
         requirementNumber: "",
+        caseModuleId: "",
+        caseModulePath: "",
       },
       rules: {
         name: [
@@ -389,6 +410,7 @@ export default {
       stageOption: [],
       defaultNode: null,
       treeNodes: null,
+      caseTreeNodes: [],
       moduleObj: {
         id: "id",
         label: "name",
@@ -482,6 +504,7 @@ export default {
     openFromRequirement(requirement) {
       this.resetForm();
       this.getNodeTrees();
+      this.getCaseNodeTrees();
       this.setPrincipalOptions();
       this.operationType = "add";
       this.form.name = requirement.requirementName;
@@ -491,6 +514,15 @@ export default {
       this.setEmptyStage();
       this.dialogFormVisible = true;
       this.reload();
+    },
+    getCaseNodeTrees() {
+      testCaseNodeListProject({projectId: this.projectId}).then((r) => {
+        let treeNodes = r.data;
+        treeNodes.forEach((node) => {
+          buildTree(node, {path: ""});
+        });
+        this.caseTreeNodes = treeNodes;
+      });
     },
     setEmptyStage() {
       // 如果测试阶段选项中没有当前值，则置空
@@ -536,6 +568,8 @@ export default {
               repeatCase: param.repeatCase,
               nodeId: param.nodeId,
               nodePath: param.nodePath,
+              caseModuleId: param.caseModuleId,
+              caseModulePath: param.caseModulePath,
               tags: param.tags
             })
               .then((response) => {
@@ -603,6 +637,8 @@ export default {
               repeatCase: param.repeatCase,
               nodeId: param.nodeId,
               nodePath: param.nodePath,
+              caseModuleId: param.caseModuleId,
+              caseModulePath: param.caseModulePath,
               tags: param.tags
             })
               .then(() => {
@@ -677,6 +713,9 @@ export default {
           this.form.plannedEndTime = null;
           this.form.nodeId = "";
           this.form.nodePath = "";
+          this.form.requirementNumber = "";
+          this.form.caseModuleId = "";
+          this.form.caseModulePath = "";
           return true;
         });
       }
@@ -685,6 +724,12 @@ export default {
       if (data) {
         this.form.nodeId = id;
         this.form.nodePath = data.path;
+      }
+    },
+    setCaseModule(id, data) {
+      if (data) {
+        this.form.caseModuleId = id;
+        this.form.caseModulePath = data.path;
       }
     },
   },

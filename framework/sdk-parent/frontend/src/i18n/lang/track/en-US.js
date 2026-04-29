@@ -93,6 +93,8 @@ export default {
     case_type: "Case Type",
     name: "Name",
     module: "System",
+    plan_module: "Plan System",
+    case_module: "Case System",
     project: "Project",
     maintainer: "Maintainer",
     steps: "Steps",
