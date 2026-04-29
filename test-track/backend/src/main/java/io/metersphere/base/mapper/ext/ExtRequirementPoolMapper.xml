@@ -237,39 +237,39 @@
             <foreach collection="request.filters.entrySet()" index="key" item="values">
                 <if test="values != null and values.size() > 0">
                     <choose>
-                        <when test="key=='poolStatus'">
+                        <when test="key=='pool_status'">
                             and requirement_pool.pool_status in
                             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
                         </when>
-                        <when test="key=='systemName'">
+                        <when test="key=='system_name'">
                             and requirement_pool.system_name in
                             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
                         </when>
-                        <when test="key=='reqFatherClass'">
+                        <when test="key=='req_father_class'">
                             and requirement_pool.req_father_class in
                             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
                         </when>
-                        <when test="key=='reqSonClass'">
+                        <when test="key=='req_son_class'">
                             and requirement_pool.req_son_class in
                             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
                         </when>
-                        <when test="key=='reqManagerName'">
+                        <when test="key=='req_manager_name'">
                             and requirement_pool.req_manager_name in
                             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
                         </when>
-                        <when test="key=='actName'">
+                        <when test="key=='act_name'">
                             and requirement_pool.act_name in
                             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
                         </when>
-                        <when test="key=='assigneeName'">
+                        <when test="key=='assignee_name'">
                             and requirement_pool.assignee_name in
                             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
                         </when>
-                        <when test="key=='createdDept'">
+                        <when test="key=='created_dept'">
                             and requirement_pool.created_dept in
                             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
                         </when>
-                        <when test="key=='operationType'">
+                        <when test="key=='operation_type'">
                             and requirement_pool.operation_type in
                             <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.filterInWrapper"/>
                         </when>
