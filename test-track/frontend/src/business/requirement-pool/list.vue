@@ -343,7 +343,7 @@ export default {
       }).then(() => {
         rollbackTestPlan(row.dmpNum).then(() => {
           this.$success('回退成功');
-          this.search();
+          this.initTableData();
         }).catch(() => {
           this.$error('回退失败');
         });
