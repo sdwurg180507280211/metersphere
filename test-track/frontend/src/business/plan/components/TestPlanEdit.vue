@@ -441,6 +441,14 @@ export default {
         if (this.operationType === "add") {
           this.setDefaultModule();
         }
+        // 树数据加载完成，恢复nodeId必填规则
+        if (this.form.requirementNumber) {
+          this.rules.nodeId = [{
+            required: true,
+            message: this.$t("api_test.environment.module_warning"),
+            trigger: "change",
+          }];
+        }
       });
     },
     setDefaultModule() {
@@ -503,8 +511,6 @@ export default {
     },
     openFromRequirement(requirement) {
       this.resetForm();
-      this.getNodeTrees();
-      this.getCaseNodeTrees();
       this.setPrincipalOptions();
       this.operationType = "add";
       this.form.name = requirement.requirementName;
@@ -512,8 +518,14 @@ export default {
       this.form.tags = [];
       listenGoBack(this.close);
       this.setEmptyStage();
+      // 临时去掉nodeId必填规则，避免树数据加载前触发校验闪烁
+      this.rules.nodeId = [];
+      // 先弹窗
       this.dialogFormVisible = true;
       this.reload();
+      // 再异步加载树数据，加载完后恢复必填规则
+      this.getNodeTrees();
+      this.getCaseNodeTrees();
     },
     getCaseNodeTrees() {
       testCaseNodeListProject({projectId: this.projectId}).then((r) => {
