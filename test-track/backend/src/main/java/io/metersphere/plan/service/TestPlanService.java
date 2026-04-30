@@ -200,8 +200,14 @@ public class TestPlanService {
     }
 
     public TestPlan addTestPlan(AddTestPlanRequest testPlan) {
-        if (getTestPlanByName(testPlan.getName()).size() > 0) {
-            MSException.throwException(Translator.get("plan_name_already_exists"));
+        if (StringUtils.isNotBlank(testPlan.getNodeId())) {
+            if (getTestPlanByNameAndNode(testPlan.getName(), testPlan.getNodeId()).size() > 0) {
+                MSException.throwException(Translator.get("plan_name_already_exists"));
+            }
+        } else {
+            if (getTestPlanByName(testPlan.getName()).size() > 0) {
+                MSException.throwException(Translator.get("plan_name_already_exists"));
+            }
         }
         testPlan.setStatus(TestPlanStatus.Prepare.name());
         testPlan.setCreateTime(System.currentTimeMillis());
@@ -241,6 +247,15 @@ public class TestPlanService {
         example.createCriteria()
                 .andProjectIdEqualTo(SessionUtils.getCurrentProjectId())
                 .andNameEqualTo(name);
+        return testPlanMapper.selectByExample(example);
+    }
+
+    public List<TestPlan> getTestPlanByNameAndNode(String name, String nodeId) {
+        TestPlanExample example = new TestPlanExample();
+        example.createCriteria()
+                .andProjectIdEqualTo(SessionUtils.getCurrentProjectId())
+                .andNameEqualTo(name)
+                .andNodeIdEqualTo(nodeId);
         return testPlanMapper.selectByExample(example);
     }
 
@@ -359,10 +374,13 @@ public class TestPlanService {
     private void checkTestPlanExist(TestPlan testPlan) {
         if (testPlan.getName() != null) {
             TestPlanExample example = new TestPlanExample();
-            example.createCriteria()
+            TestPlanExample.Criteria criteria = example.createCriteria()
                     .andNameEqualTo(testPlan.getName())
                     .andProjectIdEqualTo(testPlan.getProjectId())
                     .andIdNotEqualTo(testPlan.getId());
+            if (StringUtils.isNotBlank(testPlan.getNodeId())) {
+                criteria.andNodeIdEqualTo(testPlan.getNodeId());
+            }
             if (testPlanMapper.selectByExample(example).size() > 0) {
                 MSException.throwException(Translator.get("plan_name_already_exists"));
             }

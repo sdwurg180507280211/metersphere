@@ -192,44 +192,8 @@ public class RequirementPoolService {
             return;
         }
 
-        // 检查该子模块下是否还有其他测试计划
-        TestPlanExample planExample = new TestPlanExample();
-        planExample.createCriteria().andNodeIdEqualTo(nodeId);
-        long planCount = testPlanMapper.countByExample(planExample);
-        // 注意：此时测试计划尚未删除，count >= 1（当前计划自身）。如果 > 1 说明还有其他计划，不删节点
-        // 但 deleteTestPlan 还没执行，所以我们先检查除当前计划外的数量
-        // 这里简化处理：因为 deleteTestPlan 还没执行，子节点下一定有当前计划
-        // 回退场景下，该节点下一般只有这一个由需求创建的计划，所以直接删除节点即可
-        // 更安全的做法：删除计划后再检查节点下是否还有计划，但事务内顺序不便于调整
-        // 采用先删子节点的策略，因为 deleteTestPlan 会清理计划关联数据
-
-        // 删除子模块节点
+        // 仅删除自动创建的子模块节点，不删除父模块（测试计划的父模块由用户维护）
         testPlanNodeMapper.deleteByPrimaryKey(nodeId);
-
-        // 检查父节点（系统节点）是否为空，为空则也删除
-        String parentNodeId = subNode.getParentId();
-        if (StringUtils.isNotBlank(parentNodeId)) {
-            TestPlanNode parentNode = testPlanNodeMapper.selectByPrimaryKey(parentNodeId);
-            if (parentNode != null) {
-                // 检查父节点下是否还有子节点
-                TestPlanNodeExample childExample = new TestPlanNodeExample();
-                childExample.createCriteria()
-                        .andParentIdEqualTo(parentNodeId)
-                        .andProjectIdEqualTo(projectId);
-                long childCount = testPlanNodeMapper.countByExample(childExample);
-
-                // 检查父节点下是否还有直接关联的测试计划
-                TestPlanExample parentPlanExample = new TestPlanExample();
-                parentPlanExample.createCriteria().andNodeIdEqualTo(parentNodeId);
-                long parentPlanCount = testPlanMapper.countByExample(parentPlanExample);
-
-                // 父节点下既无子节点也无测试计划，且不是默认节点，则删除
-                if (childCount == 0 && parentPlanCount == 0
-                        && !StringUtils.equals(parentNode.getName(), ProjectModuleDefaultNodeEnum.TRACK_DEFAULT_NODE.getNodeName())) {
-                    testPlanNodeMapper.deleteByPrimaryKey(parentNodeId);
-                }
-            }
-        }
     }
 
     /**
