@@ -6,6 +6,7 @@ import lombok.Setter;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 @Getter
 @Setter
@@ -20,7 +21,7 @@ public class CreateTestPlanFromRequirementRequest implements Serializable {
 
     private String workspaceId;
 
-    private String principalId;
+    private List<String> principalIds;
 
     private String stage;
 
