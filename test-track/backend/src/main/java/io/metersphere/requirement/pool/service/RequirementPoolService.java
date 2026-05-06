@@ -26,7 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -250,8 +250,8 @@ public class RequirementPoolService {
                     requirement.getDmpNum(), requirement.getRequirementName(), projectId);
         }
 
-        if (StringUtils.isNotBlank(request.getPrincipalId())) {
-            testPlanRequest.setPrincipals(Collections.singletonList(request.getPrincipalId()));
+        if (request.getPrincipalIds() != null && !request.getPrincipalIds().isEmpty()) {
+            testPlanRequest.setPrincipals(request.getPrincipalIds());
         }
         return testPlanRequest;
     }

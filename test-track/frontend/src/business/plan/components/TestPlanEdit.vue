@@ -552,6 +552,8 @@ export default {
       this.rules.nodeId = [];
       // 加载项目列表
       this.loadProjectOptions();
+      // 加载当前项目的负责人
+      this.setPrincipalOptions(this.projectId);
       // 先弹窗
       this.dialogFormVisible = true;
       this.reload();
@@ -609,7 +611,7 @@ export default {
               dmpNum: param.requirementNumber,
               projectId: param.projectId,
               workspaceId: getCurrentWorkspaceId(),
-              principalId: param.principals && param.principals.length > 0 ? param.principals[0] : null,
+              principalIds: param.principals || [],
               stage: param.stage,
               plannedStartTime: param.plannedStartTime,
               plannedEndTime: param.plannedEndTime,
@@ -679,7 +681,7 @@ export default {
               dmpNum: param.requirementNumber,
               projectId: param.projectId,
               workspaceId: getCurrentWorkspaceId(),
-              principalId: param.principals && param.principals.length > 0 ? param.principals[0] : null,
+              principalIds: param.principals || [],
               stage: param.stage,
               plannedStartTime: param.plannedStartTime,
               plannedEndTime: param.plannedEndTime,
