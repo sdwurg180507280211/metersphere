@@ -414,17 +414,8 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         TestCaseWithBLOBs testCase = new TestCaseWithBLOBs();
         BeanUtils.copyBean(testCase, data);
         testCase.setProjectId(request.getProjectId());
-
-        // 根据编辑模式设置步骤字段，与parseData()保持一致，确保重复检测能正确匹配
-        if (StringUtils.isNotBlank(data.getStepModel())
-                && StringUtils.equals(data.getStepModel(), TestCaseConstants.StepModel.TEXT.name())) {
-            testCase.setStepDescription(data.getStepDesc());
-            testCase.setExpectedResult(data.getStepResult());
-            testCase.setSteps("[]");
-        } else {
-            String steps = getSteps(data);
-            testCase.setSteps(steps);
-        }
+        String steps = getSteps(data);
+        testCase.setSteps(steps);
 
         testCase.setNodeId(pathMap.get(testCase.getNodePath()));
         boolean dbExist = testCaseService.exist(testCase);
