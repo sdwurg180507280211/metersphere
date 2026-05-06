@@ -1,7 +1,7 @@
 <template>
   <el-card class="scenario-div" v-loading="result">
     <slot name="version"></slot>
-    <ms-search :condition.sync="condition" :base-search-tip="$t('commons.search_by_id_name_tag')" @search="search">
+    <ms-search :condition.sync="condition" :base-search-tip="$t('commons.search_by_id_name_tag')" @search="handleSearch">
     </ms-search>
     <ms-table
       :data="tableData"
@@ -49,7 +49,7 @@
           label="ID"
           sortable
           min-width="120px"
-          v-if="item.id == 'num' && !customNum">
+          v-if="item.id === 'num' && !customNum">
           <template slot-scope="scope" v-if="!trashEnable">
             <el-tooltip :content="$t('commons.edit')">
               <a style="cursor: pointer" @click="edit(scope.row)">
@@ -65,7 +65,7 @@
           :fields-width="fieldsWidth"
           min-width="120px"
           prop="customNum"
-          v-if="item.id == 'num' && customNum">
+          v-if="item.id === 'num' && customNum">
           <template slot-scope="scope">
             <el-tooltip :content="$t('commons.edit')">
               <a style="cursor: pointer" @click="edit(scope.row)">
@@ -81,9 +81,11 @@
           :label="$t('api_test.automation.scenario_name')"
           min-width="150px"
           prop="name"
-          sortable />
+          sortable
+          v-if="item.id === 'name'" />
 
         <ms-table-column
+          v-if="item.id === 'nodePath'"
           prop="nodePath"
           :field="item"
           :fields-width="fieldsWidth"
@@ -101,7 +103,8 @@
           :label="$t('api_test.automation.case_level')"
           min-width="130px"
           prop="level"
-          sortable>
+          sortable
+          v-if="item.id === 'level'">
           <template v-slot:default="scope">
             <priority-table-item :value="scope.row.level" />
           </template>
@@ -114,7 +117,8 @@
           :fields-width="fieldsWidth"
           :filters="!trashEnable ? scenarioFilters.STATUS_FILTERS : null"
           prop="status"
-          min-width="120px">
+          min-width="120px"
+          v-if="item.id === 'status'">
           <template v-slot:default="scope">
             <plan-status-table-item :value="scope.row.status" />
           </template>
@@ -126,7 +130,8 @@
           :showOverflowTooltip="false"
           :label="$t('api_test.automation.tag')"
           min-width="120px"
-          prop="tags">
+          prop="tags"
+          v-if="item.id === 'tags'">
           <template v-slot:default="scope">
             <el-tooltip class="item" effect="dark" placement="top">
               <div v-html="getTagToolTips(scope.row.tags)" slot="content"></div>
@@ -150,7 +155,8 @@
           :fields-width="fieldsWidth"
           :filters="versionFilters"
           min-width="100px"
-          prop="versionId">
+          prop="versionId"
+          v-if="item.id === 'versionId'">
           <template v-slot:default="scope">
             <span>{{ scope.row.versionName }}</span>
           </template>
@@ -162,7 +168,8 @@
           :fields-width="fieldsWidth"
           prop="principalName"
           min-width="120px"
-          sortable />
+          sortable
+          v-if="item.id === 'principalName'" />
         <ms-table-column
           :label="$t('api_test.automation.creator')"
           :filters="userFilters"
@@ -170,14 +177,16 @@
           :fields-width="fieldsWidth"
           prop="creatorName"
           min-width="120px"
-          sortable="custom" />
+          sortable="custom"
+          v-if="item.id === 'creatorName'" />
         <ms-table-column
           :field="item"
           :fields-width="fieldsWidth"
           :filters="environmentsFilters"
           prop="environmentMap"
           :label="$t('commons.environment')"
-          min-width="180">
+          min-width="180"
+          v-if="item.id === 'environmentMap'">
           <template v-slot:default="{ row }">
             <div v-if="row.environmentMap">
               <span v-for="(k, v, index) in row.environmentMap" :key="index">
@@ -210,7 +219,8 @@
           :fields-width="fieldsWidth"
           min-width="100px"
           :filters="!trashEnable ? scheduleFilters : null"
-          prop="schedule">
+          prop="schedule"
+          v-if="item.id === 'schedule'">
           <template v-slot:default="scope">
             <schedule-info-in-table
               v-if="scope.row.scheduleObj"
@@ -230,7 +240,8 @@
           :label="$t('commons.update_time')"
           sortable
           prop="updateTime"
-          min-width="180px">
+          min-width="180px"
+          v-if="item.id === 'updateTime'">
           <template v-slot:default="scope">
             <span>{{ scope.row.updateTime | datetimeFormat }}</span>
           </template>
@@ -241,7 +252,8 @@
           :label="$t('commons.create_time')"
           sortable
           prop="createTime"
-          min-width="180px">
+          min-width="180px"
+          v-if="item.id === 'createTime'">
           <template v-slot:default="scope">
             <span>{{ scope.row.createTime | datetimeFormat }}</span>
           </template>
@@ -252,7 +264,8 @@
           :fields-width="fieldsWidth"
           :label="$t('api_test.automation.step')"
           prop="stepTotal"
-          min-width="80px" />
+          min-width="80px"
+          v-if="item.id === 'stepTotal'" />
         <ms-table-column
           :label="$t('api_test.automation.last_result')"
           :filters="resultFilters"
@@ -260,7 +273,8 @@
           :fields-width="fieldsWidth"
           sortable
           prop="lastResult"
-          min-width="130px">
+          min-width="130px"
+          v-if="item.id === 'lastResult'">
           <template v-slot:default="{ row }">
             <el-link @click="showReport(row)" :disabled="!row.lastResult || row.lastResult === 'PENDING'">
               <ms-api-report-status :status="row.lastResult" />
@@ -273,7 +287,8 @@
           :fields-width="fieldsWidth"
           :label="$t('api_test.automation.passing_rate')"
           prop="passRate"
-          min-width="120px" />
+          min-width="120px"
+          v-if="item.id === 'passRate'" />
       </span>
 
       <template v-slot:opt-before="scope">
@@ -472,6 +487,26 @@ import MsShowReference from '@/business/definition/components/reference/ShowRefe
 import scheduleInfoInTable from '@/business/automation/schedule/ScheduleInfoInTable.vue';
 import { scheduleUpdate } from '@/api/schedule';
 
+function debounce(fn, delay) {
+  let timer = null;
+  const debounced = function (...args) {
+    if (timer) {
+      clearTimeout(timer);
+    }
+    timer = setTimeout(() => {
+      fn.apply(this, args);
+      timer = null;
+    }, delay);
+  };
+  debounced.cancel = function () {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  return debounced;
+}
+
 const performanceStore = usePerformanceStore();
 export default {
   name: 'MsApiScenarioList',
@@ -576,6 +611,9 @@ export default {
       currentScenario: {},
       schedule: {},
       tableData: [],
+      hideHandler: null,
+      scheduleRequestId: 0,
+      handleSearch: null,
       selectDataRange: 'all',
       selectDataType: 'all',
       currentPage: 1,
@@ -745,16 +783,18 @@ export default {
   },
   created() {
     this.scenarioFilters = API_SCENARIO_FILTERS();
-    this.$EventBus.$on('hide', (id) => {
+    this.hideHandler = (id) => {
       this.hideStopBtn(id);
-    });
+    };
+    this.$EventBus.$on('hide', this.hideHandler);
+    this.handleSearch = debounce((projectId) => this.search(projectId), 300);
     this.projectId = getCurrentProjectID();
     if (!this.projectName || this.projectName === '') {
       this.getProjectName();
     }
     this.condition.filters = { status: ['Prepare', 'Underway', 'Completed'] };
 
-    this.initEnvironment();
+    this.$nextTick(() => this.initEnvironment());
     if (this.trashEnable) {
       this.condition.filters = { status: ['Trash'] };
       this.condition.moduleIds = [];
@@ -794,7 +834,12 @@ export default {
     }
   },
   beforeDestroy() {
-    this.$EventBus.$off('hide');
+    if (this.hideHandler) {
+      this.$EventBus.$off('hide', this.hideHandler);
+    }
+    if (this.handleSearch && this.handleSearch.cancel) {
+      this.handleSearch.cancel();
+    }
   },
   watch: {
     selectNodeIds() {
@@ -954,6 +999,7 @@ export default {
           let ids = [];
           this.tableData.forEach((item) => {
             ids.push(item.id);
+            this.$set(item, 'scheduleObj', this.getScheduleObject(null, item.id));
             if (item.tags && item.tags.length > 0) {
               item.tags = JSON.parse(item.tags);
             }
@@ -967,8 +1013,12 @@ export default {
       }
     },
     selectSchedule(ids) {
+      const requestId = ++this.scheduleRequestId;
       if (ids.length > 0) {
         getScheduleDetail(ids).then((response) => {
+          if (requestId !== this.scheduleRequestId) {
+            return;
+          }
           if (response.data) {
             let scheduleData = response.data;
             this.tableData.forEach((scenario) => {
