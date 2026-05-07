@@ -22,7 +22,7 @@
         v-if="isStepTableAlive"
       >
         <el-row type="flex" :gutter="20">
-          <el-col :span="12" v-if="form.requirementNumber">
+          <el-col :span="12" v-if="fromRequirement">
             <el-form-item
               label="需求编号"
               :label-width="formLabelWidth"
@@ -53,7 +53,7 @@
             </el-form-item>
           </el-col>
 
-          <el-col :span="12" v-if="!form.requirementNumber">
+          <el-col :span="12" v-if="!fromRequirement">
             <el-form-item
               prop="nodeId"
               :label="$t('test_track.case.module')"
@@ -74,7 +74,7 @@
           </el-col>
         </el-row>
 
-        <el-row type="flex" :gutter="20" v-if="form.requirementNumber">
+        <el-row type="flex" :gutter="20" v-if="fromRequirement">
           <el-col :span="12">
             <el-form-item
               :label="$t('test_track.case.project')"
@@ -99,7 +99,7 @@
           </el-col>
         </el-row>
 
-        <el-row type="flex" :gutter="20" v-if="form.requirementNumber">
+        <el-row type="flex" :gutter="20" v-if="fromRequirement">
           <el-col :span="12">
             <el-form-item
               prop="nodeId"
@@ -441,6 +441,7 @@ export default {
       caseTreeNodes: [],
       projectOptions: [],
       requirementSystemName: "",
+      fromRequirement: false,
       moduleObj: {
         id: "id",
         label: "name",
@@ -531,6 +532,7 @@ export default {
     openTestPlanEditDialog(testPlan, selectDefaultNode) {
       this.resetForm();
       this.defaultNode = selectDefaultNode;
+      this.fromRequirement = false;
       this.getNodeTrees();
       this.setPrincipalOptions();
       this.operationType = "add";
@@ -551,6 +553,7 @@ export default {
     openFromRequirement(requirement) {
       this.resetForm();
       this.operationType = "add";
+      this.fromRequirement = true;
       this.form.name = requirement.requirementName;
       this.form.requirementNumber = requirement.dmpNum;
       this.form.projectId = this.projectId;
@@ -789,6 +792,8 @@ export default {
           this.form.requirementNumber = "";
           this.form.caseModuleId = "";
           this.form.caseModulePath = "";
+          this.fromRequirement = false;
+          this.requirementSystemName = "";
           return true;
         });
       }
