@@ -440,6 +440,7 @@ export default {
       treeNodes: null,
       caseTreeNodes: [],
       projectOptions: [],
+      requirementSystemName: "",
       moduleObj: {
         id: "id",
         label: "name",
@@ -468,7 +469,15 @@ export default {
           buildTree(node, { path: "" });
         });
         this.treeNodes = treeNodes;
-        if (this.operationType === "add") {
+        // 需求池创建时，根据所属系统名称自动匹配计划所属系统节点
+        if (this.form.requirementNumber && this.requirementSystemName) {
+          let matched = this.findNodeByName(treeNodes, this.requirementSystemName);
+          if (matched) {
+            this.form.nodeId = matched.id;
+            this.form.nodePath = matched.path;
+          }
+        }
+        if (this.operationType === "add" && !(this.form.requirementNumber && this.requirementSystemName)) {
           this.setDefaultModule();
         }
         // 树数据加载完成，恢复nodeId必填规则
@@ -546,6 +555,8 @@ export default {
       this.form.requirementNumber = requirement.dmpNum;
       this.form.projectId = this.projectId;
       this.form.tags = [];
+      // 保存需求的所属系统名称，用于树加载后自动匹配
+      this.requirementSystemName = requirement.systemName || "";
       listenGoBack(this.close);
       this.setEmptyStage();
       // 临时去掉nodeId必填规则，避免树数据加载前触发校验闪烁
@@ -574,6 +585,14 @@ export default {
           buildTree(node, {path: ""});
         });
         this.caseTreeNodes = treeNodes;
+        // 需求池创建时，根据所属系统名称自动匹配用例所属系统节点
+        if (this.form.requirementNumber && this.requirementSystemName) {
+          let matched = this.findNodeByName(treeNodes, this.requirementSystemName);
+          if (matched) {
+            this.form.caseModuleId = matched.id;
+            this.form.caseModulePath = matched.path;
+          }
+        }
       });
     },
     setEmptyStage() {
@@ -785,6 +804,20 @@ export default {
         this.form.caseModuleId = id;
         this.form.caseModulePath = data.path;
       }
+    },
+    // 递归遍历模块树，按名称匹配节点
+    findNodeByName(nodes, name) {
+      if (!nodes || !name) return null;
+      for (let node of nodes) {
+        if (node.name === name) {
+          return node;
+        }
+        if (node.children && node.children.length > 0) {
+          let found = this.findNodeByName(node.children, name);
+          if (found) return found;
+        }
+      }
+      return null;
     },
     // 需求池创建时，切换所属项目联动刷新模块树和负责人
     handleProjectChange(projectId) {
