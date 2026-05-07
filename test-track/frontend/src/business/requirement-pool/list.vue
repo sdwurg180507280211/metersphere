@@ -323,7 +323,8 @@ export default {
       // 打开测试计划创建弹窗，传入需求信息
       this.$refs.testPlanEdit.openFromRequirement({
         dmpNum: row.dmpNum,
-        requirementName: row.requirementName
+        requirementName: row.requirementName,
+        systemName: row.systemName
       });
     },
     // 判断创建按钮是否禁用
