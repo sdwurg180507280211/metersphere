@@ -18,8 +18,8 @@ PROJECT_PATH=${PROJECT_PATH:-"$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd)"}
 # 镜像仓库地址
 REGISTRY=${REGISTRY:-"registry.fit2cloud.com/north"}
 
-# 打包输出路径
-PACKAGE_PATH=${PACKAGE_PATH:-"$HOME/Desktop/metersphere-$(date +%y%m%d).tar"}
+# 打包输出路径（如果未设置，将在 main 函数中根据模块和版本动态生成）
+PACKAGE_PATH=${PACKAGE_PATH:-""}
 
 # 是否跳过 Maven 依赖安装
 SKIP_INIT=${SKIP_INIT:-false}
@@ -599,6 +599,67 @@ main() {
     # 确定要构建的模块（按预定义顺序）
     if [ "$build_all" = true ] || [ ${#modules_to_build[@]} -eq 0 ]; then
         modules_to_build=("${BUILD_ORDER[@]}")
+    fi
+
+    # 动态生成包名（如果未通过 -o 或环境变量指定）
+    if [ -z "$PACKAGE_PATH" ]; then
+        local date_suffix="$(date +%y%m%d)"
+        local module_count=${#modules_to_build[@]}
+
+        # 检查所有模块版本是否相同
+        local first_version=""
+        local all_same_version=true
+        for module in "${modules_to_build[@]}"; do
+            local ver="$(get_module_version "$module")"
+            if [ -z "$first_version" ]; then
+                first_version="$ver"
+            elif [ "$ver" != "$first_version" ]; then
+                all_same_version=false
+                break
+            fi
+        done
+
+        # 生成模块名部分
+        local module_part=""
+        if [ $module_count -le 3 ]; then
+            if [ "$all_same_version" = true ] && [ -n "$first_version" ]; then
+                # 版本相同：简化显示
+                module_part=$(IFS='+'; echo "${modules_to_build[*]}")
+                module_part="${module_part}-${first_version}"
+            else
+                # 版本不同：每个模块显示版本
+                local parts=()
+                for module in "${modules_to_build[@]}"; do
+                    local ver="$(get_module_version "$module")"
+                    if [ -n "$ver" ]; then
+                        parts+=("${module}-${ver}")
+                    else
+                        parts+=("${module}")
+                    fi
+                done
+                module_part=$(IFS='+'; echo "${parts[*]}")
+            fi
+        else
+            # 超过3个模块：显示数量+版本信息
+            if [ "$all_same_version" = true ] && [ -n "$first_version" ]; then
+                module_part="${module_count}modules-${first_version}"
+            else
+                # 版本不同时，显示最高版本
+                local max_version=""
+                for module in "${modules_to_build[@]}"; do
+                    local ver="$(get_module_version "$module")"
+                    if [ -n "$ver" ]; then
+                        if [ -z "$max_version" ] || [[ "$ver" > "$max_version" ]]; then
+                            max_version="$ver"
+                        fi
+                    fi
+                done
+                module_part="${module_count}modules-${max_version}"
+            fi
+        fi
+
+        # 生成完整包名
+        PACKAGE_PATH="$HOME/Desktop/metersphere-${module_part}-${date_suffix}.tar"
     fi
 
     # 显示构建配置
