@@ -249,6 +249,22 @@
         <appender-ref ref="console"/>
     </root>
 
+    <logger name="io.metersphere.requirement.pool" additivity="false">
+        <level value="${logger.level:INFO}"/>
+        <appender-ref ref="infoAsyncAppender"/>
+        <appender-ref ref="warnAsyncAppender"/>
+        <appender-ref ref="errorAsyncAppender"/>
+        <appender-ref ref="console"/>
+    </logger>
+
+    <logger name="io.metersphere.track.consumer.RequirementSyncConsumer" additivity="false">
+        <level value="${logger.level:INFO}"/>
+        <appender-ref ref="infoAsyncAppender"/>
+        <appender-ref ref="warnAsyncAppender"/>
+        <appender-ref ref="errorAsyncAppender"/>
+        <appender-ref ref="console"/>
+    </logger>
+
     <logger name="io.metersphere" additivity="false">
         <level value="${logger.level:INFO}"/>
         <appender-ref ref="infoAsyncAppender"/>

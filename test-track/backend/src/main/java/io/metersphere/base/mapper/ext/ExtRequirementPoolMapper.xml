@@ -321,4 +321,33 @@
         where dmp_num = #{dmpNum}
     </update>
 
+    <update id="updateByDmpNum" parameterType="io.metersphere.base.domain.RequirementPool">
+        update requirement_pool
+        <set>
+            <if test="requirementName != null">requirement_name = #{requirementName},</if>
+            <if test="parentWfinstCode != null">parent_wfinst_code = #{parentWfinstCode},</if>
+            <if test="actName != null">act_name = #{actName},</if>
+            <if test="operationType != null">operation_type = #{operationType},</if>
+            <if test="systemName != null">system_name = #{systemName},</if>
+            <if test="reqManagerName != null">req_manager_name = #{reqManagerName},</if>
+            <if test="assigneeName != null">assignee_name = #{assigneeName},</if>
+            <if test="createdDept != null">created_dept = #{createdDept},</if>
+            <if test="createUser1 != null">create_user1 = #{createUser1},</if>
+            <if test="deptName != null">dept_name = #{deptName},</if>
+            <if test="startUserName != null">start_user_name = #{startUserName},</if>
+            <if test="reqFatherClass != null">req_father_class = #{reqFatherClass},</if>
+            <if test="reqSonClass != null">req_son_class = #{reqSonClass},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="upTime != null">up_time = #{upTime},</if>
+            <if test="lastSyncTime != null">last_sync_time = #{lastSyncTime},</if>
+            <if test="eventTime != null">event_time = #{eventTime},</if>
+            <if test="traceId != null">trace_id = #{traceId},</if>
+            <if test="poolStatus != null">pool_status = #{poolStatus},</if>
+            <if test="linkedPlanId != null">linked_plan_id = #{linkedPlanId},</if>
+            <if test="linkedPlanName != null">linked_plan_name = #{linkedPlanName},</if>
+            updated_at = UNIX_TIMESTAMP(NOW()) * 1000
+        </set>
+        where dmp_num = #{dmpNum}
+    </update>
+
 </mapper>
