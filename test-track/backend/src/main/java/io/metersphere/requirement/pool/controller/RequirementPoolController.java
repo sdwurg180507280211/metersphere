@@ -28,6 +28,11 @@ public class RequirementPoolController {
         return requirementPoolService.submitRequirement(request);
     }
 
+    @PostMapping("/update")
+    public RequirementPool updateRequirement(@RequestBody CreateRequirementPoolRequest request) throws Exception {
+        return requirementPoolService.updateRequirement(request);
+    }
+
     @PostMapping("/list/{goPage}/{pageSize}")
     public Pager<List<RequirementPool>> listRequirements(@PathVariable int goPage,
                                                           @PathVariable int pageSize,

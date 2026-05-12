@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :visible.sync="dialogVisible"
-    title="创建需求"
+    :title="dialogTitle"
     width="960px"
     :close-on-click-modal="false"
     append-to-body
@@ -20,6 +20,7 @@
           <el-form-item label="需求编号" prop="dmpNum">
             <el-input
               v-model="form.dmpNum"
+              :disabled="isEdit"
               maxlength="64"
               show-word-limit
               placeholder="请输入需求编号"
@@ -176,7 +177,7 @@
 </template>
 
 <script>
-import { addRequirement } from "@/api/requirement-pool";
+import { addRequirement, updateRequirement } from "@/api/requirement-pool";
 
 const defaultForm = () => ({
   dmpNum: "",
@@ -201,6 +202,7 @@ export default {
     return {
       dialogVisible: false,
       saving: false,
+      isEdit: false,
       form: defaultForm(),
       rules: {
         dmpNum: [
@@ -212,9 +214,19 @@ export default {
       },
     };
   },
+  computed: {
+    dialogTitle() {
+      return this.isEdit ? "编辑需求" : "创建需求";
+    },
+  },
   methods: {
-    open() {
-      this.resetForm();
+    open(row) {
+      if (row) {
+        this.isEdit = true;
+        this.form = this.buildForm(row);
+      } else {
+        this.resetForm();
+      }
       this.dialogVisible = true;
       this.$nextTick(() => {
         if (this.$refs.createRequirementForm) {
@@ -227,7 +239,20 @@ export default {
       this.resetForm();
     },
     resetForm() {
+      this.isEdit = false;
       this.form = defaultForm();
+    },
+    buildForm(source) {
+      const form = defaultForm();
+      Object.keys(form).forEach((key) => {
+        if (source[key] !== undefined) {
+          form[key] = source[key];
+        }
+      });
+      return form;
+    },
+    buildPayload() {
+      return this.buildForm(this.form);
     },
     save() {
       this.$refs.createRequirementForm.validate((valid) => {
@@ -235,7 +260,8 @@ export default {
           return false;
         }
         this.saving = true;
-        addRequirement(this.form)
+        const request = this.isEdit ? updateRequirement : addRequirement;
+        request(this.buildPayload())
           .then(() => {
             this.saving = false;
             this.$success(this.$t("commons.save_success"));

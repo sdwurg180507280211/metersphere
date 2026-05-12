@@ -127,7 +127,7 @@ public class RequirementPoolService {
             MSException.throwException("需求名称不能为空");
         }
 
-        RequirementSyncMessage msg = buildSyncMessage(request);
+        RequirementSyncMessage msg = buildSyncMessage(request, OPERATION_CREATED);
         log.info("[需求MQ-模拟生产者] 创建按钮触发发送, dmpNum={}, requirementName={}, traceId={}", dmpNum, requirementName, msg.getTraceId());
         requirementSyncProducer.sendSyncMessage(msg);
 
@@ -137,12 +137,39 @@ public class RequirementPoolService {
         return result;
     }
 
-    private RequirementSyncMessage buildSyncMessage(CreateRequirementPoolRequest request) {
+    public RequirementPool updateRequirement(CreateRequirementPoolRequest request) throws Exception {
+        String dmpNum = StringUtils.trimToEmpty(request.getDmpNum());
+        String requirementName = StringUtils.trimToEmpty(request.getRequirementName());
+        if (StringUtils.isBlank(dmpNum)) {
+            MSException.throwException("需求编号不能为空");
+        }
+        if (StringUtils.isBlank(requirementName)) {
+            MSException.throwException("需求名称不能为空");
+        }
+        RequirementPool existing = extRequirementPoolMapper.selectByDmpNum(dmpNum);
+        if (existing == null) {
+            MSException.throwException("需求不存在");
+        }
+        if (STATUS_CANCELLED.equals(existing.getPoolStatus())) {
+            MSException.throwException("已取消的需求不可编辑");
+        }
+
+        RequirementSyncMessage msg = buildSyncMessage(request, OPERATION_UPDATED);
+        log.info("[需求MQ-模拟生产者] 编辑按钮触发发送, dmpNum={}, requirementName={}, traceId={}", dmpNum, requirementName, msg.getTraceId());
+        requirementSyncProducer.sendSyncMessage(msg);
+
+        RequirementPool result = new RequirementPool();
+        result.setDmpNum(dmpNum);
+        result.setRequirementName(requirementName);
+        return result;
+    }
+
+    private RequirementSyncMessage buildSyncMessage(CreateRequirementPoolRequest request, String operationType) {
         RequirementSyncMessage msg = BeanUtils.copyBean(new RequirementSyncMessage(), request);
         msg.setDmpNum(StringUtils.trimToEmpty(request.getDmpNum()));
         msg.setName1(StringUtils.trimToEmpty(request.getRequirementName()));
         msg.setCreatedept(request.getCreatedDept());
-        msg.setOperationType(OPERATION_CREATED);
+        msg.setOperationType(operationType);
         msg.setEventTime(System.currentTimeMillis());
         ensureTraceId(msg);
         return msg;

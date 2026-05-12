@@ -4,6 +4,10 @@ export function addRequirement(param) {
   return post("/requirement-pool/add", param);
 }
 
+export function updateRequirement(param) {
+  return post("/requirement-pool/update", param);
+}
+
 /**
  * 需求池列表查询
  * @param goPage 页码
