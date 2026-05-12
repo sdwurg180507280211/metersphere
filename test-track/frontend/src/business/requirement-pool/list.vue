@@ -15,7 +15,7 @@
 
         <ms-table
             v-loading="page.loading"
-            operator-width="160px"
+            operator-width="200px"
             row-key="dmpNum"
             :data="page.data"
             :condition="page.condition"
@@ -254,6 +254,13 @@ export default {
       pageRefresh: false,
       operators: [
         {
+          tip: '编辑需求',
+          icon: 'el-icon-edit',
+          exec: this.handleEditRequirement,
+          isDisable: this.isEditDisabled,
+          permissions: ['PROJECT_TRACK_PLAN:READ+CREATE']
+        },
+        {
           tip: '创建测试计划',
           icon: 'el-icon-circle-plus-outline',
           exec: this.handleCreatePlan,
@@ -277,6 +284,16 @@ export default {
   methods: {
     handleCreateRequirement() {
       this.$refs.createRequirementDialog.open();
+    },
+    handleEditRequirement(row) {
+      if (row.poolStatus === 'CANCELLED') {
+        this.$warning('已取消的需求不可编辑');
+        return;
+      }
+      this.$refs.createRequirementDialog.open(row);
+    },
+    isEditDisabled(row) {
+      return row.poolStatus === 'CANCELLED';
     },
     // 初始化表格数据
     initTableData() {
