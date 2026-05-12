@@ -13,15 +13,19 @@ import io.metersphere.base.mapper.TestPlanNodeMapper;
 import io.metersphere.base.mapper.ext.ExtRequirementPoolMapper;
 import io.metersphere.commons.constants.ProjectModuleDefaultNodeEnum;
 import io.metersphere.commons.exception.MSException;
+import io.metersphere.commons.utils.BeanUtils;
 import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.plan.request.AddTestPlanRequest;
 import io.metersphere.plan.service.TestPlanService;
+import io.metersphere.requirement.pool.dto.RequirementSyncMessage;
+import io.metersphere.requirement.pool.producer.RequirementSyncProducer;
 import io.metersphere.requirement.pool.request.CreateRequirementPoolRequest;
 import io.metersphere.requirement.pool.request.CreateTestPlanFromRequirementRequest;
 import io.metersphere.requirement.pool.request.QueryRequirementPoolRequest;
 import io.metersphere.service.TestCaseNodeService;
 import io.metersphere.service.TestPlanNodeService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +34,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class RequirementPoolService {
+
+    private static final String OPERATION_CREATED = "CREATED";
+    private static final String OPERATION_UPDATED = "UPDATED";
+    private static final String OPERATION_CANCELLED = "CANCELLED";
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_CREATED = "CREATED";
+    private static final String STATUS_CANCELLED = "CANCELLED";
 
     @Resource
     private ExtRequirementPoolMapper extRequirementPoolMapper;
     @Resource
     private TestPlanService testPlanService;
+    @Resource
+    private RequirementSyncProducer requirementSyncProducer;
     @Resource
     private TestPlanNodeService testPlanNodeService;
     @Resource
@@ -68,7 +82,7 @@ public class RequirementPoolService {
         requirementPool.setId(UUID.randomUUID().toString().replace("-", ""));
         requirementPool.setDmpNum(dmpNum);
         requirementPool.setRequirementName(requirementName);
-        requirementPool.setPoolStatus("PENDING");
+        requirementPool.setPoolStatus(STATUS_PENDING);
         requirementPool.setActName(trimToNull(request.getActName()));
         requirementPool.setOperationType(trimToNull(request.getOperationType()));
         requirementPool.setParentWfinstCode(trimToNull(request.getParentWfinstCode()));
@@ -103,6 +117,37 @@ public class RequirementPoolService {
         return extRequirementPoolMapper.updatePoolStatusAndLinkedPlan(dmpNum, poolStatus, linkedPlanId, linkedPlanName);
     }
 
+    public RequirementPool submitRequirement(CreateRequirementPoolRequest request) throws Exception {
+        String dmpNum = StringUtils.trimToEmpty(request.getDmpNum());
+        String requirementName = StringUtils.trimToEmpty(request.getRequirementName());
+        if (StringUtils.isBlank(dmpNum)) {
+            MSException.throwException("需求编号不能为空");
+        }
+        if (StringUtils.isBlank(requirementName)) {
+            MSException.throwException("需求名称不能为空");
+        }
+
+        RequirementSyncMessage msg = buildSyncMessage(request);
+        log.info("[需求MQ-模拟生产者] 创建按钮触发发送, dmpNum={}, requirementName={}, traceId={}", dmpNum, requirementName, msg.getTraceId());
+        requirementSyncProducer.sendSyncMessage(msg);
+
+        RequirementPool result = new RequirementPool();
+        result.setDmpNum(dmpNum);
+        result.setRequirementName(requirementName);
+        return result;
+    }
+
+    private RequirementSyncMessage buildSyncMessage(CreateRequirementPoolRequest request) {
+        RequirementSyncMessage msg = BeanUtils.copyBean(new RequirementSyncMessage(), request);
+        msg.setDmpNum(StringUtils.trimToEmpty(request.getDmpNum()));
+        msg.setName1(StringUtils.trimToEmpty(request.getRequirementName()));
+        msg.setCreatedept(request.getCreatedDept());
+        msg.setOperationType(OPERATION_CREATED);
+        msg.setEventTime(System.currentTimeMillis());
+        ensureTraceId(msg);
+        return msg;
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public TestPlan createTestPlanFromRequirement(CreateTestPlanFromRequirementRequest request) {
         // 1. 检查需求是否存在且状态为PENDING
@@ -110,7 +155,7 @@ public class RequirementPoolService {
         if (requirement == null) {
             MSException.throwException("需求不存在");
         }
-        if (!"PENDING".equals(requirement.getPoolStatus())) {
+        if (!STATUS_PENDING.equals(requirement.getPoolStatus())) {
             MSException.throwException("该需求已创建测试计划或已取消");
         }
 
@@ -121,7 +166,7 @@ public class RequirementPoolService {
         // 3. 更新需求池状态
         extRequirementPoolMapper.updatePoolStatusAndLinkedPlan(
             request.getDmpNum(),
-            "CREATED",
+            STATUS_CREATED,
             testPlan.getId(),
             testPlan.getName()
         );
@@ -143,7 +188,7 @@ public class RequirementPoolService {
         if (requirement == null) {
             MSException.throwException("需求不存在");
         }
-        if (!"CREATED".equals(requirement.getPoolStatus())) {
+        if (!STATUS_CREATED.equals(requirement.getPoolStatus())) {
             MSException.throwException("只有已创建状态的需求才能回退");
         }
         String linkedPlanId = requirement.getLinkedPlanId();
@@ -167,7 +212,7 @@ public class RequirementPoolService {
         testPlanService.deleteTestPlan(linkedPlanId);
 
         // 4. 重置需求池状态
-        extRequirementPoolMapper.updatePoolStatusAndLinkedPlan(dmpNum, "PENDING", null, null);
+        extRequirementPoolMapper.updatePoolStatusAndLinkedPlan(dmpNum, STATUS_PENDING, null, null);
     }
 
     /**
@@ -222,6 +267,128 @@ public class RequirementPoolService {
 
     private String trimToNull(String value) {
         return StringUtils.trimToNull(value);
+    }
+
+    // ==================== MQ消息处理 ====================
+
+    /**
+     * 统一处理MQ同步消息，根据operationType分发
+     * 包含幂等检查：基于dmpNum + eventTime防止重复消费和乱序消息
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void handleSyncMessage(RequirementSyncMessage msg) {
+        ensureTraceId(msg);
+        String dmpNum = StringUtils.trimToEmpty(msg.getDmpNum());
+        if (StringUtils.isBlank(dmpNum)) {
+            log.warn("[需求MQ-丢弃] dmpNum为空, traceId={}", msg.getTraceId());
+            return;
+        }
+
+        RequirementPool existing = extRequirementPoolMapper.selectByDmpNum(dmpNum);
+
+        if (existing != null && existing.getEventTime() != null
+                && msg.getEventTime() != null && msg.getEventTime() <= existing.getEventTime()) {
+            log.info("[需求MQ-幂等丢弃] dmpNum={}, incomingEventTime={}, currentEventTime={}, traceId={}",
+                    dmpNum, msg.getEventTime(), existing.getEventTime(), msg.getTraceId());
+            return;
+        }
+
+        String operationType = StringUtils.trimToEmpty(msg.getOperationType());
+        log.info("[需求MQ-业务分发] dmpNum={}, operationType={}, exists={}, traceId={}",
+                dmpNum, operationType, existing != null, msg.getTraceId());
+        switch (operationType) {
+            case OPERATION_CREATED:
+                handleCreated(msg, existing);
+                break;
+            case OPERATION_UPDATED:
+                handleUpdated(msg, existing);
+                break;
+            case OPERATION_CANCELLED:
+                handleCancelled(msg, existing);
+                break;
+            default:
+                log.warn("[需求MQ-忽略] 未知operationType, dmpNum={}, operationType={}, traceId={}",
+                        dmpNum, operationType, msg.getTraceId());
+                break;
+        }
+    }
+
+    /** 处理CREATED消息：新建需求 */
+    public void handleCreated(RequirementSyncMessage msg, RequirementPool existing) {
+        if (existing != null) {
+            // 已存在则当作更新处理
+            handleUpdated(msg, existing);
+            return;
+        }
+        long now = System.currentTimeMillis();
+        RequirementPool pool = new RequirementPool();
+        pool.setId(UUID.randomUUID().toString().replace("-", ""));
+        applySyncMessage(pool, msg, OPERATION_CREATED);
+        pool.setPoolStatus(STATUS_PENDING);
+        pool.setCreateTime(msg.getCreateTime() != null ? msg.getCreateTime() : now);
+        pool.setUpTime(msg.getUpTime() != null ? msg.getUpTime() : now);
+        pool.setLastSyncTime(now);
+        pool.setEventTime(msg.getEventTime());
+        pool.setCreatedAt(now);
+        pool.setUpdatedAt(now);
+        extRequirementPoolMapper.insert(pool);
+        log.info("[需求MQ-落库完成] action=insert, dmpNum={}, poolStatus={}, traceId={}",
+                pool.getDmpNum(), pool.getPoolStatus(), pool.getTraceId());
+    }
+
+    /** 处理UPDATED消息：更新已有需求 */
+    public void handleUpdated(RequirementSyncMessage msg, RequirementPool existing) {
+        if (existing == null) {
+            // 不存在则当作新建处理
+            handleCreated(msg, null);
+            return;
+        }
+        long now = System.currentTimeMillis();
+        applySyncMessage(existing, msg, OPERATION_UPDATED);
+        if (msg.getCreateTime() != null) {
+            existing.setCreateTime(msg.getCreateTime());
+        }
+        if (msg.getUpTime() != null) {
+            existing.setUpTime(msg.getUpTime());
+        }
+        existing.setLastSyncTime(now);
+        existing.setEventTime(msg.getEventTime());
+        extRequirementPoolMapper.updateByDmpNum(existing);
+        log.info("[需求MQ-落库完成] action=update, dmpNum={}, traceId={}",
+                existing.getDmpNum(), existing.getTraceId());
+    }
+
+    /** 处理CANCELLED消息：取消需求 */
+    public void handleCancelled(RequirementSyncMessage msg, RequirementPool existing) {
+        if (existing == null) {
+            return;
+        }
+        applySyncMessage(existing, msg, OPERATION_CANCELLED);
+        if (STATUS_PENDING.equals(existing.getPoolStatus())) {
+            existing.setPoolStatus(STATUS_CANCELLED);
+        } else {
+            existing.setPoolStatus(null);
+        }
+        existing.setLastSyncTime(System.currentTimeMillis());
+        extRequirementPoolMapper.updateByDmpNum(existing);
+        log.info("[需求MQ-落库完成] action=cancel, dmpNum={}, poolStatus={}, traceId={}",
+                existing.getDmpNum(), existing.getPoolStatus(), existing.getTraceId());
+    }
+
+    private void applySyncMessage(RequirementPool pool, RequirementSyncMessage msg, String operationType) {
+        ensureTraceId(msg);
+        BeanUtils.copyBean(pool, msg, "createTime", "upTime");
+        pool.setDmpNum(StringUtils.trimToEmpty(msg.getDmpNum()));
+        pool.setRequirementName(StringUtils.trimToNull(msg.getName1()));
+        pool.setCreatedDept(StringUtils.trimToNull(msg.getCreatedept()));
+        pool.setOperationType(operationType);
+        pool.setTraceId(msg.getTraceId());
+    }
+
+    private void ensureTraceId(RequirementSyncMessage msg) {
+        if (StringUtils.isBlank(msg.getTraceId())) {
+            msg.setTraceId(UUID.randomUUID().toString().replace("-", ""));
+        }
     }
 
     private AddTestPlanRequest buildTestPlanRequest(CreateTestPlanFromRequirementRequest request, RequirementPool requirement) {
