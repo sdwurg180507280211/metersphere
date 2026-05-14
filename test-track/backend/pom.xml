@@ -38,6 +38,11 @@
             <artifactId>rocketmq-client</artifactId>
             <version>4.9.2</version>
         </dependency>
+        <dependency>
+            <groupId>com.ruiinsurance</groupId>
+            <artifactId>cloudlaunch-message-rocketmq</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>

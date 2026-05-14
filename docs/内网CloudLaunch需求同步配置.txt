@@ -1,0 +1,21 @@
+# 内网 CloudLaunch 需求同步配置
+# 文件位置建议：/opt/metersphere/conf/metersphere.properties
+# 用途：MeterSphere 模拟需求平台 Producer，向 MQ 发送需求同步消息，并由 MeterSphere 自己消费落库。
+
+requirement.sync.mq.client=cloudlaunch
+
+cloudlaunch.message.broker-clusters.broker-int.server-address=10.0.2.92:2876;10.0.2.93:2876;10.0.2.94:2876
+
+cloudlaunch.message.broker-clusters.broker-int.producers.producer-aiuw.producer-id=producer-requirement-to-metersphere
+cloudlaunch.message.broker-clusters.broker-int.producers.producer-aiuw.topic=topic-requirement-to-metersphere
+cloudlaunch.message.broker-clusters.broker-int.producers.producer-aiuw.tag=*
+cloudlaunch.message.broker-clusters.broker-int.producers.producer-aiuw.send-timeout=3000
+
+cloudlaunch.message.broker-clusters.broker-int.consumers.requirementSyncConsumer.consumer-id=consumer-requirement-to-metersphere
+cloudlaunch.message.broker-clusters.broker-int.consumers.requirementSyncConsumer.message-listener=io.metersphere.track.consumer.RequirementSyncCloudlaunchListener
+cloudlaunch.message.broker-clusters.broker-int.consumers.requirementSyncConsumer.topic=topic-requirement-to-metersphere
+cloudlaunch.message.broker-clusters.broker-int.consumers.requirementSyncConsumer.tag=*
+cloudlaunch.message.broker-clusters.broker-int.consumers.requirementSyncConsumer.consume-thread-nums=5
+cloudlaunch.message.broker-clusters.broker-int.consumers.requirementSyncConsumer.consumeTimeout=15
+cloudlaunch.message.broker-clusters.broker-int.consumers.requirementSyncConsumer.MessageModel=CLUSTERING
+cloudlaunch.message.broker-clusters.broker-int.consumers.requirementSyncConsumer.ConsumeFromWhere=CONSUME_FROM_FIRST_OFFSET
