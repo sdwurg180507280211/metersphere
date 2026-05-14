@@ -10,6 +10,7 @@ import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -21,7 +22,8 @@ import java.util.UUID;
  */
 @Slf4j
 @Component
-public class RequirementSyncProducer implements InitializingBean {
+@ConditionalOnProperty(name = "requirement.sync.mq.client", havingValue = "rocketmq", matchIfMissing = true)
+public class RequirementSyncProducer implements InitializingBean, RequirementSyncMessageSender {
 
     @Value("${rocketmq.name-server:}")
     private String nameServer;
@@ -47,14 +49,13 @@ public class RequirementSyncProducer implements InitializingBean {
     /**
      * 同步发送需求消息
      */
-    public SendResult sendSyncMessage(RequirementSyncMessage msg) throws Exception {
+    public void sendSyncMessage(RequirementSyncMessage msg) throws Exception {
         ensureTraceId(msg);
         String body = JSON.toJSONString(msg);
-        log.info("[需求MQ-发送] topic={}, dmpNum={}, operationType={}, traceId={}", topic, msg.getDmpNum(), msg.getOperationType(), msg.getTraceId());
+        log.info("[需求MQ-发送] client=rocketmq, topic={}, dmpNum={}, operationType={}, traceId={}", topic, msg.getDmpNum(), msg.getOperationType(), msg.getTraceId());
         Message message = new Message(topic, body.getBytes(StandardCharsets.UTF_8));
         SendResult result = producer.send(message);
-        log.info("[需求MQ-发送成功] msgId={}, sendStatus={}, dmpNum={}, traceId={}", result.getMsgId(), result.getSendStatus(), msg.getDmpNum(), msg.getTraceId());
-        return result;
+        log.info("[需求MQ-发送成功] client=rocketmq, msgId={}, sendStatus={}, dmpNum={}, traceId={}", result.getMsgId(), result.getSendStatus(), msg.getDmpNum(), msg.getTraceId());
     }
 
     private void ensureTraceId(RequirementSyncMessage msg) {

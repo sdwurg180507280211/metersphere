@@ -18,7 +18,7 @@ import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.plan.request.AddTestPlanRequest;
 import io.metersphere.plan.service.TestPlanService;
 import io.metersphere.requirement.pool.dto.RequirementSyncMessage;
-import io.metersphere.requirement.pool.producer.RequirementSyncProducer;
+import io.metersphere.requirement.pool.producer.RequirementSyncMessageSender;
 import io.metersphere.requirement.pool.request.CreateRequirementPoolRequest;
 import io.metersphere.requirement.pool.request.CreateTestPlanFromRequirementRequest;
 import io.metersphere.requirement.pool.request.QueryRequirementPoolRequest;
@@ -50,7 +50,7 @@ public class RequirementPoolService {
     @Resource
     private TestPlanService testPlanService;
     @Resource
-    private RequirementSyncProducer requirementSyncProducer;
+    private RequirementSyncMessageSender requirementSyncMessageSender;
     @Resource
     private TestPlanNodeService testPlanNodeService;
     @Resource
@@ -129,7 +129,7 @@ public class RequirementPoolService {
 
         RequirementSyncMessage msg = buildSyncMessage(request, OPERATION_CREATED);
         log.info("[需求MQ-模拟生产者] 创建按钮触发发送, dmpNum={}, requirementName={}, traceId={}", dmpNum, requirementName, msg.getTraceId());
-        requirementSyncProducer.sendSyncMessage(msg);
+        requirementSyncMessageSender.sendSyncMessage(msg);
 
         RequirementPool result = new RequirementPool();
         result.setDmpNum(dmpNum);
@@ -156,7 +156,7 @@ public class RequirementPoolService {
 
         RequirementSyncMessage msg = buildSyncMessage(request, OPERATION_UPDATED);
         log.info("[需求MQ-模拟生产者] 编辑按钮触发发送, dmpNum={}, requirementName={}, traceId={}", dmpNum, requirementName, msg.getTraceId());
-        requirementSyncProducer.sendSyncMessage(msg);
+        requirementSyncMessageSender.sendSyncMessage(msg);
 
         RequirementPool result = new RequirementPool();
         result.setDmpNum(dmpNum);
