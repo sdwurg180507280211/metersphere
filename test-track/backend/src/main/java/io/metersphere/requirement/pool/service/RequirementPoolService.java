@@ -1,13 +1,10 @@
 package io.metersphere.requirement.pool.service;
 
 import io.metersphere.base.domain.RequirementPool;
-import io.metersphere.base.domain.TestCaseNode;
-import io.metersphere.base.domain.TestCaseNodeExample;
 import io.metersphere.base.domain.TestPlan;
 import io.metersphere.base.domain.TestPlanExample;
 import io.metersphere.base.domain.TestPlanNode;
 import io.metersphere.base.domain.TestPlanNodeExample;
-import io.metersphere.base.mapper.TestCaseNodeMapper;
 import io.metersphere.base.mapper.TestPlanMapper;
 import io.metersphere.base.mapper.TestPlanNodeMapper;
 import io.metersphere.base.mapper.ext.ExtRequirementPoolMapper;
@@ -22,7 +19,6 @@ import io.metersphere.requirement.pool.producer.RequirementSyncMessageSender;
 import io.metersphere.requirement.pool.request.CreateRequirementPoolRequest;
 import io.metersphere.requirement.pool.request.CreateTestPlanFromRequirementRequest;
 import io.metersphere.requirement.pool.request.QueryRequirementPoolRequest;
-import io.metersphere.service.TestCaseNodeService;
 import io.metersphere.service.TestPlanNodeService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -57,10 +53,6 @@ public class RequirementPoolService {
     private TestPlanNodeMapper testPlanNodeMapper;
     @Resource
     private TestPlanMapper testPlanMapper;
-    @Resource
-    private TestCaseNodeService testCaseNodeService;
-    @Resource
-    private TestCaseNodeMapper testCaseNodeMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public RequirementPool addRequirement(CreateRequirementPoolRequest request) {
@@ -231,8 +223,6 @@ public class RequirementPoolService {
             if (StringUtils.isNotBlank(testPlan.getNodeId())) {
                 cleanOrphanNodes(testPlan.getNodeId(), requirement.getDmpNum(), requirement.getRequirementName(), projectId);
             }
-            // 清理功能用例模块树孤儿节点
-            cleanCaseOrphanNodes(requirement.getDmpNum(), requirement.getRequirementName(), projectId);
         }
 
         // 3. 删除测试计划
@@ -266,30 +256,6 @@ public class RequirementPoolService {
 
         // 仅删除自动创建的子模块节点，不删除父模块（测试计划的父模块由用户维护）
         testPlanNodeMapper.deleteByPrimaryKey(nodeId);
-    }
-
-    /**
-     * 清理功能用例模块树下的孤儿节点
-     * 查找名为"需求编号+需求名称"的子模块节点，若无关联用例则删除
-     *
-     * @param dmpNum          需求编号
-     * @param requirementName 需求名称
-     * @param projectId       项目ID
-     */
-    private void cleanCaseOrphanNodes(String dmpNum, String requirementName, String projectId) {
-        String expectedSubModuleName = dmpNum + requirementName;
-
-        // 查找所有项目中名为"需求编号+需求名称"的用例模块节点
-        TestCaseNodeExample example = new TestCaseNodeExample();
-        example.createCriteria()
-                .andProjectIdEqualTo(projectId)
-                .andNameEqualTo(expectedSubModuleName);
-        List<TestCaseNode> subNodes = testCaseNodeMapper.selectByExample(example);
-
-        for (TestCaseNode subNode : subNodes) {
-            // 仅删除子模块节点，不删除父模块（功能用例的父模块由用户维护）
-            testCaseNodeMapper.deleteByPrimaryKey(subNode.getId());
-        }
     }
 
     private String trimToNull(String value) {
@@ -438,12 +404,6 @@ public class RequirementPoolService {
         testPlanRequest.setNodeId(nodeInfo[0]);
         testPlanRequest.setNodePath(nodeInfo[1]);
 
-        // 用例所属系统：在功能用例模块树下创建"需求编号+需求名称"子模块
-        if (StringUtils.isNotBlank(request.getCaseModuleId())) {
-            resolveCaseSubModuleNode(request.getCaseModuleId(), request.getCaseModulePath(),
-                    requirement.getDmpNum(), requirement.getRequirementName(), projectId);
-        }
-
         if (request.getPrincipalIds() != null && !request.getPrincipalIds().isEmpty()) {
             testPlanRequest.setPrincipals(request.getPrincipalIds());
         }
@@ -530,41 +490,4 @@ public class RequirementPoolService {
         return new String[]{subNodeId, subNodePath};
     }
 
-    /**
-     * 在功能用例模块树下创建"需求编号+需求名称"子模块
-     *
-     * @param caseModuleId    用例所属系统节点ID
-     * @param caseModulePath  用例所属系统节点路径
-     * @param dmpNum          需求编号
-     * @param requirementName 需求名称
-     * @param projectId       项目ID
-     */
-    private void resolveCaseSubModuleNode(String caseModuleId, String caseModulePath, String dmpNum, String requirementName, String projectId) {
-        TestCaseNode parentNode = testCaseNodeMapper.selectByPrimaryKey(caseModuleId);
-        if (parentNode == null) {
-            return;
-        }
-
-        String subModuleName = dmpNum + requirementName;
-
-        // 查找是否已存在同名子模块
-        TestCaseNodeExample example = new TestCaseNodeExample();
-        example.createCriteria()
-                .andProjectIdEqualTo(projectId)
-                .andParentIdEqualTo(caseModuleId)
-                .andNameEqualTo(subModuleName);
-        List<TestCaseNode> existingNodes = testCaseNodeMapper.selectByExample(example);
-
-        if (!existingNodes.isEmpty()) {
-            return;
-        }
-
-        // 创建新子模块
-        TestCaseNode subNode = new TestCaseNode();
-        subNode.setProjectId(projectId);
-        subNode.setName(subModuleName);
-        subNode.setParentId(caseModuleId);
-        subNode.setLevel(parentNode.getLevel() + 1);
-        testCaseNodeService.addNode(subNode);
-    }
 }
