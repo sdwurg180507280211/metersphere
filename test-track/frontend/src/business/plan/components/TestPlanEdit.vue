@@ -77,33 +77,8 @@
         <el-row type="flex" :gutter="20" v-if="fromRequirement">
           <el-col :span="12">
             <el-form-item
-              :label="$t('test_track.case.project')"
-              label-width="120px"
-            >
-              <el-select
-                v-model="form.projectId"
-                :placeholder="$t('test_track.case.project')"
-                style="width: 100%"
-                filterable
-                :size="itemSize"
-                @change="handleProjectChange"
-              >
-                <el-option
-                  v-for="item in projectOptions"
-                  :key="item.id"
-                  :label="item.name"
-                  :value="item.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row type="flex" :gutter="20" v-if="fromRequirement">
-          <el-col :span="12">
-            <el-form-item
               prop="nodeId"
-              :label="$t('test_track.case.plan_module')"
+              :label="$t('test_track.case.module')"
               label-width="120px"
             >
               <ms-select-tree
@@ -116,24 +91,6 @@
                 @getValue="setModule"
                 size="small"
                 ref="moduleTree"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item
-              :label="$t('test_track.case.case_module')"
-              label-width="120px"
-            >
-              <ms-select-tree
-                class="plan-node-tree"
-                :disabled="false"
-                :data="caseTreeNodes"
-                :obj="moduleObj"
-                :default-key="form.caseModuleId"
-                checkStrictly
-                @getValue="setCaseModule"
-                size="small"
-                ref="caseModuleTree"
               />
             </el-form-item>
           </el-col>
@@ -339,7 +296,6 @@ import TestPlanStatusButton from "../common/TestPlanStatusButton";
 import {
   getCurrentProjectID,
   getCurrentWorkspaceId,
-  setCurrentProjectID,
 } from "metersphere-frontend/src/utils/token";
 import {
   listenGoBack,
@@ -352,11 +308,9 @@ import {
   testPlanAdd,
   testPlanEdit,
 } from "@/api/remote/plan/test-plan";
-import { buildTree, getProjectMemberOption, getProjectMemberById, getCurrentUser } from "@/business/utils/sdk-utils";
+import { buildTree, getProjectMemberOption, getProjectMemberById } from "@/business/utils/sdk-utils";
 import { getTestPlanNodes } from "@/api/test-plan-node";
 import { createTestPlanFromRequirement } from "@/api/requirement-pool";
-import { testCaseNodeListProject } from "@/api/test-case-node";
-import { getOwnerProjects, getProjectListAll, switchProject } from "metersphere-frontend/src/api/project";
 
 export default {
   name: "TestPlanEdit",
@@ -386,9 +340,6 @@ export default {
         nodeId: "",
         nodePath: "",
         requirementNumber: "",
-        caseModuleId: "",
-        caseModulePath: "",
-        projectId: "",
       },
       rules: {
         name: [
@@ -438,8 +389,6 @@ export default {
       stageOption: [],
       defaultNode: null,
       treeNodes: null,
-      caseTreeNodes: [],
-      projectOptions: [],
       requirementSystemName: "",
       fromRequirement: false,
       moduleObj: {
@@ -463,7 +412,7 @@ export default {
   },
   methods: {
     getNodeTrees() {
-      let projectId = this.form.requirementNumber ? this.form.projectId : this.projectId;
+      let projectId = this.projectId;
       getTestPlanNodes(projectId, {}).then((r) => {
         let treeNodes = r.data;
         treeNodes.forEach((node) => {
@@ -556,7 +505,6 @@ export default {
       this.fromRequirement = true;
       this.form.name = requirement.requirementName;
       this.form.requirementNumber = requirement.dmpNum;
-      this.form.projectId = this.projectId;
       this.form.tags = [];
       // 保存需求的所属系统名称，用于树加载后自动匹配
       this.requirementSystemName = requirement.systemName || "";
@@ -564,8 +512,6 @@ export default {
       this.setEmptyStage();
       // 临时去掉nodeId必填规则，避免树数据加载前触发校验闪烁
       this.rules.nodeId = [];
-      // 加载项目列表
-      this.loadProjectOptions();
       // 加载当前项目的负责人
       this.setPrincipalOptions(this.projectId);
       // 先弹窗
@@ -573,30 +519,6 @@ export default {
       this.reload();
       // 再异步加载树数据，加载完后恢复必填规则
       this.getNodeTrees();
-      this.getCaseNodeTrees();
-    },
-    loadProjectOptions() {
-      getOwnerProjects().then((r) => {
-        this.projectOptions = r.data || [];
-      });
-    },
-    getCaseNodeTrees() {
-      let projectId = this.form.requirementNumber ? this.form.projectId : this.projectId;
-      testCaseNodeListProject({projectId: projectId}).then((r) => {
-        let treeNodes = r.data;
-        treeNodes.forEach((node) => {
-          buildTree(node, {path: ""});
-        });
-        this.caseTreeNodes = treeNodes;
-        // 需求池创建时，根据所属系统名称自动匹配用例所属系统节点
-        if (this.form.requirementNumber && this.requirementSystemName) {
-          let matched = this.findNodeByName(treeNodes, this.requirementSystemName);
-          if (matched) {
-            this.form.caseModuleId = matched.id;
-            this.form.caseModulePath = matched.path;
-          }
-        }
-      });
     },
     setEmptyStage() {
       // 如果测试阶段选项中没有当前值，则置空
@@ -631,7 +553,7 @@ export default {
           if (param.requirementNumber) {
             createTestPlanFromRequirement({
               dmpNum: param.requirementNumber,
-              projectId: param.projectId,
+              projectId: this.projectId,
               workspaceId: getCurrentWorkspaceId(),
               principalIds: param.principals || [],
               stage: param.stage,
@@ -642,8 +564,6 @@ export default {
               repeatCase: param.repeatCase,
               nodeId: param.nodeId,
               nodePath: param.nodePath,
-              caseModuleId: param.caseModuleId,
-              caseModulePath: param.caseModulePath,
               tags: param.tags
             })
               .then((response) => {
@@ -651,8 +571,7 @@ export default {
                 this.$success(this.$t("commons.save_success"));
                 this.dialogFormVisible = false;
                 this.$emit("refresh");
-                // 规划&执行：全局切换项目后跳转
-                this.switchProjectAndNavigate(param.projectId, response.data.id);
+                this.$router.push("/track/plan/view/" + response.data.id);
               })
               .catch(() => {
                 this.loading = false;
@@ -701,7 +620,7 @@ export default {
           if (param.requirementNumber) {
             createTestPlanFromRequirement({
               dmpNum: param.requirementNumber,
-              projectId: param.projectId,
+              projectId: this.projectId,
               workspaceId: getCurrentWorkspaceId(),
               principalIds: param.principals || [],
               stage: param.stage,
@@ -712,8 +631,6 @@ export default {
               repeatCase: param.repeatCase,
               nodeId: param.nodeId,
               nodePath: param.nodePath,
-              caseModuleId: param.caseModuleId,
-              caseModulePath: param.caseModulePath,
               tags: param.tags
             })
               .then(() => {
@@ -790,8 +707,6 @@ export default {
           this.form.nodeId = "";
           this.form.nodePath = "";
           this.form.requirementNumber = "";
-          this.form.caseModuleId = "";
-          this.form.caseModulePath = "";
           this.fromRequirement = false;
           this.requirementSystemName = "";
           return true;
@@ -802,12 +717,6 @@ export default {
       if (data) {
         this.form.nodeId = id;
         this.form.nodePath = data.path;
-      }
-    },
-    setCaseModule(id, data) {
-      if (data) {
-        this.form.caseModuleId = id;
-        this.form.caseModulePath = data.path;
       }
     },
     // 递归遍历模块树，按名称匹配节点
@@ -823,33 +732,6 @@ export default {
         }
       }
       return null;
-    },
-    // 需求池创建时，切换所属项目联动刷新模块树和负责人
-    handleProjectChange(projectId) {
-      // 清空已选模块
-      this.form.nodeId = "";
-      this.form.nodePath = "";
-      this.form.caseModuleId = "";
-      this.form.caseModulePath = "";
-      this.form.principals = [];
-      // 重新加载两个模块树
-      this.getNodeTrees();
-      this.getCaseNodeTrees();
-      // 重新加载负责人列表
-      this.setPrincipalOptions(projectId);
-    },
-    // 规划&执行时，全局切换项目后跳转到测试计划详情
-    switchProjectAndNavigate(projectId, planId) {
-      if (!projectId || projectId === getCurrentProjectID()) {
-        this.$router.push("/track/plan/view/" + planId);
-        return;
-      }
-      // 与左上角项目切换逻辑一致：调后端API + 设置sessionStorage + 整页跳转
-      switchProject({id: getCurrentUser().id, lastProjectId: projectId}).then(() => {
-        setCurrentProjectID(projectId);
-        window.location.href = "/#/track/plan/view/" + planId;
-        window.location.reload();
-      });
     },
   },
 };
