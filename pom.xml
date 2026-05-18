@@ -107,7 +107,6 @@
         <module>system-setting</module>
         <module>test-track</module>
         <module>workstation</module>
-        <module>analytics-stat</module>
     </modules>
 
     <dependencies>
