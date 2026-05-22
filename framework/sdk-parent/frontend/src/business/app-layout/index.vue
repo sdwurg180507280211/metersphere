@@ -38,12 +38,12 @@
             :name="currentApp.name"
             :url="currentApp.entry"
             :data="appData"
-            :destroy="false"
-            :fiber="true"
-            :iframe="currentApp.isViteApp || false"
-            :inline="true"
-            :disable-memory-router="true"
-            :disable-scopecss="true"
+            :destroy="microAppPolicy.destroy"
+            :fiber="microAppPolicy.fiber"
+            :iframe="microAppPolicy.iframe"
+            :inline="microAppPolicy.inline"
+            :disable-memory-router="microAppPolicy.disableMemoryRouter"
+            :disable-scopecss="microAppPolicy.disableScopecss"
             @datachange="handleDataChange"
             @error="handleError"
           />
@@ -69,7 +69,7 @@ import {ORIGIN_COLOR} from "../../utils/constants";
 import {getDisplayInfo, getSystemTheme, isLogin, getSystemParameter} from "../../api/user";
 import {useUserStore} from "@/store";
 import {getModuleList} from "../../api/module";
-import {MIGRATED_MODULES, getEntryUrl} from "../../micro-app-config";
+import {MIGRATED_MODULES, getEntryUrl, getMainMicroAppRuntimePolicy} from "../../micro-app-config";
 
 
 export default {
@@ -185,6 +185,12 @@ export default {
       return {
         defaultPath: this.$route.path,
       };
+    },
+    /**
+     * 当前主应用路由子应用运行策略
+     */
+    microAppPolicy() {
+      return getMainMicroAppRuntimePolicy(this.currentApp.name);
     },
     /**
      * 公告栏动态样式

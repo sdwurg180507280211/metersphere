@@ -11,7 +11,13 @@
 import microApp from '@micro-zoe/micro-app';
 import Vue from 'vue';
 // 引入模块配置表和共享工具函数
-import { getEntryUrl, isMigrated, isViteApp, toMicroAppModuleName, toShortName } from './micro-app-config';
+import {
+  getEntryUrl,
+  getMainMicroAppRuntimePolicy,
+  isMigrated,
+  toMicroAppModuleName,
+  toShortName,
+} from './micro-app-config';
 
 // 【关键】Vue 2 必须忽略 micro-app 自定义元素
 // 否则 Vue 会对 <micro-app> 标签报 "Unknown custom element" 警告
@@ -52,14 +58,10 @@ microApp.start({
     if (process.env.NODE_ENV !== 'development' && appName) {
       const moduleName = toMicroAppModuleName(appName);
       if (isMigrated(moduleName)) {
-        if (url.indexOf('/js/') === -1 && url.indexOf('/css/') === -1) {
-          return window.fetch(url, options).then(res => res.text());
-        }
-
         try {
           const urlObj = new URL(url, window.location.origin);
           const pathname = urlObj.pathname;
-          // 检测绝对路径的静态资源：/js/xxx、/css/xxx
+          // 仅修正根级静态资源：/js/xxx、/css/xxx
           // 注意：fonts/img 等二进制资源由浏览器原生加载，此处不拦截
           // 且路径中尚未包含 /{moduleName}/ 前缀（避免重复补全）
           if (/^\/(js|css)\//.test(pathname) && !pathname.startsWith('/' + moduleName + '/')) {
@@ -112,12 +114,13 @@ export function preFetchApps(services) {
     .filter(svc => svc.serviceId && svc.serviceId !== 'gateway' && isMigrated(svc.serviceId))
     .map(svc => {
       const moduleName = toShortName(svc.serviceId);
+      const runtimePolicy = getMainMicroAppRuntimePolicy(moduleName);
       return {
         name: moduleName,
         url: getEntryUrl(svc.serviceId),
         // Vite 子应用预加载时也需设置 iframe: true
         // 因为 Vite 输出的 ES Module 需要 iframe 沙箱才能正确加载
-        ...(isViteApp(moduleName) ? { iframe: true } : {}),
+        ...(runtimePolicy.iframe ? { iframe: true } : {}),
       };
     });
 

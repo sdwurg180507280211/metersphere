@@ -44,8 +44,10 @@ const menus = [
 
 const activePath = computed(() => {
   const path = route.path
-  // 匹配菜单路径前缀，支持子路径高亮
-  const matched = menus.find((m) => path.startsWith(m.path))
+  // 按最长路径优先匹配，支持子路径高亮
+  const matched = [...menus]
+    .sort((a, b) => b.path.length - a.path.length)
+    .find((m) => path === m.path || path.startsWith(`${m.path}/`))
   if (matched) return matched.path
   // 根路径默认高亮知识库
   if (path === KNOWLEDGE_ROUTE_BASE) return KNOWLEDGE_ROUTE_PATHS.knowledge
