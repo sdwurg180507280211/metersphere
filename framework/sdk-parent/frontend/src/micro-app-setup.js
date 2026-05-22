@@ -11,7 +11,7 @@
 import microApp from '@micro-zoe/micro-app';
 import Vue from 'vue';
 // 引入模块配置表和共享工具函数
-import { MIGRATED_MODULES, getEntryUrl, isViteApp } from './micro-app-config';
+import { getEntryUrl, isMigrated, isViteApp, toMicroAppModuleName, toShortName } from './micro-app-config';
 
 // 【关键】Vue 2 必须忽略 micro-app 自定义元素
 // 否则 Vue 会对 <micro-app> 标签报 "Unknown custom element" 警告
@@ -49,22 +49,29 @@ microApp.start({
    */
   fetch(url, options, appName) {
     // 仅在生产环境且有子应用名称时进行路径修正
-    if (process.env.NODE_ENV !== 'development' && appName && MIGRATED_MODULES[appName]) {
-      try {
-        const urlObj = new URL(url, window.location.origin);
-        const pathname = urlObj.pathname;
-        // 检测绝对路径的静态资源：/js/xxx、/css/xxx
-        // 注意：fonts/img 等二进制资源由浏览器原生加载，此处不拦截
-        // 且路径中尚未包含 /{appName}/ 前缀（避免重复补全）
-        if (/^\/(js|css)\//.test(pathname) && !pathname.startsWith('/' + appName + '/')) {
-          // 补全路径前缀：/js/xxx → /{appName}/js/xxx
-          urlObj.pathname = '/' + appName + pathname;
-          const newUrl = urlObj.toString();
-          return window.fetch(newUrl, options).then(res => res.text());
+    if (process.env.NODE_ENV !== 'development' && appName) {
+      const moduleName = toMicroAppModuleName(appName);
+      if (isMigrated(moduleName)) {
+        if (url.indexOf('/js/') === -1 && url.indexOf('/css/') === -1) {
+          return window.fetch(url, options).then(res => res.text());
         }
-      } catch (e) {
-        // URL 解析失败时不阻塞，降级为默认行为
+
+        try {
+          const urlObj = new URL(url, window.location.origin);
+          const pathname = urlObj.pathname;
+          // 检测绝对路径的静态资源：/js/xxx、/css/xxx
+          // 注意：fonts/img 等二进制资源由浏览器原生加载，此处不拦截
+          // 且路径中尚未包含 /{moduleName}/ 前缀（避免重复补全）
+          if (/^\/(js|css)\//.test(pathname) && !pathname.startsWith('/' + moduleName + '/')) {
+            // 补全路径前缀：/js/xxx → /{moduleName}/js/xxx
+            urlObj.pathname = '/' + moduleName + pathname;
+            const newUrl = urlObj.toString();
+            return window.fetch(newUrl, options).then(res => res.text());
+          }
+        } catch (e) {
+          // URL 解析失败时不阻塞，降级为默认行为
           console.warn('[micro-app] 资源路径修正失败:', url, e);
+        }
       }
     }
     return window.fetch(url, options).then(res => res.text());
@@ -102,15 +109,17 @@ microApp.start({
  */
 export function preFetchApps(services) {
   const apps = services
-    // 排除网关服务，网关不是子应用
-    .filter(svc => svc.serviceId !== 'gateway')
-    .map(svc => ({
-      name: svc.serviceId,
-      url: getEntryUrl(svc.serviceId),
-      // Vite 子应用预加载时也需设置 iframe: true
-      // 因为 Vite 输出的 ES Module 需要 iframe 沙箱才能正确加载
-      ...(isViteApp(svc.serviceId) ? { iframe: true } : {}),
-    }));
+    .filter(svc => svc.serviceId && svc.serviceId !== 'gateway' && isMigrated(svc.serviceId))
+    .map(svc => {
+      const moduleName = toShortName(svc.serviceId);
+      return {
+        name: moduleName,
+        url: getEntryUrl(svc.serviceId),
+        // Vite 子应用预加载时也需设置 iframe: true
+        // 因为 Vite 输出的 ES Module 需要 iframe 沙箱才能正确加载
+        ...(isViteApp(moduleName) ? { iframe: true } : {}),
+      };
+    });
 
   // 延迟 3 秒执行预加载，避免影响首屏渲染
   microApp.preFetch(apps, 3000);
