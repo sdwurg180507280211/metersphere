@@ -21,7 +21,7 @@
         <span slot="title" class="ms-menu-item-title">{{ $t('test_track.test_track') }}</span>
       </div>
     </el-menu-item>
-    <el-menu-item index="/api" @click="active()" v-if="check('api')" onselectstart="return false"
+    <el-menu-item index="/api/home" v-if="check('api')" onselectstart="return false"
                   v-permission="['PROJECT_API_HOME:READ', 'PROJECT_API_DEFINITION:READ','PROJECT_API_SCENARIO:READ','PROJECT_API_REPORT:READ']">
       <div>
         <svg-icon iconClass="api" class-name="ms-menu-img"/>
@@ -54,7 +54,7 @@
       </div>
     </el-menu-item>
 
-    <el-menu-item index="/analytics" v-if="check('analytics')" onselectstart="return false">
+    <el-menu-item index="/analytics/knowledge/chat" v-if="check('analytics')" onselectstart="return false">
       <div>
         <svg-icon iconClass="analytics-stat" class-name="ms-menu-img"/>
         <span slot="title" class="ms-menu-item-title">{{ $t('commons.analytics_stat') }}</span>
@@ -141,12 +141,6 @@ export default {
     handleSelect(index) {
       if (index) {
         this.activeIndex = index;
-      }
-    },
-    active() {
-      // 仅当已在 api 页面时才导航到默认首页，使用 replace 避免与 el-menu router 双重导航冲突
-      if (this.$route.path.startsWith('/api')) {
-        this.$router.replace('/api/home').catch(() => {});
       }
     },
     check(key) {

@@ -100,7 +100,53 @@ function isViteApp(moduleName) {
   return config?.isViteApp === true;
 }
 
-export { MIGRATED_MODULES, SERVICE_ID_TO_MODULE, toShortName, toEmbedMicroAppName, toMicroAppModuleName, isMigrated, isViteApp };
+/**
+ * 获取主应用路由子应用运行策略
+ *
+ * 主应用容器复用子应用实例，保持当前 destroy=false、inline、禁用 memory router、禁用 scoped css 的行为。
+ *
+ * @param {string} moduleName - 模块名称，如 'api' 或 'api-test'
+ * @returns {Object} micro-app 运行策略
+ */
+function getMainMicroAppRuntimePolicy(moduleName) {
+  return {
+    iframe: isViteApp(moduleName),
+    fiber: true,
+    destroy: false,
+    inline: true,
+    disableMemoryRouter: true,
+    disableScopecss: true,
+  };
+}
+
+/**
+ * 获取嵌入式子应用运行策略
+ *
+ * 嵌入式容器用于按需加载场景，保持当前 destroy=true、clearData=true 的 disposable 行为。
+ *
+ * @param {string} moduleName - 模块名称，如 'api' 或 'api-test'
+ * @returns {Object} micro-app 运行策略
+ */
+function getEmbedMicroAppRuntimePolicy(moduleName) {
+  return {
+    iframe: isViteApp(moduleName),
+    fiber: true,
+    destroy: true,
+    clearData: true,
+  };
+}
+
+export {
+  MIGRATED_MODULES,
+  SERVICE_ID_TO_MODULE,
+  toShortName,
+  toEmbedMicroAppName,
+  toMicroAppModuleName,
+  isMigrated,
+  isViteApp,
+  getMainMicroAppRuntimePolicy,
+  getEmbedMicroAppRuntimePolicy,
+};
 
 /**
  * 计算子应用入口 URL（统一入口，避免重复实现）

@@ -11,10 +11,10 @@
       :name="appName"
       :url="appUrl"
       :data="appData"
-      :iframe="isViteApp"
-      destroy
-      clear-data
-      :fiber="true"
+      :iframe="microAppPolicy.iframe"
+      :destroy="microAppPolicy.destroy"
+      :clear-data="microAppPolicy.clearData"
+      :fiber="microAppPolicy.fiber"
       @datachange="handleDataChange"
       @mounted="onMounted"
       @unmount="onUnmount"
@@ -24,7 +24,7 @@
 </template>
 
 <script>
-import { getEntryUrl, isViteApp, toEmbedMicroAppName } from '../micro-app-config';
+import { getEmbedMicroAppRuntimePolicy, getEntryUrl, toEmbedMicroAppName } from '../micro-app-config';
 
 /**
  * MicroAppWrapper - 按需加载子应用组件
@@ -83,14 +83,10 @@ export default {
     },
 
     /**
-     * 判断当前 service 是否为 Vue 3 + Vite 子应用
-     *
-     * Vite 子应用必须开启 iframe 沙箱，因为 Vite 输出的
-     * <script type="module"> 无法被 micro-app 的 with 沙箱拦截。
-     * Vue 2 + Webpack 子应用使用默认的 with 沙箱即可。
+     * 嵌入式子应用运行策略
      */
-    isViteApp() {
-      return isViteApp(this.service);
+    microAppPolicy() {
+      return getEmbedMicroAppRuntimePolicy(this.service);
     },
   },
   methods: {
