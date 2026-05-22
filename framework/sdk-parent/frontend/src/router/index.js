@@ -123,7 +123,7 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  if (to.name === "login_redirect" || to.path === "/login") {
+  if (to.path === "/login") {
     next();
     return;
   }

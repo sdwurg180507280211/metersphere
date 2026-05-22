@@ -70,7 +70,7 @@ export default {
                     console.log(routerUrl)
                     sessionStorage.setItem('redirectUrl', routerUrl);
                     sessionStorage.setItem('lastUser', getCurrentUserId());
-                    router.push({name: "login_redirect", path: routerUrl || '/', query: {}});
+                    router.push({path: routerUrl || '/', query: {}});
                     localStorage.setItem('loginType', 'DING_TALK');
                   }
                 }).catch((err)=>{

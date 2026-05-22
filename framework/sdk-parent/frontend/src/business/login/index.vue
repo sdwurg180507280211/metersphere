@@ -322,7 +322,7 @@ export default {
 
       sessionStorage.setItem('redirectUrl', redirectUrl);
       sessionStorage.setItem('lastUser', getCurrentUserId());
-      this.$router.push({ name: 'login_redirect', path: redirectUrl || '/', query: this.otherQuery });
+      this.$router.push({ path: redirectUrl || '/', query: this.otherQuery });
     },
     doLogin() {
       const userStore = useUserStore();
