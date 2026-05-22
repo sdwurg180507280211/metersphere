@@ -54,7 +54,7 @@
       </div>
     </el-menu-item>
 
-    <el-menu-item index="/analytics" @click="activeAnalyticsStat()" v-if="check('analytics')" onselectstart="return false">
+    <el-menu-item index="/analytics" v-if="check('analytics')" onselectstart="return false">
       <div>
         <svg-icon iconClass="analytics-stat" class-name="ms-menu-img"/>
         <span slot="title" class="ms-menu-item-title">{{ $t('commons.analytics_stat') }}</span>
@@ -144,13 +144,9 @@ export default {
       }
     },
     active() {
-      if (this.activeIndex === '/api') {
-        this.$router.push('/api/home').catch(() => {});
-      }
-    },
-    activeAnalyticsStat() {
-      if (this.activeIndex === '/analytics') {
-        this.$router.push('/analytics/knowledge/chat').catch(() => {});
+      // 仅当已在 api 页面时才导航到默认首页，使用 replace 避免与 el-menu router 双重导航冲突
+      if (this.$route.path.startsWith('/api')) {
+        this.$router.replace('/api/home').catch(() => {});
       }
     },
     check(key) {
