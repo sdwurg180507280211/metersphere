@@ -23,6 +23,8 @@ import {
 // 否则 Vue 会对 <micro-app> 标签报 "Unknown custom element" 警告
 Vue.config.ignoredElements = ['micro-app'];
 
+const PREFETCH_PRIORITY = ['track', 'api', 'project', 'setting', 'workstation', 'report', 'performance', 'analytics'];
+
 const microAppPerfMarks = new Map();
 
 function logMicroAppLifecycle(name, stage) {
@@ -137,12 +139,20 @@ export function preFetchApps(services) {
       return {
         name: moduleName,
         url: getEntryUrl(svc.serviceId),
+        inline: runtimePolicy.inline,
+        'disable-scopecss': runtimePolicy.disableScopecss,
         // Vite 子应用预加载时也需设置 iframe: true
         // 因为 Vite 输出的 ES Module 需要 iframe 沙箱才能正确加载
         ...(runtimePolicy.iframe ? { iframe: true } : {}),
       };
+    })
+    .sort((left, right) => {
+      const leftIndex = PREFETCH_PRIORITY.indexOf(left.name);
+      const rightIndex = PREFETCH_PRIORITY.indexOf(right.name);
+      return (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex)
+        - (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex);
     });
 
-  // 延迟 3 秒执行预加载，避免影响首屏渲染
-  microApp.preFetch(apps, 3000);
+  // 尽早预加载高频/重模块；micro-app 内部仍会在浏览器 idle 时串行执行，避免和首屏强并发抢资源
+  microApp.preFetch(apps, 0);
 }
