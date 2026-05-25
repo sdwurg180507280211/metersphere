@@ -1,11 +1,22 @@
 package io.metersphere.simulator;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
 import java.util.UUID;
 
 public class TestProducer {
+
+    private static final String DEFAULT_CONFIG_PATH = "/opt/metersphere/conf/metersphere.properties";
+    private static final String DEFAULT_TOPIC = "topic-requirement-to-metersphere";
+
     public static void main(String[] args) {
-        String nameServer = "192.168.8.101:9876";
-        String topic = "topic-requirement-to-metersphere";
+        Properties properties = loadProperties(args);
+        String nameServer = getConfig(properties, "requirement.sync.mq.name-server", "ROCKETMQ_NAME_SERVER", "");
+        String topic = getConfig(properties, "requirement.sync.mq.topic", "ROCKETMQ_TOPIC", DEFAULT_TOPIC);
+        if (nameServer.isBlank()) {
+            throw new IllegalArgumentException("RocketMQ NameServer 未配置，请在 /opt/metersphere/conf/metersphere.properties 中配置 requirement.sync.mq.name-server，或设置环境变量 ROCKETMQ_NAME_SERVER");
+        }
 
         RequirementProducer producer = new RequirementProducer(nameServer, topic);
 
@@ -43,5 +54,28 @@ public class TestProducer {
         } finally {
             producer.shutdown();
         }
+    }
+
+    private static Properties loadProperties(String[] args) {
+        String configPath = args.length > 0 && !args[0].isBlank() ? args[0] : DEFAULT_CONFIG_PATH;
+        Properties properties = new Properties();
+        try (FileInputStream inputStream = new FileInputStream(configPath)) {
+            properties.load(inputStream);
+            System.out.println("已加载配置文件: " + configPath);
+        } catch (IOException e) {
+            System.out.println("未加载配置文件: " + configPath + "，将尝试读取环境变量");
+        }
+        return properties;
+    }
+
+    private static String getConfig(Properties properties, String propertyKey, String envKey, String defaultValue) {
+        String value = properties.getProperty(propertyKey);
+        if (value == null || value.isBlank()) {
+            value = System.getenv(envKey);
+        }
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+        return value.trim();
     }
 }
