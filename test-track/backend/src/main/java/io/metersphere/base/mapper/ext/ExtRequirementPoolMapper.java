@@ -18,4 +18,7 @@ public interface ExtRequirementPoolMapper {
                                        @Param("poolStatus") String poolStatus,
                                        @Param("linkedPlanId") String linkedPlanId,
                                        @Param("linkedPlanName") String linkedPlanName);
+
+    /** 根据dmpNum选择性更新需求信息 */
+    int updateByDmpNum(RequirementPool requirementPool);
 }

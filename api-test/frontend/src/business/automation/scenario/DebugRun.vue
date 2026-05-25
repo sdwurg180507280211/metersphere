@@ -79,6 +79,7 @@ export default {
       threadGroup.enableCookieShare = this.runData.enableCookieShare;
       threadGroup.onSampleError = this.runData.onSampleError;
       let map = this.environment;
+      let environmentObj = strMapToObj(map);
       this.runData.projectId = getCurrentProjectID();
       this.runData.clazzName = TYPE_TO_C.get(this.runData.type);
       threadGroup.hashTree.push(this.runData);
@@ -94,10 +95,10 @@ export default {
         scenarioId: this.runData.id,
         testElement: testPlan,
         projectId: getCurrentProjectID(),
-        environmentMap: strMapToObj(map),
+        environmentMap: environmentObj,
         environmentType: this.environmentType,
         environmentGroupId: this.environmentGroupId,
-        environmentJson: JSON.stringify(strMapToObj(map)),
+        environmentJson: JSON.stringify(environmentObj),
       };
       if (this.runData.variables) {
         reqObj.variables = this.runData.variables;

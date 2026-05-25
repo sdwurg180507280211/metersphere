@@ -22,7 +22,7 @@
         v-if="isStepTableAlive"
       >
         <el-row type="flex" :gutter="20">
-          <el-col :span="12" v-if="form.requirementNumber">
+          <el-col :span="12" v-if="fromRequirement">
             <el-form-item
               label="需求编号"
               :label-width="formLabelWidth"
@@ -53,7 +53,7 @@
             </el-form-item>
           </el-col>
 
-          <el-col :span="12" v-if="!form.requirementNumber">
+          <el-col :span="12" v-if="!fromRequirement">
             <el-form-item
               prop="nodeId"
               :label="$t('test_track.case.module')"
@@ -74,12 +74,12 @@
           </el-col>
         </el-row>
 
-        <el-row type="flex" :gutter="20" v-if="form.requirementNumber">
+        <el-row type="flex" :gutter="20" v-if="fromRequirement">
           <el-col :span="12">
             <el-form-item
               prop="nodeId"
               :label="$t('test_track.case.module')"
-              :label-width="formLabelWidth"
+              label-width="120px"
             >
               <ms-select-tree
                 class="plan-node-tree"
@@ -308,7 +308,7 @@ import {
   testPlanAdd,
   testPlanEdit,
 } from "@/api/remote/plan/test-plan";
-import { buildTree, getProjectMemberOption } from "@/business/utils/sdk-utils";
+import { buildTree, getProjectMemberOption, getProjectMemberById } from "@/business/utils/sdk-utils";
 import { getTestPlanNodes } from "@/api/test-plan-node";
 import { createTestPlanFromRequirement } from "@/api/requirement-pool";
 
@@ -389,6 +389,8 @@ export default {
       stageOption: [],
       defaultNode: null,
       treeNodes: null,
+      requirementSystemName: "",
+      fromRequirement: false,
       moduleObj: {
         id: "id",
         label: "name",
@@ -410,14 +412,31 @@ export default {
   },
   methods: {
     getNodeTrees() {
-      getTestPlanNodes(this.projectId, {}).then((r) => {
+      let projectId = this.projectId;
+      getTestPlanNodes(projectId, {}).then((r) => {
         let treeNodes = r.data;
         treeNodes.forEach((node) => {
           buildTree(node, { path: "" });
         });
         this.treeNodes = treeNodes;
-        if (this.operationType === "add") {
+        // 需求池创建时，根据所属系统名称自动匹配计划所属系统节点
+        if (this.form.requirementNumber && this.requirementSystemName) {
+          let matched = this.findNodeByName(treeNodes, this.requirementSystemName);
+          if (matched) {
+            this.form.nodeId = matched.id;
+            this.form.nodePath = matched.path;
+          }
+        }
+        if (this.operationType === "add" && !(this.form.requirementNumber && this.requirementSystemName)) {
           this.setDefaultModule();
+        }
+        // 树数据加载完成，恢复nodeId必填规则
+        if (this.form.requirementNumber) {
+          this.rules.nodeId = [{
+            required: true,
+            message: this.$t("api_test.environment.module_warning"),
+            trigger: "change",
+          }];
         }
       });
     },
@@ -462,6 +481,7 @@ export default {
     openTestPlanEditDialog(testPlan, selectDefaultNode) {
       this.resetForm();
       this.defaultNode = selectDefaultNode;
+      this.fromRequirement = false;
       this.getNodeTrees();
       this.setPrincipalOptions();
       this.operationType = "add";
@@ -481,16 +501,24 @@ export default {
     },
     openFromRequirement(requirement) {
       this.resetForm();
-      this.getNodeTrees();
-      this.setPrincipalOptions();
       this.operationType = "add";
+      this.fromRequirement = true;
       this.form.name = requirement.requirementName;
       this.form.requirementNumber = requirement.dmpNum;
       this.form.tags = [];
+      // 保存需求的所属系统名称，用于树加载后自动匹配
+      this.requirementSystemName = requirement.systemName || "";
       listenGoBack(this.close);
       this.setEmptyStage();
+      // 临时去掉nodeId必填规则，避免树数据加载前触发校验闪烁
+      this.rules.nodeId = [];
+      // 加载当前项目的负责人
+      this.setPrincipalOptions(this.projectId);
+      // 先弹窗
       this.dialogFormVisible = true;
       this.reload();
+      // 再异步加载树数据，加载完后恢复必填规则
+      this.getNodeTrees();
     },
     setEmptyStage() {
       // 如果测试阶段选项中没有当前值，则置空
@@ -527,7 +555,7 @@ export default {
               dmpNum: param.requirementNumber,
               projectId: this.projectId,
               workspaceId: getCurrentWorkspaceId(),
-              principalId: param.principals && param.principals.length > 0 ? param.principals[0] : null,
+              principalIds: param.principals || [],
               stage: param.stage,
               plannedStartTime: param.plannedStartTime,
               plannedEndTime: param.plannedEndTime,
@@ -594,7 +622,7 @@ export default {
               dmpNum: param.requirementNumber,
               projectId: this.projectId,
               workspaceId: getCurrentWorkspaceId(),
-              principalId: param.principals && param.principals.length > 0 ? param.principals[0] : null,
+              principalIds: param.principals || [],
               stage: param.stage,
               plannedStartTime: param.plannedStartTime,
               plannedEndTime: param.plannedEndTime,
@@ -647,8 +675,9 @@ export default {
       }
       return true;
     },
-    setPrincipalOptions() {
-      getProjectMemberOption().then((response) => {
+    setPrincipalOptions(projectId) {
+      let request = projectId ? getProjectMemberById(projectId) : getProjectMemberOption();
+      request.then((response) => {
         this.principalOptions = response.data;
       });
     },
@@ -677,6 +706,9 @@ export default {
           this.form.plannedEndTime = null;
           this.form.nodeId = "";
           this.form.nodePath = "";
+          this.form.requirementNumber = "";
+          this.fromRequirement = false;
+          this.requirementSystemName = "";
           return true;
         });
       }
@@ -686,6 +718,20 @@ export default {
         this.form.nodeId = id;
         this.form.nodePath = data.path;
       }
+    },
+    // 递归遍历模块树，按名称匹配节点
+    findNodeByName(nodes, name) {
+      if (!nodes || !name) return null;
+      for (let node of nodes) {
+        if (node.name === name) {
+          return node;
+        }
+        if (node.children && node.children.length > 0) {
+          let found = this.findNodeByName(node.children, name);
+          if (found) return found;
+        }
+      }
+      return null;
     },
   },
 };

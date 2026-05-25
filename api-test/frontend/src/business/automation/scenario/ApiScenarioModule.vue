@@ -136,6 +136,7 @@ export default {
       param: {},
       data: [],
       currentModule: undefined,
+      scenarioConditionHandler: null,
       operators: [
         {
           label: this.$t('api_test.automation.add_scenario'),
@@ -187,17 +188,18 @@ export default {
   created() {
     // 树搜索防抖，避免每次按键都触发 el-tree.filter 导致卡顿
     this.filter = debounce(this._filter, 300);
-    this.$EventBus.$on('scenarioConditionBus', (param) => {
+    this.scenarioConditionHandler = (param) => {
       this.param = param;
-      if(this.$route.params && this.$route.params.versionId) {
-        this.list()
+      if (this.$route.params && this.$route.params.versionId) {
+        this.list();
       }
-    });
+    };
+    this.$EventBus.$on('scenarioConditionBus', this.scenarioConditionHandler);
   },
   beforeDestroy() {
-    this.$EventBus.$off('scenarioConditionBus', (param) => {
-      this.param = param;
-    });
+    if (this.scenarioConditionHandler) {
+      this.$EventBus.$off('scenarioConditionBus', this.scenarioConditionHandler);
+    }
     // 清理防抖函数
     if (this.filter && this.filter.cancel) {
       this.filter.cancel();

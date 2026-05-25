@@ -24,8 +24,13 @@ public class RequirementPoolController {
     private RequirementPoolService requirementPoolService;
 
     @PostMapping("/add")
-    public RequirementPool addRequirement(@RequestBody CreateRequirementPoolRequest request) {
-        return requirementPoolService.addRequirement(request);
+    public RequirementPool addRequirement(@RequestBody CreateRequirementPoolRequest request) throws Exception {
+        return requirementPoolService.submitRequirement(request);
+    }
+
+    @PostMapping("/update")
+    public RequirementPool updateRequirement(@RequestBody CreateRequirementPoolRequest request) throws Exception {
+        return requirementPoolService.updateRequirement(request);
     }
 
     @PostMapping("/list/{goPage}/{pageSize}")

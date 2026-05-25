@@ -1429,8 +1429,6 @@ export default {
       this.$refs['currentScenario'].validate(async (valid) => {
         if (valid) {
           this.debugLoading = true;
-          let definition = JSON.parse(JSON.stringify(this.currentScenario));
-          definition.hashTree = this.scenarioDefinition;
           this.initParameter();
           this.debugData = {
             id: this.currentScenario.id,
@@ -1883,10 +1881,10 @@ export default {
       if (!hasPermissions('PROJECT_API_SCENARIO:READ+DEBUG', 'PROJECT_API_SCENARIO:READ+RUN')) {
         return;
       }
-      this.mergeScenario(this.scenarioDefinition);
       if (this.debugLoading) {
         return;
       }
+      this.mergeScenario(this.scenarioDefinition);
       this.debugLoading = true;
       if (this.scenarioDefinition.length < 1) {
         this.debugLoading = false;
