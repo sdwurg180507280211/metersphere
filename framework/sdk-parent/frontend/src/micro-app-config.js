@@ -111,7 +111,7 @@ function isViteApp(moduleName) {
 function getMainMicroAppRuntimePolicy(moduleName) {
   return {
     iframe: isViteApp(moduleName),
-    fiber: true,
+    fiber: false,
     destroy: false,
     inline: true,
     disableMemoryRouter: true,
@@ -130,7 +130,7 @@ function getMainMicroAppRuntimePolicy(moduleName) {
 function getEmbedMicroAppRuntimePolicy(moduleName) {
   return {
     iframe: isViteApp(moduleName),
-    fiber: true,
+    fiber: false,
     destroy: true,
     clearData: true,
   };

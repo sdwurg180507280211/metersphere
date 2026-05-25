@@ -23,11 +23,29 @@ import {
 // 否则 Vue 会对 <micro-app> 标签报 "Unknown custom element" 警告
 Vue.config.ignoredElements = ['micro-app'];
 
+const microAppPerfMarks = new Map();
+
+function logMicroAppLifecycle(name, stage) {
+  const now = performance.now();
+  const mark = microAppPerfMarks.get(name) || { created: now };
+  if (stage === 'created') {
+    microAppPerfMarks.set(name, { created: now });
+    console.log('[micro-app] 子应用容器已创建', name);
+    return;
+  }
+
+  const fromCreated = Math.round(now - mark.created);
+  console.log(`[micro-app] 子应用${stage === 'beforemount' ? '即将挂载' : '已挂载'} ${name} (+${fromCreated}ms)`);
+  if (stage === 'mounted') {
+    microAppPerfMarks.delete(name);
+  }
+}
+
 // 初始化 micro-app 框架
 microApp.start({
-  // 开启 fiber 模式：异步执行子应用 JS，减少主线程阻塞
-  // MeterSphere 有 8 个子应用，fiber 模式可改善首屏性能
-  fiber: true,
+  // 关闭全局 fiber：实际挂载子应用时需要紧凑执行，避免 requestIdleCallback 调度导致 created/beforemount/mounted 间隔过长
+  // 预加载仍由 micro-app 内部按 idle 机制执行，不依赖全局 fiber
+  fiber: false,
   /**
    * 自定义 fetch —— 修复生产环境子应用静态资源路径问题
    *
@@ -81,15 +99,16 @@ microApp.start({
   // 全局生命周期回调，用于监控子应用加载状态
   lifeCycles: {
     created(e) {
-      console.log('[micro-app] 子应用容器已创建', e.detail.name);
+      logMicroAppLifecycle(e.detail.name, 'created');
     },
     beforemount(e) {
-      console.log('[micro-app] 子应用即将挂载', e.detail.name);
+      logMicroAppLifecycle(e.detail.name, 'beforemount');
     },
     mounted(e) {
-      console.log('[micro-app] 子应用已挂载', e.detail.name);
+      logMicroAppLifecycle(e.detail.name, 'mounted');
     },
     unmount(e) {
+      microAppPerfMarks.delete(e.detail.name);
       console.log('[micro-app] 子应用已卸载', e.detail.name);
     },
     error(e) {
