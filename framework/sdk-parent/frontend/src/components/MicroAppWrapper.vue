@@ -4,7 +4,7 @@
       micro-app 标签实现按需加载子应用
       - destroy: 组件销毁时强制清除缓存资源，避免内存泄漏（按需加载场景必须开启）
       - clear-data: 卸载时清空通讯缓存，防止下次加载时收到残留数据
-      - fiber: 异步执行子应用 JS，减少主线程阻塞
+      - fiber: 当前关闭，避免实际挂载时被 idle 调度拉长加载链路
       - iframe: 仅 Vue 3 + Vite 子应用开启 iframe 沙箱（Vite 的 <script type="module"> 无法被 with 沙箱拦截）
     -->
     <micro-app
