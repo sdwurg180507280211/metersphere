@@ -15,7 +15,7 @@
 
         <ms-table
             v-loading="page.loading"
-            operator-width="160px"
+            operator-width="200px"
             row-key="dmpNum"
             :data="page.data"
             :condition="page.condition"
@@ -31,7 +31,7 @@
             @handlePageChange="handlePageChange"
             @order="initTableData"
             ref="requirementPoolTable"
-            @filter="search"
+            @filter="filter"
             class="requirement-pool-table"
         >
         <span v-for="item in fields" :key="item.key">
@@ -218,7 +218,7 @@
 
 <script>
 import {getRequirementPoolList, rollbackTestPlan} from '@/api/requirement-pool';
-import {getCustomTableHeader, getCustomTableWidth, getPageInfo} from "metersphere-frontend/src/utils/tableUtils";
+import {getCustomTableHeader, getCustomTableWidth, getPageInfo, _filter} from "metersphere-frontend/src/utils/tableUtils";
 import {REQUIREMENT_POOL_LIST} from "metersphere-frontend/src/components/search/search-components";
 import MsTable from "metersphere-frontend/src/components/table/MsTable";
 import MsTableColumn from "metersphere-frontend/src/components/table/MsTableColumn";
@@ -254,6 +254,13 @@ export default {
       pageRefresh: false,
       operators: [
         {
+          tip: '编辑需求',
+          icon: 'el-icon-edit',
+          exec: this.handleEditRequirement,
+          isDisable: this.isEditDisabled,
+          permissions: ['PROJECT_TRACK_PLAN:READ+CREATE']
+        },
+        {
           tip: '创建测试计划',
           icon: 'el-icon-circle-plus-outline',
           exec: this.handleCreatePlan,
@@ -278,6 +285,16 @@ export default {
     handleCreateRequirement() {
       this.$refs.createRequirementDialog.open();
     },
+    handleEditRequirement(row) {
+      if (row.poolStatus === 'CANCELLED') {
+        this.$warning('已取消的需求不可编辑');
+        return;
+      }
+      this.$refs.createRequirementDialog.open(row);
+    },
+    isEditDisabled(row) {
+      return row.poolStatus === 'CANCELLED';
+    },
     // 初始化表格数据
     initTableData() {
       this.page.loading = true;
@@ -297,6 +314,11 @@ export default {
     search() {
       this.page.currentPage = 1;
       this.initTableData();
+    },
+    // 列头筛选
+    filter(filters) {
+      _filter(filters, this.page.condition);
+      this.search();
     },
     // 分页
     handlePageChange(page) {
@@ -318,7 +340,8 @@ export default {
       // 打开测试计划创建弹窗，传入需求信息
       this.$refs.testPlanEdit.openFromRequirement({
         dmpNum: row.dmpNum,
-        requirementName: row.requirementName
+        requirementName: row.requirementName,
+        systemName: row.systemName
       });
     },
     // 判断创建按钮是否禁用
@@ -331,14 +354,14 @@ export default {
         this.$warning('只有已创建状态的需求才能回退');
         return;
       }
-      this.$confirm('回退将删除关联的测试计划及其所属模块节点，是否继续？', '提示', {
+      this.$confirm('回退将删除关联的测试计划及自动创建的模块节点，需求状态恢复为未创建，是否继续？', '回退确认', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
         rollbackTestPlan(row.dmpNum).then(() => {
           this.$success('回退成功');
-          this.search();
+          this.initTableData();
         }).catch(() => {
           this.$error('回退失败');
         });

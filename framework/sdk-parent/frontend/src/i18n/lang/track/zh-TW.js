@@ -80,6 +80,8 @@ export default {
     case_type: "用例類型",
     name: "用例名稱",
     module: "所屬系統",
+    plan_module: "計畫所屬系統",
+    case_module: "用例所屬系統",
     project: "所屬項目",
     maintainer: "責任人",
     steps: "執行步驟",

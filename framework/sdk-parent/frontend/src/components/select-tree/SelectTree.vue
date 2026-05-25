@@ -395,7 +395,7 @@ export default {
       document.removeEventListener('click', this.hidePanel, false);
     },
     hidePanel(e) {
-      if (!this.$refs.projectButton.contains(e.target)) {
+      if (this.$refs.projectButton && !this.$refs.projectButton.contains(e.target)) {
         this.isShowSelect = false;
         this.popoverHide();
       }
@@ -503,6 +503,9 @@ export default {
         this.$refs.tree.filter(val);
       });
     },
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.hidePanel, false);
   },
 };
 </script>
