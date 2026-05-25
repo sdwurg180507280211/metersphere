@@ -4,94 +4,11 @@
 
 ## 分支合并方法论
 
-合并 develop 分支代码到 master 时，按文件后缀分类处理，避免全量 merge 带来的文档/脚本冲突：
+`develop-v2.10.26` 与 `master` 之间的选择性代码同步方法论已迁移至：
 
-| 类别 | 后缀 | 处理方式 |
-|------|------|---------|
-| **代码** | `.java` `.vue` `.js` `.ts` `.xml` `.properties` `.sql`(仅Flyway) | 从 develop 检出同步 |
-| **文档** | `.md` `.html` `.docx` | 按 master 保留，不同步 |
-| **脚本/配置** | `.sh` `.yml` `.example` Makefile `.css` | 按 master 保留，不同步 |
-| **构建产物** | `dist/` `static/js/` 下的 JS/CSS | 不同步，各分支自行构建 |
+- [develop 与 master 分支选择性合并方法论](./04-技术架构/微前端架构/分支合并.md)
 
-**操作步骤：**
-
-1. `git fetch origin` 更新远程分支
-2. `git checkout develop-v2.10.26 && git pull` 更新本地 develop 分支
-3. `git checkout master` 切回 master
-4. `git diff --name-only master...develop-v2.10.26` 获取差异文件列表
-5. 按后缀筛选出代码文件（排除 dist/、static/、docs/）
-6. `git checkout develop-v2.10.26 -- <code_files>` 逐个检出
-7. **恢复 master-only 保护文件**（见下方清单和命令）
-8. `git diff --cached` 验证暂存区仅含代码后缀
-9. **验证无遗漏**：`diff <(git show master:f) <(git show develop-v2.10.26:f)` 对比保护文件，确认差异仅为 master 独有的 micro-app 代码，没有丢失 develop 业务逻辑
-10. 提交
-
-**优势：** 避免 `git merge` 的 rename/delete 冲突、中文路径 unstage 难题，以及 develop 新增文档污染 master 目录结构。
-
-### master-only 代码保护清单
-
-以下文件包含 master 分支独有的 micro-app 微前端代码，develop 分支没有，checkout 后**必须恢复**：
-
-| 文件 | master 独有内容 |
-|------|----------------|
-| `framework/sdk-parent/frontend/src/business/app-layout/index.vue` | `<micro-app>` 标签、currentApp/appData 计算属性、handleDataChange/handleError |
-| `framework/sdk-parent/frontend/src/micro-app-config.js` | 完整文件（MIGRATED_MODULES、getEntryUrl、toShortName 等） |
-| `framework/sdk-parent/frontend/src/micro-app-setup.js` | 完整文件（microApp.start 配置、preFetchApps） |
-| `framework/sdk-parent/frontend/src/utils/micro-app-env.js` | `__MICRO_APP_PROXY_WINDOW__` 双窗口检查 |
-| `framework/sdk-parent/frontend/src/utils/micro-app-event-bus.js` | 完整文件（createEventBusAdapter、broadcastEvent） |
-| `framework/sdk-parent/frontend/src/plugins/request.js` | `__MICRO_APP_PROXY_WINDOW__` 双窗口检查 |
-| `framework/sdk-parent/frontend/src/components/MicroAppWrapper.vue` | 完整文件（按需加载子应用组件） |
-| `framework/sdk-parent/frontend/src/router/index.js` | microAppRoutes 占位路由、beforeEach 子应用直接放行 |
-| `test-track/frontend/src/router/modules/track.js` | PassThrough 替代 Layout（micro-app 环境下） |
-| `workstation/frontend/src/router/modules/workstation.js` | PassThrough 替代 Layout（micro-app 环境下） |
-| `analytics-stat/frontend/src/micro-app-env.ts` | `__MICRO_APP_PROXY_WINDOW__` 双窗口检查 |
-| `analytics-stat/frontend/src/main.ts` | UMD 生命周期 + Pinia PersistedState |
-| `api-test/frontend/src/main.js` | addDataListener 内存泄漏修复 |
-| `performance-test/frontend/src/main.js` | addDataListener 内存泄漏修复 |
-| `framework/sdk-parent/frontend/src/i18n/lang/zh-CN.js` | `analytics_stat: '分析统计'` |
-| `framework/sdk-parent/frontend/src/i18n/lang/en-US.js` | `analytics_stat: 'Analytics'` |
-| `framework/sdk-parent/frontend/src/i18n/lang/zh-TW.js` | `analytics_stat: '分析統計'` |
-
-**恢复命令（checkout 后立即执行）：**
-```bash
-git checkout HEAD -- \
-  framework/sdk-parent/frontend/src/business/app-layout/index.vue \
-  framework/sdk-parent/frontend/src/micro-app-config.js \
-  framework/sdk-parent/frontend/src/micro-app-setup.js \
-  framework/sdk-parent/frontend/src/utils/micro-app-env.js \
-  framework/sdk-parent/frontend/src/utils/micro-app-event-bus.js \
-  framework/sdk-parent/frontend/src/plugins/request.js \
-  framework/sdk-parent/frontend/src/components/MicroAppWrapper.vue \
-  framework/sdk-parent/frontend/src/router/index.js \
-  test-track/frontend/src/router/modules/track.js \
-  workstation/frontend/src/router/modules/workstation.js \
-  framework/sdk-parent/frontend/src/i18n/lang/zh-CN.js \
-  framework/sdk-parent/frontend/src/i18n/lang/en-US.js \
-  framework/sdk-parent/frontend/src/i18n/lang/zh-TW.js
-```
-
-**注意：** `git checkout HEAD --` 恢复的是 master 最新 commit 版本。由于保护文件中的 develop 业务代码（如 requirement-pool 路由、AdvancedSearch 路由）已在更早的 commit 中合入，恢复不会丢失这些内容。但仍需用 `diff` 命令验证，防止 develop 新增的业务改动被回退。
-
-### master → develop 反向合并
-
-将 master 的代码同步回 develop 时，方向相反，但原则相同——只同步代码文件，不同步文档/配置：
-
-**操作步骤：**
-
-1. `git fetch origin` 更新远程分支
-2. `git checkout master && git pull` 确保 master 最新
-3. `git checkout develop-v2.10.26` 切到 develop
-4. `git diff --name-only develop-v2.10.26...master` 获取差异文件列表
-5. 按后缀筛选出代码文件（排除 dist/、static/、docs/）
-6. `git checkout master -- <code_files>` 逐个检出
-7. `git diff --cached` 验证暂存区仅含代码后缀
-8. 提交
-
-**需要注意：**
-
-- **micro-app 相关文件会随代码一起同步到 develop**，这是预期行为——develop 应该具备微前端能力，避免未来合并时覆盖 master 的 micro-app 代码
-- 如果 develop 暂时不需要 micro-app 功能，可以不同步保护清单中的文件，但下次 develop → master 合并时需再次恢复
-- **推荐做法**：将 micro-app 代码也同步到 develop，保持两个分支前端代码一致，减少合并冲突
+该文档说明了 develop -> master、master -> develop 的同步流程、master-only micro-app 保护清单、暂存区验证、删除/重命名处理、Flyway SQL 风险和提交信息规范。
 
 ---
 
@@ -158,6 +75,7 @@ docs/
 │
 ├── 04-技术架构/
 │   ├── 微前端架构/
+│   │   ├── 分支合并.md
 │   │   ├── UI实现方式对比分析.md
 │   │   ├── 乾坤微前端技术细节.md
 │   │   ├── 微前端框架实现方式指南.md
