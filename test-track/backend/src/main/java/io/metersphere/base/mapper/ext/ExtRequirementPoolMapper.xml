@@ -23,6 +23,9 @@
         <result column="up_time" property="upTime" jdbcType="BIGINT"/>
         <result column="linked_plan_id" property="linkedPlanId" jdbcType="VARCHAR"/>
         <result column="linked_plan_name" property="linkedPlanName" jdbcType="VARCHAR"/>
+        <result column="test_status" property="testStatus" jdbcType="VARCHAR"/>
+        <result column="plan_share_url" property="planShareUrl" jdbcType="VARCHAR"/>
+        <result column="last_callback_time" property="lastCallbackTime" jdbcType="BIGINT"/>
         <result column="last_sync_time" property="lastSyncTime" jdbcType="BIGINT"/>
         <result column="event_time" property="eventTime" jdbcType="BIGINT"/>
         <result column="trace_id" property="traceId" jdbcType="VARCHAR"/>
@@ -52,6 +55,9 @@
             up_time,
             linked_plan_id,
             linked_plan_name,
+            test_status,
+            plan_share_url,
+            last_callback_time,
             last_sync_time,
             event_time,
             trace_id,
@@ -78,6 +84,9 @@
             #{upTime},
             #{linkedPlanId},
             #{linkedPlanName},
+            #{testStatus},
+            #{planShareUrl},
+            #{lastCallbackTime},
             #{lastSyncTime},
             #{eventTime},
             #{traceId},
@@ -321,6 +330,15 @@
         where dmp_num = #{dmpNum}
     </update>
 
+    <update id="updateCallbackResult">
+        update requirement_pool
+        set test_status = #{testStatus},
+            plan_share_url = #{planShareUrl},
+            last_callback_time = #{lastCallbackTime},
+            updated_at = UNIX_TIMESTAMP(NOW()) * 1000
+        where dmp_num = #{dmpNum}
+    </update>
+
     <update id="updateByDmpNum" parameterType="io.metersphere.base.domain.RequirementPool">
         update requirement_pool
         <set>
@@ -345,6 +363,9 @@
             <if test="poolStatus != null">pool_status = #{poolStatus},</if>
             <if test="linkedPlanId != null">linked_plan_id = #{linkedPlanId},</if>
             <if test="linkedPlanName != null">linked_plan_name = #{linkedPlanName},</if>
+            <if test="testStatus != null">test_status = #{testStatus},</if>
+            <if test="planShareUrl != null">plan_share_url = #{planShareUrl},</if>
+            <if test="lastCallbackTime != null">last_callback_time = #{lastCallbackTime},</if>
             updated_at = UNIX_TIMESTAMP(NOW()) * 1000
         </set>
         where dmp_num = #{dmpNum}

@@ -70,6 +70,36 @@
             </template>
           </ms-table-column>
           <ms-table-column
+              v-if="item.id === 'testStatus'"
+              prop="testStatus"
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          >
+            <template v-slot:default="scope">
+              <el-tag v-if="scope.row.testStatus" type="success" size="mini">
+                {{ getTestStatusText(scope.row.testStatus) }}
+              </el-tag>
+              <span v-else>-</span>
+            </template>
+          </ms-table-column>
+          <ms-table-column
+              v-if="item.id === 'planShareUrl'"
+              prop="planShareUrl"
+              :field="item"
+              :fields-width="fieldsWidth"
+              :label="item.label"
+              :min-width="item.minWidth"
+          >
+            <template v-slot:default="scope">
+              <el-link v-if="scope.row.planShareUrl" type="primary" :href="scope.row.planShareUrl" target="_blank">
+                查看报告
+              </el-link>
+              <span v-else>-</span>
+            </template>
+          </ms-table-column>
+          <ms-table-column
               v-if="item.id === 'systemName'"
               prop="systemName"
               sortable
@@ -393,6 +423,14 @@ export default {
           return '已创建';
         case 'CANCELLED':
           return '已取消';
+        default:
+          return status;
+      }
+    },
+    getTestStatusText(status) {
+      switch (status) {
+        case 'Completed':
+          return '已完成';
         default:
           return status;
       }
