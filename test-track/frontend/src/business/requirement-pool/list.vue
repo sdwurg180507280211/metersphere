@@ -93,8 +93,13 @@
               :min-width="item.minWidth"
           >
             <template v-slot:default="scope">
-              <el-link v-if="scope.row.planShareUrl" type="primary" :href="scope.row.planShareUrl" target="_blank">
-                查看报告
+              <el-link
+                  v-if="scope.row.planShareUrl"
+                  type="primary"
+                  v-clipboard:copy="getReportCopyUrl(scope.row.planShareUrl)"
+                  v-clipboard:success="handleCopySuccess"
+              >
+                复制链接
               </el-link>
               <span v-else>-</span>
             </template>
@@ -460,6 +465,19 @@ export default {
         default:
           return status;
       }
+    },
+    getReportCopyUrl(planShareUrl) {
+      if (!planShareUrl) {
+        return '';
+      }
+      if (/^https?:\/\//.test(planShareUrl)) {
+        return planShareUrl;
+      }
+      const path = planShareUrl.startsWith('/') ? planShareUrl : `/${planShareUrl}`;
+      return `${window.location.origin}${path}`;
+    },
+    handleCopySuccess() {
+      this.$success('复制成功');
     }
   }
 };
