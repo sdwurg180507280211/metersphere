@@ -62,12 +62,12 @@
 ```
 ┌─────────────────┐         RocketMQ          ┌──────────────────┐
 │   需求平台      │ ──────────────────────────>│  MeterSphere     │
-│                 │  topic-requirement-to-ms   │                  │
+│                 │  topic-requirement-to-metersphere │            │
 │                 │                            │  ┌─────────────┐ │
 │                 │                            │  │ 需求池模块  │ │
 │                 │                            │  └─────────────┘ │
 │                 │                            │  ┌─────────────┐ │
-│                 │  topic-ms-to-requirement   │  │ 测试计划模块│ │
+│                 │  topic-metersphere-to-requirement │ │ 测试计划模块│ │
 │                 │ <──────────────────────────│  └─────────────┘ │
 └─────────────────┘         RocketMQ          └──────────────────┘
 ```
@@ -169,6 +169,9 @@
 | up_time | BIGINT | - | 否 | 预计上线时间（时间戳） |
 | linked_plan_id | VARCHAR | 50 | 否 | 关联的测试计划ID |
 | linked_plan_name | VARCHAR | 255 | 否 | 关联的测试计划名称 |
+| test_status | VARCHAR | 32 | 否 | 回传的测试状态（模拟需求平台展示） |
+| plan_share_url | VARCHAR | 500 | 否 | 回传的报告链接（模拟需求平台展示） |
+| last_callback_time | BIGINT | - | 否 | 最后回传时间（时间戳） |
 | last_sync_time | BIGINT | - | 是 | 最后同步时间（时间戳） |
 | event_time | BIGINT | - | 否 | 消息事件时间（时间戳） |
 | trace_id | VARCHAR | 64 | 否 | 追踪ID |
@@ -410,6 +413,8 @@
 ### 需求同步消息（需求平台 → MeterSphere）
 
 **Topic**: `topic-requirement-to-metersphere`
+**Producer ID**: `producer-requirement-to-metersphere`
+**Consumer ID**: `consumer-requirement-to-metersphere`
 
 **消息体**:
 ```json
@@ -448,6 +453,8 @@
 ### 状态回传消息（MeterSphere → 需求平台）
 
 **Topic**: `topic-metersphere-to-requirement`
+**Producer ID**: `producer-metersphere-to-requirement`
+**Consumer ID**: `consumer-metersphere-to-requirement`
 
 **消息体**:
 ```json
@@ -459,7 +466,7 @@
   "actualStartTime": 1234567890000,
   "actualEndTime": 1234567890000,
   "principalUsers": "张三",
-  "planShareUrl": "/track/share-plan-report?shareId={shareId}",
+  "planShareUrl": "/#/track/testPlan/reportList?resourceId={reportId}",
   "syncTime": 1234567890000,
   "traceId": "trace-002"
 }
@@ -473,7 +480,7 @@
 - `actualStartTime`：实际开始时间
 - `actualEndTime`：实际结束时间
 - `principalUsers`：负责人
-- `planShareUrl`：测试计划报告分享链接，格式：`/track/share-plan-report?shareId={shareId}`
+- `planShareUrl`：测试计划报告链接，格式: `/#/track/testPlan/reportList?resourceId={reportId}`（V1 使用内部 DB 报告链接，回传前若无报告则自动生成）
 
 ---
 
@@ -539,17 +546,17 @@ public class RequirementSyncMessage {
     private String traceId;             // 追踪ID
 }
 
-// RequirementCallbackMessage.java
+// RequirementCallbackMessage.java — 实际包路径: io.metersphere.requirement.pool.dto
 @Data
 public class RequirementCallbackMessage {
     private String dmpNum;              // 需求编号（关联主键）
-    private String planStatus;           // 测试计划状态（需求平台最关心的字段）
+    private String planStatus;           // 测试计划状态（V1 仅回传 Completed）
     private Long plannedStartTime;       // 计划开始时间
     private Long plannedEndTime;         // 计划结束时间
     private Long actualStartTime;        // 实际开始时间
     private Long actualEndTime;          // 实际结束时间
-    private String principalUsers;       // 负责人
-    private String planShareUrl;         // 测试计划报告分享链接：/track/share-plan-report?shareId={shareId}
+    private String principalUsers;       // 负责人（多人逗号分隔）
+    private String planShareUrl;         // 报告链接: /#/track/testPlan/reportList?resourceId={reportId}
     private Long syncTime;               // 同步时间
     private String traceId;              // 追踪ID
 }
@@ -790,6 +797,19 @@ ORDER BY create_time DESC
 | `test-track/backend/src/main/java/io/metersphere/requirement/pool/request/CreateRequirementPoolRequest.java` | 新增 | 创建需求请求DTO |
 | `test-track/backend/src/main/java/io/metersphere/requirement/pool/request/QueryRequirementPoolRequest.java` | 新增 | 查询需求请求DTO |
 
+### 后端文件（回传 - 已落地）
+
+| 文件路径 | 修改类型 | 说明 |
+|----------|----------|------|
+| `test-track/backend/src/main/java/io/metersphere/requirement/pool/dto/RequirementCallbackMessage.java` | 新增 | 回传消息DTO |
+| `test-track/backend/src/main/java/io/metersphere/requirement/pool/producer/RequirementCallbackMessageSender.java` | 新增 | 回传消息发送接口 |
+| `test-track/backend/src/main/java/io/metersphere/requirement/pool/producer/RequirementCallbackProducer.java` | 新增 | RocketMQ 回传生产者 |
+| `test-track/backend/src/main/java/io/metersphere/plan/service/TestPlanService.java` | 修改 | 新增 sendRequirementCompletedCallback()、getLatestDbReportUrl()、getPrincipalUsers() |
+| `test-track/backend/src/main/java/io/metersphere/base/mapper/ext/ExtRequirementPoolMapper.java` | 修改 | 新增 updateCallbackResult() 方法 |
+| `test-track/backend/src/main/java/io/metersphere/base/mapper/ext/ExtRequirementPoolMapper.xml` | 修改 | 新增 updateCallbackResult SQL、回传字段映射 |
+| `test-track/backend/src/main/java/io/metersphere/base/domain/RequirementPool.java` | 修改 | 新增 testStatus、planShareUrl、lastCallbackTime 字段 |
+| `test-track/backend/src/main/resources/db/migration/2.10.26/ddl/V19__create_requirement_pool_table.sql` | 修改 | 新增 test_status、plan_share_url、last_callback_time 列 |
+
 ### 后端文件（待开发）
 
 | 文件路径 | 修改类型 | 说明 |
@@ -808,9 +828,10 @@ ORDER BY create_time DESC
 | `test-track/frontend/src/business/requirement-pool/components/CreateRequirementDialog.vue` | 新增 | 创建需求弹窗（双列布局+默认值） |
 | `test-track/frontend/src/api/requirement-pool.js` | 新增 | 需求池API接口 |
 | `test-track/frontend/src/router/modules/track.js` | 修改 | 添加需求池路由 |
-| `framework/sdk-parent/frontend/src/utils/default-table-header.js` | 修改 | 添加REQUIREMENT_POOL_LIST列配置（17列） |
+| `framework/sdk-parent/frontend/src/utils/default-table-header.js` | 修改 | 添加 REQUIREMENT_POOL_LIST 列配置（17列 + testStatus/planShareUrl 回传展示列） |
 | `framework/sdk-parent/frontend/src/components/search/search-components.js` | 修改 | 添加17个高级搜索配置+BUILTIN_ADV_SEARCH_KEYS |
 | `test-track/frontend/src/business/plan/components/TestPlanEdit.vue` | 修改 | 支持openFromRequirement()从需求池创建 |
+| `test-track/frontend/src/business/requirement-pool/list.vue` | 修改 | 新增 testStatus（el-tag）、planShareUrl（el-link 查看报告）列 |
 
 ### 配置文件
 
@@ -1016,12 +1037,14 @@ ALTER TABLE `test_plan` ADD UNIQUE KEY `uk_requirement_number` (`requirement_num
 ```properties
 # RocketMQ 配置
 rocketmq.name-server=10.12.105.254:9876
-rocketmq.producer.group=metersphere-producer-group
-rocketmq.consumer.group=metersphere-consumer-group
 
-# Topic 配置
+# Topic 与客户端 ID 配置
 rocketmq.topic.requirement-sync=topic-requirement-to-metersphere
+rocketmq.producer.requirement-sync=producer-requirement-to-metersphere
+rocketmq.consumer.requirement-sync=consumer-requirement-to-metersphere
 rocketmq.topic.status-callback=topic-metersphere-to-requirement
+rocketmq.producer.status-callback=producer-metersphere-to-requirement
+rocketmq.consumer.status-callback=consumer-metersphere-to-requirement
 ```
 
 ---
@@ -1048,12 +1071,14 @@ rocketmq.topic.status-callback=topic-metersphere-to-requirement
 ```properties
 # RocketMQ 配置
 rocketmq.name-server=10.12.105.254:9876
-rocketmq.producer.group=metersphere-producer-group
-rocketmq.consumer.group=metersphere-consumer-group
 
-# Topic 配置
+# Topic 与客户端 ID 配置
 rocketmq.topic.requirement-sync=topic-requirement-to-metersphere
+rocketmq.producer.requirement-sync=producer-requirement-to-metersphere
+rocketmq.consumer.requirement-sync=consumer-requirement-to-metersphere
 rocketmq.topic.status-callback=topic-metersphere-to-requirement
+rocketmq.producer.status-callback=producer-metersphere-to-requirement
+rocketmq.consumer.status-callback=consumer-metersphere-to-requirement
 ```
 
 **Maven 依赖**
@@ -1311,7 +1336,7 @@ public class RequirementCallbackMessage {
     private Long actualStartTime;        // 实际开始时间
     private Long actualEndTime;          // 实际结束时间
     private String principalUsers;       // 负责人
-    private String planShareUrl;         // 测试计划报告分享链接：/track/share-plan-report?shareId={shareId}
+    private String planShareUrl;         // 测试计划报告链接: /#/track/testPlan/reportList?resourceId={reportId}
     private Long syncTime;               // 同步时间
     private String traceId;              // 追踪ID
 }
@@ -1392,6 +1417,28 @@ public void updateStatus(String planId, String status) {
     // 直接创建的测试计划（requirementNumber = null）不回传
 }
 ```
+
+### V1 实际实现（与设计差异）
+
+**差异 1: 仅回传 Completed 状态**
+- V1 仅回传 `Completed` 状态，不在 `updateStatus()` 通用方法中触发
+- 回传触发点：`TestPlanService.editTestPlan()` 保存后调用 `sendRequirementCompletedCallback()`
+- 触发条件：`requirementNumber != null` && 状态变更 && 新状态为 `Completed`
+
+**差异 2: 报告自动生成**
+- 回传前调用 `getLatestDbReportUrl()` 获取最新报告链接
+- 若无历史报告，自动调用 `genTestPlanReport()` + `genTestPlanReportContent()` + `countReportByTestPlanReportId()` 生成
+- 报告链接格式: `/#/track/testPlan/reportList?resourceId={reportId}`
+
+**差异 3: 回传同时更新需求池**
+- 回传成功后调用 `extRequirementPoolMapper.updateCallbackResult()` 更新需求池
+- 更新字段: `test_status`、`plan_share_url`、`last_callback_time`
+- 需求池页面可直接展示回传结果（模拟需求平台视角）
+
+**差异 4: Producer 实现模式**
+- 使用 `InitializingBean.afterPropertiesSet()` 模式（非 `@PostConstruct`）
+- 通过 `RequirementCallbackMessageSender` 接口解耦
+- 配置 key: `rocketmq.producer.status-callback`（默认 `producer-metersphere-to-requirement`）
 
 ---
 

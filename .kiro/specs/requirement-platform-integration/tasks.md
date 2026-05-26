@@ -1,8 +1,14 @@
 # 任务清单：全流程平台对接
 
 > **项目周期**: 2026年3月10日 - 2026年6月30日
-> **当前周次**: W07 (2026-04-27 ~ 2026-05-01)
+> **当前周次**: W13 (2026-05-25 ~ 2026-05-30)
 > **开发人员**: 单人开发、部署、联调
+>
+> **V1 回传实现说明**:
+> - V1 仅回传 `Completed` 状态，其他状态变更不回传
+> - 回传前自动生成测试报告（若无），确保 planShareUrl 不为空
+> - 回传同时更新需求池 `test_status`、`plan_share_url`、`last_callback_time` 字段
+> - 回传链接格式: `/#/track/testPlan/reportList?resourceId={reportId}`
 
 ---
 
@@ -92,10 +98,10 @@
 - [x] 3.3.5 在测试计划列表展示关联需求编码（TestPlanList.vue 添加 requirementNumber 列，search-components.js 添加搜索配置，ExtTestPlanMapper.xml 添加 combine 条件）
 
 ### 3.4 回传能力开发 (W10)
-- [ ] 3.4.1 创建 RequirementCallbackMessage DTO
-- [ ] 3.4.2 实现 RequirementCallbackProducer MQ 生产者
-- [ ] 3.4.3 明确回传触发点（测试计划状态变更）
-- [ ] 3.4.4 实现状态映射逻辑（TestPlanStatus → 回传状态）
+- [x] 3.4.1 创建 RequirementCallbackMessage DTO
+- [x] 3.4.2 实现 RequirementCallbackProducer MQ 生产者
+- [x] 3.4.3 明确回传触发点（测试计划状态变更为 Completed）
+- [x] 3.4.4 实现状态映射逻辑（仅回传 Completed 状态，V1）
 - [ ] 3.4.5 实现回传失败记录（CallbackRecord）
 
 ---
@@ -111,8 +117,8 @@
 
 ### 4.2 监控与日志
 - [x] 4.2.1 补充消息消费日志（traceId、处理结果）
-- [ ] 4.2.2 补充测试计划创建日志（操作人、时间、需求编号）
-- [ ] 4.2.3 补充状态回传日志（回传时间、内容、成功与否）
+- [x] 4.2.2 补充测试计划创建日志（操作人、时间、需求编号）
+- [x] 4.2.3 补充状态回传日志（回传时间、内容、成功与否）
 - [ ] 4.2.4 实现通过 traceId 查询完整链路
 
 ### 4.3 联调准备
@@ -187,10 +193,10 @@
 | 9 | 实现需求池高级搜索查询接口（/requirement-pool/list） | 高级搜索 | 开发者A | 0.5天 | ☑ |
 | 10 | 创建高级搜索配置 REQUIREMENT_POOL_LIST | 高级搜索 | 开发者B | 1天 | ☑ |
 | 11 | 实现需求池高级搜索页面（RequirementPoolList.vue） | 高级搜索 | 开发者B | 1.5天 | ☑ |
-| 12 | 扩展 test_plan 表和服务（createFromRequirement） | 9.6 | 开发者B | 2天 | ☐ |
-| 13 | 创建回传消息 DTO（RequirementCallbackMessage） | 9.7 | 开发者B | 0.5天 | ☐ |
-| 14 | 实现状态回传生产者（RequirementCallbackProducer） | 9.7 | 开发者B | 1天 | ☐ |
-| 15 | 在测试计划状态更新时触发回传 | 9.7 | 开发者B | 0.5天 | ☐ |
+| 12 | 扩展 test_plan 表和服务（createFromRequirement） | 9.6 | 开发者B | 2天 | ☑ |
+| 13 | 创建回传消息 DTO（RequirementCallbackMessage） | 9.7 | 开发者B | 0.5天 | ☑ |
+| 14 | 实现状态回传生产者（RequirementCallbackProducer） | 9.7 | 开发者B | 1天 | ☑ |
+| 15 | 在测试计划状态更新时触发回传 | 9.7 | 开发者B | 0.5天 | ☑ |
 
 **关键依赖**:
 - 步骤 1-4 必须顺序完成（基础设施）
