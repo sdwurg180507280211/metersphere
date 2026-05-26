@@ -36,3 +36,12 @@ export function createTestPlanFromRequirement(param) {
 export function rollbackTestPlan(dmpNum) {
   return post('/requirement-pool/rollback-test-plan', {dmpNum: dmpNum});
 }
+
+/**
+ * 模拟需求平台取消需求
+ * @param dmpNum 需求编号
+ * @returns {Promise<any>}
+ */
+export function cancelRequirement(dmpNum) {
+  return post('/requirement-pool/cancel', {dmpNum: dmpNum});
+}
