@@ -10,7 +10,6 @@ import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -22,7 +21,6 @@ import java.util.UUID;
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(name = "requirement.sync.mq.client", havingValue = "rocketmq", matchIfMissing = true)
 public class RequirementSyncProducer implements InitializingBean, RequirementSyncMessageSender {
 
     @Value("${rocketmq.name-server:}")

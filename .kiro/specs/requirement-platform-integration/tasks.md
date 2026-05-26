@@ -34,32 +34,32 @@
 ## 阶段 2：后端主链路 (W03-W06: 03/30 ~ 04/24)
 
 ### 2.1 后端骨架搭建 (W03)
-- [ ] 2.1.1 添加 RocketMQ Maven 依赖（test-track/backend/pom.xml）
-- [ ] 2.1.2 配置 RocketMQ 连接信息（metersphere.properties）
+- [x] 2.1.1 添加 RocketMQ Maven 依赖（test-track/backend/pom.xml）
+- [x] 2.1.2 配置 RocketMQ 连接信息（metersphere.properties）
 - [x] 2.1.3 创建数据库 Migration 文件（V19__requirement_pool.sql）
 - [x] 2.1.4 创建 RequirementPool 实体类
 - [x] 2.1.5 创建 RequirementPoolMapper 接口和 XML
 
 ### 2.2 需求同步主链路开发 (W04)
-- [ ] 2.2.1 创建 RequirementSyncMessage DTO
-- [ ] 2.2.2 实现 RequirementSyncConsumer MQ 消费者
-- [ ] 2.2.3 实现 RequirementSyncService 同步业务逻辑
-- [ ] 2.2.4 实现新增/更新/取消处理的落库逻辑
-- [ ] 2.2.5 保留原始消息和 trace 信息
+- [x] 2.2.1 创建 RequirementSyncMessage DTO
+- [x] 2.2.2 实现 RequirementSyncConsumer MQ 消费者
+- [x] 2.2.3 实现需求同步业务逻辑
+- [x] 2.2.4 实现新增/更新/取消处理的落库逻辑
+- [x] 2.2.5 保留 trace 信息和关键处理日志
 
 ### 2.3 幂等与审计 (W05)
-- [ ] 2.3.1 实现幂等检查逻辑（dmpNum + eventTime）
-- [ ] 2.3.2 实现重复消费防护
-- [ ] 2.3.3 实现版本/时间比较逻辑（旧消息过滤）
-- [ ] 2.3.4 补充同步审计字段（last_sync_time、trace_id）
-- [ ] 2.3.5 本地模拟重复消息和乱序消息测试
+- [x] 2.3.1 实现幂等检查逻辑（dmpNum + eventTime）
+- [x] 2.3.2 实现重复消费防护
+- [x] 2.3.3 实现版本/时间比较逻辑（旧消息过滤）
+- [x] 2.3.4 补充同步审计字段（last_sync_time、trace_id）
+- [x] 2.3.5 本地模拟重复消息和乱序消息测试
 
 ### 2.4 查询接口与部署预演 (W06)
 - [x] 2.4.1 创建 RequirementPoolRequest.java（page.condition 格式）
 - [x] 2.4.2 实现需求池高级搜索查询接口（/requirement-pool/list）
 - [x] 2.4.3 实现 RequirementPoolMapper.xml SQL 处理（filters、combine、orders）
-- [ ] 2.4.4 整理部署步骤和配置项清单
-- [ ] 2.4.5 做一次非正式环境部署预演
+- [x] 2.4.4 整理部署步骤和配置项清单
+- [x] 2.4.5 做一次非正式环境部署预演
 
 ---
 
@@ -74,21 +74,21 @@
 - [x] 3.1.6 左上角按钮改为"创建需求"
 - [x] 3.1.7 新增创建需求弹窗和前端提交流程
 - [x] 3.1.8 实现创建需求接口（`POST /requirement-pool/add`）
-- [ ] 3.1.9 跑通"消息入池 → 页面可见"主链路
+- [x] 3.1.9 跑通"消息入池 → 页面可见"主链路
 
 ### 3.2 创建测试计划流程开发 (W08)
 - [x] 3.2.1 复用测试计划页面的 TestPlanEdit 弹窗组件（不创建单独的 CreatePlanDialog）
-- [ ] 3.2.2 实现从需求池创建测试计划接口（`/requirement-pool/create-test-plan`）
-- [ ] 3.2.3 实现需求编号绑定逻辑（requirementNumber = dmpNum）
-- [ ] 3.2.4 实现计划名称自动填充（只读，不可编辑）
-- [ ] 3.2.5 实现需求池状态更新（PENDING → CREATED）
-- [ ] 3.2.6 实现并发控制（数据库唯一索引）
+- [x] 3.2.2 实现从需求池创建测试计划接口（`/requirement-pool/create-test-plan`）
+- [x] 3.2.3 实现需求编号绑定逻辑（requirementNumber = dmpNum）
+- [x] 3.2.4 实现计划名称自动填充（只读，不可编辑）
+- [x] 3.2.5 实现需求池状态更新（PENDING → CREATED）
+- [x] 3.2.6 实现并发控制（数据库唯一索引）
 
 ### 3.3 测试计划扩展开发 (W09)
 - [x] 3.3.1 扩展 test_plan 表（添加 requirement_number 字段）
 - [x] 3.3.2 添加 uk_requirement_number 唯一索引
 - [x] 3.3.3 在 TestPlan 实体类添加 requirementNumber 字段
-- [ ] 3.3.4 修改直接创建测试计划逻辑（requirementNumber = null）
+- [x] 3.3.4 修改直接创建测试计划逻辑（requirementNumber = null）
 - [x] 3.3.5 在测试计划列表展示关联需求编码（TestPlanList.vue 添加 requirementNumber 列，search-components.js 添加搜索配置，ExtTestPlanMapper.xml 添加 combine 条件）
 
 ### 3.4 回传能力开发 (W10)
@@ -103,14 +103,14 @@
 ## 阶段 4：异常处理与完善 (W11: 05/18 ~ 05/22)
 
 ### 4.1 异常路径补齐
-- [ ] 4.1.1 处理取消需求场景（CANCELLED 消息处理）
-- [ ] 4.1.2 处理旧消息过滤（eventTime 比较）
-- [ ] 4.1.3 处理坏数据兜底（字段缺失、格式错误）
-- [ ] 4.1.4 处理空字段校验（dmpNum、name1 必填检查）
-- [ ] 4.1.5 整理失败重试策略
+- [x] 4.1.1 处理取消需求场景（CANCELLED 消息处理）
+- [x] 4.1.2 处理旧消息过滤（eventTime 比较）
+- [x] 4.1.3 处理坏数据兜底（字段缺失、格式错误）
+- [x] 4.1.4 处理空字段校验（dmpNum、name1 必填检查）
+- [x] 4.1.5 整理失败重试策略
 
 ### 4.2 监控与日志
-- [ ] 4.2.1 补充消息消费日志（traceId、处理结果）
+- [x] 4.2.1 补充消息消费日志（traceId、处理结果）
 - [ ] 4.2.2 补充测试计划创建日志（操作人、时间、需求编号）
 - [ ] 4.2.3 补充状态回传日志（回传时间、内容、成功与否）
 - [ ] 4.2.4 实现通过 traceId 查询完整链路
