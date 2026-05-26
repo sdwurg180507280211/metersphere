@@ -228,6 +228,8 @@ export let CUSTOM_TABLE_HEADER = {
     { id: "dmpNum", key: "1", label: "需求编号", minWidth: 150, sortable: true },
     { id: "requirementName", key: "2", label: "需求名称", minWidth: 200, sortable: true },
     { id: "poolStatus", key: "3", label: "需求池状态", minWidth: 120, filters: [{text: '未创建', value: 'PENDING'}, {text: '已创建', value: 'CREATED'}, {text: '已取消', value: 'CANCELLED'}], columnKey: 'poolStatus' },
+    { id: "testStatus", key: "i", label: "测试状态", minWidth: 120 },
+    { id: "planShareUrl", key: "j", label: "报告链接", minWidth: 120 },
     { id: "actName", key: "4", label: "当前环节", minWidth: 120 },
     { id: "parentWfinstCode", key: "g", label: "主流程编码", minWidth: 150 },
     { id: "operationType", key: "h", label: "操作类型", minWidth: 100 },

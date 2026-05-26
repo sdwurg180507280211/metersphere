@@ -19,6 +19,11 @@ public interface ExtRequirementPoolMapper {
                                        @Param("linkedPlanId") String linkedPlanId,
                                        @Param("linkedPlanName") String linkedPlanName);
 
+    int updateCallbackResult(@Param("dmpNum") String dmpNum,
+                             @Param("testStatus") String testStatus,
+                             @Param("planShareUrl") String planShareUrl,
+                             @Param("lastCallbackTime") Long lastCallbackTime);
+
     /** 根据dmpNum选择性更新需求信息 */
     int updateByDmpNum(RequirementPool requirementPool);
 }
