@@ -247,7 +247,7 @@
 </template>
 
 <script>
-import {getRequirementPoolList, rollbackTestPlan} from '@/api/requirement-pool';
+import {cancelRequirement, getRequirementPoolList, rollbackTestPlan} from '@/api/requirement-pool';
 import {getCustomTableHeader, getCustomTableWidth, getPageInfo, _filter} from "metersphere-frontend/src/utils/tableUtils";
 import {REQUIREMENT_POOL_LIST} from "metersphere-frontend/src/components/search/search-components";
 import MsTable from "metersphere-frontend/src/components/table/MsTable";
@@ -303,6 +303,13 @@ export default {
           exec: this.handleRollback,
           isDisable: this.isRollbackDisabled,
           permissions: ['PROJECT_TRACK_PLAN:READ+DELETE']
+        },
+        {
+          tip: '已取消',
+          icon: 'el-icon-circle-close',
+          exec: this.handleCancelRequirement,
+          isDisable: this.isCancelDisabled,
+          permissions: ['PROJECT_TRACK_PLAN:READ+DELETE']
         }
       ]
     };
@@ -316,14 +323,10 @@ export default {
       this.$refs.createRequirementDialog.open();
     },
     handleEditRequirement(row) {
-      if (row.poolStatus === 'CANCELLED') {
-        this.$warning('已取消的需求不可编辑');
-        return;
-      }
       this.$refs.createRequirementDialog.open(row);
     },
-    isEditDisabled(row) {
-      return row.poolStatus === 'CANCELLED';
+    isEditDisabled() {
+      return false;
     },
     // 初始化表格数据
     initTableData() {
@@ -380,8 +383,8 @@ export default {
     },
     // 回退测试计划
     handleRollback(row) {
-      if (row.poolStatus !== 'CREATED') {
-        this.$warning('只有已创建状态的需求才能回退');
+      if (row.poolStatus !== 'CREATED' && row.poolStatus !== 'CANCELLED') {
+        this.$warning('只有已创建或已取消状态的需求才能回退');
         return;
       }
       this.$confirm('回退将删除关联的测试计划及自动创建的模块节点，需求状态恢复为未创建，是否继续？', '回退确认', {
@@ -399,7 +402,30 @@ export default {
     },
     // 判断回退按钮是否禁用
     isRollbackDisabled(row) {
-      return row.poolStatus !== 'CREATED';
+      return row.poolStatus !== 'CREATED' && row.poolStatus !== 'CANCELLED';
+    },
+    // 模拟需求平台取消需求
+    handleCancelRequirement(row) {
+      if (row.poolStatus === 'CANCELLED') {
+        this.$warning('需求已取消');
+        return;
+      }
+      this.$confirm('将模拟需求平台发送取消消息，需求状态会变为已取消，是否继续？', '取消确认', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        cancelRequirement(row.dmpNum).then(() => {
+          this.$success('取消消息已发送');
+          this.initTableData();
+        }).catch(() => {
+          this.$error('取消失败');
+        });
+      }).catch(() => {});
+    },
+    // 判断取消按钮是否禁用
+    isCancelDisabled(row) {
+      return row.poolStatus === 'CANCELLED';
     },
     // 获取状态类型
     getStatusType(status) {

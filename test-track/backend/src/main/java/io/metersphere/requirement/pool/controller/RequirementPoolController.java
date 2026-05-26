@@ -55,4 +55,9 @@ public class RequirementPoolController {
     public void rollbackTestPlan(@RequestBody Map<String, String> request) {
         requirementPoolService.rollbackTestPlan(request.get("dmpNum"));
     }
+
+    @PostMapping("/cancel")
+    public void cancelRequirement(@RequestBody Map<String, String> request) throws Exception {
+        requirementPoolService.cancelRequirement(request.get("dmpNum"));
+    }
 }
