@@ -1,7 +1,7 @@
 package io.metersphere.requirement.pool.producer;
 
 import com.alibaba.fastjson.JSON;
-import io.metersphere.requirement.pool.dto.RequirementSyncMessage;
+import io.metersphere.requirement.pool.dto.RequirementCallbackMessage;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -15,21 +15,17 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-/**
- * 需求同步消息生产者
- * 模拟需求平台推送消息，"创建需求"按钮通过此Producer发MQ消息
- */
 @Slf4j
 @Component
-public class RequirementSyncProducer implements InitializingBean, RequirementSyncMessageSender {
+public class RequirementCallbackProducer implements InitializingBean, RequirementCallbackMessageSender {
 
     @Value("${rocketmq.name-server:}")
     private String nameServer;
 
-    @Value("${rocketmq.topic.requirement-sync:topic-requirement-to-metersphere}")
+    @Value("${rocketmq.topic.status-callback:topic-metersphere-to-requirement}")
     private String topic;
 
-    @Value("${rocketmq.producer.group:producer-requirement-to-metersphere}")
+    @Value("${rocketmq.producer.status-callback:producer-metersphere-to-requirement}")
     private String producerGroup;
 
     private DefaultMQProducer producer;
@@ -44,19 +40,17 @@ public class RequirementSyncProducer implements InitializingBean, RequirementSyn
         producer.start();
     }
 
-    /**
-     * 同步发送需求消息
-     */
-    public void sendSyncMessage(RequirementSyncMessage msg) throws Exception {
+    @Override
+    public void sendCallbackMessage(RequirementCallbackMessage msg) throws Exception {
         ensureTraceId(msg);
         String body = JSON.toJSONString(msg);
-        log.info("[需求MQ-发送] client=rocketmq, topic={}, dmpNum={}, operationType={}, traceId={}", topic, msg.getDmpNum(), msg.getOperationType(), msg.getTraceId());
+        log.info("[需求回传MQ-发送] client=rocketmq, topic={}, dmpNum={}, planStatus={}, traceId={}", topic, msg.getDmpNum(), msg.getPlanStatus(), msg.getTraceId());
         Message message = new Message(topic, body.getBytes(StandardCharsets.UTF_8));
         SendResult result = producer.send(message);
-        log.info("[需求MQ-发送成功] client=rocketmq, msgId={}, sendStatus={}, dmpNum={}, traceId={}", result.getMsgId(), result.getSendStatus(), msg.getDmpNum(), msg.getTraceId());
+        log.info("[需求回传MQ-发送成功] client=rocketmq, msgId={}, sendStatus={}, dmpNum={}, traceId={}", result.getMsgId(), result.getSendStatus(), msg.getDmpNum(), msg.getTraceId());
     }
 
-    private void ensureTraceId(RequirementSyncMessage msg) {
+    private void ensureTraceId(RequirementCallbackMessage msg) {
         if (StringUtils.isBlank(msg.getTraceId())) {
             msg.setTraceId(UUID.randomUUID().toString().replace("-", ""));
         }
