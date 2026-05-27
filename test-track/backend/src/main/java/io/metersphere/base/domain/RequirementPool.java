@@ -46,6 +46,12 @@ public class RequirementPool implements Serializable {
 
     private String linkedPlanName;
 
+    private String testStatus;
+
+    private String planShareUrl;
+
+    private Long lastCallbackTime;
+
     private Long lastSyncTime;
 
     private Long eventTime;

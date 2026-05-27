@@ -5,10 +5,12 @@ import io.metersphere.base.domain.TestPlan;
 import io.metersphere.base.domain.TestPlanExample;
 import io.metersphere.base.domain.TestPlanNode;
 import io.metersphere.base.domain.TestPlanNodeExample;
+import io.metersphere.base.domain.TestPlanWithBLOBs;
 import io.metersphere.base.mapper.TestPlanMapper;
 import io.metersphere.base.mapper.TestPlanNodeMapper;
 import io.metersphere.base.mapper.ext.ExtRequirementPoolMapper;
 import io.metersphere.commons.constants.ProjectModuleDefaultNodeEnum;
+import io.metersphere.commons.constants.TestPlanStatus;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.BeanUtils;
 import io.metersphere.commons.utils.SessionUtils;
@@ -142,10 +144,6 @@ public class RequirementPoolService {
         if (existing == null) {
             MSException.throwException("需求不存在");
         }
-        if (STATUS_CANCELLED.equals(existing.getPoolStatus())) {
-            MSException.throwException("已取消的需求不可编辑");
-        }
-
         RequirementSyncMessage msg = buildSyncMessage(request, OPERATION_UPDATED);
         log.info("[需求MQ-模拟生产者] 编辑按钮触发发送, dmpNum={}, requirementName={}, traceId={}", dmpNum, requirementName, msg.getTraceId());
         requirementSyncMessageSender.sendSyncMessage(msg);
@@ -154,6 +152,25 @@ public class RequirementPoolService {
         result.setDmpNum(dmpNum);
         result.setRequirementName(requirementName);
         return result;
+    }
+
+    public void cancelRequirement(String dmpNum) throws Exception {
+        dmpNum = StringUtils.trimToEmpty(dmpNum);
+        if (StringUtils.isBlank(dmpNum)) {
+            MSException.throwException("需求编号不能为空");
+        }
+        RequirementPool existing = extRequirementPoolMapper.selectByDmpNum(dmpNum);
+        if (existing == null) {
+            MSException.throwException("需求不存在");
+        }
+        if (STATUS_CANCELLED.equals(existing.getPoolStatus())) {
+            MSException.throwException("需求已取消");
+        }
+
+        CreateRequirementPoolRequest request = BeanUtils.copyBean(new CreateRequirementPoolRequest(), existing);
+        RequirementSyncMessage msg = buildSyncMessage(request, OPERATION_CANCELLED);
+        log.info("[需求MQ-模拟生产者] 已取消按钮触发发送, dmpNum={}, traceId={}", dmpNum, msg.getTraceId());
+        requirementSyncMessageSender.sendSyncMessage(msg);
     }
 
     private RequirementSyncMessage buildSyncMessage(CreateRequirementPoolRequest request, String operationType) {
@@ -207,8 +224,8 @@ public class RequirementPoolService {
         if (requirement == null) {
             MSException.throwException("需求不存在");
         }
-        if (!STATUS_CREATED.equals(requirement.getPoolStatus())) {
-            MSException.throwException("只有已创建状态的需求才能回退");
+        if (!STATUS_CREATED.equals(requirement.getPoolStatus()) && !STATUS_CANCELLED.equals(requirement.getPoolStatus())) {
+            MSException.throwException("只有已创建或已取消状态的需求才能回退");
         }
         String linkedPlanId = requirement.getLinkedPlanId();
         if (StringUtils.isBlank(linkedPlanId)) {
@@ -357,15 +374,36 @@ public class RequirementPoolService {
             return;
         }
         applySyncMessage(existing, msg, OPERATION_CANCELLED);
-        if (STATUS_PENDING.equals(existing.getPoolStatus())) {
-            existing.setPoolStatus(STATUS_CANCELLED);
-        } else {
-            existing.setPoolStatus(null);
-        }
-        existing.setLastSyncTime(System.currentTimeMillis());
+        long now = System.currentTimeMillis();
+        existing.setPoolStatus(STATUS_CANCELLED);
+        existing.setLastSyncTime(now);
+        existing.setEventTime(msg.getEventTime());
+        existing.setUpdatedAt(now);
+        cancelLinkedTestPlan(existing);
         extRequirementPoolMapper.updateByDmpNum(existing);
         log.info("[需求MQ-落库完成] action=cancel, dmpNum={}, poolStatus={}, traceId={}",
                 existing.getDmpNum(), existing.getPoolStatus(), existing.getTraceId());
+    }
+
+    private void cancelLinkedTestPlan(RequirementPool requirement) {
+        String linkedPlanId = requirement.getLinkedPlanId();
+        if (StringUtils.isBlank(linkedPlanId)) {
+            return;
+        }
+        TestPlanWithBLOBs testPlan = testPlanMapper.selectByPrimaryKey(linkedPlanId);
+        if (testPlan == null) {
+            log.warn("[需求MQ-取消测试计划跳过] 关联测试计划不存在, dmpNum={}, linkedPlanId={}", requirement.getDmpNum(), linkedPlanId);
+            return;
+        }
+        if (TestPlanStatus.Cancelled.name().equals(testPlan.getStatus())) {
+            return;
+        }
+        testPlan.setStatus(TestPlanStatus.Cancelled.name());
+        testPlan.setActualStartTime(null);
+        testPlan.setActualEndTime(null);
+        testPlan.setUpdateTime(System.currentTimeMillis());
+        testPlanMapper.updateByPrimaryKeySelective(testPlan);
+        log.info("[需求MQ-取消测试计划完成] dmpNum={}, linkedPlanId={}", requirement.getDmpNum(), linkedPlanId);
     }
 
     private void applySyncMessage(RequirementPool pool, RequirementSyncMessage msg, String operationType) {

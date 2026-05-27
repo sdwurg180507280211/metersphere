@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import io.metersphere.base.domain.*;
 import io.metersphere.base.mapper.*;
+import io.metersphere.base.mapper.ext.ExtRequirementPoolMapper;
 import io.metersphere.base.mapper.ext.ExtTestCaseMapper;
 import io.metersphere.base.mapper.ext.ExtTestPlanMapper;
 import io.metersphere.base.mapper.ext.ExtTestPlanTestCaseMapper;
@@ -47,6 +48,8 @@ import io.metersphere.plan.service.remote.ui.PlanUiAutomationService;
 import io.metersphere.plan.request.TestPlanExportRequest;
 import io.metersphere.plan.utils.TestPlanReportUtil;
 import io.metersphere.plan.utils.TestPlanRequestUtil;
+import io.metersphere.requirement.pool.dto.RequirementCallbackMessage;
+import io.metersphere.requirement.pool.producer.RequirementCallbackMessageSender;
 import io.metersphere.request.OrderRequest;
 import io.metersphere.request.ScheduleRequest;
 import io.metersphere.service.BaseUserService;
@@ -136,6 +139,8 @@ public class TestPlanService {
     private TestCaseTestMapper testCaseTestMapper;
     @Resource
     private TestPlanReportService testPlanReportService;
+    @Resource
+    private TestPlanReportMapper testPlanReportMapper;
     @Lazy
     @Resource
     private IssuesService issuesService;
@@ -165,6 +170,10 @@ public class TestPlanService {
     private TestPlanService testPlanService;
     @Resource
     private BaseTestResourcePoolService baseTestResourcePoolService;
+    @Resource
+    private RequirementCallbackMessageSender requirementCallbackMessageSender;
+    @Resource
+    private ExtRequirementPoolMapper extRequirementPoolMapper;
 
     public static final String PLAN_ERROR = "error";
     public static final String PLAN_FAKE_ERROR = "fakeError";
@@ -368,7 +377,67 @@ public class TestPlanService {
             //  有修改字段的调用，为保证将某些时间置null的情况，使用updateByPrimaryKey
             testPlanMapper.updateByPrimaryKeyWithBLOBs(testPlan); //  更新
         }
-        return testPlanMapper.selectByPrimaryKey(testPlan.getId());
+        TestPlan updatedPlan = testPlanMapper.selectByPrimaryKey(testPlan.getId());
+        sendRequirementCompletedCallback(res, updatedPlan);
+        return updatedPlan;
+    }
+
+    private void sendRequirementCompletedCallback(TestPlan oldPlan, TestPlan updatedPlan) {
+        if (updatedPlan == null || StringUtils.isBlank(updatedPlan.getRequirementNumber())) {
+            return;
+        }
+        if (StringUtils.equals(oldPlan.getStatus(), updatedPlan.getStatus())) {
+            return;
+        }
+        if (!StringUtils.equals(TestPlanStatus.Completed.name(), updatedPlan.getStatus())) {
+            return;
+        }
+        RequirementCallbackMessage message = new RequirementCallbackMessage();
+        message.setDmpNum(updatedPlan.getRequirementNumber());
+        message.setPlanStatus(TestPlanStatus.Completed.name());
+        message.setPlannedStartTime(updatedPlan.getPlannedStartTime());
+        message.setPlannedEndTime(updatedPlan.getPlannedEndTime());
+        message.setActualStartTime(updatedPlan.getActualStartTime());
+        message.setActualEndTime(updatedPlan.getActualEndTime());
+        message.setPrincipalUsers(getPrincipalUsers(updatedPlan.getId()));
+        message.setPlanShareUrl(getLatestDbReportUrl(updatedPlan.getId()));
+        // 如需切换为测试计划报告列表页，可使用：
+        // message.setPlanShareUrl("/#/track/testPlan/reportList?resourceId=" + updatedPlan.getId());
+        // 如需切换为免登录分享报告链接，改为生成 share_info 后使用：
+        // message.setPlanShareUrl("/share-plan-report?shareId=" + shareInfo.getId());
+        message.setSyncTime(System.currentTimeMillis());
+        try {
+            requirementCallbackMessageSender.sendCallbackMessage(message);
+            extRequirementPoolMapper.updateCallbackResult(message.getDmpNum(), message.getPlanStatus(), message.getPlanShareUrl(), message.getSyncTime());
+        } catch (Exception e) {
+            LoggerUtil.error("需求平台已完成状态回传失败, planId=" + updatedPlan.getId() + ", dmpNum=" + updatedPlan.getRequirementNumber(), e);
+        }
+    }
+
+    private String getPrincipalUsers(String planId) {
+        List<User> users = getPlanPrincipal(planId);
+        if (CollectionUtils.isEmpty(users)) {
+            return StringUtils.EMPTY;
+        }
+        return users.stream().map(User::getName).filter(StringUtils::isNotBlank).collect(Collectors.joining(","));
+    }
+
+    private String getLatestDbReportUrl(String planId) {
+        TestPlanReportExample example = new TestPlanReportExample();
+        example.createCriteria().andTestPlanIdEqualTo(planId);
+        example.setOrderByClause("create_time desc");
+        List<TestPlanReport> reports = testPlanReportMapper.selectByExample(example);
+        if (CollectionUtils.isEmpty(reports)) {
+            // 未有报告时自动生成一份，确保回传链接不为空
+            String reportId = UUID.randomUUID().toString();
+            TestPlanReportSaveRequest saveRequest = new TestPlanReportSaveRequest(reportId,
+                    planId, SessionUtils.getUser().getId(), TriggerMode.MANUAL.name());
+            TestPlanScheduleReportInfoDTO report = testPlanReportService.genTestPlanReport(saveRequest, null);
+            testPlanReportService.genTestPlanReportContent(report);
+            testPlanReportService.countReportByTestPlanReportId(report.getTestPlanReport().getId(), null, TriggerMode.MANUAL.name());
+            return "/#/track/testPlan/reportList?resourceId=" + report.getTestPlanReport().getId();
+        }
+        return "/#/track/testPlan/reportList?resourceId=" + reports.get(0).getId();
     }
 
     private void checkTestPlanExist(TestPlan testPlan) {
