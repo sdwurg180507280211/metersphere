@@ -2879,6 +2879,12 @@ const message = {
       delete: '刪除報告',
       export: '導出報告',
     },
+    project_track_requirement_pool: {
+      name: '需求池',
+      read: '查詢需求池',
+      create_plan: '創建測試計劃',
+      rollback: '回退',
+    },
     project_api_definition: {
       name: '接口定義',
       read: '查詢接口',

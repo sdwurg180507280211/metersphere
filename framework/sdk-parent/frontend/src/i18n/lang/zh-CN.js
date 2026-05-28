@@ -2884,6 +2884,12 @@ const message = {
       delete: '删除报告',
       export: '导出报告',
     },
+    project_track_requirement_pool: {
+      name: '需求池',
+      read: '查询需求池',
+      create_plan: '创建测试计划',
+      rollback: '回退',
+    },
     project_api_definition: {
       name: '接口定义',
       read: '查询接口',

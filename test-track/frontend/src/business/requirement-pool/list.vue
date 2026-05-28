@@ -300,14 +300,14 @@ export default {
           icon: 'el-icon-circle-plus-outline',
           exec: this.handleCreatePlan,
           isDisable: this.isCreateDisabled,
-          permissions: ['PROJECT_TRACK_PLAN:READ+CREATE']
+          permissions: ['PROJECT_TRACK_REQUIREMENT_POOL:READ+CREATE_PLAN']
         },
         {
           tip: '回退',
           icon: 'el-icon-refresh-left',
           exec: this.handleRollback,
           isDisable: this.isRollbackDisabled,
-          permissions: ['PROJECT_TRACK_PLAN:READ+DELETE']
+          permissions: ['PROJECT_TRACK_REQUIREMENT_POOL:READ+ROLLBACK']
         },
         {
           tip: '已取消',
