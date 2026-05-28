@@ -4,14 +4,12 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import io.metersphere.base.domain.RequirementPool;
 import io.metersphere.base.domain.TestPlan;
-import io.metersphere.commons.constants.PermissionConstants;
 import io.metersphere.commons.utils.PageUtils;
 import io.metersphere.commons.utils.Pager;
 import io.metersphere.requirement.pool.request.CreateRequirementPoolRequest;
 import io.metersphere.requirement.pool.request.CreateTestPlanFromRequirementRequest;
 import io.metersphere.requirement.pool.request.QueryRequirementPoolRequest;
 import io.metersphere.requirement.pool.service.RequirementPoolService;
-import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.annotation.Resource;
@@ -49,13 +47,11 @@ public class RequirementPoolController {
     }
 
     @PostMapping("/create-test-plan")
-    @RequiresPermissions(PermissionConstants.PROJECT_TRACK_REQUIREMENT_POOL_READ_CREATE_PLAN)
     public TestPlan createTestPlanFromRequirement(@RequestBody CreateTestPlanFromRequirementRequest request) {
         return requirementPoolService.createTestPlanFromRequirement(request);
     }
 
     @PostMapping("/rollback-test-plan")
-    @RequiresPermissions(PermissionConstants.PROJECT_TRACK_REQUIREMENT_POOL_READ_ROLLBACK)
     public void rollbackTestPlan(@RequestBody Map<String, String> request) {
         requirementPoolService.rollbackTestPlan(request.get("dmpNum"));
     }
