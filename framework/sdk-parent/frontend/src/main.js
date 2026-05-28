@@ -21,6 +21,7 @@ import { gotoCancel, gotoNext } from "./utils";
 import ElementUI from "element-ui";
 
 Vue.config.productionTip = false;
+window.__MS_MAIN_APP_HOST__ = true;
 
 const pinia = createPinia();
 pinia.use(PersistedState); //开启缓存，存储在localstorage

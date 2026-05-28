@@ -165,6 +165,9 @@ export default {
      * 返回 null 表示当前路由不对应任何子应用（如主应用自身页面）
      */
     currentApp() {
+      if (!window.__MS_MAIN_APP_HOST__) {
+        return null;
+      }
       const name = this.currentModuleName;
       if (!name || !MIGRATED_MODULES[name]) {
         return null;

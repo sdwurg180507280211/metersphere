@@ -114,3 +114,17 @@ export function saveAnnouncementScrollSpeed(speed) {
     type: 'text'
   });
 }
+
+// 获取公告字体大小
+export function getAnnouncementFontSize() {
+  return get('/system/get/info/announcement.font.size');
+}
+
+// 保存公告字体大小
+export function saveAnnouncementFontSize(fontSize) {
+  return post('/system/edit/info', {
+    paramKey: 'announcement.font.size',
+    paramValue: String(fontSize),
+    type: 'text'
+  });
+}
