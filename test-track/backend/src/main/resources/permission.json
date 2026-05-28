@@ -226,6 +226,21 @@
       "id": "PROJECT_TRACK_REPORT:READ+EXPORT",
       "name": "permission.project_track_report.export",
       "resourceId": "PROJECT_TRACK_REPORT"
+    },
+    {
+      "id": "PROJECT_TRACK_REQUIREMENT_POOL:READ",
+      "name": "permission.project_track_requirement_pool.read",
+      "resourceId": "PROJECT_TRACK_REQUIREMENT_POOL"
+    },
+    {
+      "id": "PROJECT_TRACK_REQUIREMENT_POOL:READ+CREATE_PLAN",
+      "name": "permission.project_track_requirement_pool.create_plan",
+      "resourceId": "PROJECT_TRACK_REQUIREMENT_POOL"
+    },
+    {
+      "id": "PROJECT_TRACK_REQUIREMENT_POOL:READ+ROLLBACK",
+      "name": "permission.project_track_requirement_pool.rollback",
+      "resourceId": "PROJECT_TRACK_REQUIREMENT_POOL"
     }
   ],
   "resource": [
@@ -252,6 +267,10 @@
     {
       "id": "PROJECT_TRACK_REPORT",
       "name": "permission.project_track_report.name"
+    },
+    {
+      "id": "PROJECT_TRACK_REQUIREMENT_POOL",
+      "name": "permission.project_track_requirement_pool.name"
     }
   ]
 }

@@ -2921,6 +2921,12 @@ const message = {
       delete: 'DELETE',
       export: 'EXPORT',
     },
+    project_track_requirement_pool: {
+      name: 'Requirement Pool',
+      read: 'Read',
+      create_plan: 'Create Test Plan',
+      rollback: 'Rollback',
+    },
     project_api_definition: {
       name: 'Definition',
       read: 'READ',
