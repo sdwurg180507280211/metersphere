@@ -58,7 +58,7 @@ export default {
         {
           path: '/track/requirement-pool/list',
           name: '需求池',
-          permission: 'PROJECT_TRACK_REQUIREMENT_POOL:READ'
+          permission: 'PROJECT_TRACK_PLAN:READ'
         },
         {
           path: '/track/plan/all',
