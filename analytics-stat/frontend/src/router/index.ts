@@ -7,7 +7,7 @@
  *   - <base>/knowledge/chat → 知识问答（主页面）
  *   - <base>/knowledge → 知识库管理
  *   - <base>/home | <base>/sql-console | <base>/data-dictionary
- *     兼容历史入口，统一重定向到知识问答（可通过 VITE_ENABLE_ANALYTICS_LEGACY_ROUTES=false 关闭）
+ *     兼容历史入口，统一重定向到知识问答（可通过 VITE_ENABLE_AI_LEGACY_ROUTES=false 关闭）
  * - <base> 默认是 /ai，可通过 VITE_KNOWLEDGE_ROUTE_BASE 配置
  *
  * 与 Vue 2 版本的差异：
@@ -19,7 +19,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw, Router } from 'vue-router'
 import { KNOWLEDGE_ROUTE_BASE, KNOWLEDGE_ROUTE_PATHS } from '@/config/knowledge-route'
 
-const enableLegacyRedirectRoutes = import.meta.env.VITE_ENABLE_ANALYTICS_LEGACY_ROUTES !== 'false'
+const enableLegacyRedirectRoutes = import.meta.env.VITE_ENABLE_AI_LEGACY_ROUTES !== 'false'
 
 const legacyRedirectRoutes: RouteRecordRaw[] = enableLegacyRedirectRoutes
   ? [

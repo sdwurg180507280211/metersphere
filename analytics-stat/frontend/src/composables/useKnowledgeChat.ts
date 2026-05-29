@@ -84,7 +84,7 @@ function getCurrentWorkspaceId(): string {
 
 function buildWsUrl(): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}/analytics/ws/${getSessionToken()}`
+  return `${protocol}//${window.location.host}/ai/ws/${getSessionToken()}`
 }
 
 function buildHistory(messages: ChatMessage[]): ChatHistoryTurn[] {
