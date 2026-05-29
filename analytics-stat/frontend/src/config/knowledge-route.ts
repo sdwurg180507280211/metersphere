@@ -1,12 +1,12 @@
 function normalizeRouteBase(base: string | undefined): string {
-  const input = (base || '/analytics').trim()
+  const input = (base || '/ai').trim()
   if (!input) {
-    return '/analytics'
+    return '/ai'
   }
 
   const withLeadingSlash = input.startsWith('/') ? input : `/${input}`
   const normalized = withLeadingSlash.replace(/\/+$/, '')
-  return normalized || '/analytics'
+  return normalized || '/ai'
 }
 
 export const KNOWLEDGE_ROUTE_BASE = normalizeRouteBase(import.meta.env.VITE_KNOWLEDGE_ROUTE_BASE)

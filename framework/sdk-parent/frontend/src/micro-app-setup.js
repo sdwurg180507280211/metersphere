@@ -23,7 +23,7 @@ import {
 // 否则 Vue 会对 <micro-app> 标签报 "Unknown custom element" 警告
 Vue.config.ignoredElements = ['micro-app'];
 
-const PREFETCH_PRIORITY = ['track', 'api', 'project', 'setting', 'workstation', 'report', 'performance', 'analytics'];
+const PREFETCH_PRIORITY = ['track', 'api', 'project', 'setting', 'workstation', 'report', 'performance', 'ai'];
 
 const microAppPerfMarks = new Map();
 

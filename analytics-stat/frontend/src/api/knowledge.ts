@@ -2,12 +2,12 @@
  * 知识库检索 API 客户端
  *
  * 接口说明：
- * - GET /analytics/knowledge/search/hybrid?query=xxx&topK=10 — 混合检索（KNN + BM25）
+ * - GET /ai/knowledge/search/hybrid?query=xxx&topK=10 — 混合检索（KNN + BM25）
  *
  * 请求路径说明：
- * - 前端发 /analytics/knowledge/search/hybrid
- * - Gateway 匹配 /analytics/** → 转发到 analytics-stat 后端，去掉 /analytics 前缀
- * - 后端收到 /knowledge/search/hybrid
+ * - 前端发 /ai/knowledge/search/hybrid
+ * - Gateway 匹配 /ai/** → 转发到 ai 后端微服务（工程名 analytics-stat），并去掉 /ai 前缀
+ * - 后端微服务收到 /knowledge/search/hybrid
  *
  * 认证说明：
  * - MeterSphere 使用 X-AUTH-TOKEN header 认证（不是 cookie）
@@ -33,15 +33,15 @@ const WORKSPACE_ID_KEY = 'workspace_id'
 const PROJECT_ID_KEY = 'project_id'
 
 /**
- * 创建带 /analytics 前缀的 axios 实例
+ * 创建带 /ai 前缀的 axios 实例
  *
  * 为什么需要前缀：
- * - analytics-stat 在 Eureka 注册的服务名是 "analytics"
- * - Gateway 通过服务发现路由，URL 第一段路径必须是服务名
+ * - ai 模块在 Eureka 注册的服务名称是 "ai"（对应配置项 spring.application.name）
+ * - Gateway 通过路径前缀匹配将请求转发给对应的微服务
  * - 不加前缀，Gateway 无法识别该请求应转发给哪个微服务
  */
 export const knowledgeHttp = axios.create({
-  baseURL: '/analytics',
+  baseURL: '/ai',
   withCredentials: true,
 })
 

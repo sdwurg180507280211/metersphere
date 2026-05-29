@@ -3,7 +3,7 @@
  */
 export default {
   commons: {
-    analytics_stat: '知识库',
+    analytics_stat: 'AI工作台',
     operating: '操作',
     cancel: '取消',
     confirm: '确定',
@@ -14,7 +14,7 @@ export default {
     delete_failed: '删除失败',
   },
   analytics: {
-    title: '知识库',
+    title: 'AI工作台',
     menu: {
       knowledge: '知识库',
       knowledge_chat: '知识问答',
@@ -69,7 +69,7 @@ export default {
       error_network: '网络异常，请检查网络连接后重试',
       error_server: '服务暂不可用，请稍后重试',
       module_intro_title: '知识库工作台',
-      module_intro_desc: '分析统计模块已聚焦为知识库能力中心，你可以在这里完成文档上传、解析入库与语义检索全流程。',
+      module_intro_desc: 'AI工作台模块已聚焦为知识库能力中心，你可以在这里完成文档上传、解析入库与语义检索全流程。',
       workflow_title: '推荐工作流',
       workflow_step_upload: '上传结构清晰、主题单一的文档，优先使用 Markdown 或文本格式。',
       workflow_step_parse: '等待文档解析与向量化完成，确认状态为“已入库”后再执行检索。',

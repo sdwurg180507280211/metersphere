@@ -3,7 +3,7 @@
  */
 export default {
   commons: {
-    analytics_stat: 'Knowledge Base',
+    analytics_stat: 'AI Workbench',
     operating: 'Actions',
     cancel: 'Cancel',
     confirm: 'Confirm',
@@ -14,7 +14,7 @@ export default {
     delete_failed: 'Delete failed',
   },
   analytics: {
-    title: 'Knowledge Base',
+    title: 'AI Workbench',
     menu: {
       knowledge: 'Knowledge Base',
       knowledge_chat: 'Knowledge Chat',
@@ -69,7 +69,7 @@ export default {
       error_network: 'Network error, please check your connection and try again',
       error_server: 'Service is temporarily unavailable, please try again later',
       module_intro_title: 'Knowledge Workspace',
-      module_intro_desc: 'The analytics module is now focused on a knowledge base center, covering upload, parsing, indexing, and semantic retrieval.',
+      module_intro_desc: 'The AI Workbench module is now focused on a knowledge base center, covering upload, parsing, indexing, and semantic retrieval.',
       workflow_title: 'Recommended Workflow',
       workflow_step_upload: 'Upload focused and well-structured documents, preferably in Markdown or plain text.',
       workflow_step_parse: 'Wait for parsing and vectorization to finish before starting retrieval.',

@@ -156,7 +156,7 @@ const message = {
     follow_api: 'Follow API definition',
     response_time_delay: 'Response delay time',
     my_workstation: 'Workstation',
-    analytics_stat: 'Analytics',
+    analytics_stat: 'AI Workbench',
     ui_test: 'UiTest',
     performance: 'Performance',
     enable_settings: 'Enable Settings',

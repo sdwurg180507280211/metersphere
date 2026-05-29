@@ -46,6 +46,15 @@
         </el-card>
       </el-col>
     </el-row>
+    <el-row :gutter="12">
+      <el-col :span="8">
+        <el-card shadow="hover">
+          {{ $t('commons.analytics_stat') }}
+          <el-switch v-model="ai" @change="update('ai')" active-value="ENABLE"
+                     inactive-value="DISABLE" :disabled="disabled"/>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -74,7 +83,7 @@ export default {
       track: "ENABLE",
       ui: "ENABLE",
       workstation: "ENABLE",
-      analytics: "ENABLE",
+      ai: "ENABLE",
     };
   },
   mounted() {

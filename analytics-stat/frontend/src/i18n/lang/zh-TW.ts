@@ -3,7 +3,7 @@
  */
 export default {
   commons: {
-    analytics_stat: '知識庫',
+    analytics_stat: 'AI工作台',
     operating: '操作',
     cancel: '取消',
     confirm: '確認',
@@ -14,7 +14,7 @@ export default {
     delete_failed: '刪除失敗',
   },
   analytics: {
-    title: '知識庫',
+    title: 'AI工作台',
     menu: {
       knowledge: '知識庫',
       knowledge_chat: '知識問答',
@@ -69,7 +69,7 @@ export default {
       error_network: '網路異常，請檢查網路連線後重試',
       error_server: '服務暫不可用，請稍後重試',
       module_intro_title: '知識庫工作台',
-      module_intro_desc: '分析統計模組已聚焦為知識庫能力中心，你可以在這裡完成文件上傳、解析入庫與語義檢索全流程。',
+      module_intro_desc: 'AI工作台模組已聚焦為知識庫能力中心，你可以在這裡完成文件上傳、解析入庫與語義檢索全流程。',
       workflow_title: '推薦工作流',
       workflow_step_upload: '上傳結構清晰、主題單一的文件，優先使用 Markdown 或文字格式。',
       workflow_step_parse: '等待文件解析與向量化完成，確認狀態為「已入庫」後再執行檢索。',

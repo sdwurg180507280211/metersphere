@@ -54,7 +54,7 @@
       </div>
     </el-menu-item>
 
-    <el-menu-item index="/analytics/knowledge/chat" v-if="check('analytics')" onselectstart="return false">
+    <el-menu-item index="/ai/knowledge/chat" v-if="check('ai')" onselectstart="return false">
       <div>
         <svg-icon iconClass="analytics-stat" class-name="ms-menu-img"/>
         <span slot="title" class="ms-menu-item-title">{{ $t('commons.analytics_stat') }}</span>
