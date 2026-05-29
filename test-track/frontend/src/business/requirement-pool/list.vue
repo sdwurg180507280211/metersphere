@@ -15,7 +15,7 @@
 
         <ms-table
             v-loading="page.loading"
-            operator-width="200px"
+            operator-width="120px"
             row-key="dmpNum"
             :data="page.data"
             :condition="page.condition"
@@ -288,13 +288,13 @@ export default {
       screenHeight: 'calc(100vh - 160px)',
       pageRefresh: false,
       operators: [
-        {
-          tip: '编辑需求',
-          icon: 'el-icon-edit',
-          exec: this.handleEditRequirement,
-          isDisable: this.isEditDisabled,
-          permissions: ['PROJECT_TRACK_PLAN:READ+CREATE']
-        },
+        // {
+        //   tip: '编辑需求',
+        //   icon: 'el-icon-edit',
+        //   exec: this.handleEditRequirement,
+        //   isDisable: this.isEditDisabled,
+        //   permissions: ['PROJECT_TRACK_PLAN:READ+CREATE']
+        // },
         {
           tip: '创建测试计划',
           icon: 'el-icon-circle-plus-outline',
@@ -302,20 +302,20 @@ export default {
           isDisable: this.isCreateDisabled,
           permissions: ['PROJECT_TRACK_PLAN:READ+CREATE']
         },
-        {
-          tip: '回退',
-          icon: 'el-icon-refresh-left',
-          exec: this.handleRollback,
-          isDisable: this.isRollbackDisabled,
-          permissions: ['PROJECT_TRACK_PLAN:READ+DELETE']
-        },
-        {
-          tip: '已取消',
-          icon: 'el-icon-circle-close',
-          exec: this.handleCancelRequirement,
-          isDisable: this.isCancelDisabled,
-          permissions: ['PROJECT_TRACK_PLAN:READ+DELETE']
-        }
+        // {
+        //   tip: '回退',
+        //   icon: 'el-icon-refresh-left',
+        //   exec: this.handleRollback,
+        //   isDisable: this.isRollbackDisabled,
+        //   permissions: ['PROJECT_TRACK_PLAN:READ+DELETE']
+        // },
+        // {
+        //   tip: '已取消',
+        //   icon: 'el-icon-circle-close',
+        //   exec: this.handleCancelRequirement,
+        //   isDisable: this.isCancelDisabled,
+        //   permissions: ['PROJECT_TRACK_PLAN:READ+DELETE']
+        // }
       ]
     };
   },
