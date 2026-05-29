@@ -22,9 +22,9 @@ const EMBED_APP_PREFIX = 'embed-';
 const EMBED_APP_SEPARATOR = '__';
 
 const MICRO_APP_MODULES = [
-  // 统计分析模块（serviceId: analytics-stat，路由前缀: analytics）
+  // AI工作台模块（serviceId: ai，路由前缀: ai）
   // Vue 3 + Vite 构建，需要 iframe 沙箱
-  { serviceId: 'analytics-stat', moduleName: 'analytics', migrated: true, isViteApp: true },
+  { serviceId: 'ai', moduleName: 'ai', migrated: true, isViteApp: true },
   // 工作台模块（serviceId: workstation，路由前缀: workstation）
   { serviceId: 'workstation', moduleName: 'workstation', migrated: true, isViteApp: false },
   // 报告统计模块（serviceId: report-stat，路由前缀: report）
@@ -156,7 +156,7 @@ export {
  * - 生产环境：使用当前域名 + 服务路径 {origin}/{name}
  *   （通过网关反向代理访问各子应用静态资源）
  *
- * @param {string} name - 模块名称，如 'api'、'analytics'
+ * @param {string} name - 模块名称，如 'api'、'ai'
  * @returns {string} 子应用入口 URL
  */
 export function getEntryUrl(name) {

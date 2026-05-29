@@ -8,7 +8,7 @@
  *   - <base>/knowledge → 知识库管理
  *   - <base>/home | <base>/sql-console | <base>/data-dictionary
  *     兼容历史入口，统一重定向到知识问答（可通过 VITE_ENABLE_ANALYTICS_LEGACY_ROUTES=false 关闭）
- * - <base> 默认是 /analytics，可通过 VITE_KNOWLEDGE_ROUTE_BASE 配置
+ * - <base> 默认是 /ai，可通过 VITE_KNOWLEDGE_ROUTE_BASE 配置
  *
  * 与 Vue 2 版本的差异：
  * - 使用 createRouter / createWebHashHistory 替代 new Router
@@ -43,10 +43,10 @@ const routes: RouteRecordRaw[] = [
   // 根路径重定向到知识问答
   { path: '/', redirect: KNOWLEDGE_ROUTE_PATHS.knowledgeChat },
 
-  // 分析统计模块路由
+  // AI工作台模块路由
   {
     path: KNOWLEDGE_ROUTE_BASE,
-    name: 'analytics',
+    name: 'ai',
     redirect: KNOWLEDGE_ROUTE_PATHS.knowledgeChat,
     // 二级布局组件
     component: () => import('@/business/KnowledgeBaseLayout.vue'),
