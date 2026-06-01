@@ -6,7 +6,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springdoc.core.properties.SwaggerUiConfigProperties;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -33,7 +32,7 @@ public class LoginFilter implements WebFilter, Ordered {
     @Resource
     private SwaggerUiConfigProperties swaggerUiConfigProperties;
 
-    @Value("${management.server.port:8080}")
+    @Value("${management.server.port:7421}")
     private int managementPort;
 
     @PostConstruct
@@ -72,12 +71,6 @@ public class LoginFilter implements WebFilter, Ordered {
     @Override
     public Mono<Void> filter(final ServerWebExchange serverWebExchange, final WebFilterChain webFilterChain) {
         ServerHttpRequest request = serverWebExchange.getRequest();
-
-        // 如果是 management port，直接放行（不需要认证）
-        // 使用 getLocalAddress() 获取服务器监听的端口
-        if (request.getLocalAddress() != null && request.getLocalAddress().getPort() == managementPort) {
-            return webFilterChain.filter(serverWebExchange);
-        }
 
         if (isApiKeyCall(request)) {
             return webFilterChain.filter(serverWebExchange);
