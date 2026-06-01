@@ -51,8 +51,7 @@ export default {
         'SYSTEM_TEST_POOL:READ',
         'SYSTEM_SETTING:READ',
         'SYSTEM_QUOTA:READ',
-        'SYSTEM_AUTH:READ',
-        'SYSTEM_WORKFLOW:READ'
+        'SYSTEM_AUTH:READ'
       ];
       let workspacePermission = [
         'WORKSPACE_USER:READ',
