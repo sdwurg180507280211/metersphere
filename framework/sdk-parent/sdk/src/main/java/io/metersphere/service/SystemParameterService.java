@@ -36,6 +36,7 @@ import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionUtils;
+import org.springframework.core.env.Environment;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -75,6 +76,8 @@ public class SystemParameterService {
     private SqlSessionFactory sqlSessionFactory;
     @Resource
     private ProjectApplicationMapper projectApplicationMapper;
+    @Resource
+    private Environment environment;
 
     public String searchEmail() {
         return baseSystemParameterMapper.email();
@@ -265,11 +268,21 @@ public class SystemParameterService {
      * @return 系统key对应的值 ｜ ""
      */
     public String getValue(String key) {
+        if (StringUtils.equals(key, ParamConstants.BASE.URL.getValue())) {
+            String envUrl = getMetersphereSiteUrl();
+            if (StringUtils.isNotBlank(envUrl)) {
+                return envUrl;
+            }
+        }
         SystemParameter param = systemParameterMapper.selectByPrimaryKey(key);
         if (param == null || StringUtils.isBlank(param.getParamValue())) {
             return StringUtils.EMPTY;
         }
         return param.getParamValue();
+    }
+
+    private String getMetersphereSiteUrl() {
+        return environment.getProperty("METERSPHERE_SITE_URL", System.getenv("METERSPHERE_SITE_URL"));
     }
 
     public BaseSystemConfigDTO getBaseInfo() {
@@ -278,7 +291,12 @@ public class SystemParameterService {
         if (!CollectionUtils.isEmpty(paramList)) {
             for (SystemParameter param : paramList) {
                 if (StringUtils.equals(param.getParamKey(), ParamConstants.BASE.URL.getValue())) {
-                    baseSystemConfigDTO.setUrl(param.getParamValue());
+                    String envUrl = getMetersphereSiteUrl();
+                    if (StringUtils.isNotBlank(envUrl)) {
+                        baseSystemConfigDTO.setUrl(envUrl);
+                    } else {
+                        baseSystemConfigDTO.setUrl(param.getParamValue());
+                    }
                 }
                 if (StringUtils.equals(param.getParamKey(), ParamConstants.BASE.CONCURRENCY.getValue())) {
                     baseSystemConfigDTO.setConcurrency(param.getParamValue());
