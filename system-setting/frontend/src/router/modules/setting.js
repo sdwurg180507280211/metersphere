@@ -124,61 +124,6 @@ const Setting = {
       component: () => import('../../business/system/plugin/PluginConfig'),
       meta: {system: true, title: 'plugin.title', permissions: ['SYSTEM_PLUGIN:READ']}
     },
-    {
-      path: 'workflow',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.management', permissions: ['SYSTEM_WORKFLOW:READ']}
-    },
-    {
-      path: 'workflow/process',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.process_manage', permissions: ['SYSTEM_WORKFLOW:READ'], menu: false}
-    },
-    {
-      path: 'workflow/todo',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.todo_task', permissions: ['SYSTEM_WORKFLOW:READ'], menu: false}
-    },
-    {
-      path: 'workflow/done',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.done_task', permissions: ['SYSTEM_WORKFLOW:READ'], menu: false}
-    },
-    {
-      path: 'workflow/models',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.model_manage', permissions: ['SYSTEM_WORKFLOW:READ'], menu: false}
-    },
-    {
-      path: 'workflow/deployment',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.deployment_manage', permissions: ['SYSTEM_WORKFLOW:READ'], menu: false}
-    },
-    {
-      path: 'workflow/definition',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.definition_manage', permissions: ['SYSTEM_WORKFLOW:READ'], menu: false}
-    },
-    {
-      path: 'workflow/instance',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.instance_manage', permissions: ['SYSTEM_WORKFLOW:READ'], menu: false}
-    },
-    {
-      path: 'workflow/forms',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.form_manage', permissions: ['SYSTEM_WORKFLOW:READ'], menu: false}
-    },
-    {
-      path: 'workflow/design',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.process_design', permissions: ['SYSTEM_WORKFLOW:READ'], menu: false}
-    },
-    {
-      path: 'workflow/form-design',
-      component: () => import('../../business/system/workflow/WorkflowManage'),
-      meta: {system: true, title: 'workflow.form_design', permissions: ['SYSTEM_WORKFLOW:READ'], menu: false}
-    },
   ]
 };
 
