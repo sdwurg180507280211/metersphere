@@ -1,0 +1,75 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "/Users/edy/.nvm/versions/node/v20.19.6/bin/npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--autoConnect",
+        "--channel=stable"
+      ],
+      "env": {
+        "PATH": "/Users/edy/.nvm/versions/node/v20.19.6/bin:/usr/local/bin:/usr/bin:/bin",
+        "NODE_PATH": "/Users/edy/.nvm/versions/node/v20.19.6/lib/node_modules"
+      },
+      "autoApprove": [
+        "navigate_page",
+        "reload_page",
+        "go_back",
+        "go_forward",
+        "take_screenshot",
+        "take_snapshot",
+        "list_console_messages",
+        "clear_console_messages",
+        "list_network_requests",
+        "get_network_request_details",
+        "click",
+        "hover",
+        "type_text",
+        "press_key",
+        "scroll_to",
+        "get_element_html",
+        "get_element_text",
+        "get_computed_style",
+        "find_elements",
+        "get_page_content",
+        "get_page_title",
+        "get_page_url",
+        "evaluate_script",
+        "call_function",
+        "start_performance_recording",
+        "stop_performance_recording",
+        "run_lighthouse_audit",
+        "get_cookies",
+        "set_cookie"
+      ],
+      "disabled": false
+    },
+    "gitee": {
+      "command": "/Users/edy/.nvm/versions/node/v20.19.6/bin/npx",
+      "args": [
+        "-y",
+        "@gitee/mcp-gitee@latest"
+      ],
+      "env": {
+        "GITEE_API_BASE": "https://gitee.com/api/v5",
+        "GITEE_ACCESS_TOKEN": "b7b7f85d83121c560fdf6eaa64ba4a0c",
+        "PATH": "/Users/edy/.nvm/versions/node/v20.19.6/bin:/usr/local/bin:/usr/bin:/bin",
+        "NODE_PATH": "/Users/edy/.nvm/versions/node/v20.19.6/lib/node_modules"
+      },
+      "autoApprove": [],
+      "disabled": false
+    },
+    "exa": {
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp?exaApiKey=f410d5c2-5db6-420f-8eae-2e23687c891c",
+      "headers": {},
+      "autoApprove": [
+        "web_search_exa",
+        "web_search_exa",
+        "web_search_exa"
+      ],
+      "disabled": false
+    }
+  }
+}
