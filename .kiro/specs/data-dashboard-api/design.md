@@ -1,567 +1,623 @@
-# 设计文档：数据大屏 API 数据对接
+# 设计文档：数据大屏所属系统视图对接
 
 ## 概述
 
-本文档描述数据大屏外部系统通过 HTTP API 从 MeterSphere 获取测试跟踪统计数据的对接方案。核心依赖现有 `ApiKeyFilter` / `ApiKeyHandler` 认证机制和 `TrackController` 五个统计接口，外部系统通过定时轮询拉取数据，在本地缓存并渲染大屏展示。
+V1 方案不新增后端接口，改为提供四个只读数据库视图。甲方人员直接查询数据库视图，以**所属系统**为查询条件获取测试跟踪-首页四个统计卡片的同口径数据。
 
-V1 阶段不新增任何后端接口，完全复用现有能力。后续需求测试流程模块上线后，再新增 workflow 维度的统计端点。
-
-**文档版本**：V1.0
-**修订日期**：2026年6月1日
+**文档版本**：V1.1
+**修订日期**：2026年6月2日
 
 ---
 
 ## 核心设计目标
 
-1. **零侵入**：V1 不新增/不修改任何后端代码，仅提供对接规范和示例
-2. **认证复用**：直接使用现有 ApiKeyFilter 链路，无需额外开发
-3. **接口复用**：复用 TrackController 现有 5 个统计端点
-4. **可扩展**：预留 workflow 统计接口设计，后续按相同认证模式接入
-5. **文档化**：提供签名算法多语言示例和接口契约
+1. **甲方直接查数据库**：不经过后端 API，不走 API Key 认证链
+2. **所属系统维度**：甲方按 `system_code`（所属系统简称）查询，不按 `projectId` 查
+3. **只读视图**：甲方数据库账号只授予四个视图的 `SELECT` 权限
+4. **未设置归组**：没有填写所属系统的数据统一归入 `未设置`
+5. **同口径不同维度**：统计逻辑与测试跟踪-首页卡片一致，维度从项目改为所属系统
+6. **视图自查**：甲方查询不需要理解 `test_case`、`issues`、`custom_field_*` 等基础表结构
 
 ---
 
 ## 架构设计
 
-### 总体架构
+### 甲方查询流程
 
 ```
-┌─────────────────────┐         HTTPS + API Key           ┌──────────────────────┐
-│   数据大屏           │ ────────────────────────────────> │  MeterSphere          │
-│   (外部系统)         │   GET /track/count/{projectId}     │                      │
-│                     │   GET /track/relevance/count/...   │  ┌────────────────┐  │
-│  ┌───────────────┐  │   GET /track/bug/count/...         │  │ ApiKeyFilter    │  │
-│  │ 定时轮询器    │  │   GET /track/case/bar/...           │  │ (accessKey +    │  │
-│  │ (5-10min)    │  │   GET /track/failure/case/...       │  │  signature)     │  │
-│  └───────────────┘  │                                     │  └───────┬────────┘  │
-│                     │   Headers:                          │          │           │
-│  ┌───────────────┐  │   - accessKey: AK1a2b3c4d5e6f7g   │  ┌───────▼────────┐  │
-│  │ 数据缓存层    │  │   - signature: AES(...)             │  │ ApiKeyHandler   │  │
-│  └───────────────┘  │                                     │  │ 验证签名+时间戳 │  │
-│                     │                                     │  └───────┬────────┘  │
-│  ┌───────────────┐  │                                     │          │           │
-│  │ 可视化渲染    │  │                                     │  ┌───────▼────────┐  │
-│  └───────────────┘  │                                     │  │ TrackController │  │
-└─────────────────────┘                                     │  │ 返回统计数据    │  │
-                                                            │  └────────────────┘  │
-                                                            └──────────────────────┘
+┌──────────────────────────┐         MySQL read-only         ┌──────────────────────────┐
+│  甲方数据大屏 / BI        │ ─────────────────────────────>  │  MeterSphere 数据库       │
+│                          │   SELECT * FROM                 │                          │
+│  ┌────────────────────┐  │   v_dashboard_case_count_      │  ┌──────────────────────┐ │
+│  │ 定时查询器          │  │   by_system                    │  │ 四个只读统计视图      │ │
+│  │ (5-10min, JDBC)    │  │   WHERE system_code = 'CMS'    │  │                      │ │
+│  └────────────────────┘  │                                 │  │ 1. case_count        │ │
+│                          │                                 │  │ 2. relevance_count   │ │
+│  ┌────────────────────┐  │                                 │  │ 3. case_maintainer   │ │
+│  │ 可视化渲染          │  │                                 │  │ 4. bug_count         │ │
+│  └────────────────────┘  │                                 │  └──────────────────────┘ │
+└──────────────────────────┘                                 └──────────────────────────┘
 ```
 
-### 认证流程
+### V1 方案与原始 HTTP 方案的区别
+
+| 维度 | 原始 HTTP 方案（备用） | 当前 V1 视图方案 |
+|------|----------------------|------------------|
+| 数据获取方式 | HTTP + API Key | MySQL 只读连接 |
+| 统计维度 | 项目 `projectId` | 所属系统 `system_id` |
+| 甲方查询方式 | 轮询 5 个接口 | 查询 4 个视图 |
+| 认证方式 | API Key + AES 签名 | MySQL 账号密码 |
+| 前端复杂度 | 需要签名、重试、缓存 | 直接 JDBC 查询 |
+
+---
+
+## 数据来源与关联关系
+
+### 用例侧（卡片 1、2、3）
 
 ```
-外部系统                              MeterSphere
-    │                                     │
-    │  1. 生成签名                        │
-    │  plainText = accessKey|timestamp     │
-    │  signature = AES(secretKey, plain)   │
-    │                                     │
-    │  2. 发起请求 (Headers)               │
-    │  ──────────────────────────────────> │
-    │  accessKey: AKxxx                   │
-    │  signature: base64Encoded           │
-    │                                     │
-    │                                     │  3. ApiKeyFilter 拦截
-    │                                     │  4. ApiKeyHandler.getUser()
-    │                                     │     a. 查 UserKey by accessKey
-    │                                     │     b. AES 解密 signature
-    │                                     │     c. 校验 accessKey 匹配
-    │                                     │     d. 校验 timestamp ±30min
-    │                                     │     e. 返回 userId
-    │                                     │
-    │                                     │  5. Shiro 执行登录
-    │                                     │     (UsernamePasswordToken)
-    │                                     │
-    │                                     │  6. 权限校验
-    │                                     │     (PROJECT_TRACK_HOME:READ)
-    │                                     │
-    │                                     │  7. 执行业务逻辑
-    │                                     │
-    │  8. 返回 JSON 数据                   │
-    │  <────────────────────────────────── │
-    │                                     │
-    │  9. 请求结束，ApiKeyFilter.postHandle│
-    │     登出 API Key 用户的 Shiro Session│
-    │                                     │
+test_case                           # 功能用例 (只统计 status != 'Trash', latest = 1)
+  ├── custom_field_test_case        # 关联用例所属系统
+  │     field_id = 'case-associated-system-field-2024-12-01-002'
+  │     value = associated_system.id (带引号的 UUID)
+  ├── test_case_test                # 用例关联关系 (卡片 2 使用)
+  │     test_type = 'testCase'     → api_test_case
+  │     test_type = 'performance'  → load_test
+  │     test_type = 'automation'   → api_scenario
+  │     test_type = 'uiAutomation' → ui_scenario
+  └── associated_system             # 所属系统主数据
+        id = TRIM('"' FROM custom_field_test_case.value)
+
+test_case.maintainer → user.id → user.name   # 维护人 (卡片 3 使用)
+```
+
+### 缺陷侧（卡片 4）
+
+```
+test_plan_test_case                 # 测试计划关联用例
+  └── test_case_issues              # 用例关联缺陷
+        resource_id = test_plan_test_case.id
+        └── issues                  # 缺陷
+              └── custom_field_issues
+                    field_id = 'issue-associated-system-field-2024-12-16-001'
+                    value = associated_system.id (带引号的 UUID)
+              └── associated_system # 所属系统主数据
 ```
 
 ---
 
-## API Key 管理
+## 四个视图设计
 
-### 生成 API Key
+### 视图 1: v_dashboard_case_count_by_system
 
-相关文件：
+对应页面卡片：**CaseCountCard**（用例数量统计）
 
-| 文件 | 说明 |
+| 属性 | 内容 |
 |------|------|
-| `sdk/src/main/java/io/metersphere/controller/UserKeysController.java` | API Key CRUD 接口 |
-| `sdk/src/main/java/io/metersphere/service/UserKeyService.java` | API Key 业务逻辑 |
-| `sdk/src/main/java/io/metersphere/security/ApiKeyHandler.java` | 签名验证 |
-| `sdk/src/main/java/io/metersphere/security/ApiKeyFilter.java` | Shiro Filter |
-| `sdk/src/main/java/io/metersphere/commons/utils/CodingUtil.java` | AES 加解密工具 |
+| 所属页面 | 测试跟踪-首页，左上角卡片 |
+| 统计对象 | 有效、最新功能用例 |
+| 系统归属 | `custom_field_test_case` → `所属系统` 字段 |
+| 分组逻辑 | 按 `associated_system.name` 分组，未设置归入 `未设置` |
 
-### 操作步骤
-
-1. MeterSphere 管理员或项目管理员登录系统
-2. 调用 `GET /user/key/generate` 生成 API Key
-3. 系统返回一对：`accessKey`（16 位随机字符串）和 `secretKey`（16 位随机字符串）
-4. **secretKey 仅展示一次**，需要立即复制保存
-5. 可对 Key 执行启用/禁用/删除操作
-6. 每个用户最多 5 个有效 API Key
-
-### UserKey 实体关键字段
+**输出字段**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | VARCHAR(50) | 主键 |
-| user_id | VARCHAR(64) | 关联用户 |
-| access_key | VARCHAR(16) | 16 位随机字母数字 |
-| secret_key | VARCHAR(16) | 16 位随机字母数字 |
-| status | VARCHAR(32) | ACTIVE / DISABLED |
-| create_time | BIGINT | 创建时间 |
+| `system_id` | VARCHAR(50) | 所属系统 ID，未设置为 NULL |
+| `system_name` | VARCHAR(64) | 所属系统名称，未设置为 `未设置` |
+| `system_code` | VARCHAR(255) | 所属系统简称，未设置为 NULL |
+| `case_count` | BIGINT | 用例总数 |
+| `p0_count` | BIGINT | P0 数量 |
+| `p1_count` | BIGINT | P1 数量 |
+| `p2_count` | BIGINT | P2 数量 |
+| `p3_count` | BIGINT | P3 数量 |
+| `review_pass_count` | BIGINT | 评审通过数 |
+| `review_unpass_count` | BIGINT | 评审未通过数 |
+| `review_prepare_count` | BIGINT | 未评审数 |
+| `review_rage` | DECIMAL(5,2) | 评审覆盖率（%） |
+| `review_pass_rage` | DECIMAL(5,2) | 评审通过率（%） |
+| `this_week_count` | BIGINT | 本周新增用例数 |
+
+**数据口径**
+
+- 用例范围：`test_case.status != 'Trash'` 或 `status IS NULL`，且 `latest = 1`
+- 优先级按 `test_case.priority` 分组
+- 评审状态按 `test_case.review_status` 分组
+- 本周新增以当前周周一 00:00 到周日 23:59 的 `create_time` 为范围
+- 评审覆盖率 = (评审通过 + 评审未通过) / 总用例数 × 100
+- 评审通过率 = 评审通过 / (评审通过 + 评审未通过) × 100
 
 ---
 
-## 签名算法
+### 视图 2: v_dashboard_relevance_count_by_system
 
-### 算法参数
+对应页面卡片：**RelevanceCaseCard**（关联用例覆盖率）
 
-| 参数 | 说明 |
+| 属性 | 内容 |
 |------|------|
-| 算法 | AES/CBC/PKCS5Padding |
-| 密钥 | `secretKey`（16 字节 = 128-bit AES） |
-| IV | `accessKey`（16 字节） |
-| 明文格式 | `accessKey|timestamp`（管道符分隔，timestamp 为毫秒值） |
-| 密文编码 | Base64 |
+| 所属页面 | 测试跟踪-首页，右上角卡片 |
+| 统计对象 | 功能用例对应的 API/场景/性能/UI 用例关联数量 |
+| 系统归属 | 通过功能用例的 `所属系统` 字段追溯 |
+| 分组逻辑 | 按 `associated_system.name` 分组，未设置归入 `未设置` |
 
-### 签名生成步骤
-
-```
-1. 获取当前毫秒时间戳: timestamp = System.currentTimeMillis()
-2. 拼接明文: plainText = accessKey + "|" + timestamp
-3. AES 加密:
-   - Key = secretKey.getBytes(UTF-8)   // 16 bytes
-   - IV  = accessKey.getBytes(UTF-8)   // 16 bytes
-   - Cipher = AES/CBC/PKCS5Padding
-4. Base64 编码密文得到 signature
-5. 设置 HTTP Header:
-   - accessKey: accessKey 原始值
-   - signature: Base64 字符串
-```
-
-### Java 示例
-
-```java
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import java.util.Base64;
-
-public class ApiKeySigner {
-
-    public static String generateSignature(String accessKey, String secretKey) {
-        long timestamp = System.currentTimeMillis();
-        String plainText = accessKey + "|" + timestamp;
-
-        try {
-            SecretKeySpec keySpec = new SecretKeySpec(secretKey.getBytes("UTF-8"), "AES");
-            IvParameterSpec ivSpec = new IvParameterSpec(accessKey.getBytes("UTF-8"));
-            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
-            byte[] encrypted = cipher.doFinal(plainText.getBytes("UTF-8"));
-            return Base64.getEncoder().encodeToString(encrypted);
-        } catch (Exception e) {
-            throw new RuntimeException("Signature generation failed", e);
-        }
-    }
-
-    public static void main(String[] args) {
-        String accessKey = "AK1a2b3c4d5e6f7g";
-        String secretKey = "SK9h8g7f6e5d4c3b";
-
-        String signature = generateSignature(accessKey, secretKey);
-        System.out.println("accessKey: " + accessKey);
-        System.out.println("signature: " + signature);
-    }
-}
-```
-
-### Python 示例
-
-```python
-import time
-import base64
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-
-def generate_signature(access_key: str, secret_key: str) -> str:
-    timestamp = int(time.time() * 1000)
-    plain_text = f"{access_key}|{timestamp}"
-
-    backend = default_backend()
-    cipher = Cipher(
-        algorithms.AES(secret_key.encode("utf-8")),
-        modes.CBC(access_key.encode("utf-8")),
-        backend=backend
-    )
-    encryptor = cipher.encryptor()
-
-    # PKCS5/PKCS7 padding
-    block_size = 16
-    padding_len = block_size - len(plain_text) % block_size
-    padded = plain_text + chr(padding_len) * padding_len
-
-    encrypted = encryptor.update(padded.encode("utf-8")) + encryptor.finalize()
-    return base64.b64encode(encrypted).decode("utf-8")
-
-# Usage
-access_key = "AK1a2b3c4d5e6f7g"
-secret_key = "SK9h8g7f6e5d4c3b"
-signature = generate_signature(access_key, secret_key)
-print(f"accessKey: {access_key}")
-print(f"signature: {signature}")
-```
-
-### JavaScript/Node.js 示例
-
-```javascript
-const crypto = require('crypto');
-
-function generateSignature(accessKey, secretKey) {
-    const timestamp = Date.now();
-    const plainText = `${accessKey}|${timestamp}`;
-
-    // PKCS7 padding
-    const blockSize = 16;
-    const paddingLen = blockSize - (plainText.length % blockSize);
-    const padded = plainText + String.fromCharCode(paddingLen).repeat(paddingLen);
-
-    const cipher = crypto.createCipheriv(
-        'aes-128-cbc',
-        Buffer.from(secretKey, 'utf-8'),
-        Buffer.from(accessKey, 'utf-8')
-    );
-    cipher.setAutoPadding(false);  // we do manual PKCS7 padding
-
-    let encrypted = cipher.update(padded, 'utf-8');
-    encrypted = Buffer.concat([encrypted, cipher.final()]);
-    return encrypted.toString('base64');
-}
-
-// Usage
-const accessKey = 'AK1a2b3c4d5e6f7g';
-const secretKey = 'SK9h8g7f6e5d4c3b';
-const signature = generateSignature(accessKey, secretKey);
-console.log('accessKey:', accessKey);
-console.log('signature:', signature);
-```
-
-### 调用示例（curl）
-
-```bash
-ACCESS_KEY="AK1a2b3c4d5e6f7g"
-SECRET_KEY="SK9h8g7f6e5d4c3b"
-
-# 用上述任意语言示例生成 signature
-SIGNATURE=$(java -jar signer.jar $ACCESS_KEY $SECRET_KEY)
-
-curl -X GET \
-  "http://metersphere-host/track/count/project-123" \
-  -H "accessKey: $ACCESS_KEY" \
-  -H "signature: $SIGNATURE"
-```
-
----
-
-## 接口详细契约
-
-所有接口前缀为 `/track`，需要 header `accessKey` + `signature`。
-
-### 接口 1: GET /track/count/{projectId}
-
-**请求**
-
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|------|------|------|------|------|
-| projectId | Path | String | 是 | 项目 ID |
-
-**响应** - `TrackStatisticsDTO`
-
-```json
-{
-  "success": true,
-  "data": {
-    "priorityCounts": {
-      "P0": 5,
-      "P1": 23,
-      "P2": 67,
-      "P3": 12
-    },
-    "reviewStatusCounts": {
-      "pass": 56,
-      "unpass": 8,
-      "prepare": 43
-    },
-    "thisWeekAddedCount": 15,
-    "reviewRage": "87.50",
-    "reviewPassRage": "52.34",
-    "chartData": {}
-  }
-}
-```
-
-**字段说明**
+**输出字段**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| priorityCounts | Map | P0/P1/P2/P3 各级别用例数量 |
-| reviewStatusCounts | Map | pass(通过) / unpass(未通过) / prepare(未评审) |
-| thisWeekAddedCount | int | 本周新增用例数 |
-| reviewRage | String | 评审覆盖率（百分比字符串） |
-| reviewPassRage | String | 评审通过率（百分比字符串） |
+| `system_id` | VARCHAR(50) | 所属系统 ID |
+| `system_name` | VARCHAR(64) | 所属系统名称 |
+| `system_code` | VARCHAR(255) | 所属系统简称 |
+| `api_case_count` | BIGINT | API 用例关联数 |
+| `scenario_case_count` | BIGINT | 场景用例关联数 |
+| `performance_case_count` | BIGINT | 性能用例关联数 |
+| `ui_case_count` | BIGINT | UI 自动化用例关联数 |
+| `coverage_count` | BIGINT | 已覆盖功能用例数 |
+| `uncoverage_count` | BIGINT | 未覆盖功能用例数 |
+| `total_case_count` | BIGINT | 功能用例总数 |
+| `coverage_rage` | DECIMAL(5,2) | 关联覆盖率（%） |
+| `this_week_count` | BIGINT | 本周新增关联数 |
+
+**数据口径**
+
+- 关联关系通过 `test_case` → `test_case_test` 获取
+- 每种关联类型只统计对应目标表的有效记录
+- `coverage_count`：至少有一条关联记录的功能用例数
+- `uncoverage_count`：总功能用例数 - `coverage_count`
+- 覆盖率 = 已覆盖用例数 / 总功能用例数 × 100
+- **系统归属来自功能用例侧**，API 用例、场景用例、性能用例、UI 自动化用例本身没有所属系统字段
 
 ---
 
-### 接口 2: GET /track/relevance/count/{projectId}
+### 视图 3: v_dashboard_case_maintainer_by_system
 
-**请求**
+对应页面卡片：**CaseMaintenance**（用例维护人分布）
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|------|------|------|------|------|
-| projectId | Path | String | 是 | 项目 ID |
+| 属性 | 内容 |
+|------|------|
+| 所属页面 | 测试跟踪-首页，左中位置柱状图 |
+| 统计对象 | 功能用例按维护人分组 |
+| 系统归属 | `custom_field_test_case` → `所属系统` 字段 |
+| 返回格式 | 多行，每行一个系统 + 维护人组合 |
 
-**响应** - `TrackStatisticsDTO`
-
-```json
-{
-  "success": true,
-  "data": {
-    "relevanceCounts": {
-      "apiCase": 120,
-      "scenarioCase": 45,
-      "performanceCase": 8,
-      "uiScenarioCase": 3
-    },
-    "coverageCount": 98,
-    "uncoverageCount": 49,
-    "coverageRage": "66.67",
-    "thisWeekAddedCount": 10,
-    "chartData": {}
-  }
-}
-```
-
----
-
-### 接口 3: GET /track/bug/count/{projectId}
-
-**请求**
-
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|------|------|------|------|------|
-| projectId | Path | String | 是 | 项目 ID |
-
-**响应** - `BugStatistics`
-
-```json
-{
-  "success": true,
-  "data": {
-    "bugUnclosedCount": 34,
-    "bugTotalCount": 89,
-    "caseTotalCount": 298,
-    "newCount": 12,
-    "resolvedCount": 45,
-    "rejectedCount": 3,
-    "unKnownCount": 7,
-    "thisWeekCount": 5,
-    "unClosedRage": "38.20",
-    "bugCaseRage": "29.87",
-    "chartData": {
-      "open": 20,
-      "in_progress": 14,
-      "resolved": 45,
-      "closed": 10
-    },
-    "testPlanBugCounts": [
-      {
-        "index": 1,
-        "planName": "Sprint 12 测试计划",
-        "createTime": 1717200000000,
-        "status": "进行中",
-        "caseSize": 85,
-        "bugSize": 8,
-        "passRage": "92.50",
-        "planId": "plan-001"
-      }
-    ]
-  }
-}
-```
-
----
-
-### 接口 4: GET /track/case/bar/{projectId}
-
-**请求**
-
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|------|------|------|------|------|
-| projectId | Path | String | 是 | 项目 ID |
-
-**响应** - `List<ChartsData>`
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "xAxis": "张三",
-      "yAxis": 45.0,
-      "groupName": "FUNCTIONCASE",
-      "description": null
-    },
-    {
-      "xAxis": "张三",
-      "yAxis": 12.0,
-      "groupName": "RELEVANCECASE",
-      "description": null
-    },
-    {
-      "xAxis": "李四",
-      "yAxis": 32.0,
-      "groupName": "FUNCTIONCASE",
-      "description": null
-    }
-  ]
-}
-```
-
-**字段说明**
+**输出字段**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| xAxis | String | 人员名称 |
-| yAxis | BigDecimal | 用例数量 |
-| groupName | String | FUNCTIONCASE(功能用例) 或 RELEVANCECASE(关联用例) |
+| `system_id` | VARCHAR(50) | 所属系统 ID |
+| `system_name` | VARCHAR(64) | 所属系统名称 |
+| `system_code` | VARCHAR(255) | 所属系统简称 |
+| `maintainer` | VARCHAR(64) | 维护人姓名，未分配维护人的归入 `未分配` |
+| `function_case_count` | BIGINT | 功能用例数量 |
+| `relevance_case_count` | BIGINT | 关联用例数量 |
+
+**数据口径**
+
+- 功能用例按 `test_case.maintainer` 关联 `user.name`
+- 关联用例按 `test_case.maintainer` 关联 `user.name`，且用例在 `test_case_test` 中有关联记录
+- 系统归属通过 `custom_field_test_case` → `所属系统`
+- 维护人为空时归入 `未分配`
 
 ---
 
-### 接口 5: GET /track/failure/case/about/plan/{projectId}/{versionId}/{pageSize}/{goPage}
+### 视图 4: v_dashboard_bug_count_by_system
 
-**请求**
+对应页面卡片：**BugCountCard**（缺陷统计）
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|------|------|------|------|------|
-| projectId | Path | String | 是 | 项目 ID |
-| versionId | Path | String | 是 | 版本 ID，传 `default` 不过滤 |
-| pageSize | Path | int | 是 | 每页条数 |
-| goPage | Path | int | 是 | 页码，0-based |
+| 属性 | 内容 |
+|------|------|
+| 所属页面 | 测试跟踪-首页，左下角卡片 |
+| 统计对象 | 测试计划关联的缺陷 |
+| 系统归属 | `custom_field_issues` → `缺陷所属系统` 字段 |
+| 分组逻辑 | 按 `associated_system.name` 分组，未设置归入 `未设置` |
 
-**响应** - `Pager<List<ExecutedCaseInfoDTO>>`
+**输出字段**
 
-```json
-{
-  "success": true,
-  "data": {
-    "list": [
-      {
-        "sortIndex": 1,
-        "caseID": "case-001",
-        "caseName": "用户登录功能测试",
-        "testPlan": "Sprint 12 回归测试",
-        "failureTimes": 3,
-        "testPlanId": "plan-001",
-        "caseType": "功能用例",
-        "protocol": "HTTP"
-      }
-    ],
-    "total": 25,
-    "pageSize": 20,
-    "currentPage": 0
-  }
-}
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `system_id` | VARCHAR(50) | 所属系统 ID |
+| `system_name` | VARCHAR(64) | 所属系统名称 |
+| `system_code` | VARCHAR(255) | 所属系统简称 |
+| `bug_total` | BIGINT | 缺陷总数 |
+| `bug_unclosed` | BIGINT | 未关闭缺陷数 |
+| `unclosed_rage` | DECIMAL(5,2) | 未关闭率（%） |
+| `this_week_count` | BIGINT | 本周新增缺陷数 |
+| `status_new` | BIGINT | 新增状态缺陷数 |
+| `status_in_progress` | BIGINT | 处理中状态缺陷数 |
+| `status_resolved` | BIGINT | 已解决状态缺陷数 |
+| `status_closed` | BIGINT | 已关闭状态缺陷数 |
+
+**数据口径**
+
+- 缺陷范围与 `getTestPlanIssue` 一致：通过 `test_plan_test_case → test_case_issues → issues` 获取
+- 排除 `issues.platform_status = 'delete'` 的缺陷
+- 未关闭 = 缺陷 status != 'closed'
+- 未关闭率 = 未关闭数 / 总缺陷数 × 100
+- 本周新增按 `test_case_issues.relate_time` 筛选
+- **缺陷不是项目全量缺陷，而是测试计划关联缺陷**
+
+---
+
+## 授权方案
+
+### 创建甲方只读账号
+
+```sql
+CREATE USER 'dashboard_ro'@'%' IDENTIFIED BY '<strong-password>';
+
+GRANT SELECT ON  v_dashboard_case_count_by_system   TO 'dashboard_ro'@'%';
+GRANT SELECT ON  v_dashboard_relevance_count_by_system TO 'dashboard_ro'@'%';
+GRANT SELECT ON  v_dashboard_case_maintainer_by_system TO 'dashboard_ro'@'%';
+GRANT SELECT ON  v_dashboard_bug_count_by_system    TO 'dashboard_ro'@'%';
+
+FLUSH PRIVILEGES;
+```
+
+### 安全约束
+
+- 只授予四个视图 `SELECT`，不授予基础表任何权限
+- 使用独立只读账号 `dashboard_ro`，不与业务读写账号共享
+- 视图中不输出不必要的敏感字段
+- 数据库访问地址、账号、密码由运维侧单独交付
+
+---
+
+## 甲方查询示例
+
+### 查询单个所属系统
+
+```sql
+SELECT *
+FROM v_dashboard_case_count_by_system
+WHERE system_code = 'IT';
+```
+
+### 查询全部所属系统
+
+```sql
+SELECT *
+FROM v_dashboard_case_count_by_system
+ORDER BY system_code;
+```
+
+### 查询某系统的用例维护人分布
+
+```sql
+SELECT system_name, maintainer, function_case_count, relevance_case_count
+FROM v_dashboard_case_maintainer_by_system
+WHERE system_code = 'IT'
+ORDER BY function_case_count DESC;
+```
+
+### 查询缺陷未关闭率高于 30% 的系统
+
+```sql
+SELECT system_name, bug_total, bug_unclosed, unclosed_rage
+FROM v_dashboard_bug_count_by_system
+WHERE unclosed_rage > 30
+ORDER BY unclosed_rage DESC;
 ```
 
 ---
 
-## 错误处理
+## 数据质量说明
 
-### 认证错误
-
-| HTTP 状态码 | 场景 | Header 或 Body 提示 |
-|-------------|------|---------------------|
-| 401 | accessKey 不存在或已禁用 | `AUTHENTICATION_STATUS: invalid` |
-| 401 | 签名验证失败 | `AUTHENTICATION_STATUS: invalid` |
-| 401 | 时间戳超过 30 分钟 | `AUTHENTICATION_STATUS: invalid` |
-
-### 业务错误
-
-| HTTP 状态码 | 场景 | 响应体 |
-|-------------|------|--------|
-| 403 | 无项目权限 | `{"success": false, "message": "无权限"}` |
-| 404 | 项目不存在 | `{"success": false, "message": "项目未找到"}` |
-
----
-
-## 网关层
-
-**文件**: `gateway/src/main/java/io/metersphere/gateway/filter/LoginFilter.java:62-69`
-
-网关 `LoginFilter` 自动检测到 `accessKey` + `signature` header 时会直接放行，不校验 Session/Cookie，因此数据大屏请求可以正常穿透网关到达后端服务。
-
----
-
-## 后续扩展：需求测试流程统计接口
-
-当需求测试流程（`test_workflow_*`）模块上线后，新增以下统计接口：
-
-### 预留路径
-
-| 方法 | 路径 | 说明 |
+| 维度 | 数值 | 说明 |
 |------|------|------|
-| GET | `/requirement-flow/statistics/stage-distribution/{projectId}` | 各阶段需求数量分布 |
-| GET | `/requirement-flow/statistics/stage-duration/{projectId}` | 各阶段平均耗时 |
-| GET | `/requirement-flow/statistics/plan-deviation/{projectId}` | 计划与实际偏差统计 |
-| GET | `/requirement-flow/statistics/defect-density/{projectId}` | 缺陷密度（缺陷数/用例数） |
-| GET | `/requirement-flow/statistics/review-pass-rate/{projectId}` | 评审通过率趋势 |
-
-### 认证方式
-
-复用相同的 API Key 认证，在 `ShiroConfig` 中为 `/requirement-flow/statistics/**` 路径配置相同的 filter chain。
-
-### 权限
-
-新增权限点 `PROJECT_WORKFLOW_STATISTICS:READ`，在 API Key 所属用户的角色中授予。
+| 功能用例总数 | 510 | `status != 'Trash', latest = 1` |
+| 有用例所属系统 | 176 | 占比 34.5%，其余 334 归入 `未设置` |
+| 缺陷总数 | 257 | 其中测试计划关联 256 有所属系统 |
+| 计划和评审本身 | 无直接所属系统 | 只能通过关联功能用例间接统计 |
 
 ---
 
-## 涉及文件清单
+## 与原 HTTP 方案的关系
 
-### V1 — 无需新建或修改（纯对接文档 + API Key 生成）
+原 HTTP 方案（API Key + 轮询 TrackController 五个接口）不删除，作为可选的后续对接方式保留：
 
-| 事项 | 说明 |
-|------|------|
-| API Key 生成 | 由 MeterSphere 管理员通过现有 `GET /user/key/generate` 操作 |
-| 对接文档 | 本 spec 即为对接规范 |
-
-### V2 — 后续 workflow 统计接口
-
-| 文件 | 说明 |
-|------|------|
-| `test-track/.../requirement/flow/controller/RequirementFlowStatisticsController.java` | 新建 workflow 统计 Controller |
-| `test-track/.../requirement/flow/service/RequirementFlowStatisticsService.java` | 新建统计 Service |
-| `test-track/.../requirement/flow/dto/WorkflowStatisticsDTO.java` | 新建统计 DTO |
-| `ShiroConfig` 或权限配置 | 新增 `PROJECT_WORKFLOW_STATISTICS:READ` 权限点 |
+- 如果甲方后续需要 HTTP 接口形式对接，可切换到原方案
+- 如果甲方 BI 工具支持数据库视图查询，继续使用当前视图方案
+- 两种方案的统计口径相同，仅获取方式不同
 
 ---
 
-## 风险与取舍
+## 风险
 
 | 风险 | 等级 | 处理方式 |
 |------|------|----------|
-| API Key 泄露 | 中 | secretKey 仅展示一次；支持随时禁用/删除 Key；时间戳 30 分钟窗口 |
-| 接口响应时间超标 | 低 | 现有 5 个接口已有查询优化；大屏端可缓存数据，降低轮询频率 |
-| 项目数量多导致轮询请求量大 | 中 | 建议大屏端按需轮询活跃项目，或后续提供跨项目聚合接口 |
-| 需求测试流程模块未上线 | - | V1 不包含 workflow 统计，待模块上线后通过 V2 spec 补充 |
+| 数据库直连安全风险 | **高** | 只读视图 + 独立只读账号 + IP 白名单 |
+| 所属系统字段覆盖率低（用例侧 34.5%） | 中 | 归入 `未设置`，不丢弃数据 |
+| 视图查询性能 | 低 | 合理使用索引，甲方按 5-10 分钟频率查询 |
+| 缺陷统计范围是测试计划关联缺陷 | 中 | 文档明确口径，避免甲方误以为全量缺陷 |
+| 关联覆盖率的所属系统来自功能用例侧 | 中 | 文档说明 API/场景/性能/UI 本身无系统字段 |
+
+---
+
+## 附录：实施参考手册
+
+### A.1 创建四个视图
+
+连入 `metersphere_dev` 库，依次执行：
+
+```sql
+-- ============================================================
+-- 视图 1：用例数量统计（对应 CaseCountCard）
+-- ============================================================
+CREATE OR REPLACE VIEW v_dashboard_case_count_by_system AS
+SELECT
+    COALESCE(sys.id, NULL)              AS system_id,
+    COALESCE(sys.name, '未设置')         AS system_name,
+    COALESCE(sys.description, NULL)      AS system_code,
+    COUNT(tc.id)                        AS case_count,
+    SUM(CASE WHEN tc.priority = 'P0' THEN 1 ELSE 0 END) AS p0_count,
+    SUM(CASE WHEN tc.priority = 'P1' THEN 1 ELSE 0 END) AS p1_count,
+    SUM(CASE WHEN tc.priority = 'P2' THEN 1 ELSE 0 END) AS p2_count,
+    SUM(CASE WHEN tc.priority = 'P3' THEN 1 ELSE 0 END) AS p3_count,
+    SUM(CASE WHEN tc.review_status = 'pass'    THEN 1 ELSE 0 END) AS review_pass_count,
+    SUM(CASE WHEN tc.review_status = 'unpass'  THEN 1 ELSE 0 END) AS review_unpass_count,
+    SUM(CASE WHEN tc.review_status = 'prepare' OR tc.review_status IS NULL THEN 1 ELSE 0 END) AS review_prepare_count,
+    ROUND(
+        SUM(CASE WHEN tc.review_status IN ('pass','unpass') THEN 1 ELSE 0 END)
+        * 100.0 / NULLIF(COUNT(tc.id), 0), 2
+    ) AS review_rage,
+    ROUND(
+        SUM(CASE WHEN tc.review_status = 'pass' THEN 1 ELSE 0 END)
+        * 100.0 / NULLIF(SUM(CASE WHEN tc.review_status IN ('pass','unpass') THEN 1 ELSE 0 END), 0), 2
+    ) AS review_pass_rage,
+    SUM(CASE WHEN tc.create_time >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)) * 1000
+        THEN 1 ELSE 0 END) AS this_week_count
+FROM test_case tc
+LEFT JOIN custom_field_test_case cftc
+    ON cftc.resource_id = tc.id
+    AND cftc.field_id = 'case-associated-system-field-2024-12-01-002'
+LEFT JOIN associated_system sys
+    ON sys.id = TRIM('"' FROM COALESCE(cftc.value, cftc.text_value, ''))
+WHERE (tc.status != 'Trash' OR tc.status IS NULL)
+  AND tc.latest = 1
+GROUP BY COALESCE(sys.id, NULL), COALESCE(sys.name, '未设置'), COALESCE(sys.description, NULL);
+```
+
+```sql
+-- ============================================================
+-- 视图 2：关联覆盖率统计（对应 RelevanceCaseCard）
+-- ============================================================
+CREATE OR REPLACE VIEW v_dashboard_relevance_count_by_system AS
+WITH
+system_cases AS (
+    SELECT
+        tc.id AS case_id,
+        COALESCE(sys.id, NULL)              AS system_id,
+        COALESCE(sys.name, '未设置')         AS system_name,
+        COALESCE(sys.description, NULL)      AS system_code,
+        tc.ref_id
+    FROM test_case tc
+    LEFT JOIN custom_field_test_case cftc
+        ON cftc.resource_id = tc.id
+        AND cftc.field_id = 'case-associated-system-field-2024-12-01-002'
+    LEFT JOIN associated_system sys
+        ON sys.id = TRIM('"' FROM COALESCE(cftc.value, cftc.text_value, ''))
+    WHERE (tc.status != 'Trash' OR tc.status IS NULL) AND tc.latest = 1
+),
+relevance_by_type AS (
+    SELECT sc.system_id, sc.system_name, sc.system_code, tct.test_type, COUNT(DISTINCT tct.test_id) AS cnt
+    FROM system_cases sc
+    INNER JOIN test_case_test tct ON tct.test_case_id = sc.case_id
+    INNER JOIN api_test_case atc ON atc.id = tct.test_id AND (atc.status IS NULL OR atc.status != 'Trash')
+    WHERE tct.test_type = 'testCase'
+    GROUP BY sc.system_id, sc.system_name, sc.system_code, tct.test_type
+    UNION ALL
+    SELECT sc.system_id, sc.system_name, sc.system_code, tct.test_type, COUNT(DISTINCT tct.test_id) AS cnt
+    FROM system_cases sc
+    INNER JOIN test_case_test tct ON tct.test_case_id = sc.case_id
+    INNER JOIN load_test lt ON lt.id = tct.test_id
+    WHERE tct.test_type = 'performance'
+    GROUP BY sc.system_id, sc.system_name, sc.system_code, tct.test_type
+    UNION ALL
+    SELECT sc.system_id, sc.system_name, sc.system_code, tct.test_type, COUNT(DISTINCT tct.test_id) AS cnt
+    FROM system_cases sc
+    INNER JOIN test_case_test tct ON tct.test_case_id = sc.case_id
+    INNER JOIN api_scenario aps ON aps.id = tct.test_id AND aps.status != 'Trash'
+    WHERE tct.test_type = 'automation'
+    GROUP BY sc.system_id, sc.system_name, sc.system_code, tct.test_type
+    UNION ALL
+    SELECT sc.system_id, sc.system_name, sc.system_code, tct.test_type, COUNT(DISTINCT tct.test_id) AS cnt
+    FROM system_cases sc
+    INNER JOIN test_case_test tct ON tct.test_case_id = sc.case_id
+    INNER JOIN ui_scenario uis ON uis.id = tct.test_id AND uis.status != 'Trash'
+    WHERE tct.test_type = 'uiAutomation'
+    GROUP BY sc.system_id, sc.system_name, sc.system_code, tct.test_type
+),
+coverage AS (
+    SELECT
+        sc.system_id, sc.system_name, sc.system_code,
+        COUNT(DISTINCT CASE WHEN tct.test_case_id IS NOT NULL THEN sc.case_id END) AS coverage_count,
+        COUNT(DISTINCT sc.case_id) AS total_count
+    FROM system_cases sc
+    LEFT JOIN test_case_test tct ON tct.test_case_id = sc.case_id
+    GROUP BY sc.system_id, sc.system_name, sc.system_code
+),
+this_week AS (
+    SELECT sc.system_id, sc.system_name, sc.system_code, COUNT(DISTINCT sc.ref_id) AS this_week_count
+    FROM system_cases sc
+    INNER JOIN test_case_test tct ON tct.test_case_id = sc.case_id
+    WHERE tct.create_time >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)) * 1000
+    GROUP BY sc.system_id, sc.system_name, sc.system_code
+)
+SELECT
+    cov.system_id, cov.system_name, cov.system_code,
+    COALESCE(SUM(CASE WHEN rbt.test_type = 'testCase'     THEN rbt.cnt END), 0) AS api_case_count,
+    COALESCE(SUM(CASE WHEN rbt.test_type = 'automation'   THEN rbt.cnt END), 0) AS scenario_case_count,
+    COALESCE(SUM(CASE WHEN rbt.test_type = 'performance'  THEN rbt.cnt END), 0) AS performance_case_count,
+    COALESCE(SUM(CASE WHEN rbt.test_type = 'uiAutomation' THEN rbt.cnt END), 0) AS ui_case_count,
+    cov.coverage_count,
+    cov.total_count - cov.coverage_count AS uncoverage_count,
+    cov.total_count AS total_case_count,
+    ROUND(cov.coverage_count * 100.0 / NULLIF(cov.total_count, 0), 2) AS coverage_rage,
+    COALESCE(tw.this_week_count, 0) AS this_week_count
+FROM coverage cov
+LEFT JOIN relevance_by_type rbt
+    ON COALESCE(cov.system_id, '') = COALESCE(rbt.system_id, '')
+    AND cov.system_name = rbt.system_name
+LEFT JOIN this_week tw
+    ON COALESCE(cov.system_id, '') = COALESCE(tw.system_id, '')
+    AND cov.system_name = tw.system_name
+GROUP BY cov.system_id, cov.system_name, cov.system_code, cov.coverage_count, cov.total_count, tw.this_week_count;
+```
+
+```sql
+-- ============================================================
+-- 视图 3：用例维护人分布（对应 CaseMaintenance）
+-- ============================================================
+CREATE OR REPLACE VIEW v_dashboard_case_maintainer_by_system AS
+SELECT
+    COALESCE(sys.id, NULL)              AS system_id,
+    COALESCE(sys.name, '未设置')         AS system_name,
+    COALESCE(sys.description, NULL)      AS system_code,
+    COALESCE(u.name, '未分配')           AS maintainer,
+    COUNT(tc.id)                        AS function_case_count,
+    COUNT(DISTINCT tct.test_case_id)    AS relevance_case_count
+FROM test_case tc
+LEFT JOIN user u ON u.id = tc.maintainer
+LEFT JOIN custom_field_test_case cftc
+    ON cftc.resource_id = tc.id
+    AND cftc.field_id = 'case-associated-system-field-2024-12-01-002'
+LEFT JOIN associated_system sys
+    ON sys.id = TRIM('"' FROM COALESCE(cftc.value, cftc.text_value, ''))
+LEFT JOIN test_case_test tct ON tct.test_case_id = tc.id
+WHERE tc.status != 'Trash' AND tc.latest = 1
+GROUP BY COALESCE(sys.id, NULL), COALESCE(sys.name, '未设置'), COALESCE(sys.description, NULL), COALESCE(u.name, '未分配');
+```
+
+```sql
+-- ============================================================
+-- 视图 4：测试计划遗留缺陷统计（对应 BugCountCard）
+-- ============================================================
+CREATE OR REPLACE VIEW v_dashboard_bug_count_by_system AS
+WITH plan_issues AS (
+    SELECT DISTINCT tci.issues_id AS issue_id
+    FROM test_plan_test_case tptc
+    JOIN test_plan tp ON tp.id = tptc.plan_id
+    JOIN test_case_issues tci ON tptc.id = tci.resource_id
+    JOIN issues i ON tci.issues_id = i.id
+    WHERE tptc.is_del != 1
+      AND (i.platform_status IS NULL OR i.platform_status != 'delete')
+),
+issue_system AS (
+    SELECT
+        pi.issue_id, i.status,
+        COALESCE(sys.id, NULL)              AS system_id,
+        COALESCE(sys.name, '未设置')         AS system_name,
+        COALESCE(sys.description, NULL)      AS system_code
+    FROM plan_issues pi
+    JOIN issues i ON i.id = pi.issue_id
+    LEFT JOIN custom_field_issues cfi
+        ON cfi.resource_id = i.id
+        AND cfi.field_id = 'issue-associated-system-field-2024-12-16-001'
+    LEFT JOIN associated_system sys
+        ON sys.id = TRIM('"' FROM COALESCE(cfi.value, cfi.text_value, ''))
+),
+this_week_count AS (
+    SELECT
+        COALESCE(sys2.id, NULL)              AS system_id,
+        COALESCE(sys2.name, '未设置')         AS system_name,
+        COALESCE(sys2.description, NULL)      AS system_code,
+        COUNT(DISTINCT tci2.issues_id)        AS cnt
+    FROM test_plan_test_case tptc2
+    JOIN test_plan tp2 ON tp2.id = tptc2.plan_id
+    JOIN test_case_issues tci2 ON tptc2.id = tci2.resource_id
+    JOIN issues i2 ON tci2.issues_id = i2.id
+    LEFT JOIN custom_field_issues cfi2
+        ON cfi2.resource_id = i2.id
+        AND cfi2.field_id = 'issue-associated-system-field-2024-12-16-001'
+    LEFT JOIN associated_system sys2
+        ON sys2.id = TRIM('"' FROM COALESCE(cfi2.value, cfi2.text_value, ''))
+    WHERE tptc2.is_del != 1
+      AND (i2.platform_status IS NULL OR i2.platform_status != 'delete')
+      AND tci2.relate_time >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)) * 1000
+    GROUP BY sys2.id, sys2.name, sys2.description
+)
+SELECT
+    iss.system_id, iss.system_name, iss.system_code,
+    COUNT(*) AS bug_total,
+    SUM(CASE WHEN iss.status != 'closed' THEN 1 ELSE 0 END) AS bug_unclosed,
+    ROUND(
+        SUM(CASE WHEN iss.status != 'closed' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0), 2
+    ) AS unclosed_rage,
+    COALESCE(tw.cnt, 0) AS this_week_count,
+    SUM(CASE WHEN iss.status = 'new'         THEN 1 ELSE 0 END) AS status_new,
+    SUM(CASE WHEN iss.status = 'in_progress' THEN 1 ELSE 0 END) AS status_in_progress,
+    SUM(CASE WHEN iss.status = 'resolved'    THEN 1 ELSE 0 END) AS status_resolved,
+    SUM(CASE WHEN iss.status = 'closed'      THEN 1 ELSE 0 END) AS status_closed
+FROM issue_system iss
+LEFT JOIN this_week_count tw
+    ON COALESCE(iss.system_id, '') = COALESCE(tw.system_id, '')
+    AND iss.system_name = tw.system_name
+GROUP BY iss.system_id, iss.system_name, iss.system_code;
+```
+
+### A.2 创建只读账号并授权
+
+```sql
+-- 删除旧账号（如存在）
+DROP USER IF EXISTS 'dashboard_ro'@'%';
+
+-- 创建只读账号
+CREATE USER 'dashboard_ro'@'%' IDENTIFIED BY '<your-strong-password>';
+
+-- 只授予四个视图的 SELECT 权限
+GRANT SELECT ON  v_dashboard_case_count_by_system       TO 'dashboard_ro'@'%';
+GRANT SELECT ON  v_dashboard_relevance_count_by_system  TO 'dashboard_ro'@'%';
+GRANT SELECT ON  v_dashboard_case_maintainer_by_system  TO 'dashboard_ro'@'%';
+GRANT SELECT ON  v_dashboard_bug_count_by_system        TO 'dashboard_ro'@'%';
+
+FLUSH PRIVILEGES;
+```
+
+### A.3 验证
+
+| 测试项 | 结果 |
+|--------|------|
+| `dashboard_ro` 查询 `v_dashboard_case_count_by_system` | 通过 |
+| `dashboard_ro` 查询 `v_dashboard_relevance_count_by_system` | 通过 |
+| `dashboard_ro` 查询 `v_dashboard_case_maintainer_by_system` | 通过 |
+| `dashboard_ro` 查询 `v_dashboard_bug_count_by_system` | 通过 |
+| `dashboard_ro` 查询 `test_case` | 拒绝（`SELECT command denied`） |
+| `dashboard_ro` 查询 `issues` | 拒绝 |
+| `dashboard_ro` 查询 `custom_field_test_case` | 拒绝 |
+
+### A.4 连接信息交付甲方
+
+| 参数 | 值 |
+|------|-----|
+| Host | 10.0.149.15 |
+| Port | `3306` |
+| Database | `metersphere` |
+| User | `dashboard_ro` |
+| Password | `dashboard_ro` |
+
+### A.5 甲方查询示例
+
+```sql
+-- 按系统简称查
+SELECT * FROM v_dashboard_case_count_by_system
+WHERE system_code = 'ICBS-POS';
+
+-- 查多个系统
+SELECT * FROM v_dashboard_case_count_by_system
+WHERE system_code IN ('HX', 'ICBS-POS', 'IT');
+
+-- 查全部所属系统
+SELECT * FROM v_dashboard_case_count_by_system
+ORDER BY case_count DESC;
+
+-- 查某系统的用例维护人分布
+SELECT system_code, system_name, maintainer, function_case_count, relevance_case_count
+FROM v_dashboard_case_maintainer_by_system
+WHERE system_code = 'IT'
+ORDER BY function_case_count DESC;
+
+-- 查缺陷未关闭率高于 30% 的系统
+SELECT system_code, system_name, bug_total, bug_unclosed, unclosed_rage
+FROM v_dashboard_bug_count_by_system
+WHERE unclosed_rage > 30
+ORDER BY unclosed_rage DESC;
+```
