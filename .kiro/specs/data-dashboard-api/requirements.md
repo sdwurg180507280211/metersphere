@@ -1,13 +1,13 @@
-# 需求文档：数据大屏 API 数据对接
+# 需求文档：数据大屏所属系统视图对接
 
 ## 简介
 
-数据大屏是一个独立的外部可视化系统，需要通过 HTTP API 从 MeterSphere 定时拉取测试跟踪模块的统计数据，在大型展示屏上呈现测试质量全貌。
+数据大屏由甲方人员直接访问数据库获取测试跟踪首页统计数据。当前甲方只按照**所属系统**维度查询，不按照 MeterSphere 页面上的 `projectId` 维度查询。
 
-与普通业务接口不同，数据大屏的调用方是**外部系统**而非登录用户，因此不依赖 Session/Cookie 认证，而是通过 **API Key + 签名** 的方式进行身份验证。现有 `TrackController` 中已有 5 个统计类接口可以直接被数据大屏复用，后续随着需求测试流程（requirement-flow）模块建设，需要新增 workflow 维度的统计接口。
+本方案为测试跟踪-首页四个统计卡片提供四个只读数据库视图。视图统计逻辑与首页卡片保持一致，但统计维度从“当前项目”调整为“所属系统”。没有填写所属系统的数据统一归入“未设置”。
 
-**文档版本**：V1.0
-**修订日期**：2026年6月1日
+**文档版本**：V1.1
+**修订日期**：2026年6月2日
 
 ---
 
@@ -15,141 +15,128 @@
 
 | 术语 | 定义 |
 |------|------|
-| **数据大屏** | 外部独立可视化系统，通过 API 定时拉取 MeterSphere 数据并展示 |
-| **API Key** | 一对 `accessKey` + `secretKey`，由 MeterSphere 用户生成，用于外部系统身份认证 |
-| **签名** | 使用 `secretKey` 对 `accessKey\|timestamp` 做 AES 加密得到的结果，放在 HTTP Header 中 |
-| **TrackController** | 测试跟踪模块首页统计 Controller，路径前缀 `/track` |
-| **需求测试流程** | planning 中的新模块，围绕需求规格书串联测试全流程（见 `platform-transformation` spec） |
+| **所属系统** | `associated_system` 表中的系统主数据，通过系统 ID 和系统名称标识 |
+| **用例所属系统** | 功能用例上的自定义字段 `所属系统`，存储在 `custom_field_test_case` |
+| **缺陷所属系统** | 缺陷上的自定义字段 `缺陷所属系统`，存储在 `custom_field_issues` |
+| **统计视图** | 面向甲方只读查询的数据库 View，不暴露基础业务表 |
+| **未设置** | 用例或缺陷未填写所属系统时的统一归属分组 |
+| **同口径不同维度** | 统计计算逻辑与测试跟踪-首页卡片一致，但查询条件从项目维度改为所属系统维度 |
 
 ---
 
 ## 需求
 
-### 需求 1: API Key 认证
+### 需求 1: 提供所属系统维度只读视图
 
-**用户故事：** 作为数据大屏运维人员，我希望使用 API Key 调用 MeterSphere 接口，而不是用个人账号密码登录，以便系统间自动化对接。
+**用户故事：** 作为甲方数据大屏使用人员，我希望直接按照所属系统查询测试跟踪首页统计数据，以便在外部系统中展示各系统的测试质量情况。
 
 #### 验收标准
 
-1. THE 系统 SHALL 支持通过 HTTP Header 传递 `accessKey` 和 `signature` 进行认证
-2. THE `signature` SHALL 为 `AES(secretKey, accessKey\|timestamp)` 的加密结果，其中 `accessKey` 同时作为 AES 的 IV
-3. THE 系统 SHALL 校验时间戳在 30 分钟内，超时返回 401
-4. THE 系统 SHALL 校验 `accessKey` 状态为 ACTIVE，已禁用或删除的 Key 不可用
-5. EACH 用户 SHALL 最多生成 5 个 API Key
-6. THE API Key 认证通过后 SHALL 以该 Key 所属用户的身份执行后续权限校验
+1. THE 系统 SHALL 提供四个只读数据库视图，对应测试跟踪-首页四个统计卡片
+2. THE 视图 SHALL 以 `associated_system` 为主要统计维度
+3. THE 甲方 SHALL 能够通过 `system_code`（所属系统简称，即 `associated_system.description`）查询统计结果
+4. THE 视图 SHALL 不要求甲方传入或理解 `projectId`
+5. THE 视图 SHALL 将未填写所属系统的数据统一归入 `未设置`
+6. THE 甲方数据库账号 SHALL 只能查询视图，不能直接查询基础业务表
 
 ---
 
-### 需求 2: 用例数量统计接口
+### 需求 2: 用例数量统计视图
 
-**用户故事：** 作为数据大屏，我希望获取指定项目下的测试用例数量分布（按优先级、评审状态、本周新增），以便在首页展示项目测试用例总览。
+**用户故事：** 作为甲方数据大屏，我希望按所属系统查看用例数量统计，以便了解每个系统的用例规模和评审情况。
 
 #### 验收标准
 
-1. THE 系统 SHALL 提供 `GET /track/count/{projectId}` 接口
-2. THE 响应 SHALL 包含 P0/P1/P2/P3 各级用例数量
-3. THE 响应 SHALL 包含评审状态统计（通过/未通过/未评审）
-4. THE 响应 SHALL 包含本周新增用例数和评审通过率
-5. THE 接口 SHALL 要求权限 `PROJECT_TRACK_HOME:READ`
+1. THE 系统 SHALL 提供 `v_dashboard_case_count_by_system` 视图
+2. THE 视图 SHALL 统计有效、最新功能用例，排除 `Trash` 状态用例
+3. THE 视图 SHALL 输出所属系统、用例总数、P0/P1/P2/P3 优先级数量
+4. THE 视图 SHALL 输出评审状态数量、评审覆盖率、评审通过率
+5. THE 视图 SHALL 输出本周新增用例数
+6. THE 视图 SHALL 使用用例自定义字段 `所属系统` 作为系统归属来源
 
 ---
 
-### 需求 3: 关联用例覆盖率统计接口
+### 需求 3: 关联覆盖率统计视图
 
-**用户故事：** 作为数据大屏，我希望获取项目的用例覆盖情况（API 用例、场景用例、性能用例等关联数量），以便展示测试覆盖度。
+**用户故事：** 作为甲方数据大屏，我希望按所属系统查看功能用例与接口、场景、性能、UI 自动化用例的关联覆盖情况，以便识别测试覆盖不足的系统。
 
 #### 验收标准
 
-1. THE 系统 SHALL 提供 `GET /track/relevance/count/{projectId}` 接口
-2. THE 响应 SHALL 包含各类用例关联数量：API 用例、场景用例、性能用例、UI 用例
-3. THE 响应 SHALL 包含已覆盖数、未覆盖数、覆盖率百分比
-4. THE 响应 SHALL 包含本周新增关联数
-5. THE 接口 SHALL 要求权限 `PROJECT_TRACK_HOME:READ`
+1. THE 系统 SHALL 提供 `v_dashboard_relevance_count_by_system` 视图
+2. THE 视图 SHALL 统计功能用例关联的 API 用例、场景用例、性能用例、UI 自动化用例数量
+3. THE 视图 SHALL 输出已覆盖用例数、未覆盖用例数、覆盖率
+4. THE 视图 SHALL 输出本周新增关联数
+5. THE 视图 SHALL 以功能用例的 `所属系统` 作为系统归属来源
+6. THE 视图 SHALL 明确 API/场景/性能/UI 用例本身不单独计算所属系统，系统维度来自功能用例侧
 
 ---
 
-### 需求 4: 测试计划遗留缺陷统计接口
+### 需求 4: 用例维护人分布视图
 
-**用户故事：** 作为数据大屏，我希望获取项目的缺陷统计数据（未关闭数、各状态分布、各测试计划缺陷数），以便展示质量风险状况。
+**用户故事：** 作为甲方数据大屏，我希望按所属系统和维护人查看功能用例数量与已关联用例数量，以便了解各系统的人员工作负载分布。
 
 #### 验收标准
 
-1. THE 系统 SHALL 提供 `GET /track/bug/count/{projectId}` 接口
-2. THE 响应 SHALL 包含缺陷总数、未关闭缺陷数和未关闭率
-3. THE 响应 SHALL 包含新增/已解决/已拒绝/未知状态缺陷数量
-4. THE 响应 SHALL 包含本周新增缺陷数和缺陷用例比
-5. THE 响应 SHALL 包含各测试计划的缺陷分布列表
-6. THE 接口 SHALL 要求权限 `PROJECT_TRACK_HOME:READ`
+1. THE 系统 SHALL 提供 `v_dashboard_case_maintainer_by_system` 视图
+2. THE 视图 SHALL 按所属系统和用例维护人输出统计数据
+3. THE 视图 SHALL 输出功能用例数量
+4. THE 视图 SHALL 输出已关联用例数量
+5. THE 视图 SHALL 以功能用例的 `所属系统` 作为系统归属来源
+6. THE 维护人为空时 SHALL 归入 `未分配`
 
 ---
 
-### 需求 5: 用例责任人分布统计接口
+### 需求 5: 测试计划遗留缺陷统计视图
 
-**用户故事：** 作为数据大屏，我希望获取项目下按责任人维度统计的功能用例和关联用例数量，以便展示人员工作负载分布。
+**用户故事：** 作为甲方数据大屏，我希望按所属系统查看测试计划关联缺陷统计，以便了解各系统的质量风险和缺陷关闭情况。
 
 #### 验收标准
 
-1. THE 系统 SHALL 提供 `GET /track/case/bar/{projectId}` 接口
-2. THE 响应 SHALL 为柱状图数据列表，每条包含 x 轴标签（责任人）和 y 轴数值（用例数）
-3. THE 数据 SHALL 按 `FUNCTIONCASE` 和 `RELEVANCECASE` 分组
-4. THE 接口 SHALL 要求权限 `PROJECT_TRACK_HOME:READ`
+1. THE 系统 SHALL 提供 `v_dashboard_bug_count_by_system` 视图
+2. THE 视图 SHALL 统计测试计划关联缺陷，保持与测试跟踪-首页 `BugCountCard` 一致的缺陷范围
+3. THE 视图 SHALL 输出缺陷总数、未关闭缺陷数、未关闭率、本周新增缺陷数
+4. THE 视图 SHALL 输出缺陷状态分布
+5. THE 视图 SHALL 使用缺陷自定义字段 `缺陷所属系统` 作为系统归属来源
+6. THE 视图 SHALL 明确该统计不是项目下所有缺陷，而是测试计划关联缺陷
 
 ---
 
-### 需求 6: 失败用例统计接口
+### 需求 6: 查询规范
 
-**用户故事：** 作为数据大屏，我希望获取最近 7 天内执行失败的用例列表，以便追踪高频失败用例并推动修复。
+**用户故事：** 作为甲方数据库查询人员，我希望有固定的查询规范，以便稳定获取指定所属系统的统计数据。
 
 #### 验收标准
 
-1. THE 系统 SHALL 提供 `GET /track/failure/case/about/plan/{projectId}/{versionId}/{pageSize}/{goPage}` 接口
-2. THE `versionId` 参数为 `default` 时 SHALL 视为不过滤版本
-3. THE 响应 SHALL 包含分页的失败用例列表（用例名称、所属测试计划、失败次数、用例类型）
-4. THE 时间范围 SHALL 默认最近 7 天
-5. THE 接口 SHALL 要求权限 `PROJECT_TRACK_HOME:READ`
+1. THE 查询 SHALL 以 `system_code`（所属系统简称）作为主要条件
+2. THE 查询 SHALL 支持查询全部所属系统汇总结果
+3. THE 查询 SHALL 支持查询 `未设置` 分组
+4. THE 查询 SHALL 不要求甲方传入 `project_id`
+5. THE 查询结果 SHALL 包含 `system_id`、`system_name`、`system_code` 字段
+6. THE 查询文档 SHALL 明确页面原始卡片是项目维度，数据库视图是所属系统维度，二者属于同口径不同维度
 
 ---
 
-### 需求 7: 数据大屏调用规范
+### 需求 7: 数据质量与边界
 
-**用户故事：** 作为数据大屏开发人员，我希望有明确的接口调用规范文档，以便正确对接 MeterSphere。
-
-#### 验收标准
-
-1. THE 规范 SHALL 包含 API Key 生成步骤（由 MeterSphere 管理员在系统中生成）
-2. THE 规范 SHALL 包含签名生成算法（Java/Python/JavaScript 等语言示例）
-3. THE 规范 SHALL 包含所有可用接口的请求/响应示例
-4. THE 规范 SHALL 包含定时拉取的建议频率（建议 5-10 分钟一次）
-5. THE 规范 SHALL 包含错误码说明
-
----
-
-### 需求 8: 需求测试流程统计接口（规划）
-
-**用户故事：** 作为数据大屏，我希望在需求测试流程模块上线后，获取 workflow 维度的统计数据（各阶段需求数量、平均耗时、缺陷密度等）。
+**用户故事：** 作为项目实施人员，我希望明确所属系统字段的数据质量边界，以便解释统计差异并减少甲方误解。
 
 #### 验收标准
 
-1. THE 系统 SHALL 预留需求测试流程统计接口路径 `/requirement-flow/statistics/`
-2. THE 接口 SHALL 覆盖以下统计维度（后续 spec 细化）：
-   - 各阶段需求数量分布
-   - 阶段平均耗时
-   - 计划与实际偏差统计
-   - 缺陷密度（缺陷数/用例数）
-   - 评审通过率
-3. THE 接口 SHALL 使用与 TrackController 相同的 API Key 认证方式
-4. THE 接口 SHALL 要求对应 workflow 模块的查看权限
+1. THE 系统 SHALL 保留未填写所属系统的数据，不能在统计中丢弃
+2. THE 用例统计 SHALL 使用 `custom_field_test_case` 中的 `所属系统` 字段
+3. THE 缺陷统计 SHALL 使用 `custom_field_issues` 中的 `缺陷所属系统` 字段
+4. THE 计划和评审本身 SHALL 不作为直接所属系统统计来源
+5. THE 如需统计计划或评审 SHALL 通过其关联功能用例的所属系统间接统计，并在口径中单独说明
 
 ---
 
 ## 安全要求
 
-1. 签名算法采用 AES/CBC/PKCS5Padding，`secretKey` 为 128-bit 密钥，`accessKey` 为 128-bit IV
-2. 签名原文格式为 `accessKey|timestamp`（管道符分隔），时间戳为毫秒值
-3. 时间戳窗口为 ±30 分钟，防止重放攻击
-4. API Key 一经生成只展示一次 `secretKey`，后续只能查看 `accessKey`
-5. 用户最多持有 5 个有效 API Key
-6. 可对单个 Key 执行启用/禁用/删除操作
+1. 为甲方创建专用只读数据库账号
+2. 只给甲方账号授予四个统计视图的 `SELECT` 权限
+3. 不给甲方账号授予 `test_case`、`issues`、`custom_field_*`、`associated_system` 等基础表权限
+4. 视图中不输出不必要的敏感字段
+5. 数据库访问地址、账号、密码由运维侧单独交付，不写入业务代码或公开文档
 
 ---
 
@@ -157,14 +144,18 @@
 
 | 指标 | 目标值 |
 |------|--------|
-| 单次统计接口响应时间 | < 3 秒 |
-| 数据大屏定时轮询间隔 | 5-10 分钟（由大屏端控制） |
-| 并发大屏数量 | 支持 3-5 个数据大屏同时轮询 |
+| 单个视图查询响应时间 | < 3 秒 |
+| 甲方查询频率 | 建议 5-10 分钟一次 |
+| 视图数量 | 4 个 |
+| 查询条件 | `system_code` |
 
 ---
 
 ## 约束
 
-1. 接口仅在 MeterSphere 有权限的项目范围内返回数据（以 API Key 所属用户的权限为准）
-2. 接口不支持跨工作空间查询，需按 projectId 逐一拉取
-3. V1 仅复用现有 TrackController 接口，不新增独立的大屏聚合接口
+1. 本方案 V1 不新增 HTTP API，不要求甲方调用 `/track/**` 接口
+2. 本方案 V1 不要求甲方按 `projectId` 查询
+3. 四个视图统计逻辑对应测试跟踪-首页四个卡片，但统计维度为所属系统
+4. 未设置所属系统的数据必须保留为 `未设置`
+5. 缺陷统计范围为测试计划关联缺陷，不是项目全量缺陷
+6. 关联覆盖率的所属系统来自功能用例侧，不来自 API/场景/性能/UI 用例本身
