@@ -121,9 +121,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { NConfigProvider, NMessageProvider, NDialogProvider, NInput, NDropdown, createDiscreteApi } from 'naive-ui'
 import ChatSidebar from './knowledge/ChatSidebar.vue'
 import ChatWelcome from './knowledge/ChatWelcome.vue'
@@ -139,6 +139,7 @@ import type { ChatConnectionState, ChatFeedback, ChatMessage } from '@/composabl
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const { message, dialog } = createDiscreteApi(['message', 'dialog'])
 const { addQuestion } = useChatHistory()
 const {
@@ -441,6 +442,18 @@ const llmStatusText = computed(() => {
 let resizeObserver: ResizeObserver | null = null
 onMounted(() => {
   loadLlmStatus()
+
+  // 从知识库搜索页跳转过来时，预填问题到输入框
+  const prefilledQuestion = route.query.q
+  if (prefilledQuestion && typeof prefilledQuestion === 'string') {
+    nextTick(() => {
+      chatInputBarRef.value?.restoreDraft(prefilledQuestion)
+      chatInputBarRef.value?.focus()
+    })
+    // 清理 URL 中的 q 参数，避免刷新后重复填入
+    router.replace({ path: route.path, query: {} })
+  }
+
   if (chatLayoutRef.value) {
     resizeObserver = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width || 0
