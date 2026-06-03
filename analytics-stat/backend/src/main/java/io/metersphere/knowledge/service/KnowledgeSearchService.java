@@ -88,7 +88,7 @@ public class KnowledgeSearchService {
                                 // 条件1: 用户自己上传的文档
                                 .should(s1 -> s1.term(t -> t.field("userId").value(userId)))
                                 // 条件2: 公开文档
-                                .should(s2 -> s2.term(t -> t.field("public").value(true)))
+                                .should(s2 -> s2.term(t -> t.field("isPublic").value(true)))
                                 // 条件3: 同一工作空间的文档（orgTag 在 MeterSphere 中映射为 workspaceId）
                                 .should(s3 -> {
                                     if (workspaceId == null || workspaceId.isEmpty()) {
@@ -169,7 +169,7 @@ public class KnowledgeSearchService {
                             // 权限过滤
                             .filter(f -> f.bool(bf -> bf
                                     .should(s1 -> s1.term(t -> t.field("userId").value(userId)))
-                                    .should(s2 -> s2.term(t -> t.field("public").value(true)))
+                                    .should(s2 -> s2.term(t -> t.field("isPublic").value(true)))
                                     .should(s3 -> {
                                         if (workspaceId == null || workspaceId.isEmpty()) {
                                             return s3.matchNone(mn -> mn);
