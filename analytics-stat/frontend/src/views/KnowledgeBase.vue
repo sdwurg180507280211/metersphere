@@ -20,8 +20,20 @@
                 </template>
                 {{ t('analytics.knowledge.search') }}
               </n-button>
+              <n-button type="primary" @click="goToChat" secondary>
+                <template #icon>
+                  <n-icon><ChatIcon /></n-icon>
+                </template>
+                {{ t('analytics.knowledge.ai_chat') }}
+              </n-button>
             </div>
           </div>
+
+          <n-collapse :default-expanded-names="guideCollapsed ? [] : ['guide']">
+            <n-collapse-item name="guide" class="guide-collapse-item">
+              <template #header>
+                <span class="guide-header-text">{{ t('analytics.knowledge.module_intro_title') }}</span>
+              </template>
 
           <n-alert
             class="intro-alert"
@@ -100,6 +112,9 @@
             </n-gi>
           </n-grid>
 
+            </n-collapse-item>
+          </n-collapse>
+
           <!-- 文件列表 -->
           <n-card class="file-list-card" :bordered="true">
             <template #header>
@@ -129,14 +144,20 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { NConfigProvider, NMessageProvider, NDialogProvider, NButton, NIcon, NAlert, NGrid, NGi, NCard } from 'naive-ui'
-import { Search as SearchIcon, Document as DocumentIcon, LockClosed as LockIcon, CloudUpload as UploadIcon, Refresh as RefreshIcon } from '@vicons/ionicons5'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { NConfigProvider, NMessageProvider, NDialogProvider, NButton, NIcon, NAlert, NGrid, NGi, NCard, NCollapse, NCollapseItem } from 'naive-ui'
+import { Search as SearchIcon, Document as DocumentIcon, LockClosed as LockIcon, CloudUpload as UploadIcon, Refresh as RefreshIcon, Chatbubbles as ChatIcon } from '@vicons/ionicons5'
 import SearchDialog from './knowledge/SearchDialog.vue'
 import UploadDialog from './knowledge/UploadDialog.vue'
 import FileList from './knowledge/FileList.vue'
 import { useKnowledgeBasePage } from '@/composables/useKnowledgeBasePage'
+import { KNOWLEDGE_ROUTE_PATHS } from '@/config/knowledge-route'
 
 const { t } = useI18n()
+const router = useRouter()
+const GUIDE_COLLAPSED_KEY = 'knowledge-guide-collapsed'
+
 const {
   showSearch,
   showUpload,
@@ -146,6 +167,17 @@ const {
   refreshFileList,
   handleUploadSuccess,
 } = useKnowledgeBasePage()
+
+const guideCollapsed = ref(localStorage.getItem(GUIDE_COLLAPSED_KEY) === 'true')
+
+const goToChat = () => {
+  router.push(KNOWLEDGE_ROUTE_PATHS.knowledgeChat)
+}
+
+const toggleGuide = () => {
+  guideCollapsed.value = !guideCollapsed.value
+  localStorage.setItem(GUIDE_COLLAPSED_KEY, String(guideCollapsed.value))
+}
 
 const workflowSteps = [
   'analytics.knowledge.workflow_step_upload',

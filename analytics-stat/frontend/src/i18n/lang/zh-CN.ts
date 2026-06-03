@@ -22,6 +22,8 @@ export default {
     knowledge: {
       title: '知识库',
       search: '检索',
+      ai_chat: 'AI 问答',
+      ask_about_this: '提问',
       upload_file: '上传文件',
       my_files: '我的文件',
       hybrid_search: '混合检索',

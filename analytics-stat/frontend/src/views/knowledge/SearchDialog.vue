@@ -38,6 +38,9 @@
           <span class="result-filename">{{ item.fileName || item.fileMd5 }}</span>
           <n-tag v-if="item.isPublic" size="small" type="success" :bordered="false">{{ t('analytics.knowledge.public') }}</n-tag>
           <span class="result-score">{{ t('analytics.knowledge.score_label') }}: {{ item.score?.toFixed(4) }}</span>
+          <n-button size="tiny" type="primary" text @click="askFromResult(item)">
+            {{ t('analytics.knowledge.ask_about_this') }}
+          </n-button>
         </div>
         <div class="result-content">{{ item.textContent }}</div>
       </div>
@@ -52,12 +55,15 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { NModal, NInput, NButton, NInputNumber, NTag, NEmpty, useMessage } from 'naive-ui'
 import { EMPTY_QUERY_ERROR, useKnowledgeSearch } from '@/composables/useKnowledgeSearch'
 import { resolveKnowledgeErrorMessage } from '@/composables/useKnowledgeErrorMessage'
+import { KNOWLEDGE_ROUTE_PATHS } from '@/config/knowledge-route'
 
 const visible = defineModel<boolean>({ default: false })
 const { t } = useI18n()
+const router = useRouter()
 const message = useMessage()
 
 const { query, topK, loading, searched, results, search, reset } = useKnowledgeSearch()
@@ -75,6 +81,15 @@ async function doSearch() {
     }
     message.error(resolveKnowledgeErrorMessage(e, t, 'analytics.knowledge.search_failed'))
   }
+}
+
+function askFromResult(result: { textContent: string; fileMd5: string }) {
+  const snippet = result.textContent.slice(0, 200).replace(/\n/g, ' ')
+  visible.value = false
+  router.push({
+    path: KNOWLEDGE_ROUTE_PATHS.knowledgeChat,
+    query: { q: snippet },
+  })
 }
 
 function handleClose() {
