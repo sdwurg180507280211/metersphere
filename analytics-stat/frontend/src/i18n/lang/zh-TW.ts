@@ -22,6 +22,10 @@ export default {
     knowledge: {
       title: '知識庫',
       search: '檢索',
+      ai_chat: 'AI 問答',
+      ask_about_this: '提問',
+      ask: '提問',
+      ask_file_prompt: '請基於《{name}》這份文檔回答我的問題。',
       upload_file: '上傳文件',
       my_files: '我的文件',
       status: '狀態',
