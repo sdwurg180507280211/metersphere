@@ -24,6 +24,8 @@ export default {
       search: '检索',
       ai_chat: 'AI 问答',
       ask_about_this: '提问',
+      ask: '提问',
+      ask_file_prompt: '请基于《{name}》这份文档回答我的问题。',
       upload_file: '上传文件',
       my_files: '我的文件',
       hybrid_search: '混合检索',

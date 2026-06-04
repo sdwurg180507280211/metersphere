@@ -22,6 +22,10 @@ export default {
     knowledge: {
       title: 'Knowledge Base',
       search: 'Search',
+      ai_chat: 'AI Chat',
+      ask_about_this: 'Ask',
+      ask: 'Ask',
+      ask_file_prompt: 'Please answer my question based on the document "{name}".',
       upload_file: 'Upload File',
       my_files: 'My Files',
       status: 'Status',

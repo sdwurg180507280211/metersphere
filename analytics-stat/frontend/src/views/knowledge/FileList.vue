@@ -32,15 +32,18 @@
 <script setup lang="ts">
 import { h, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NDataTable, NInput, NSelect, NPagination, NTag, NButton, useMessage, useDialog, type DataTableColumns } from 'naive-ui'
+import { useRouter } from 'vue-router'
+import { NDataTable, NInput, NSelect, NPagination, NTag, NButton, NSpace, useMessage, useDialog, type DataTableColumns } from 'naive-ui'
 import { deleteFile } from '@/api/knowledge'
 import type { KbFileUpload } from '@/api/knowledge'
 import { KNOWLEDGE_FILE_STATUS } from '@/api/knowledge'
 import { useKnowledgeFiles } from '@/composables/useKnowledgeFiles'
 import { resolveKnowledgeErrorMessage } from '@/composables/useKnowledgeErrorMessage'
 import { useKnowledgeFileFilters } from '@/composables/useKnowledgeFileFilters'
+import { KNOWLEDGE_ROUTE_PATHS } from '@/config/knowledge-route'
 
 const { t, locale } = useI18n()
+const router = useRouter()
 const message = useMessage()
 const dialog = useDialog()
 
@@ -102,14 +105,25 @@ const columns: DataTableColumns<KbFileUpload> = [
   {
     title: t('commons.operating'),
     key: 'actions',
-    width: 100,
+    width: 140,
     fixed: 'right',
-    render: (row) => h(NButton, {
-      type: 'error',
-      size: 'small',
-      text: true,
-      onClick: () => handleDelete(row)
-    }, { default: () => t('commons.delete') })
+    render: (row) => h(NSpace, { size: 8 }, {
+      default: () => [
+        h(NButton, {
+          type: 'primary',
+          size: 'small',
+          text: true,
+          disabled: row.status !== KNOWLEDGE_FILE_STATUS.INDEXED,
+          onClick: () => askAboutFile(row)
+        }, { default: () => t('analytics.knowledge.ask') }),
+        h(NButton, {
+          type: 'error',
+          size: 'small',
+          text: true,
+          onClick: () => handleDelete(row)
+        }, { default: () => t('commons.delete') })
+      ]
+    })
   }
 ]
 
@@ -153,6 +167,15 @@ const getStatusText = (status: number): string => {
     [KNOWLEDGE_FILE_STATUS.FAILED]: t('analytics.knowledge.status_failed'),
   }
   return statusMap[status] || t('analytics.knowledge.status_unknown')
+}
+
+const askAboutFile = (row: KbFileUpload) => {
+  router.push({
+    path: KNOWLEDGE_ROUTE_PATHS.knowledgeChat,
+    query: {
+      q: t('analytics.knowledge.ask_file_prompt', { name: row.fileName })
+    }
+  })
 }
 
 const handleDelete = async (row: KbFileUpload) => {
