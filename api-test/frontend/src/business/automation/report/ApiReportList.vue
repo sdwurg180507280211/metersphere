@@ -54,6 +54,12 @@
             </template>
           </el-table-column>
 
+          <el-table-column
+            prop="id"
+            label="ID"
+            width="100"
+            show-overflow-tooltip />
+
           <ms-table-column
             prop="name"
             sortable
