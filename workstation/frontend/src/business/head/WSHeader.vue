@@ -18,9 +18,6 @@
           <el-menu-item :index="'/workstation/creation'" >
             {{ $t('workstation.creation') }}
           </el-menu-item>
-          <el-menu-item :index="'/workstation/advanced-search'" >
-            {{ $t('advanced_search.advanced_search') }}
-          </el-menu-item>
         </el-menu>
       </el-col>
       <el-col :span="10">
