@@ -56,8 +56,14 @@ export default {
       let oldVnode = this.$refs.old;
       let vnode = this.$refs.new;
       if (oldVnode && vnode) {
-        window.clearInterval(this.currentItervalID);
+        this.clearVnodeInterval();
         this.getDiff();
+      }
+    },
+    clearVnodeInterval() {
+      if (this.currentItervalID) {
+        window.clearInterval(this.currentItervalID);
+        this.currentItervalID = '';
       }
     },
   },
@@ -66,6 +72,9 @@ export default {
     this.$nextTick(function () {
       this.currentItervalID = window.setInterval(this.getVnode, 1000);
     });
+  },
+  beforeDestroy() {
+    this.clearVnodeInterval();
   },
 };
 </script>

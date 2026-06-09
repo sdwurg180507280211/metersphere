@@ -373,9 +373,10 @@ export default {
       if (this.request.protocol === 'HTTP') {
         // 历史数据 auth 处理
         if (this.request.hashTree) {
-          for (let index in this.request.hashTree) {
-            if (this.request.hashTree[index].type == 'AuthManager') {
-              this.request.authManager = this.request.hashTree[index];
+          for (let index = this.request.hashTree.length - 1; index >= 0; index--) {
+            const step = this.request.hashTree[index];
+            if (step.type == 'AuthManager') {
+              this.request.authManager = step;
               this.request.hashTree.splice(index, 1);
             }
           }
@@ -386,13 +387,13 @@ export default {
       }
     },
     setOwnEnvironment(scenarioDefinition) {
-      for (let i in scenarioDefinition) {
-        let typeArray = ['JDBCPostProcessor', 'JDBCSampler', 'JDBCPreProcessor'];
-        if (typeArray.indexOf(scenarioDefinition[i].type) !== -1 && this.currentScenario) {
-          scenarioDefinition[i].currentScenarioId = this.currentScenario.id;
+      const typeArray = ['JDBCPostProcessor', 'JDBCSampler', 'JDBCPreProcessor'];
+      for (const step of scenarioDefinition) {
+        if (typeArray.indexOf(step.type) !== -1 && this.currentScenario) {
+          step.currentScenarioId = this.currentScenario.id;
         }
-        if (scenarioDefinition[i].hashTree && scenarioDefinition[i].hashTree.length > 0) {
-          this.setOwnEnvironment(scenarioDefinition[i].hashTree);
+        if (step.hashTree && step.hashTree.length > 0) {
+          this.setOwnEnvironment(step.hashTree);
         }
       }
     },
@@ -425,10 +426,11 @@ export default {
       this.$emit('copyRow', this.request, this.node);
     },
     sort() {
-      for (let i in this.request.hashTree) {
-        this.request.hashTree[i].index = Number(i) + 1;
-        if (!this.request.hashTree[i].resourceId) {
-          this.request.hashTree[i].resourceId = getUUID();
+      for (let i = 0; i < this.request.hashTree.length; i++) {
+        const step = this.request.hashTree[i];
+        step.index = i + 1;
+        if (!step.resourceId) {
+          step.resourceId = getUUID();
         }
       }
     },
