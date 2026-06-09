@@ -54,11 +54,11 @@
             </template>
           </el-table-column>
 
-          <el-table-column
-            prop="id"
-            label="ID"
-            width="100"
-            show-overflow-tooltip />
+          <el-table-column prop="id" label="ID" min-width="180" show-overflow-tooltip>
+            <template v-slot:default="scope">
+              <span class="report-id" @click.stop="copyReportId(scope.row.id)">{{ scope.row.id }}</span>
+            </template>
+          </el-table-column>
 
           <ms-table-column
             prop="name"
@@ -306,6 +306,16 @@ export default {
         });
       });
     },
+    trimIdCondition() {
+      if (this.condition.combine && this.condition.combine.id && typeof this.condition.combine.id.value === 'string') {
+        this.condition.combine.id.value = this.condition.combine.id.value.trim();
+      }
+    },
+    copyReportId(id) {
+      this.$copyText(id).then(() => {
+        this.$success(this.$t('commons.copy_success'));
+      });
+    },
     search() {
       if (this.testId !== 'all') {
         this.condition.testId = this.testId;
@@ -315,6 +325,7 @@ export default {
       this.unSelection = [];
       this.selectDataCounts = 0;
       this.condition.reportType = this.reportType;
+      this.trimIdCondition();
       if (this.condition.orders && this.condition.orders.length > 0) {
         let order = this.condition.orders[this.condition.orders.length - 1];
         this.condition.orders = [];
@@ -533,5 +544,10 @@ export default {
   height: 32px;
   padding: 5px 8px;
   border: solid 1px var(--primary_color);
+}
+
+.report-id {
+  color: var(--primary_color);
+  cursor: pointer;
 }
 </style>
