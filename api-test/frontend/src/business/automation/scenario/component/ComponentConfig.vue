@@ -42,18 +42,25 @@
 </template>
 
 <script>
+import MsIfController from './IfController';
+import MsTransactionController from './TransactionController';
 import { ELEMENT_TYPE } from '../Setting';
+import MsApiComponent from './ApiComponent';
+import MsLoopController from './LoopController';
+import MsApiScenarioComponent from './ApiScenarioComponent';
+import JmeterElementComponent from './JmeterElementComponent';
+import PluginComponent from './PluginComponent';
 
 export default {
   name: 'ComponentConfig',
   components: {
-    PluginComponent: () => import('./PluginComponent'),
-    MsIfController: () => import('./IfController'),
-    MsTransactionController: () => import('./TransactionController'),
-    MsApiComponent: () => import('./ApiComponent'),
-    MsLoopController: () => import('./LoopController'),
-    MsApiScenarioComponent: () => import('./ApiScenarioComponent'),
-    JmeterElementComponent: () => import('./JmeterElementComponent'),
+    PluginComponent,
+    MsIfController,
+    MsTransactionController,
+    MsApiComponent,
+    MsLoopController,
+    MsApiScenarioComponent,
+    JmeterElementComponent,
     MsConstantTimer: () => import('./ConstantTimer'),
     MsJsr233Processor: () => import('./Jsr233Processor'),
     MsScenarioAssertions: () => import('../../../definition/components/assertion/ScenarioAssertions'),

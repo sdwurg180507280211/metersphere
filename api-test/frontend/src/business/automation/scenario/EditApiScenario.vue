@@ -925,10 +925,10 @@ export default {
       this.getApiScenario(true);
     },
     recursiveSorting(arr) {
-      for (const step of arr) {
-        step.disabled = true;
-        if (step.hashTree != undefined && step.hashTree.length > 0) {
-          this.recursiveSorting(step.hashTree);
+      for (let i in arr) {
+        arr[i].disabled = true;
+        if (arr[i].hashTree != undefined && arr[i].hashTree.length > 0) {
+          this.recursiveSorting(arr[i].hashTree);
         }
       }
     },
@@ -2227,17 +2227,17 @@ export default {
     },
     dataProcessing(stepArray, parent = null) {
       if (stepArray) {
-        const typeArray = ['JDBCPostProcessor', 'JDBCSampler', 'JDBCPreProcessor'];
-        for (const step of stepArray) {
-          if (typeArray.indexOf(step.type) !== -1) {
-            step.originalDataSourceId = step.dataSourceId;
-            step.originalEnvironmentId = step.environmentId;
+        for (let i in stepArray) {
+          let typeArray = ['JDBCPostProcessor', 'JDBCSampler', 'JDBCPreProcessor'];
+          if (typeArray.indexOf(stepArray[i].type) !== -1) {
+            stepArray[i].originalDataSourceId = stepArray[i].dataSourceId;
+            stepArray[i].originalEnvironmentId = stepArray[i].environmentId;
           }
-          if (!step.hashTree) {
-            step.hashTree = [];
+          if (!stepArray[i].hashTree) {
+            stepArray[i].hashTree = [];
           }
-          if (step.type === 'Assertions' && !step.document) {
-            step.document = {
+          if (stepArray[i].type === 'Assertions' && !stepArray[i].document) {
+            stepArray[i].document = {
               type: 'JSON',
               data: {
                 xmlFollowAPI: false,
@@ -2248,29 +2248,29 @@ export default {
             };
           }
           if (
-            this.stepFilter.get('ALlSamplerStep').indexOf(step.type) === -1 ||
+            this.stepFilter.get('ALlSamplerStep').indexOf(stepArray[i].type) === -1 ||
             !parent ||
             this.stepFilter.get('AllSamplerProxy').indexOf(parent.type) === -1
           ) {
             this.stepCount += 1;
           }
-          if (step.hashTree.length > 0) {
-            this.dataProcessing(step.hashTree, step);
+          if (stepArray[i].hashTree.length > 0) {
+            this.dataProcessing(stepArray[i].hashTree, stepArray[i]);
           }
         }
       }
     },
 
     formatData(hashTree) {
-      for (const step of hashTree) {
-        if (step && TYPE_TO_C.get(step.type) && !step.clazzName) {
-          step.clazzName = TYPE_TO_C.get(step.type);
+      for (let i in hashTree) {
+        if (hashTree[i] && TYPE_TO_C.get(hashTree[i].type) && !hashTree[i].clazzName) {
+          hashTree[i].clazzName = TYPE_TO_C.get(hashTree[i].type);
         }
-        if (step && step.authManager && !step.authManager.clazzName) {
-          step.authManager.clazzName = TYPE_TO_C.get(step.authManager.type);
+        if (hashTree[i] && hashTree[i].authManager && !hashTree[i].authManager.clazzName) {
+          hashTree[i].authManager.clazzName = TYPE_TO_C.get(hashTree[i].authManager.type);
         }
-        if (step && step.hashTree && step.hashTree.length > 0) {
-          this.formatData(step.hashTree);
+        if (hashTree[i].hashTree && hashTree[i].hashTree.length > 0) {
+          this.formatData(hashTree[i].hashTree);
         }
       }
     },
@@ -2379,19 +2379,19 @@ export default {
       this.setStep(this.scenarioDefinition);
     },
     setStep(stepArray) {
-      const typeArray = ['JDBCPostProcessor', 'JDBCSampler', 'JDBCPreProcessor'];
-      for (const step of stepArray) {
-        if (typeArray.indexOf(step.type) !== -1) {
-          if (step.customizeReq) {
-            if (step.isRefEnvironment) {
-              this.setStepEnv(step);
+      for (let i in stepArray) {
+        let typeArray = ['JDBCPostProcessor', 'JDBCSampler', 'JDBCPreProcessor'];
+        if (typeArray.indexOf(stepArray[i].type) !== -1) {
+          if (stepArray[i].customizeReq) {
+            if (stepArray[i].isRefEnvironment) {
+              this.setStepEnv(stepArray[i]);
             }
           } else {
-            this.setStepEnv(step);
+            this.setStepEnv(stepArray[i]);
           }
         }
-        if (step.hashTree && step.hashTree.length > 0) {
-          this.setStep(step.hashTree);
+        if (stepArray[i].hashTree && stepArray[i].hashTree.length > 0) {
+          this.setStep(stepArray[i].hashTree);
         }
       }
     },
@@ -2445,9 +2445,9 @@ export default {
       if (envId) {
         request.environmentId = envId;
       } else {
-        for (const environment of this.environments) {
-          if (environment.id === request.environmentId) {
-            currentEnvironment = environment;
+        for (let i in this.environments) {
+          if (this.environments[i].id === request.environmentId) {
+            currentEnvironment = this.environments[i];
             break;
           }
         }
@@ -2545,7 +2545,8 @@ export default {
       return ids;
     },
     changeNodeStatus(resourceIds, nodes) {
-      for (const node of nodes) {
+      for (let i in nodes) {
+        const node = nodes[i];
         if (node && !(node.type === 'scenario' && node.referenced === 'REF')) {
           if (
             resourceIds.indexOf(node.resourceId) !== -1 &&
@@ -2644,13 +2645,13 @@ export default {
       this.recursionExpansion(resourceIds, this.$refs.stepTree.root.childNodes);
     },
     stepStatus(resourceIds, nodes) {
-      for (const node of nodes) {
-        if (node) {
-          if (resourceIds.indexOf(node.resourceId) !== -1) {
-            node.enable = this.stepEnable;
+      for (let i in nodes) {
+        if (nodes[i]) {
+          if (resourceIds.indexOf(nodes[i].resourceId) !== -1) {
+            nodes[i].enable = this.stepEnable;
           }
-          if (node.hashTree != undefined && node.hashTree.length > 0) {
-            this.stepStatus(resourceIds, node.hashTree);
+          if (nodes[i].hashTree != undefined && nodes[i].hashTree.length > 0) {
+            this.stepStatus(resourceIds, nodes[i].hashTree);
           }
         }
       }
@@ -2684,24 +2685,19 @@ export default {
       });
     },
     recursionDelete(item, nodes) {
-      for (let i = nodes.length - 1; i >= 0; i--) {
-        const node = nodes[i];
-        if (node) {
+      for (let i in nodes) {
+        if (nodes[i]) {
           //复制的case的断言的resourceId是一样的，所以要加上parentIndex做唯一标识
-          if (item.resourceId === node.resourceId && item.parentIndex === node.parentIndex) {
+          if (item.resourceId === nodes[i].resourceId && item.parentIndex === nodes[i].parentIndex) {
             nodes.splice(i, 1);
             this.$refs.stepTree.remove(item);
-            return true;
-          }
-          if (node.hashTree != undefined && node.hashTree.length > 0) {
-            const deleted = this.recursionDelete(item, node.hashTree);
-            if (deleted) {
-              return true;
+          } else {
+            if (nodes[i].hashTree != undefined && nodes[i].hashTree.length > 0) {
+              this.recursionDelete(item, nodes[i].hashTree);
             }
           }
         }
       }
-      return false;
     },
     showHistory() {
       this.$refs.taskCenter.openScenarioHistory(this.currentScenario.id);

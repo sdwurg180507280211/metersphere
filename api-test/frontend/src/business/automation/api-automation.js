@@ -168,60 +168,60 @@ export function savePreciseEnvProjectIds(projectIds, envMap) {
 }
 
 export function scenarioSort(_this) {
-  for (let i = 0; i < _this.scenarioDefinition.length; i++) {
-    const scenario = _this.scenarioDefinition[i];
+  for (let i in _this.scenarioDefinition) {
     // 排序
-    _this.$set(scenario, 'index', i + 1);
+    _this.$set(_this.scenarioDefinition[i], 'index', Number(i) + 1);
     // 设置循环控制
     if (
-      scenario.type === ELEMENT_TYPE.LoopController &&
-      scenario.hashTree &&
-      scenario.hashTree.length > 1
+      _this.scenarioDefinition[i].type === ELEMENT_TYPE.LoopController &&
+      _this.scenarioDefinition[i].hashTree &&
+      _this.scenarioDefinition[i].hashTree.length > 1
     ) {
-      scenario.countController.proceed = true;
+      _this.scenarioDefinition[i].countController.proceed = true;
     }
     // 设置项目ID
-    if (!scenario.projectId) {
-      scenario.projectId = _this.projectId;
+    if (!_this.scenarioDefinition[i].projectId) {
+      _this.scenarioDefinition[i].projectId = _this.projectId;
     }
 
-    if (scenario.hashTree != undefined && scenario.hashTree.length > 0) {
+    if (_this.scenarioDefinition[i].hashTree != undefined && _this.scenarioDefinition[i].hashTree.length > 0) {
       if (_this.hideTreeNode) {
-        _this.hideTreeNode(scenario, scenario.hashTree);
+        _this.hideTreeNode(_this.scenarioDefinition[i], _this.scenarioDefinition[i].hashTree);
       }
-      recursiveSorting(_this, scenario.hashTree, scenario.projectId);
+      recursiveSorting(_this, _this.scenarioDefinition[i].hashTree, _this.scenarioDefinition[i].projectId);
     }
     // 添加debug结果
-    if (_this.debugResult && _this.debugResult.get(scenario.id + scenario.name)) {
-      scenario.requestResult = _this.debugResult.get(scenario.id + scenario.name);
+    if (_this.debugResult && _this.debugResult.get(_this.scenarioDefinition[i].id + _this.scenarioDefinition[i].name)) {
+      _this.scenarioDefinition[i].requestResult = _this.debugResult.get(
+        _this.scenarioDefinition[i].id + _this.scenarioDefinition[i].name
+      );
     }
   }
 }
 
 export function recursiveSorting(_this, arr, scenarioProjectId) {
-  for (let i = 0; i < arr.length; i++) {
-    const step = arr[i];
-    step.index = i + 1;
+  for (let i in arr) {
+    arr[i].index = Number(i) + 1;
     if (
-      step.type === ELEMENT_TYPE.LoopController &&
-      step.loopType === 'LOOP_COUNT' &&
-      step.hashTree &&
-      step.hashTree.length > 1
+      arr[i].type === ELEMENT_TYPE.LoopController &&
+      arr[i].loopType === 'LOOP_COUNT' &&
+      arr[i].hashTree &&
+      arr[i].hashTree.length > 1
     ) {
-      step.countController.proceed = true;
+      arr[i].countController.proceed = true;
     }
-    if (!step.projectId) {
-      step.projectId = scenarioProjectId ? scenarioProjectId : _this.projectId;
+    if (!arr[i].projectId) {
+      arr[i].projectId = scenarioProjectId ? scenarioProjectId : _this.projectId;
     }
-    if (step.hashTree != undefined && step.hashTree.length > 0) {
+    if (arr[i].hashTree != undefined && arr[i].hashTree.length > 0) {
       if (_this.hideTreeNode) {
-        _this.hideTreeNode(step, step.hashTree);
+        _this.hideTreeNode(arr[i], arr[i].hashTree);
       }
-      recursiveSorting(_this, step.hashTree, step.projectId);
+      recursiveSorting(_this, arr[i].hashTree, arr[i].projectId);
     }
     // 添加debug结果
-    if (_this.debugResult && _this.debugResult.get(step.id + step.name)) {
-      step.requestResult = _this.debugResult.get(step.id + step.name);
+    if (_this.debugResult && _this.debugResult.get(arr[i].id + arr[i].name)) {
+      arr[i].requestResult = _this.debugResult.get(arr[i].id + arr[i].name);
     }
   }
 }
