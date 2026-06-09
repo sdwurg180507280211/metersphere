@@ -37,8 +37,8 @@
             filterable
             @change="chooseEnv">
             <el-option
-              v-for="(environment, index) in pe.envs"
-              :key="index"
+              v-for="environment in pe.envs"
+              :key="environment.id"
               :label="environment.name"
               :value="environment.id" />
           </el-select>
@@ -55,8 +55,8 @@
           style="margin-top: 8px; width: 100%"
           size="small">
           <el-option
-            v-for="(group, index) in groups"
-            :key="index"
+            v-for="group in groups"
+            :key="group.id"
             :disabled="group.disabled"
             :label="group.name"
             :value="group.id" />
@@ -72,7 +72,7 @@
           <el-option-group v-for="group in groups" :key="group.label" :label="group.label">
             <el-option
               v-for="item in group.options"
-              :key="item.name"
+              :key="item.id || item.name"
               :label="item.name"
               :disabled="item.disabled"
               :value="item.id">

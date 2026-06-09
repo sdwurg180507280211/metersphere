@@ -521,6 +521,7 @@ export default {
       newProjectEnvMap: new Map(),
       showDiff: false,
       stepFilter: new STEP(),
+      diffTimer: '',
     };
   },
   methods: {
@@ -544,9 +545,9 @@ export default {
       this.recursionStep(this.oldScenarioDefinition);
     },
     recursionStep(stepArray, scenarioProjectId, fullPath, isGeneric) {
-      for (let i in stepArray) {
+      for (let i = 0; i < stepArray.length; i++) {
         let step = stepArray[i];
-        step.index = !isGeneric ? Number(i) + 1 : step.index;
+        step.index = !isGeneric ? i + 1 : step.index;
         if (step.type === 'GenericController') {
           this.pluginOrder(step);
         }
@@ -640,6 +641,9 @@ export default {
     getDiff() {
       let oldVnode = this.$refs.old;
       let vnode = this.$refs.new;
+      if (!oldVnode || !vnode) {
+        return;
+      }
       //oldVnode.style.backgroundColor = "rgb(241,200,196)";
       if (this.oldData.createTime > this.newData.createTime) {
         this.oldColor = 'rgb(121, 225, 153,0.3)';
@@ -650,6 +654,16 @@ export default {
       }
       diff(oldVnode, vnode, this.oldColor, this.newColor);
       this.isReloadData = false;
+    },
+    scheduleDiff() {
+      this.clearDiffTimer();
+      this.diffTimer = window.setTimeout(() => this.getDiff(), 1000);
+    },
+    clearDiffTimer() {
+      if (this.diffTimer) {
+        window.clearTimeout(this.diffTimer);
+        this.diffTimer = '';
+      }
     },
     showAll() {
       // 控制当有弹出页面操作时禁止刷新按钮列表
@@ -678,21 +692,21 @@ export default {
       });
     },
     changeNodeStatus(nodes, source) {
-      for (let i in nodes) {
-        if (nodes[i]) {
+      for (const node of nodes) {
+        if (node) {
           if (this.expandedStatus) {
             if (source === 'new') {
-              this.newExpandedNode.push(nodes[i].resourceId);
+              this.newExpandedNode.push(node.resourceId);
             } else {
-              this.oldExpandedNode.push(nodes[i].resourceId);
+              this.oldExpandedNode.push(node.resourceId);
             }
           }
-          nodes[i].active = this.expandedStatus;
+          node.active = this.expandedStatus;
           if (this.stepSize > 35 && this.expandedStatus) {
-            nodes[i].active = false;
+            node.active = false;
           }
-          if (nodes[i].hashTree && nodes[i].hashTree.length > 0) {
-            this.changeNodeStatus(nodes[i].hashTree, source);
+          if (node.hashTree && node.hashTree.length > 0) {
+            this.changeNodeStatus(node.hashTree, source);
           }
         }
       }
@@ -725,11 +739,11 @@ export default {
       });
     },
     stepStatus(nodes) {
-      for (let i in nodes) {
-        if (nodes[i]) {
-          nodes[i].enable = this.stepEnable;
-          if (nodes[i].hashTree && nodes[i].hashTree.length > 0) {
-            this.stepStatus(nodes[i].hashTree);
+      for (const node of nodes) {
+        if (node) {
+          node.enable = this.stepEnable;
+          if (node.hashTree && node.hashTree.length > 0) {
+            this.stepStatus(node.hashTree);
           }
         }
       }
@@ -825,8 +839,11 @@ export default {
   },
   mounted() {
     this.$nextTick(function () {
-      setTimeout(this.getDiff, (this.$refs.old.$children.length + 1) * 5000);
+      this.scheduleDiff();
     });
+  },
+  beforeDestroy() {
+    this.clearDiffTimer();
   },
 };
 </script>
