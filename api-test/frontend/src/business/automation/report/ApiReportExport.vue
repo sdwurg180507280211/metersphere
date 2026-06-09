@@ -7,17 +7,13 @@
     :mode="mode"
     :type="$t('report.api_test_report')">
     <ms-metric-chart :content="content" :is-export="true" :totalTime="totalTime" :report="report" />
-    <div
-      class="scenario-result"
-      v-for="(scenario, index) in content.scenarios"
-      :key="scenario.id || scenario.resourceId || scenario.name || index"
-      :scenario="scenario">
+    <div class="scenario-result" v-for="(scenario, index) in content.scenarios" :key="index" :scenario="scenario">
       <el-card>
         <template v-slot:header> {{ $t('api_report.scenario_name') }}：{{ scenario.name }}</template>
         <div
           class="ms-border clearfix"
           v-for="(request, index) in scenario.requestResults"
-          :key="request.id || request.resourceId || request.name || index"
+          :key="index"
           :request="request">
           <div v-if="index != scenario.requestResults.length -1" style="min-height: 165px;">
             <div class="request-top">

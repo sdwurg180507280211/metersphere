@@ -390,8 +390,8 @@ export default {
           }
 
           let isExist = false;
-          for (const child of children) {
-            if (child.label === node.label) {
+          for (let j in children) {
+            if (children[j].label === node.label) {
               let idIsPath = true;
               //判断ID是否匹配  目前发现问题的只有重复场景，而重复场景是在第二个节点开始合并的。所以这里暂时只判断第二个场景问题。
               //如果出现了其他问题，则需要检查其他问题的数据结构。暂时采用具体问题具体分析的策略
@@ -399,8 +399,8 @@ export default {
                 idIsPath = false;
                 let childId = '';
                 let childName = '';
-                if (child.value && child.value.scenario) {
-                  let scenarioArr = JSON.parse(child.value.scenario);
+                if (children[j].value && children[j].value.scenario) {
+                  let scenarioArr = JSON.parse(children[j].value.scenario);
                   if (scenarioArr.length > 1) {
                     let childArr = scenarioArr[0].split('_');
                     childId = childArr[0];
@@ -419,10 +419,10 @@ export default {
                 }
               }
               if (idIsPath) {
-                if (i !== nodeArray.length - 1 && !child.children) {
-                  child.children = [];
+                if (i !== nodeArray.length - 1 && !children[j].children) {
+                  children[j].children = [];
                 }
-                children = i === nodeArray.length - 1 ? children : child.children;
+                children = i === nodeArray.length - 1 ? children : children[j].children;
                 isExist = true;
                 break;
               }
@@ -475,24 +475,22 @@ export default {
       return returnChildren;
     },
     recursiveSorting(arr) {
-      for (let i = 0; i < arr.length; i++) {
-        const step = arr[i];
-        if (step) {
-          step.index = i + 1;
-          if (step.children && step.children.length > 0) {
-            this.recursiveSorting(step.children);
+      for (let i in arr) {
+        if (arr[i]) {
+          arr[i].index = Number(i) + 1;
+          if (arr[i].children && arr[i].children.length > 0) {
+            this.recursiveSorting(arr[i].children);
           }
         }
       }
     },
     sort(scenarioDefinition) {
-      for (let i = 0; i < scenarioDefinition.length; i++) {
-        const step = scenarioDefinition[i];
+      for (let i in scenarioDefinition) {
         // 排序
-        if (step) {
-          step.index = i + 1;
-          if (step.children && step.children.length > 0) {
-            this.recursiveSorting(step.children);
+        if (scenarioDefinition[i]) {
+          scenarioDefinition[i].index = Number(i) + 1;
+          if (scenarioDefinition[i].children && scenarioDefinition[i].children.length > 0) {
+            this.recursiveSorting(scenarioDefinition[i].children);
           }
         }
       }

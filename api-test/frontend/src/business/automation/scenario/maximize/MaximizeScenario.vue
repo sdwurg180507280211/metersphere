@@ -1036,14 +1036,14 @@ export default {
       this.debugResult = result;
       this.sort();
     },
-    changeNodeStatus(resourceIds, nodes) {
-      for (const node of nodes) {
-        if (node) {
-          if (this.expandedStatus && resourceIds.indexOf(node.resourceId) !== -1) {
-            this.expandedNode.push(node.resourceId);
+    changeNodeStatus(nodes) {
+      for (let i in nodes) {
+        if (nodes[i]) {
+          if (this.expandedStatus) {
+            this.expandedNode.push(nodes[i].resourceId);
           }
-          if (node.hashTree != undefined && node.hashTree.length > 0) {
-            this.changeNodeStatus(resourceIds, node.hashTree);
+          if (nodes[i].hashTree != undefined && nodes[i].hashTree.length > 0) {
+            this.changeNodeStatus(nodes[i].hashTree);
           }
         }
       }
@@ -1063,17 +1063,23 @@ export default {
     },
     stepNode() {
       //改变每个节点的状态
-      const resourceIds = this.getAllResourceIds();
-      this.stepStatus(resourceIds, this.scenarioDefinition);
+      for (let i in this.scenarioDefinition) {
+        if (this.scenarioDefinition[i]) {
+          this.scenarioDefinition[i].enable = this.stepEnable;
+          if (this.scenarioDefinition[i].hashTree && this.scenarioDefinition[i].hashTree.length > 0) {
+            this.stepStatus(this.scenarioDefinition[i].hashTree);
+          }
+        }
+      }
     },
     stepStatus(resourceIds, nodes) {
-      for (const node of nodes) {
-        if (node) {
-          if (resourceIds.indexOf(node.resourceId) !== -1) {
-            node.enable = this.stepEnable;
+      for (let i in nodes) {
+        if (nodes[i]) {
+          if (resourceIds.indexOf(nodes[i].resourceId) !== -1) {
+            nodes[i].enable = this.stepEnable;
           }
-          if (node.hashTree != undefined && node.hashTree.length > 0) {
-            this.stepStatus(resourceIds, node.hashTree);
+          if (nodes[i].hashTree != undefined && nodes[i].hashTree.length > 0) {
+            this.stepStatus(nodes[i].hashTree);
           }
         }
       }
@@ -1096,22 +1102,17 @@ export default {
       this.forceRerender();
     },
     recursionDelete(resourceId, nodes) {
-      for (let i = nodes.length - 1; i >= 0; i--) {
-        const node = nodes[i];
-        if (node) {
-          if (resourceId === node.resourceId) {
+      for (let i in nodes) {
+        if (nodes[i]) {
+          if (resourceId === nodes[i].resourceId) {
             nodes.splice(i, 1);
-            return true;
-          }
-          if (node.hashTree != undefined && node.hashTree.length > 0) {
-            const deleted = this.recursionDelete(resourceId, node.hashTree);
-            if (deleted) {
-              return true;
+          } else {
+            if (nodes[i].hashTree != undefined && nodes[i].hashTree.length > 0) {
+              this.recursionDelete(resourceId, nodes[i].hashTree);
             }
           }
         }
       }
-      return false;
     },
     forceRerender() {
       this.$nextTick(() => {

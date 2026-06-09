@@ -299,10 +299,10 @@ export default {
       });
     },
     recursiveSorting(arr) {
-      for (let i = 0; i < arr.length; i++) {
+      for (let i in arr) {
         let step = arr[i];
         if (step) {
-          step.index = i + 1;
+          step.index = Number(i) + 1;
           if (step.value) {
             step.value.testing = false;
           }
@@ -514,11 +514,10 @@ export default {
       }
     },
     sort(stepArray) {
-      for (let i = 0; i < stepArray.length; i++) {
-        const step = stepArray[i];
-        step.index = i + 1;
-        if (step.children && step.children.length > 0) {
-          this.sort(step.children);
+      for (let i in stepArray) {
+        stepArray[i].index = Number(i) + 1;
+        if (stepArray[i].children && stepArray[i].children.length > 0) {
+          this.sort(stepArray[i].children);
         }
       }
     },

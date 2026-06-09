@@ -41,8 +41,8 @@
           </div>
         </el-aside>
         <el-main style="padding: 0px 20px 0px 0px; overflow: hidden">
-          <div v-for="(data, index) in value.list" :key="getAssertionKey(data, index)">
-            <el-col ref="itemOptions" name="itemOptions">
+          <div v-for="(data, index) in value.list" :key="index">
+            <el-col name="itemOptions">
               <div v-if="data.type === options.TEXT" class="assertion-item-editing">
                 <el-row :gutter="10" class="assertion-item-row">
                   <el-col class="ms-assertion-select">
@@ -263,9 +263,6 @@ export default {
       lineDivMarginTopHeight: 0,
       lineDivBottomHeight: 0,
       h: document.documentElement.clientHeight + 80,
-      assertionKeyMap: new WeakMap(),
-      assertionKeyIndex: 0,
-      asideStyleFrame: '',
     };
   },
   watch: {
@@ -279,51 +276,24 @@ export default {
   created() {
     this.getAsideStyle();
   },
-  beforeDestroy() {
-    this.clearAsideStyleFrame();
-  },
   methods: {
-    getAssertionKey(data, index) {
-      if (!data || typeof data !== 'object') {
-        return `assertion-${index}`;
-      }
-      if (data.id || data.resourceId) {
-        return data.id || data.resourceId;
-      }
-      if (!this.assertionKeyMap.has(data)) {
-        this.assertionKeyIndex += 1;
-        this.assertionKeyMap.set(data, `plugin-assertion-${this.assertionKeyIndex}`);
-      }
-      return this.assertionKeyMap.get(data);
-    },
     getAsideStyle: function () {
-      this.clearAsideStyleFrame();
       this.$nextTick(() => {
         this.lineDivHeight = 0;
-        this.asideStyleFrame = window.requestAnimationFrame(() => {
-          const refs = this.$refs.itemOptions || [];
-          const itemOptions = Array.isArray(refs) ? refs : [refs];
+        setTimeout(() => {
+          let itemOptions = document.getElementsByName('itemOptions');
           if (itemOptions && itemOptions.length > 1) {
             let optionTypeHeight = 0;
             for (let i = 0; i < itemOptions.length; i++) {
-              const item = itemOptions[i];
-              const el = item && item.$el ? item.$el : item;
-              let itemHeight = el ? el.offsetHeight : 0;
+              let itemHeight = itemOptions[i].offsetHeight;
               optionTypeHeight += itemHeight;
             }
             this.lineDivMarginTopHeight = 26;
             this.lineDivTopHeight = optionTypeHeight / 2 - 32 - 5;
             this.lineDivBottomHeight = this.lineDivTopHeight;
           }
-          this.asideStyleFrame = '';
-        });
+        }, 100);
       });
-    },
-    clearAsideStyleFrame() {
-      if (this.asideStyleFrame) {
-        window.cancelAnimationFrame(this.asideStyleFrame);
-        this.asideStyleFrame = '';
-      }
     },
     add() {
       if (this.value.contentType === this.options.TEXT) {
