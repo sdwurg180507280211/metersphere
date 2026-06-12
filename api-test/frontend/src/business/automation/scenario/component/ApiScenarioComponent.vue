@@ -289,39 +289,39 @@ export default {
       });
     },
     recursiveEnable(arr) {
-      for (let i in arr) {
-        arr[i].disabled = true;
-        arr[i].caseEnable = true;
-        arr[i].deleted = this.refStepDeleted;
-        if (arr[i].hashTree && arr[i].hashTree.length > 0) {
-          this.recursiveEnable(arr[i].hashTree);
+      for (const step of arr) {
+        step.disabled = true;
+        step.caseEnable = true;
+        step.deleted = this.refStepDeleted;
+        if (step.hashTree && step.hashTree.length > 0) {
+          this.recursiveEnable(step.hashTree);
         }
       }
     },
 
     recursive(arr, id) {
-      for (let i in arr) {
-        arr[i].isCopy = false;
-        arr[i].projectId = this.calcProjectId(arr[i].projectId, id);
+      const typeArray = ['JDBCPostProcessor', 'JDBCSampler', 'JDBCPreProcessor'];
+      for (const step of arr) {
+        step.isCopy = false;
+        step.projectId = this.calcProjectId(step.projectId, id);
         // 处理子请求环境
-        let typeArray = ['JDBCPostProcessor', 'JDBCSampler', 'JDBCPreProcessor'];
-        if (typeArray.indexOf(arr[i].type) !== -1) {
-          arr[i].refEevMap = new Map();
-          arr[i].environmentEnable = this.scenario.environmentEnable;
+        if (typeArray.indexOf(step.type) !== -1) {
+          step.refEevMap = new Map();
+          step.environmentEnable = this.scenario.environmentEnable;
           if (this.scenario.environmentEnable && this.scenario.environmentMap) {
-            arr[i].refEevMap = this.scenario.environmentMap;
+            step.refEevMap = this.scenario.environmentMap;
           }
         }
-        if (arr[i].hashTree && arr[i].hashTree.length > 0) {
-          this.recursive(arr[i].hashTree, arr[i].projectId);
+        if (step.hashTree && step.hashTree.length > 0) {
+          this.recursive(step.hashTree, step.projectId);
         }
       }
     },
     recursiveCopy(arr) {
-      for (let i in arr) {
-        arr[i].isCopy = true;
-        if (arr[i].hashTree && arr[i].hashTree.length > 0) {
-          this.recursiveCopy(arr[i].hashTree);
+      for (const step of arr) {
+        step.isCopy = true;
+        if (step.hashTree && step.hashTree.length > 0) {
+          this.recursiveCopy(step.hashTree);
         }
       }
     },
