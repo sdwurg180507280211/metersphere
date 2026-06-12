@@ -3,7 +3,7 @@
     <span class="kv-description" v-if="description">
       {{ description }}
     </span>
-    <div class="kv-row" v-for="(item, index) in items" :key="index">
+    <div class="kv-row" v-for="(item, index) in items" :key="getItemKey(item, index)">
       <el-row type="flex" :gutter="20" justify="space-between" align="middle">
         <el-col class="kv-checkbox">
           <input
@@ -73,9 +73,25 @@ export default {
     },
   },
   data() {
-    return {};
+    return {
+      itemKeyMap: new WeakMap(),
+      itemKeyIndex: 0,
+    };
   },
   methods: {
+    getItemKey(item, index) {
+      if (!item || typeof item !== 'object') {
+        return `item-${index}`;
+      }
+      if (item.uuid || item.id || item.resourceId) {
+        return item.uuid || item.id || item.resourceId;
+      }
+      if (!this.itemKeyMap.has(item)) {
+        this.itemKeyIndex += 1;
+        this.itemKeyMap.set(item, `api-scenario-variable-${this.itemKeyIndex}`);
+      }
+      return this.itemKeyMap.get(item);
+    },
     remove: function (index) {
       if (this.items) {
         this.items.splice(index, 1);

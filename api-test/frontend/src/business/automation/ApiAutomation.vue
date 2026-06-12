@@ -501,16 +501,17 @@ export default {
           description: t.currentScenario.description,
           scenarioDefinition: t.currentScenario.scenarioDefinition,
         };
-        let v3 = JSON.parse(JSON.stringify(v2));
-        if (v1 && v1.scenarioDefinition) {
-          this.deleteResourceIds(v1.scenarioDefinition);
+        const oldScenario = v1 ? JSON.parse(JSON.stringify(v1)) : null;
+        const newScenario = JSON.parse(JSON.stringify(v2));
+        if (oldScenario && oldScenario.scenarioDefinition) {
+          this.deleteResourceIds(oldScenario.scenarioDefinition);
         }
-        if (v3 && v3.scenarioDefinition) {
-          this.deleteResourceIds(v3.scenarioDefinition);
+        if (newScenario && newScenario.scenarioDefinition) {
+          this.deleteResourceIds(newScenario.scenarioDefinition);
         }
         let delta;
-        if (v1 && v3) {
-          delta = diff(JSON.parse(JSON.stringify(v1)), JSON.parse(JSON.stringify(v3)));
+        if (oldScenario && newScenario) {
+          delta = diff(oldScenario, newScenario);
         }
         if (delta) {
           this.isSave = true;
@@ -759,8 +760,7 @@ export default {
       }
     },
     setTabTitle(data) {
-      for (let index in this.tabs) {
-        let tab = this.tabs[index];
+      for (const tab of this.tabs) {
         if (tab && tab.currentScenario && tab.currentScenario.id === data.id) {
           tab.label = data.name;
           break;
