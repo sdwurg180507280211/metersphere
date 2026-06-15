@@ -109,7 +109,7 @@
         <div v-loading="loading" v-if="!asideHidden">
           <el-tree
             node-key="resourceId"
-            v-if="showHideTree && !asideHidden"
+            v-if="showHideTree && !asideHidden && !useVirtualStepTree"
             :props="props"
             :data="scenarioDefinition"
             :default-expanded-keys="expandedNode"
@@ -184,6 +184,90 @@
               </el-col>
             </el-row>
           </el-tree>
+          <div v-if="showHideTree && !asideHidden && useVirtualStepTree" :style="{ height: virtualStepTreeHeight }">
+            <vue-virtual-tree
+              node-key="resourceId"
+              children="hashTree"
+              :height="virtualStepTreeHeight"
+              :minItemSize="43"
+              :sizeDependencies="['expanded']"
+              :props="props"
+              :data="scenarioDefinition"
+              :default-expanded-keys="expandedNode"
+              :expand-on-click-node="false"
+              :buffer="300"
+              draggable
+              highlight-current
+              :show-checkbox="isBatchProcess"
+              @node-expand="nodeExpand"
+              @node-collapse="nodeCollapse"
+              :allow-drop="allowDrop"
+              @node-drag-end="allowDrag"
+              @node-click="nodeClick"
+              class="ms-max-tree"
+              isDynamic
+              ref="maxStepTree">
+              <el-row
+                class="custom-tree-node"
+                :gutter="18"
+                type="flex"
+                align="middle"
+                slot-scope="{ node, data }"
+                style="width: 98%">
+                <el-col
+                  class="custom-tree-node-col"
+                  style="padding-left: 0px; padding-right: 0px"
+                  v-show="node && data.hashTree && data.hashTree.length > 0 && !data.isLeaf">
+                  <span
+                    v-show="!node.expanded"
+                    class="el-icon-circle-plus-outline custom-node_e"
+                    @click="openOrClose(node)" />
+                  <span v-show="node.expanded" class="el-icon-remove-outline custom-node_e" @click="openOrClose(node)" />
+                </el-col>
+                <!-- 批量操作 -->
+                <el-col
+                  :class="data.checkBox ? 'custom-tree-node-hide' : 'custom-tree-node-col'"
+                  style="padding-left: 0px; padding-right: 0px"
+                  v-show="(data.hashTree && data.hashTree.length === 0) || data.isLeaf">
+                  <show-more-btn
+                    :is-show="node.checked"
+                    :buttons="batchOperators"
+                    :size="selectDataCounts"
+                    v-show="data.checkBox"
+                    style="margin-right: 3px" />
+                </el-col>
+                <el-col>
+                  <!-- 步骤组件-->
+                  <ms-component-config
+                    :isMax="true"
+                    :type="data.type"
+                    :scenario="data"
+                    :response="response"
+                    :currentScenario="currentScenario"
+                    :node="node"
+                    :project-list="projectList"
+                    :env-map="projectEnvMap"
+                    :message="message"
+                    @remove="remove"
+                    @copyRow="copyRow"
+                    @runScenario="runScenario"
+                    @stopScenario="stopScenario"
+                    @suggestClick="suggestClick"
+                    @refReload="refReload"
+                    @openScenario="openScenario"
+                    v-if="
+                      stepFilter.get('ALlSamplerStep').indexOf(data.type) === -1 ||
+                      !node.parent ||
+                      !node.parent.data ||
+                      stepFilter.get('AllSamplerProxy').indexOf(node.parent.data.type) === -1
+                    " />
+                  <div v-else class="el-tree-node is-hidden is-focusable is-leaf" style="display: none">
+                    {{ hideNode(node) }}
+                  </div>
+                </el-col>
+              </el-row>
+            </vue-virtual-tree>
+          </div>
           <div @click="fabClick">
             <vue-fab
               id="fab"
@@ -530,8 +614,27 @@ export default {
     projectId() {
       return getCurrentProjectID();
     },
+    useVirtualStepTree() {
+      return this.countVisibleStepNodes(this.scenarioDefinition) > 50;
+    },
+    virtualStepTreeHeight() {
+      return this.reqTotal > 0 ? 'calc(100vh - 90px)' : 'calc(100vh - 70px)';
+    },
   },
   methods: {
+    countVisibleStepNodes(nodes, parent = null) {
+      if (!nodes || nodes.length === 0) {
+        return 0;
+      }
+      return nodes.reduce((count, item) => {
+        const currentVisible =
+          this.stepFilter.get('ALlSamplerStep').indexOf(item.type) === -1 ||
+          !parent ||
+          this.stepFilter.get('AllSamplerProxy').indexOf(parent.type) === -1;
+        const childrenCount = item.hashTree ? this.countVisibleStepNodes(item.hashTree, item) : 0;
+        return count + (currentVisible ? 1 : 0) + childrenCount;
+      }, 0);
+    },
     handleHeaderClick(e) {
       if (e.target.tagName === 'DIV') {
         this.outsideClick(e);
