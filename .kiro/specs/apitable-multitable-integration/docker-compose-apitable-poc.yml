@@ -1,0 +1,22 @@
+# APITable official README marks the all-in-one image as demo/testing only.
+# Do not use this compose file as the enterprise or production deployment plan.
+services:
+  apitable:
+    image: apitable/all-in-one:latest
+    container_name: metersphere-apitable
+    platform: linux/amd64
+    ports:
+      - "8088:80"
+    volumes:
+      - apitable_data:/apitable
+    restart: unless-stopped
+    networks:
+      - metersphere-dev
+
+volumes:
+  apitable_data:
+    driver: local
+
+networks:
+  metersphere-dev:
+    external: true
