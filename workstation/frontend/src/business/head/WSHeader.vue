@@ -18,6 +18,9 @@
           <el-menu-item :index="'/workstation/creation'" >
             {{ $t('workstation.creation') }}
           </el-menu-item>
+          <el-menu-item :index="'/workstation/sql-query'" >
+            {{ $t('sql_query.menu') }}
+          </el-menu-item>
         </el-menu>
       </el-col>
       <el-col :span="10">

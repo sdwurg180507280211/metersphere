@@ -4,6 +4,33 @@ import mf from "metersphere-frontend/src/i18n/lang/en-US"
 import advancedSearch from "./en-US-advanced-search";
 
 const message = {
+  sql_query: {
+    menu: 'SQL Query',
+    title: 'SQL Query Console',
+    refresh: 'Refresh',
+    format: 'Format',
+    clear: 'Clear',
+    run: 'Run Query',
+    placeholder: 'Enter a SELECT statement. WITH CTE is supported. Ctrl / Cmd + Enter to run.',
+    empty: 'Ready. Enter a SELECT or WITH ... SELECT query and run it to view results.',
+    select_only: 'SELECT / WITH SELECT only',
+    max_rows: 'Max {count} rows',
+    loading: 'Querying database...',
+    failed: 'Query failed',
+    success: 'Success',
+    rows: '{count} rows',
+    cost: '{time} ms',
+    truncated: 'Truncated',
+    export_csv: 'Export CSV',
+    close: 'Close',
+    page_info: '{start}-{end} of {total}',
+    history: 'Query History',
+    clear_history: 'Clear',
+    no_history: 'No history',
+    connected: 'Connected',
+    disconnected: 'Disconnected',
+    status_failed: 'Failed to load connection status'
+  },
   advanced_search: {
     // Navigation and titles
     query_center: 'Query Center',
