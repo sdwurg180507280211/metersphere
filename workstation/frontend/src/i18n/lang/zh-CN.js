@@ -4,6 +4,33 @@ import mf from "metersphere-frontend/src/i18n/lang/zh-CN"
 import advancedSearch from "./zh-CN-advanced-search";
 
 const message = {
+  sql_query: {
+    menu: 'SQL 查询台',
+    title: 'SQL 查询台',
+    refresh: '刷新连接',
+    format: '格式化',
+    clear: '清空',
+    run: '运行查询',
+    placeholder: '请输入 SELECT 查询语句，支持 WITH CTE，Ctrl / Cmd + Enter 快捷运行',
+    empty: '准备就绪。输入 SELECT 或 WITH ... SELECT 查询后运行查看结果。',
+    select_only: '仅允许 SELECT / WITH SELECT',
+    max_rows: '最多 {count} 行',
+    loading: '正在查询数据库...',
+    failed: '查询执行失败',
+    success: '成功',
+    rows: '{count} 行',
+    cost: '耗时 {time} ms',
+    truncated: '结果已截断',
+    export_csv: '导出 CSV',
+    close: '关闭结果',
+    page_info: '第 {start}-{end} 条，共 {total} 条',
+    history: '查询历史',
+    clear_history: '清空历史',
+    no_history: '暂无记录',
+    connected: '已连接',
+    disconnected: '未连接',
+    status_failed: '连接状态获取失败'
+  },
   advanced_search: {
     // 导航和标题
     query_center: '查询中心',
