@@ -1,0 +1,28 @@
+services:
+  grist:
+    image: gristlabs/grist-oss:latest
+    container_name: metersphere-grist
+    ports:
+      - "8484:8484"
+    environment:
+      PORT: 8484
+      GRIST_DATA_DIR: /persist/docs
+      GRIST_IN_SERVICE: "true"
+      GRIST_DEFAULT_EMAIL: admin@metersphere.local
+      GRIST_ALLOW_AUTOMATIC_VERSION_CHECKING: "false"
+      GRIST_TELEMETRY_LEVEL: "off"
+      GRIST_HIDE_UI_ELEMENTS: "helpCenter,billing,templates,sendToDrive,tutorials,supportGrist,importFromAirtable,automations"
+      GRIST_WIDGET_LIST_URL: ""
+    volumes:
+      - grist_data:/persist
+    restart: unless-stopped
+    networks:
+      - metersphere-dev
+
+volumes:
+  grist_data:
+    driver: local
+
+networks:
+  metersphere-dev:
+    external: true
