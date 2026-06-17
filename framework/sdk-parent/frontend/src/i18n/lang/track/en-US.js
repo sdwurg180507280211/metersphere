@@ -36,6 +36,15 @@ export default {
   sort: "Sort",
   other_test_name: "Other Test Name",
   variable_name: "Please enter a variable name",
+  multitable: {
+    apitable_authoring: "APITable Authoring",
+    apitable_not_configured: "APITable URL is not configured",
+    apitable_config_hint: "Configure apitable.base-url in /opt/metersphere/conf/metersphere.properties, or set VUE_APP_APITABLE_BASE_URL and restart the services.",
+    loading: "Loading APITable",
+    load_timeout: "APITable is taking longer than expected",
+    load_timeout_hint: "Check the APITable service, URL configuration, or browser iframe restrictions.",
+    open_in_new_window: "Open in new window",
+  },
   demand: {
     id: "Demand ID",
     name: "Demand Name",

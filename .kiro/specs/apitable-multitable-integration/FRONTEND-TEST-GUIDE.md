@@ -4,10 +4,14 @@
 
 ### MeterSphere 中间件容器
 
-- **Compose 文件**: `docker-compose-dev.yml`
-- **网络**: `metersphere-dev`
+- **当前本机 Compose 文件**: `/opt/metersphere/docker-compose-*.yml`
+- **当前本机网络**: `metersphere_ms-network`
+- **仓库开发 Compose 文件**: `docker-compose-dev.yml`
+- **仓库开发网络**: `metersphere-dev`
 - **启动命令**:
   ```bash
+  # 当前本机如已通过 /opt/metersphere 启动中间件，可跳过
+  # 使用仓库开发中间件时再执行：
   docker compose -f docker-compose-dev.yml up -d
   ```
 
@@ -20,6 +24,8 @@
   ```bash
   docker compose -f .kiro/specs/apitable-multitable-integration/docker-compose-apitable-poc.yml up -d
   ```
+
+> 注：POC Compose 默认挂载当前本机的 `metersphere_ms-network`。如果使用仓库里的 `docker-compose-dev.yml`，启动 APITable 时增加 `APITABLE_DOCKER_NETWORK=metersphere-dev`。
 
 > 注：`apitable/all-in-one` 仅用于 demo/testing，不建议用于企业或生产环境。APITable 官方 README 建议至少 4 CPU / 8GB RAM，Apple Silicon 或 arm64 环境可能性能较差。
 
@@ -367,7 +373,25 @@ docker images | grep apitable
 
 正式试点还需要下载官方 Compose 包并导出其中引用的全部镜像。
 
-### 问题 6：本机明显变卡
+### 问题 6：APITable backend-server 反复重启
+
+**典型日志**:
+
+```text
+ALTER TABLE apitable_     -DDB_ENGINE=mysqlclient_release_version
+```
+
+**原因**:
+
+`apitable/all-in-one:latest` 的 `/usr/local/bin/init-appdata.sh` 在 Liquibase 参数中存在引号问题，`-DDB_ENGINE=mysql` 会被拼进 `table.prefix`。
+
+**处理**:
+
+- 使用本规格的 `docker-compose-apitable-poc.yml` 启动。该 Compose 会挂载 `apitable-all-in-one-entrypoint.sh`，在启动前修复引号问题。
+- 如果已经产生错误表名，可清理 APITable POC volume 后重建；不要在正式数据环境中直接删除 volume。
+- 正式试点优先使用 APITable 官方 Compose 离线部署包，并固定镜像版本。
+
+### 问题 7：本机明显变卡
 
 **检查**:
 
@@ -408,4 +432,3 @@ docker stats metersphere-apitable
 2. 实现手动同步 API。
 3. 回写同步状态。
 4. 评估 Webhook 或定时同步。
-

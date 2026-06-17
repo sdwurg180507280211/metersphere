@@ -11,7 +11,7 @@
 ## 背景约束
 
 1. 瑞众保险内网环境无法直接访问外网，所有镜像、Compose 包、依赖、模板和文档资源需要离线导入或内网镜像化。
-2. MeterSphere 项目本地开发环境已通过 `docker-compose-dev.yml` 启动 MySQL、Kafka、Redis、MinIO，并创建 `metersphere-dev` Docker 网络。
+2. 本仓库保留 `docker-compose-dev.yml` 作为开发中间件示例；当前本机实际通过 `/opt/metersphere/docker-compose-*.yml` 启动 MySQL、Kafka、Redis、MinIO，并创建 `metersphere_ms-network` Docker 网络。
 3. 测试跟踪前端是 Vue 2 微前端子应用，路由入口位于 `test-track/frontend/src/router/modules/track.js`。
 4. 测试跟踪顶部菜单由 `test-track/frontend/src/business/head/TrackHeaderMenus.vue` 管理。
 5. 项目二级路由权限映射位于 `framework/sdk-parent/frontend/src/utils/constants.js`。
@@ -45,7 +45,7 @@
 #### 验收标准
 
 1. THE 系统 SHALL 提供 APITable 本地 Docker Compose POC 方案。
-2. THE APITable POC SHALL 与 MeterSphere 开发中间件共享 `metersphere-dev` Docker 网络。
+2. THE APITable POC SHALL 与当前 MeterSphere 中间件 Docker 网络连通，默认使用 `/opt/metersphere` 部署创建的 `metersphere_ms-network`，并可通过环境变量覆盖为 `metersphere-dev` 等其他本地网络。
 3. THE APITable POC SHALL 默认映射到本机 `8088` 端口，避免占用 80 端口。
 4. THE APITable 数据 SHALL 持久化到 Docker volume 或本地目录，容器重启后数据不丢失。
 5. THE POC 方案 MAY 使用 `apitable/all-in-one:latest` 镜像。

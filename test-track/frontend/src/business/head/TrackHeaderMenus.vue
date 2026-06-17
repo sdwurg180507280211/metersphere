@@ -51,6 +51,11 @@ export default {
           permission: 'PROJECT_TRACK_CASE:READ'
         },
         {
+          path: '/track/apitable?projectId=' + this.getProjectId(),
+          name: this.$t('test_track.multitable.apitable_authoring'),
+          permission: 'PROJECT_TRACK_CASE:READ'
+        },
+        {
           path: '/track/review/all',
           name: this.$t('test_track.review.test_review'),
           permission: 'PROJECT_TRACK_REVIEW:READ'
@@ -88,6 +93,8 @@ export default {
           this.pathName = '/track/plan/all';
         } else if (to.path.indexOf("/track/case") >= 0) {
           this.pathName = '/track/case/all?projectId=' + this.getProjectId();
+        } else if (to.path.indexOf("/track/apitable") >= 0) {
+          this.pathName = '/track/apitable?projectId=' + this.getProjectId();
         } else if (to.path.indexOf("/track/issue") >= 0) {
           this.pathName = '/track/issue'
         } else if(to.path.indexOf("/track/home") >= 0) {
