@@ -1,300 +1,242 @@
-# 设计文档
+# 设计文档：接口测试前端性能优化
 
 ## 概述
 
-本优化方案采用**并行加载 + 延迟加载 + 防抖优化**的组合策略，针对接口自动化页面的性能瓶颈进行针对性优化。方案基于 Vue.js 2.7 框架，使用原生 JavaScript 实现，不引入额外依赖。
+本设计面向接口测试自动化大场景性能问题，优化重点从早期的“并行加载、延迟加载、防抖”扩展到“步骤树虚拟化、刷新链路收敛、深拷贝结构化、重组件按需挂载”。目标是在不重写业务模块、不引入大型依赖的前提下，逐步降低大 `scenarioDefinition` 场景下的 DOM、CPU、内存和重渲染成本。
 
-## 核心设计目标
+## 设计目标
 
-1. **减少白屏时间**: 通过并行加载和立即渲染，让用户尽快看到页面内容
-2. **优化首屏渲染**: 延迟加载非关键资源，优先渲染用户需要的内容
-3. **降低服务器负载**: 通过防抖减少无效请求，提升系统整体性能
-4. **保持向后兼容**: 不改变现有业务逻辑，确保功能正常
-5. **容错性**: 部分接口失败不影响整体功能
+1. **降低 DOM 压力**：普通编辑器、最大化编辑器、版本对比页都应具备大场景虚拟滚动能力。
+2. **减少无效重渲染**：去除全局 key 和 `push + splice` 等扩大刷新范围的做法。
+3. **降低大对象处理成本**：保存、调试、版本对比按用途构造最小数据结构。
+4. **控制单步组件成本**：复杂断言、脚本编辑器、请求体等重组件按需渲染。
+5. **渐进式落地**：每个方向可独立提交、独立验证、独立回滚。
 
-## 技术选型
+## 当前架构与瓶颈
 
-| 层级 | 技术 | 说明 |
-|------|------|------|
-| 前端框架 | Vue.js 2.7.3 | 与现有项目保持一致 |
-| 异步处理 | Promise.allSettled | 并行加载，部分失败不影响整体 |
-| 延迟加载 | Vue $nextTick | 延迟到下一个 DOM 更新周期 |
-| 防抖实现 | 原生 JavaScript | 轻量级实现，避免引入 lodash |
+### 步骤树渲染链路
 
-## 架构设计
-
-### 优化策略对比
-
-| 策略 | 适用场景 | 优点 | 缺点 |
-|------|---------|------|------|
-| **并行加载** | 多个独立接口 | 减少总等待时间 | 需确保接口无依赖关系 |
-| **延迟加载** | 非首屏必需资源 | 优先渲染关键内容 | 可能导致后续加载延迟 |
-| **防抖优化** | 高频触发事件 | 减少无效请求 | 需要合理设置延迟时间 |
-
-### 数据流设计
-
-```
-用户访问页面
-    ↓
-组件 mounted/created
-    ↓
-┌─────────────────────────────────────┐
-│  并行加载关键数据                      │
-│  Promise.allSettled([                │
-│    getProject(),                     │
-│    getTrashCase(),                   │
-│    getApiScenario(),                 │
-│    ...                               │
-│  ])                                  │
-└─────────────────────────────────────┘
-    ↓
-关键数据加载完成
-    ↓
-┌─────────────────────────────────────┐
-│  延迟加载非关键数据                    │
-│  $nextTick(() => {                   │
-│    initEnvironment()                 │
-│    getPlugins()                      │
-│  })                                  │
-└─────────────────────────────────────┘
-    ↓
-页面完全就绪
+```mermaid
+flowchart TD
+  A["scenarioDefinition / hashTree"] --> B["el-tree 或 vue-virtual-tree"]
+  B --> C["树节点 slot"]
+  C --> D["MsComponentConfig"]
+  D --> E["具体步骤组件"]
+  E --> F["断言 / 脚本 / 请求体 / 控制器"]
 ```
 
-## 详细设计
+瓶颈说明：
 
-### 方案 1: ApiAutomation.vue 并行加载
+- `el-tree` 会为所有可见节点创建 DOM 和 Vue 组件。
+- 左右版本对比页同时渲染两棵树，成本翻倍。
+- `MsComponentConfig` 会根据步骤类型挂载重组件。
+- 折叠节点、未编辑节点和不可视节点如果仍挂载重组件，会造成无效开销。
 
-**问题分析**:
-- 原代码在 `mounted()` 中串行执行 3 个方法
-- `getProject()` 和 `getTrashCase()` 无依赖关系，可并行
-- `init()` 只处理路由参数，不依赖前两个方法的结果
+### 大对象处理链路
 
-**设计方案**:
+```mermaid
+flowchart TD
+  A["用户保存/调试/版本对比"] --> B["读取 currentScenario / scenarioDefinition"]
+  B --> C["排序 / 字段补齐 / 文件收集"]
+  C --> D["JSON 深拷贝或全树递归"]
+  D --> E["提交 payload / 调试 testPlan / diff 数据"]
+```
+
+瓶颈说明：
+
+- JSON 深拷贝会阻塞主线程，并产生临时内存峰值。
+- 保存和调试需要的数据并不完全等于 UI 运行时对象。
+- UI 临时状态字段进入 payload 会放大复制和序列化成本。
+
+## 方案一：版本对比页步骤树虚拟化
+
+### 现状
+
+`ScenarioDiff.vue` 左右两侧仍使用 `el-tree` 渲染步骤树。普通编辑器和最大化编辑器已经具备大场景虚拟树能力，因此版本对比页是当前步骤树虚拟化的主要缺口。
+
+### 设计
+
+1. 增加 `countVisibleStepNodes(nodes, parent)`，递归统计实际可展示节点。
+2. 增加 `useOldVirtualStepTree` 和 `useNewVirtualStepTree`。
+3. 当任一侧可展示节点数超过 50 时，该侧切换为 `vue-virtual-tree`。
+4. 小场景继续使用原 `el-tree`。
+5. 抽出左右树的公共 slot 渲染逻辑，减少重复模板。
+
+### 关键点
+
+- 统计口径必须排除隐藏的 sampler 子节点。
+- `node-key` 继续使用 `resourceId`。
+- `default-expanded-keys` 继续使用 `oldExpandedNode`、`newExpandedNode`。
+- `nodeExpand`、`nodeCollapse`、`nodeClick` 事件需要兼容虚拟树参数。
+- diff 高亮依赖 DOM 对比，虚拟树模式下需要确认只对已渲染节点做高亮，或将高亮信息降级到数据状态。
+
+### 风险
+
+| 风险 | 处理 |
+|------|------|
+| 虚拟树只渲染可视 DOM，原 DOM diff 逻辑可能无法覆盖所有节点 | 优先保证页面可用和节点点击；diff 高亮作为专项兼容验证 |
+| 左右树模板重复导致维护成本高 | 抽出公共方法或子组件 |
+| 展开状态不同步 | 统一维护 expanded keys |
+
+## 方案二：强制刷新链路重构
+
+### 现状
+
+存在两类强制刷新：
+
+- `store.forceRerenderIndex = getUUID()` 通过全局 key 触发步骤头部重建。
+- 向树数据临时 `push` 一个假节点再 `splice` 删除，触发树刷新。
+
+这类逻辑能解决局部 UI 不刷新的问题，但会扩大重渲染范围，尤其在大树和虚拟树下风险更明显。
+
+### 设计
+
+1. 梳理刷新触发点：
+   - 新增步骤。
+   - 新增断言。
+   - 批量处理模式切换。
+   - 勾选状态刷新。
+   - 节点隐藏/显示状态刷新。
+2. 将刷新目标拆分为：
+   - 步骤序号刷新。
+   - 节点展开/折叠状态刷新。
+   - 批量勾选状态刷新。
+   - 选中节点样式刷新。
+3. 用局部响应式字段替代全局刷新 key。
+4. 用明确方法刷新树状态，替代 `push + splice`。
+
+### 建议实现
+
 ```javascript
-// 修改前：串行执行
-mounted() {
-  this.getProject();      // 等待完成
-  this.getTrashCase();    // 等待完成
-  this.init();            // 最后执行
-}
-
-// 修改后：并行执行
-mounted() {
-  Promise.allSettled([
-    this.getProject(),
-    this.getTrashCase()
-  ]).then(() => {
-    this.init();
-  });
-}
-```
-
-**关键点**:
-- 使用 `Promise.allSettled` 而非 `Promise.all`，部分失败不影响整体
-- 需修复 `getProject()` 和 `getTrashCase()` 方法，确保返回 Promise
-- 组件立即渲染，不等待数据加载
-
-**预期效果**: 加载时间减少 20-40%
-
----
-
-### 方案 2: EditApiScenario.vue 场景编辑器并行加载
-
-**问题分析**:
-- 原代码在 `created()` 中串行执行 6 个方法
-- `getApiScenario()` 是最重的接口，加载场景数据
-- 插件和环境配置不是首屏必需
-
-**设计方案**:
-```javascript
-created() {
-  this.buttonData = buttons(this);
-
-  // 并行加载关键数据
-  Promise.allSettled([
-    this.getApiScenario(),        // 最重要
-    this.getWsProjects(),
-    this.getMaintainerOptions(),
-    this.getDefaultVersion()
-  ]).then(() => {
-    // 关键数据加载完成
-  });
-
-  // 延迟加载非关键数据
-  this.$nextTick(() => {
-    this.getPlugins().then(() => this.initPlugins());
-    this.result = getEnvironmentByProjectId(this.projectId)
-      .then(response => this.environments = response.data);
-  });
-}
-```
-
-**关键点**:
-- 4 个关键接口并行加载
-- 插件和环境配置延迟到 `$nextTick`
-- 需修复 3 个方法的 Promise 返回
-
-**预期效果**: 加载时间减少 30-50%
-
----
-
-### 方案 3: ApiScenarioList.vue 延迟加载环境配置
-
-**问题分析**:
-- 环境配置在 `created()` 中立即加载
-- 环境配置不是首屏必需数据
-- 可延迟到首屏渲染后加载
-
-**设计方案**:
-```javascript
-created() {
-  // ... 其他初始化代码
-
-  // 延迟加载环境配置
-  this.$nextTick(() => {
-    this.initEnvironment();
-  });
-}
-```
-
-**关键点**:
-- 使用 `$nextTick` 延迟 1 个 tick（几毫秒）
-- 不影响环境配置功能
-- 优先渲染关键内容
-
-**预期效果**: 首屏渲染时间减少 15-25%
-
----
-
-### 方案 4: ApiScenarioList.vue 搜索防抖
-
-**问题分析**:
-- 用户快速输入时会触发多次搜索
-- 每次搜索都执行完整的过滤逻辑
-- 导致大量无效请求和性能问题
-
-**设计方案**:
-```javascript
-// 1. 实现轻量级防抖函数
+// 示例：用版本号表达树状态变化，而不是写假节点
+data() {
+  return {
+    treeStateVersion: 0,
+  };
+},
 methods: {
-  debounce(fn, delay) {
-    let timer = null;
-    const self = this;
-    const debounced = function(...args) {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn.apply(self, args), delay);
-    };
-    debounced.cancel = () => clearTimeout(timer);
-    return debounced;
-  }
-}
-
-// 2. 创建防抖实例
-created() {
-  this.debouncedNodeChange = this.debounce(this.nodeChange, 300);
-}
-
-// 3. 使用防抖
-search(projectId, immediate = false) {
-  if (immediate) {
-    this.nodeChange(projectId);  // 立即执行
-  } else {
-    this.debouncedNodeChange(projectId);  // 防抖执行
-  }
-}
-
-// 4. 清理
-beforeDestroy() {
-  if (this.debouncedNodeChange && this.debouncedNodeChange.cancel) {
-    this.debouncedNodeChange.cancel();
-  }
+  markTreeStateChanged() {
+    this.treeStateVersion += 1;
+  },
 }
 ```
 
-**关键点**:
-- 自实现防抖函数，仅 6 行代码，避免引入 lodash
-- 300ms 延迟，平衡响应速度和性能
-- 支持 `immediate` 参数，删除/刷新等操作立即执行
-- 组件销毁时清理定时器
+实际落地时优先使用组件已有公开 API；只有没有 API 时再使用局部版本号。
 
-**预期效果**: 减少 60-80% 无效请求
+## 方案三：保存/调试深拷贝结构化优化
 
-## 涉及文件清单
+### 现状
 
-| 文件 | 修改类型 | 修改位置 | 说明 |
-|------|---------|---------|------|
-| `api-test/frontend/src/business/automation/ApiAutomation.vue` | 修改 | mounted() 钩子 (约 206 行) | 并行加载项目配置和回收站数据 |
-| `api-test/frontend/src/business/automation/ApiAutomation.vue` | 修改 | getProject() 方法 (约 823 行) | 添加 return 语句 |
-| `api-test/frontend/src/business/automation/ApiAutomation.vue` | 修改 | getTrashCase() 方法 (约 816 行) | 添加 return 语句 |
-| `api-test/frontend/src/business/automation/scenario/EditApiScenario.vue` | 修改 | created() 钩子 (约 898 行) | 并行加载 + 延迟加载 |
-| `api-test/frontend/src/business/automation/scenario/EditApiScenario.vue` | 修改 | getWsProjects() 等方法 | 添加 return 语句 |
-| `api-test/frontend/src/business/automation/scenario/ApiScenarioList.vue` | 修改 | created() 钩子 (约 760 行) | 延迟加载环境配置 |
-| `api-test/frontend/src/business/automation/scenario/ApiScenarioList.vue` | 新增 | debounce() 方法 | 防抖工具函数 |
-| `api-test/frontend/src/business/automation/scenario/ApiScenarioList.vue` | 修改 | search() 方法 (约 892 行) | 使用防抖 + immediate 参数 |
-| `api-test/frontend/src/business/automation/scenario/ApiScenarioList.vue` | 修改 | beforeDestroy() 钩子 | 清理防抖定时器 |
+保存、调试、版本对比中仍存在对大对象的 JSON 深拷贝。虽然部分重复深拷贝已合并，但只要场景树足够大，完整序列化仍会造成主线程阻塞和内存峰值。
 
-## 技术决策
+### 设计
 
-### 为什么使用 Promise.allSettled？
+1. 新增纯函数工具层，按用途构造数据：
+   - `buildScenarioSavePayload(scenario, scenarioDefinition)`
+   - `buildScenarioDebugPayload(scenario, selectedStep)`
+   - `buildScenarioDiffPayload(oldScenario, newScenario)`
+2. 明确字段分层：
+   - 业务字段：保存/调试必需。
+   - UI 字段：active、isBatchProcess、checkBox、临时选中状态等。
+   - 运行结果字段：requestResult、debug 临时结果等。
+3. 保存 payload 不携带 UI 临时字段。
+4. 调试 payload 只构造运行所需的 testPlan/threadGroup/hashTree。
+5. 版本 diff payload 只移除或规范化差异无关字段。
 
-**对比 Promise.all**:
-- `Promise.all`: 任一失败则全部失败，返回第一个错误
-- `Promise.allSettled`: 等待所有完成，返回每个结果（成功或失败）
+### 风险
 
-**选择理由**:
-- 更健壮，部分接口失败不影响其他接口
-- 页面仍可正常使用，用户体验更好
-- 便于错误追踪和降级处理
+| 风险 | 处理 |
+|------|------|
+| 字段遗漏导致保存或调试行为变化 | 先做字段白名单审计，再加样本回归 |
+| 当前逻辑依赖原对象副作用 | 先把排序、文件收集等函数改为纯函数 |
+| 历史数据字段不完整 | payload 构造时保留历史字段兜底 |
 
-### 为什么不使用 lodash？
+## 方案四：单步骤组件内部渲染成本优化
 
-**现状**:
-- 项目中只有 lodash 子包（如 `lodash.isempty`）
-- 没有完整的 lodash 或 lodash-es
+### 重点组件
 
-**选择理由**:
-- 避免增加依赖（lodash-es 约 24KB）
-- 自实现防抖函数仅 6 行代码
-- 满足当前需求，无需引入完整库
+| 类型 | 典型问题 | 优化方向 |
+|------|----------|----------|
+| 复杂断言 | 行增删、宽度测量、DOM 查询 | 稳定 key、组件内 ref、RAF 清理 |
+| 脚本编辑器 | 编辑器实例重、初始化慢 | 折叠态不挂载，展开后异步挂载 |
+| 请求体组件 | 参数表、文件列表多 | 减少深 watch，拆分行组件 |
+| 控制器组件 | 嵌套步骤多 | 子步骤按展开状态挂载 |
 
-### 为什么不添加 loading 状态？
+### 设计
 
-**选择理由**:
-- 遵循最小改动原则
-- 先完成核心性能优化
-- 如测量后加载时间仍 > 1 秒，再考虑添加
-- loading 状态只改善感知性能，不改善实际性能
+- `ComponentConfig.vue` 继续承担类型分发，但避免在不可见或折叠状态下挂载重组件。
+- 重组件内部使用稳定 key，避免 index key 造成复用错乱。
+- DOM 测量使用组件内 ref，不使用全局查询。
+- 大列表优先拆成行组件，减少父组件重渲染成本。
 
-## 风险评估
+## 方案五：按需展开与按需挂载
 
-### 低风险
+### 设计原则
 
-- **延迟加载**: 仅调整加载时机，不改变业务逻辑
-- **防抖优化**: 成熟模式，向后兼容
+1. 虚拟滚动解决“树节点数量”问题。
+2. 按需挂载解决“单节点组件过重”问题。
+3. 二者需要配合：虚拟树只渲染可视节点，可视节点内部也只挂载必要内容。
 
-### 中风险
+### 状态设计
 
-- **并行加载**: 需确保方法返回 Promise
-  - **缓解措施**: 添加 return 语句，添加错误处理
-  - **验证方法**: 测试接口失败场景
+| 状态 | 行为 |
+|------|------|
+| 折叠节点 | 只渲染标题、状态、操作入口 |
+| 展开节点 | 挂载直接子节点 |
+| 编辑态节点 | 挂载完整步骤组件 |
+| 批量展开 | 超过阈值时分批挂载或仅展开树结构 |
 
-### 兼容性风险
+### 验证重点
 
-- **Promise.allSettled**: Chrome 76+, Firefox 71+, Safari 13+
-  - **缓解措施**: 如需兼容旧浏览器，使用 polyfill
-  - **验证方法**: 检查项目浏览器支持范围
+- 场景引用、循环、事务、If 控制器展开行为。
+- 拖拽排序后展开状态是否正确。
+- 批量启用/禁用是否影响未挂载子组件数据。
+- 保存时未挂载组件的数据不能丢失。
 
-### 内存泄漏风险
+## 实施顺序
 
-- **防抖定时器**: 组件销毁时未清理
-  - **缓解措施**: 在 `beforeDestroy` 中调用 `cancel()`
-  - **验证方法**: Chrome DevTools Memory 面板检测
+| 优先级 | 方案 | 原因 |
+|--------|------|------|
+| P0 | 建立性能基线 | 没有基线无法证明收益 |
+| P1 | `ScenarioDiff.vue` 左右树虚拟化 | 边界清晰，收益直接 |
+| P2 | 强制刷新链路重构 | 影响树稳定性，需单独推进 |
+| P3 | 保存/调试深拷贝结构化 | 收益明显但字段风险较高 |
+| P4 | 单步骤组件成本优化 | 需要按组件逐个处理 |
+| P5 | 按需展开/按需挂载 | 收益最大，改动面也最大 |
 
-## 回滚方案
+## 验证方案
 
-所有修改都是代码级别的优化，如出现问题可快速回滚：
+### 自动验证
 
-1. 使用 `git revert` 回退到优化前的版本
-2. 建议每个方案单独提交，便于精确回滚
-3. 保留原始代码注释，便于理解修改意图
+```bash
+cd api-test/frontend
+npm run lint
+npm run build
+```
+
+### 性能验证
+
+建议准备以下样本：
+
+| 样本 | 用途 |
+|------|------|
+| 20 步 | 小场景兼容 |
+| 50 步 | 阈值边界 |
+| 100 步 | 常见大场景 |
+| 200 步 | 极限压力 |
+
+记录指标：
+
+- 页面打开耗时。
+- Chrome Performance 主线程长任务。
+- DOM 节点数量。
+- JS heap 峰值。
+- 滚动帧率和明显卡顿点。
+- 保存/调试按钮点击到请求发出耗时。
+
+## 回滚策略
+
+1. 每个方案单独提交。
+2. 虚拟树保留小场景 `el-tree` 分支，可通过阈值快速降级。
+3. 强制刷新链路改造保留旧调用点映射，便于定位回退。
+4. 深拷贝结构化优化必须保留原始保存/调试样本对照。
