@@ -157,6 +157,7 @@
                       <i class="el-icon-remove-outline ms-open-btn" size="mini" @click="closeExpansion('old')" />
                     </el-tooltip>
                     <el-tree
+                      v-if="!useOldVirtualStepTree"
                       node-key="resourceId"
                       :props="props"
                       :data="oldScenarioDefinition"
@@ -164,8 +165,8 @@
                       :default-expanded-keys="oldExpandedNode"
                       :expand-on-click-node="false"
                       highlight-current
-                      @node-expand="nodeExpand(oldScenarioDefinition, null, 'old')"
-                      @node-collapse="nodeCollapse(oldScenarioDefinition, null, 'old')"
+                      @node-expand="oldNodeExpand"
+                      @node-collapse="oldNodeCollapse"
                       @node-click="oldNodeClick"
                       draggable
                       ref="stepTree">
@@ -190,6 +191,43 @@
                       </div>
                       </span>
                     </el-tree>
+                    <div v-else :style="{ height: diffStepTreeHeight }">
+                      <vue-virtual-tree
+                        node-key="resourceId"
+                        children="hashTree"
+                        :height="diffStepTreeHeight"
+                        :minItemSize="43"
+                        :sizeDependencies="['expanded']"
+                        :props="props"
+                        :data="oldScenarioDefinition"
+                        class="ms-tree"
+                        :default-expanded-keys="oldExpandedNode"
+                        :expand-on-click-node="false"
+                        :buffer="300"
+                        highlight-current
+                        @node-expand="oldNodeExpand"
+                        @node-collapse="oldNodeCollapse"
+                        @node-click="oldNodeClick"
+                        draggable
+                        isDynamic
+                        ref="stepTree">
+                        <span class="custom-tree-node father" slot-scope="{ node, data }" style="width: 96%">
+                          <!-- 步骤组件-->
+                          <ms-component-config
+                            :type="data.type"
+                            :scenario="data"
+                            :current-scenario="data"
+                            :node="node"
+                            :env-map="projectEnvMap"
+                            :project-list="projectList"
+                            :show-version="false"
+                            v-if="isStepNodeVisible(data, node)" />
+                          <div v-else class="el-tree-node is-hidden is-focusable is-leaf" style="display: none">
+                            {{ hideNode(node) }}
+                          </div>
+                        </span>
+                      </vue-virtual-tree>
+                    </div>
                   </div>
                 </el-col>
               </el-row>
@@ -342,6 +380,7 @@
                       <i class="el-icon-remove-outline ms-open-btn" size="mini" @click="closeExpansion('new')" />
                     </el-tooltip>
                     <el-tree
+                      v-if="!useNewVirtualStepTree"
                       node-key="resourceId"
                       :props="props"
                       :data="newScenarioDefinition"
@@ -349,8 +388,8 @@
                       :expand-on-click-node="false"
                       :default-expanded-keys="newExpandedNode"
                       highlight-current
-                      @node-expand="nodeExpand(newScenarioDefinition, null, 'new')"
-                      @node-collapse="nodeCollapse(newScenarioDefinition, null, 'new')"
+                      @node-expand="newNodeExpand"
+                      @node-collapse="newNodeCollapse"
                       @node-click="nodeClick"
                       draggable
                       ref="newStepTree">
@@ -375,6 +414,43 @@
                       </div>
                       </span>
                     </el-tree>
+                    <div v-else :style="{ height: diffStepTreeHeight }">
+                      <vue-virtual-tree
+                        node-key="resourceId"
+                        children="hashTree"
+                        :height="diffStepTreeHeight"
+                        :minItemSize="43"
+                        :sizeDependencies="['expanded']"
+                        :props="props"
+                        :data="newScenarioDefinition"
+                        class="ms-tree"
+                        :expand-on-click-node="false"
+                        :default-expanded-keys="newExpandedNode"
+                        :buffer="300"
+                        highlight-current
+                        @node-expand="newNodeExpand"
+                        @node-collapse="newNodeCollapse"
+                        @node-click="nodeClick"
+                        draggable
+                        isDynamic
+                        ref="newStepTree">
+                        <span class="custom-tree-node father" slot-scope="{ node, data }" style="width: 96%">
+                          <!-- 步骤组件-->
+                          <ms-component-config
+                            :type="data.type"
+                            :scenario="data"
+                            :current-scenario="data"
+                            :node="node"
+                            :env-map="newProjectEnvMap"
+                            :project-list="projectList"
+                            :show-version="false"
+                            v-if="isStepNodeVisible(data, node)" />
+                          <div v-else class="el-tree-node is-hidden is-focusable is-leaf" style="display: none">
+                            {{ hideNode(node) }}
+                          </div>
+                        </span>
+                      </vue-virtual-tree>
+                    </div>
                   </div>
                 </el-col>
               </el-row>
@@ -523,6 +599,17 @@ export default {
       stepFilter: new STEP(),
       diffTimer: '',
     };
+  },
+  computed: {
+    useOldVirtualStepTree() {
+      return this.countVisibleStepNodes(this.oldScenarioDefinition) > 50;
+    },
+    useNewVirtualStepTree() {
+      return this.countVisibleStepNodes(this.newScenarioDefinition) > 50;
+    },
+    diffStepTreeHeight() {
+      return 'calc(100vh - 320px)';
+    },
   },
   methods: {
     getCurrentScenario() {
@@ -691,6 +778,26 @@ export default {
         this.newEnvResult.loading = false;
       });
     },
+    isStepDataVisible(data, parentData) {
+      return (
+        this.stepFilter.get('ALlSamplerStep').indexOf(data.type) === -1 ||
+        !parentData ||
+        this.stepFilter.get('AllSamplerProxy').indexOf(parentData.type) === -1
+      );
+    },
+    isStepNodeVisible(data, node) {
+      const parentData = node && node.parent ? node.parent.data : null;
+      return this.isStepDataVisible(data, parentData);
+    },
+    countVisibleStepNodes(nodes, parent = null) {
+      if (!nodes || nodes.length === 0) {
+        return 0;
+      }
+      return nodes.reduce((count, item) => {
+        const childrenCount = item.hashTree ? this.countVisibleStepNodes(item.hashTree, item) : 0;
+        return count + (this.isStepDataVisible(item, parent) ? 1 : 0) + childrenCount;
+      }, 0);
+    },
     changeNodeStatus(nodes, source) {
       for (const node of nodes) {
         if (node) {
@@ -731,6 +838,18 @@ export default {
         this.changeNodeStatus(this.oldScenarioDefinition, source);
       }
       this.showHide();
+    },
+    oldNodeExpand(data, node) {
+      this.nodeExpand(data, node, 'old');
+    },
+    oldNodeCollapse(data, node) {
+      this.nodeCollapse(data, node, 'old');
+    },
+    newNodeExpand(data, node) {
+      this.nodeExpand(data, node, 'new');
+    },
+    newNodeCollapse(data, node) {
+      this.nodeCollapse(data, node, 'new');
     },
     showHide() {
       this.showHideTree = false;
@@ -781,10 +900,15 @@ export default {
     },
     nodeCollapse(data, node, source) {
       if (data && data.resourceId) {
+        let expandedNode;
         if (source === 'new') {
-          this.newExpandedNode.splice(this.newExpandedNode.indexOf(data.resourceId), 1);
+          expandedNode = this.newExpandedNode;
         } else {
-          this.oldExpandedNode.splice(this.oldExpandedNode.indexOf(data.resourceId), 1);
+          expandedNode = this.oldExpandedNode;
+        }
+        const index = expandedNode.indexOf(data.resourceId);
+        if (index !== -1) {
+          expandedNode.splice(index, 1);
         }
       }
     },
