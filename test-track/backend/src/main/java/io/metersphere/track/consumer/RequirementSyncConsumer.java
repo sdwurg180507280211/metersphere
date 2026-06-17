@@ -42,37 +42,55 @@ public class RequirementSyncConsumer implements InitializingBean {
     private DefaultMQPushConsumer consumer;
 
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         consumerGroup = StringUtils.trimToEmpty(consumerGroup);
         nameServer = StringUtils.trimToEmpty(nameServer);
         topic = StringUtils.trimToEmpty(topic);
-        consumer = new DefaultMQPushConsumer(consumerGroup);
-        consumer.setNamesrvAddr(nameServer);
-        consumer.setConsumeMessageBatchMaxSize(1);
-        consumer.subscribe(topic, "*");
+        if (StringUtils.isAnyBlank(nameServer, topic, consumerGroup)) {
+            log.warn("[需求MQ-消费者] RocketMQ配置不完整，跳过消费者启动, nameServer={}, topic={}, consumerGroup={}",
+                    nameServer, topic, consumerGroup);
+            return;
+        }
 
-        consumer.registerMessageListener(new MessageListenerConcurrently() {
-            @Override
-            public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs, ConsumeConcurrentlyContext context) {
-                for (MessageExt msg : msgs) {
-                    try {
-                        String body = new String(msg.getBody(), StandardCharsets.UTF_8);
-                        RequirementSyncMessage syncMessage = JSON.parseObject(body, RequirementSyncMessage.class);
-                        log.info("[需求MQ-接收] msgId={}, topic={}, dmpNum={}, operationType={}, traceId={}",
-                                msg.getMsgId(), msg.getTopic(), syncMessage.getDmpNum(), syncMessage.getOperationType(), syncMessage.getTraceId());
-                        requirementPoolService.handleSyncMessage(syncMessage);
-                        log.info("[需求MQ-消费成功] msgId={}, dmpNum={}, traceId={}",
-                                msg.getMsgId(), syncMessage.getDmpNum(), syncMessage.getTraceId());
-                    } catch (Exception e) {
-                        log.error("消费需求同步消息失败, msgId={}", msg.getMsgId(), e);
-                        return ConsumeConcurrentlyStatus.RECONSUME_LATER;
+        DefaultMQPushConsumer mqConsumer = null;
+        try {
+            mqConsumer = new DefaultMQPushConsumer(consumerGroup);
+            mqConsumer.setNamesrvAddr(nameServer);
+            mqConsumer.setConsumeMessageBatchMaxSize(1);
+            mqConsumer.subscribe(topic, "*");
+
+            mqConsumer.registerMessageListener(new MessageListenerConcurrently() {
+                @Override
+                public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs, ConsumeConcurrentlyContext context) {
+                    for (MessageExt msg : msgs) {
+                        try {
+                            String body = new String(msg.getBody(), StandardCharsets.UTF_8);
+                            RequirementSyncMessage syncMessage = JSON.parseObject(body, RequirementSyncMessage.class);
+                            log.info("[需求MQ-接收] msgId={}, topic={}, dmpNum={}, operationType={}, traceId={}",
+                                    msg.getMsgId(), msg.getTopic(), syncMessage.getDmpNum(), syncMessage.getOperationType(), syncMessage.getTraceId());
+                            requirementPoolService.handleSyncMessage(syncMessage);
+                            log.info("[需求MQ-消费成功] msgId={}, dmpNum={}, traceId={}",
+                                    msg.getMsgId(), syncMessage.getDmpNum(), syncMessage.getTraceId());
+                        } catch (Exception e) {
+                            log.error("消费需求同步消息失败, msgId={}", msg.getMsgId(), e);
+                            return ConsumeConcurrentlyStatus.RECONSUME_LATER;
+                        }
                     }
+                    return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
                 }
-                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
-            }
-        });
+            });
 
-        consumer.start();
+            mqConsumer.start();
+            consumer = mqConsumer;
+            log.info("[需求MQ-消费者] RocketMQ消费者启动成功, nameServer={}, topic={}, consumerGroup={}",
+                    nameServer, topic, consumerGroup);
+        } catch (Exception e) {
+            log.warn("[需求MQ-消费者] RocketMQ消费者启动失败，已降级为不消费需求同步消息，不影响test-track启动, nameServer={}, topic={}, consumerGroup={}",
+                    nameServer, topic, consumerGroup, e);
+            if (mqConsumer != null) {
+                mqConsumer.shutdown();
+            }
+        }
     }
 
     @PreDestroy

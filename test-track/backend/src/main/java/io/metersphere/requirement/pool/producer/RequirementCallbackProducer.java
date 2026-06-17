@@ -31,18 +31,41 @@ public class RequirementCallbackProducer implements InitializingBean, Requiremen
     private DefaultMQProducer producer;
 
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         producerGroup = StringUtils.trimToEmpty(producerGroup);
         nameServer = StringUtils.trimToEmpty(nameServer);
         topic = StringUtils.trimToEmpty(topic);
-        producer = new DefaultMQProducer(producerGroup);
-        producer.setNamesrvAddr(nameServer);
-        producer.start();
+        if (StringUtils.isAnyBlank(nameServer, topic, producerGroup)) {
+            log.warn("[需求回传MQ-生产者] RocketMQ配置不完整，跳过生产者启动, nameServer={}, topic={}, producerGroup={}",
+                    nameServer, topic, producerGroup);
+            return;
+        }
+
+        DefaultMQProducer mqProducer = null;
+        try {
+            mqProducer = new DefaultMQProducer(producerGroup);
+            mqProducer.setNamesrvAddr(nameServer);
+            mqProducer.start();
+            producer = mqProducer;
+            log.info("[需求回传MQ-生产者] RocketMQ生产者启动成功, nameServer={}, topic={}, producerGroup={}",
+                    nameServer, topic, producerGroup);
+        } catch (Exception e) {
+            log.warn("[需求回传MQ-生产者] RocketMQ生产者启动失败，已降级为不可发送需求回传消息，不影响test-track启动, nameServer={}, topic={}, producerGroup={}",
+                    nameServer, topic, producerGroup, e);
+            if (mqProducer != null) {
+                mqProducer.shutdown();
+            }
+        }
     }
 
     @Override
     public void sendCallbackMessage(RequirementCallbackMessage msg) throws Exception {
         ensureTraceId(msg);
+        if (producer == null) {
+            log.warn("[需求回传MQ-发送跳过] RocketMQ生产者未启动, topic={}, dmpNum={}, planStatus={}, traceId={}",
+                    topic, msg.getDmpNum(), msg.getPlanStatus(), msg.getTraceId());
+            throw new IllegalStateException("RocketMQ生产者未启动，无法发送需求回传消息");
+        }
         String body = JSON.toJSONString(msg);
         log.info("[需求回传MQ-发送] client=rocketmq, topic={}, dmpNum={}, planStatus={}, traceId={}", topic, msg.getDmpNum(), msg.getPlanStatus(), msg.getTraceId());
         Message message = new Message(topic, body.getBytes(StandardCharsets.UTF_8));
