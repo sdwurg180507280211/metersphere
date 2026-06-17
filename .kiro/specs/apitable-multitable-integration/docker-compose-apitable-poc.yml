@@ -2,24 +2,21 @@
 # Do not use this compose file as the enterprise or production deployment plan.
 services:
   apitable:
-    image: ${APITABLE_IMAGE:-apitable/all-in-one:latest}
+    image: apitable/all-in-one:latest
     container_name: metersphere-apitable
-    platform: ${APITABLE_PLATFORM:-linux/amd64}
+    platform: linux/amd64
     ports:
-      - "${APITABLE_HOST_PORT:-8088}:80"
+      - "8088:80"
     volumes:
-      - ./apitable-all-in-one-entrypoint.sh:/opt/metersphere-apitable-entrypoint.sh:ro
       - apitable_data:/apitable
-    command: ["bash", "/opt/metersphere-apitable-entrypoint.sh"]
     restart: unless-stopped
     networks:
-      - metersphere
+      - metersphere-dev
 
 volumes:
   apitable_data:
     driver: local
 
 networks:
-  metersphere:
+  metersphere-dev:
     external: true
-    name: ${APITABLE_DOCKER_NETWORK:-metersphere_ms-network}

@@ -75,49 +75,36 @@
 
 本地 POC 使用 all-in-one 镜像，目的是验证嵌入、模板和 API 可用性。该镜像不建议进入企业或生产环境。
 
-当前本机的 MeterSphere 中间件由 `/opt/metersphere/docker-compose-*.yml` 启动，Docker 网络名为 `metersphere_ms-network`；仓库中的 `docker-compose-dev.yml` 使用的是 `metersphere-dev` 网络。POC Compose 默认适配当前 `/opt/metersphere` 部署，可通过 `APITABLE_DOCKER_NETWORK` 切换到其他网络。
-
 文件：`.kiro/specs/apitable-multitable-integration/docker-compose-apitable-poc.yml`
 
 ```yaml
 services:
   apitable:
-    image: ${APITABLE_IMAGE:-apitable/all-in-one:latest}
+    image: apitable/all-in-one:latest
     container_name: metersphere-apitable
-    platform: ${APITABLE_PLATFORM:-linux/amd64}
+    platform: linux/amd64
     ports:
-      - "${APITABLE_HOST_PORT:-8088}:80"
+      - "8088:80"
     volumes:
-      - ./apitable-all-in-one-entrypoint.sh:/opt/metersphere-apitable-entrypoint.sh:ro
       - apitable_data:/apitable
-    command: ["bash", "/opt/metersphere-apitable-entrypoint.sh"]
     restart: unless-stopped
     networks:
-      - metersphere
+      - metersphere-dev
 
 volumes:
   apitable_data:
     driver: local
 
 networks:
-  metersphere:
+  metersphere-dev:
     external: true
-    name: ${APITABLE_DOCKER_NETWORK:-metersphere_ms-network}
 ```
 
 启动顺序：
 
 ```bash
-docker compose -f .kiro/specs/apitable-multitable-integration/docker-compose-apitable-poc.yml up -d
-```
-
-`apitable-all-in-one-entrypoint.sh` 只用于 POC 镜像启动前修复 `apitable/all-in-one:latest` 中 `init-appdata.sh` 的 Liquibase 参数引号问题。未修复时，首次初始化可能把 `-DDB_ENGINE=mysql` 拼进 `${table.prefix}`，生成类似 `apitable_     -DDB_ENGINE=mysqluser` 的错误表名，并导致 backend-server 持续重启。
-
-如果使用仓库里的 `docker-compose-dev.yml` 而不是 `/opt/metersphere` 中间件栈：
-
-```bash
 docker compose -f docker-compose-dev.yml up -d
-APITABLE_DOCKER_NETWORK=metersphere-dev docker compose -f .kiro/specs/apitable-multitable-integration/docker-compose-apitable-poc.yml up -d
+docker compose -f .kiro/specs/apitable-multitable-integration/docker-compose-apitable-poc.yml up -d
 ```
 
 访问地址：
@@ -431,7 +418,6 @@ POST /track/multitable/sync/{projectId}
 |------|------|------|
 | APITable 资源占用高 | 本机或内网试点机器变卡 | POC 单独启停；正式部署按 4C/8G 起步并监控 |
 | all-in-one 不适合生产 | 正式部署不稳定 | POC 只用 all-in-one；正式用官方 Compose 离线包 |
-| all-in-one 初始化脚本兼容问题 | Liquibase 生成错误表名前缀，backend-server 重启 | POC Compose 启动前修复脚本；正式部署改用官方 Compose 包并固定版本 |
 | arm64/Apple Silicon 性能差 | 本机 POC 慢 | 优先 x86_64 机器验证；Apple Silicon 只做轻量体验 |
 | AGPL / 嵌入许可风险 | 合规无法通过 | 保留品牌标识；法务评审；必要时采购企业许可 |
 | iframe 被响应头阻止 | 页面无法嵌入 | 先用 Share/Embed 链接；必要时同域反向代理 |
