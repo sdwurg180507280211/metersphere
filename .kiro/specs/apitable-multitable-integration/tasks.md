@@ -3,13 +3,13 @@
 ## 1. 本地 APITable 容器 POC
 
 ### 1.1 Docker Compose
-- [ ] 1.1.1 新增 `.kiro/specs/apitable-multitable-integration/docker-compose-apitable-poc.yml` POC Compose 文件
-- [ ] 1.1.2 使用 `apitable/all-in-one` 镜像，仅用于 demo/testing
-- [ ] 1.1.3 配置 `metersphere-dev` 外部网络
-- [ ] 1.1.4 配置 `apitable_data` 持久化卷
-- [ ] 1.1.5 配置端口映射 `8088:80`
-- [ ] 1.1.6 在文档中标注 all-in-one 不进入正式企业/生产环境
-- [ ] 1.1.7 在 Apple Silicon 环境记录 `linux/amd64` 模拟带来的性能风险
+- [x] 1.1.1 新增 `.kiro/specs/apitable-multitable-integration/docker-compose-apitable-poc.yml` POC Compose 文件
+- [x] 1.1.2 使用 `apitable/all-in-one` 镜像，仅用于 demo/testing
+- [x] 1.1.3 默认配置 `/opt/metersphere` 部署创建的 `metersphere_ms-network` 外部网络，并支持环境变量覆盖为 `metersphere-dev`
+- [x] 1.1.4 配置 `apitable_data` 持久化卷
+- [x] 1.1.5 配置默认端口映射 `8088:80`，并支持 `APITABLE_HOST_PORT` 覆盖
+- [x] 1.1.6 在文档中标注 all-in-one 不进入正式企业/生产环境
+- [x] 1.1.7 在 Apple Silicon 环境记录 `linux/amd64` 模拟带来的性能风险
 
 ### 1.2 离线镜像流程
 - [ ] 1.2.1 编写外网机器 `docker pull` / `docker save` 命令
@@ -25,7 +25,7 @@
 - [ ] 1.3.5 在内网测试环境验证无需公网即可启动
 
 ### 1.4 APITable 初始化
-- [ ] 1.4.1 启动 APITable POC 容器并访问 `http://localhost:8088`
+- [x] 1.4.1 启动 APITable POC 容器并访问 `http://localhost:8088`
 - [ ] 1.4.2 完成首次初始化或注册测试账号
 - [ ] 1.4.3 创建 `MeterSphere 测试用例辅助编写` Space
 - [ ] 1.4.4 创建 `TestCases` Datasheet 和基础视图
@@ -34,44 +34,44 @@
 ## 2. 测试跟踪前端嵌入
 
 ### 2.1 路由
-- [ ] 2.1.1 修改 `test-track/frontend/src/router/modules/track.js`
-- [ ] 2.1.2 新增 `/track/apitable` POC 路由
-- [ ] 2.1.3 路由组件指向 `@/business/multitable/ApitableMultitable.vue`
+- [x] 2.1.1 修改 `test-track/frontend/src/router/modules/track.js`
+- [x] 2.1.2 新增 `/track/apitable` POC 路由
+- [x] 2.1.3 路由组件指向 `@/business/multitable/ApitableMultitable.vue`
 - [ ] 2.1.4 正式阶段评估抽象 `/track/multitable` provider
 
 ### 2.2 菜单
-- [ ] 2.2.1 修改 `test-track/frontend/src/business/head/TrackHeaderMenus.vue`
-- [ ] 2.2.2 在测试用例菜单后新增“APITable 编写”
-- [ ] 2.2.3 POC 阶段复用 `PROJECT_TRACK_CASE:READ` 权限
-- [ ] 2.2.4 增加 `/track/apitable` 路由高亮逻辑
+- [x] 2.2.1 修改 `test-track/frontend/src/business/head/TrackHeaderMenus.vue`
+- [x] 2.2.2 在测试用例菜单后新增“APITable 编写”
+- [x] 2.2.3 POC 阶段复用 `PROJECT_TRACK_CASE:READ` 权限
+- [x] 2.2.4 增加 `/track/apitable` 路由高亮逻辑
 
 ### 2.3 权限映射
-- [ ] 2.3.1 修改 `framework/sdk-parent/frontend/src/utils/constants.js`
-- [ ] 2.3.2 在 `SECOND_LEVEL_ROUTE_PERMISSION_MAP.TRACK` 增加 `/track/apitable`
+- [x] 2.3.1 修改 `framework/sdk-parent/frontend/src/utils/constants.js`
+- [x] 2.3.2 在 `SECOND_LEVEL_ROUTE_PERMISSION_MAP.TRACK` 增加 `/track/apitable`
 - [ ] 2.3.3 正式阶段评估是否新增 `PROJECT_TRACK_MULTITABLE:READ` 权限
 
 ### 2.4 嵌入组件
-- [ ] 2.4.1 创建 `test-track/frontend/src/business/multitable/ApitableMultitable.vue`
-- [ ] 2.4.2 创建 `test-track/frontend/src/business/multitable/apitable-config.js`
-- [ ] 2.4.3 支持 iframe 加载状态
-- [ ] 2.4.4 支持配置缺失提示
-- [ ] 2.4.5 支持加载失败提示和新窗口打开
-- [ ] 2.4.6 处理页面高度，避免双重滚动
-- [ ] 2.4.7 不隐藏或遮挡 APITable 开源版品牌标识
+- [x] 2.4.1 创建 `test-track/frontend/src/business/multitable/ApitableMultitable.vue`
+- [x] 2.4.2 创建 `test-track/frontend/src/business/multitable/apitable-config.js`
+- [x] 2.4.3 支持 iframe 加载状态
+- [x] 2.4.4 支持配置缺失提示
+- [x] 2.4.5 支持加载超时诊断提示和新窗口打开
+- [x] 2.4.6 处理页面高度，避免双重滚动
+- [x] 2.4.7 不隐藏或遮挡 APITable 开源版品牌标识
 
 ### 2.5 国际化
-- [ ] 2.5.1 修改 `framework/sdk-parent/frontend/src/i18n/lang/track/zh-CN.js`
-- [ ] 2.5.2 修改 `framework/sdk-parent/frontend/src/i18n/lang/track/zh-TW.js`
-- [ ] 2.5.3 修改 `framework/sdk-parent/frontend/src/i18n/lang/track/en-US.js`
-- [ ] 2.5.4 增加“APITable 编写”“未配置 APITable 地址”“打开新窗口”等词条
+- [x] 2.5.1 修改 `framework/sdk-parent/frontend/src/i18n/lang/track/zh-CN.js`
+- [x] 2.5.2 修改 `framework/sdk-parent/frontend/src/i18n/lang/track/zh-TW.js`
+- [x] 2.5.3 修改 `framework/sdk-parent/frontend/src/i18n/lang/track/en-US.js`
+- [x] 2.5.4 增加“APITable 编写”“未配置 APITable 地址”“打开新窗口”等词条
 
 ## 3. 配置能力
 
 ### 3.1 POC 前端配置
-- [ ] 3.1.1 增加 `VUE_APP_APITABLE_BASE_URL`
-- [ ] 3.1.2 增加 `VUE_APP_APITABLE_DEFAULT_PATH`
+- [x] 3.1.1 增加 `VUE_APP_APITABLE_BASE_URL`
+- [x] 3.1.2 增加 `VUE_APP_APITABLE_DEFAULT_PATH`
 - [ ] 3.1.3 在本地 `.env` 或启动命令中配置 APITable 地址
-- [ ] 3.1.4 确保未配置时前端不报错
+- [x] 3.1.4 确保未配置时前端不报错
 
 ### 3.2 后端配置接口（正式阶段）
 - [ ] 3.2.1 在 `test-track/backend` 增加多维表 provider 配置属性
@@ -131,7 +131,7 @@
 ## 6. 测试验证
 
 ### 6.1 容器测试
-- [ ] 6.1.1 `docker compose -f docker-compose-dev.yml up -d`
+- [ ] 6.1.1 确认 `/opt/metersphere` 中间件栈或 `docker-compose-dev.yml` 已启动
 - [ ] 6.1.2 `docker compose -f .kiro/specs/apitable-multitable-integration/docker-compose-apitable-poc.yml up -d`
 - [ ] 6.1.3 验证 `http://localhost:8088` 可访问
 - [ ] 6.1.4 重启容器后验证 APITable 数据不丢失
@@ -151,4 +151,3 @@
 - [ ] 6.3.3 测试测试计划 `/track/plan/all`
 - [ ] 6.3.4 测试缺陷管理 `/track/issue`
 - [ ] 6.3.5 确认新增页面不影响已有路由和菜单
-

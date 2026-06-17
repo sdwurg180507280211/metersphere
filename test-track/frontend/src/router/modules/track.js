@@ -27,6 +27,11 @@ export default {
       component: () => import('@/business/case/TestCase'),
     },
     {
+      path: 'apitable',
+      name: 'testCaseApitable',
+      component: () => import('@/business/multitable/ApitableMultitable.vue'),
+    },
+    {
       path: 'case/edit/:caseId',
       name: 'testCaseEdit',
       component: () => import('@/business/case/components/TestCaseEdit'),
@@ -73,4 +78,3 @@ export default {
     }
   ]
 };
-

@@ -252,6 +252,7 @@ export const SECOND_LEVEL_ROUTE_PERMISSION_MAP = {
   TRACK: [
     {router: '/track/home', permission: ['PROJECT_TRACK_HOME:READ']},
     {router: '/track/case/all', permission: ['PROJECT_TRACK_CASE:READ']},
+    {router: '/track/apitable', permission: ['PROJECT_TRACK_CASE:READ']},
     {router: '/track/review/all', permission: ['PROJECT_TRACK_REVIEW:READ']},
     {router: '/track/plan/all', permission: ['PROJECT_TRACK_PLAN:READ']},
     {router: '/track/issue', permission: ['PROJECT_TRACK_ISSUE:READ']},

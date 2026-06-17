@@ -37,6 +37,15 @@ export default {
   automatic_status_update: "自動狀態更新",
   other_test_name: "其他用例名稱",
   variable_name: "請輸入變量名稱",
+  multitable: {
+    apitable_authoring: "APITable 編寫",
+    apitable_not_configured: "未配置 APITable 多維表地址",
+    apitable_config_hint: "請在 /opt/metersphere/conf/metersphere.properties 配置 apitable.base-url，或配置前端 VUE_APP_APITABLE_BASE_URL 後重啟服務。",
+    loading: "正在加載 APITable",
+    load_timeout: "APITable 加載時間較長",
+    load_timeout_hint: "請檢查 APITable 服務狀態、地址配置或瀏覽器 iframe 限制。",
+    open_in_new_window: "新窗口打開",
+  },
   case: {
     list: "列錶",
     minder: "腦圖",
