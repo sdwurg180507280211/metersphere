@@ -10,4 +10,6 @@ public class SqlQueryRequest {
     private String sql;
 
     private Integer limit;
+
+    private Integer timeoutSeconds;
 }

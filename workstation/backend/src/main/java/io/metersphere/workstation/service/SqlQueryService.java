@@ -2,6 +2,8 @@ package io.metersphere.workstation.service;
 
 import io.metersphere.workstation.dto.SqlConnectionStatus;
 import io.metersphere.workstation.dto.SqlQueryResult;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
@@ -9,10 +11,19 @@ import javax.sql.DataSource;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -26,35 +37,56 @@ public class SqlQueryService {
 
     private static final int DEFAULT_LIMIT = 1000;
     private static final int MAX_LIMIT = 5000;
-    private static final int QUERY_TIMEOUT_SECONDS = 30;
+    private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
+    private static final int MAX_QUERY_TIMEOUT_SECONDS = 300;
     private static final Pattern SELECT_PREFIX = Pattern.compile("^\\s*select\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern WITH_PREFIX = Pattern.compile("^\\s*with\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern COMMENT_PATTERN = Pattern.compile("(--|#|/\\*)");
     private static final Pattern WRITE_KEYWORDS = Pattern.compile("\\b(insert|update|delete|drop|alter|truncate|create|replace|merge|call|execute|grant|revoke|set|use|load|lock|unlock|rename|analyze|optimize|repair|handler|install|uninstall)\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern FORBIDDEN_SELECT_PATTERNS = Pattern.compile("\\binto\\s+(outfile|dumpfile)\\b|\\bfor\\s+update\\b|\\block\\s+in\\s+share\\s+mode\\b", Pattern.CASE_INSENSITIVE);
-    private static final Pattern LIMIT_PATTERN = Pattern.compile("\\blimit\\s+\\d+\\b", Pattern.CASE_INSENSITIVE);
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final ZoneId DISPLAY_ZONE = ZoneId.systemDefault();
+    private static final long MIN_EPOCH_SECONDS = 946684800L;
+    private static final long MAX_EPOCH_SECONDS = 4102444800L;
+    private static final long MIN_EPOCH_MILLIS = MIN_EPOCH_SECONDS * 1000;
+    private static final long MAX_EPOCH_MILLIS = MAX_EPOCH_SECONDS * 1000;
+    private static final long MIN_EPOCH_MICROS = MIN_EPOCH_MILLIS * 1000;
+    private static final long MAX_EPOCH_MICROS = MAX_EPOCH_MILLIS * 1000;
+    private static final Map<String, String> COLUMN_LABELS = createColumnLabels();
 
     @Resource
     private DataSource dataSource;
 
-    public SqlQueryResult query(String sql, Integer limit) throws SQLException {
+    @Value("${metersphere.sql-query.datasource.url:}")
+    private String sqlQueryDatasourceUrl;
+
+    @Value("${metersphere.sql-query.datasource.username:}")
+    private String sqlQueryDatasourceUsername;
+
+    @Value("${metersphere.sql-query.datasource.password:}")
+    private String sqlQueryDatasourcePassword;
+
+    public SqlQueryResult query(String sql, Integer limit, Integer timeoutSeconds) throws SQLException {
         String safeSql = validateSelectSql(sql);
         int safeLimit = normalizeLimit(limit);
+        int safeTimeoutSeconds = normalizeQueryTimeoutSeconds(timeoutSeconds);
         String executableSql = appendLimitIfNecessary(safeSql, safeLimit);
         long start = System.currentTimeMillis();
 
-        try (Connection connection = dataSource.getConnection()) {
+        try (Connection connection = getQueryConnection()) {
             connection.setReadOnly(true);
             try (Statement statement = connection.createStatement()) {
-                statement.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
+                statement.setQueryTimeout(safeTimeoutSeconds);
                 statement.setMaxRows(safeLimit + 1);
 
                 try (ResultSet resultSet = statement.executeQuery(executableSql)) {
-                    List<String> columns = resolveColumns(resultSet.getMetaData());
+                    List<ColumnDescriptor> columns = resolveColumns(resultSet.getMetaData());
                     List<Map<String, Object>> rows = readRows(resultSet, columns, safeLimit);
 
                     SqlQueryResult result = new SqlQueryResult();
-                    result.setColumns(columns);
+                    result.setColumns(toDisplayColumns(columns));
                     result.setRows(rows.size() > safeLimit ? rows.subList(0, safeLimit) : rows);
                     result.setRowCount(Math.min(rows.size(), safeLimit));
                     result.setExecutionTime(System.currentTimeMillis() - start);
@@ -68,7 +100,7 @@ public class SqlQueryService {
 
     public SqlConnectionStatus status() {
         SqlConnectionStatus status = new SqlConnectionStatus();
-        try (Connection connection = dataSource.getConnection();
+        try (Connection connection = getQueryConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery("SELECT DATABASE()")) {
             status.setConnected(true);
@@ -82,6 +114,10 @@ public class SqlQueryService {
             status.setMessage(e.getMessage());
         }
         return status;
+    }
+
+    public boolean useDedicatedQueryDatasource() {
+        return StringUtils.isNotBlank(sqlQueryDatasourceUrl);
     }
 
     public String validateSelectSql(String sql) {
@@ -153,12 +189,41 @@ public class SqlQueryService {
         return Math.min(limit, MAX_LIMIT);
     }
 
+    private int normalizeQueryTimeoutSeconds(Integer timeoutSeconds) {
+        if (timeoutSeconds == null || timeoutSeconds <= 0) {
+            return DEFAULT_QUERY_TIMEOUT_SECONDS;
+        }
+        return Math.min(timeoutSeconds, MAX_QUERY_TIMEOUT_SECONDS);
+    }
+
     private String appendLimitIfNecessary(String sql, int limit) {
         String maskedSql = maskLiterals(sql);
-        if (LIMIT_PATTERN.matcher(maskedSql).find()) {
+        if (hasTopLevelWord(maskedSql, "limit")) {
             return sql;
         }
         return sql + " LIMIT " + (limit + 1);
+    }
+
+    private Connection getQueryConnection() throws SQLException {
+        if (useDedicatedQueryDatasource()) {
+            return DriverManager.getConnection(sqlQueryDatasourceUrl, sqlQueryDatasourceUsername, sqlQueryDatasourcePassword);
+        }
+        return dataSource.getConnection();
+    }
+
+    private boolean hasTopLevelWord(String maskedSql, String word) {
+        int depth = 0;
+        for (int i = 0; i < maskedSql.length(); i++) {
+            char current = maskedSql.charAt(i);
+            if (current == '(') {
+                depth++;
+            } else if (current == ')' && depth > 0) {
+                depth--;
+            } else if (depth == 0 && startsWithWord(maskedSql, i, word)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String resolveHost(String jdbcUrl) {
@@ -217,35 +282,79 @@ public class SqlQueryService {
         return builder.toString().toLowerCase(Locale.ROOT);
     }
 
-    private List<String> resolveColumns(ResultSetMetaData metaData) throws SQLException {
-        List<String> columns = new ArrayList<>();
+    private List<ColumnDescriptor> resolveColumns(ResultSetMetaData metaData) throws SQLException {
+        List<ColumnDescriptor> columns = new ArrayList<>();
         Map<String, Integer> columnCount = new HashMap<>();
         for (int i = 1; i <= metaData.getColumnCount(); i++) {
             String label = metaData.getColumnLabel(i);
             if (label == null || label.isEmpty()) {
                 label = metaData.getColumnName(i);
             }
-            int count = columnCount.getOrDefault(label, 0) + 1;
-            columnCount.put(label, count);
-            columns.add(count > 1 ? label + "_" + count : label);
+            String sourceName = metaData.getColumnName(i);
+            String displayName = resolveDisplayName(label, sourceName);
+            int count = columnCount.getOrDefault(displayName, 0) + 1;
+            columnCount.put(displayName, count);
+            if (count > 1) {
+                displayName = displayName + "_" + count;
+            }
+            columns.add(new ColumnDescriptor(displayName, label, sourceName, metaData.getColumnType(i)));
         }
         return columns;
     }
 
-    private List<Map<String, Object>> readRows(ResultSet resultSet, List<String> columns, int limit) throws SQLException {
+    private List<String> toDisplayColumns(List<ColumnDescriptor> columns) {
+        List<String> displayColumns = new ArrayList<>();
+        for (ColumnDescriptor column : columns) {
+            displayColumns.add(column.getDisplayName());
+        }
+        return displayColumns;
+    }
+
+    private List<Map<String, Object>> readRows(ResultSet resultSet, List<ColumnDescriptor> columns, int limit) throws SQLException {
         List<Map<String, Object>> rows = new ArrayList<>();
         int columnCount = columns.size();
         while (resultSet.next() && rows.size() <= limit) {
             Map<String, Object> row = new LinkedHashMap<>();
             for (int i = 1; i <= columnCount; i++) {
-                row.put(columns.get(i - 1), convertValue(resultSet.getObject(i)));
+                ColumnDescriptor column = columns.get(i - 1);
+                row.put(column.getDisplayName(), convertValue(resultSet.getObject(i), column));
             }
             rows.add(row);
         }
         return rows;
     }
 
-    private Object convertValue(Object value) throws SQLException {
+    private Object convertValue(Object value, ColumnDescriptor column) throws SQLException {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Timestamp) {
+            return ((Timestamp) value).toLocalDateTime().format(DATE_TIME_FORMATTER);
+        }
+        if (value instanceof java.sql.Date) {
+            return ((java.sql.Date) value).toLocalDate().format(DATE_FORMATTER);
+        }
+        if (value instanceof Time) {
+            return ((Time) value).toLocalTime().format(TIME_FORMATTER);
+        }
+        if (value instanceof LocalDateTime) {
+            return ((LocalDateTime) value).format(DATE_TIME_FORMATTER);
+        }
+        if (value instanceof LocalDate) {
+            return ((LocalDate) value).format(DATE_FORMATTER);
+        }
+        if (value instanceof LocalTime) {
+            return ((LocalTime) value).format(TIME_FORMATTER);
+        }
+        if (value instanceof java.util.Date) {
+            return DATE_TIME_FORMATTER.format(((java.util.Date) value).toInstant().atZone(DISPLAY_ZONE));
+        }
+        if (value instanceof Number && isLikelyTimestampColumn(column)) {
+            String formattedEpoch = formatEpochValue((Number) value);
+            if (formattedEpoch != null) {
+                return formattedEpoch;
+            }
+        }
         if (value instanceof byte[]) {
             return "[BINARY " + ((byte[]) value).length + " bytes]";
         }
@@ -259,5 +368,145 @@ public class SqlQueryService {
             return clob.getSubString(1, readLength) + (length > readLength ? "..." : "");
         }
         return value;
+    }
+
+    private String resolveDisplayName(String label, String sourceName) {
+        String normalizedLabel = normalizeColumnName(label);
+        if (COLUMN_LABELS.containsKey(normalizedLabel)) {
+            return COLUMN_LABELS.get(normalizedLabel);
+        }
+
+        String normalizedSourceName = normalizeColumnName(sourceName);
+        if (COLUMN_LABELS.containsKey(normalizedSourceName)) {
+            return COLUMN_LABELS.get(normalizedSourceName);
+        }
+        return label;
+    }
+
+    private boolean isLikelyTimestampColumn(ColumnDescriptor column) {
+        String normalizedLabel = normalizeColumnName(column.getSourceLabel());
+        String normalizedSourceName = normalizeColumnName(column.getSourceName());
+        return containsTimeHint(normalizedLabel)
+            || containsTimeHint(normalizedSourceName)
+            || containsChineseTimeHint(column.getSourceLabel())
+            || containsChineseTimeHint(column.getDisplayName());
+    }
+
+    private boolean containsTimeHint(String name) {
+        if (name == null || name.isEmpty()) {
+            return false;
+        }
+        if (name.contains("duration") || name.contains("elapsed") || name.contains("cost")
+            || name.contains("timeout") || name.contains("response_time") || name.contains("execution_time")) {
+            return false;
+        }
+        return name.endsWith("_time") || name.endsWith("_date") || name.endsWith("_at")
+            || name.contains("_time_") || name.contains("_date_");
+    }
+
+    private boolean containsChineseTimeHint(String name) {
+        return name != null && (name.contains("时间") || name.contains("日期"));
+    }
+
+    private String formatEpochValue(Number value) {
+        long epoch = value.longValue();
+        if (epoch >= MIN_EPOCH_MILLIS && epoch <= MAX_EPOCH_MILLIS) {
+            return formatEpochMillis(epoch);
+        }
+        if (epoch >= MIN_EPOCH_SECONDS && epoch <= MAX_EPOCH_SECONDS) {
+            return formatEpochMillis(epoch * 1000);
+        }
+        if (epoch >= MIN_EPOCH_MICROS && epoch <= MAX_EPOCH_MICROS) {
+            return formatEpochMillis(epoch / 1000);
+        }
+        return null;
+    }
+
+    private String formatEpochMillis(long epochMillis) {
+        return DATE_TIME_FORMATTER.format(Instant.ofEpochMilli(epochMillis).atZone(DISPLAY_ZONE));
+    }
+
+    private String normalizeColumnName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.trim()
+            .replaceAll("([a-z0-9])([A-Z])", "$1_$2")
+            .replace('-', '_')
+            .replaceAll("[^A-Za-z0-9]+", "_")
+            .replaceAll("^_+|_+$", "")
+            .toLowerCase(Locale.ROOT);
+    }
+
+    private static Map<String, String> createColumnLabels() {
+        Map<String, String> labels = new HashMap<>();
+        labels.put("id", "ID");
+        labels.put("num", "编号");
+        labels.put("name", "名称");
+        labels.put("title", "标题");
+        labels.put("description", "描述");
+        labels.put("status", "状态");
+        labels.put("type", "类型");
+        labels.put("method", "方式");
+        labels.put("priority", "优先级");
+        labels.put("creator", "创建人");
+        labels.put("create_user", "创建人");
+        labels.put("update_user", "最后更新人");
+        labels.put("maintainer", "维护人");
+        labels.put("principal", "负责人");
+        labels.put("project_id", "项目ID");
+        labels.put("project_name", "项目名称");
+        labels.put("workspace_id", "工作空间ID");
+        labels.put("workspace_name", "工作空间");
+        labels.put("module_id", "模块ID");
+        labels.put("module_name", "模块");
+        labels.put("system_name", "系统名称");
+        labels.put("system_names", "关联系统");
+        labels.put("associated_system", "关联系统");
+        labels.put("plan_name", "测试计划名称");
+        labels.put("plan_status", "测试计划状态");
+        labels.put("case_name", "用例名称");
+        labels.put("case_num", "用例编号");
+        labels.put("case_status", "用例状态");
+        labels.put("review_status", "评审状态");
+        labels.put("create_time", "创建时间");
+        labels.put("update_time", "更新时间");
+        labels.put("start_time", "开始时间");
+        labels.put("end_time", "结束时间");
+        labels.put("planned_start_time", "计划开始时间");
+        labels.put("planned_end_time", "计划结束时间");
+        labels.put("actual_start_time", "实际开始时间");
+        labels.put("actual_end_time", "实际结束时间");
+        return labels;
+    }
+
+    private static class ColumnDescriptor {
+        private final String displayName;
+        private final String sourceLabel;
+        private final String sourceName;
+        private final int jdbcType;
+
+        ColumnDescriptor(String displayName, String sourceLabel, String sourceName, int jdbcType) {
+            this.displayName = displayName;
+            this.sourceLabel = sourceLabel;
+            this.sourceName = sourceName;
+            this.jdbcType = jdbcType;
+        }
+
+        String getDisplayName() {
+            return displayName;
+        }
+
+        String getSourceLabel() {
+            return sourceLabel;
+        }
+
+        String getSourceName() {
+            return sourceName;
+        }
+
+        int getJdbcType() {
+            return jdbcType;
+        }
     }
 }

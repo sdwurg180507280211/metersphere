@@ -1,7 +1,10 @@
 import Vue from "vue"
 import Router from "vue-router"
 import Workstation from "@/router/modules/workstation";
+import {useUserStore} from "@/store";
+import {SUPER_GROUP} from "metersphere-frontend/src/utils/constants";
 
+const SQL_QUERY_ALLOWED_ACCOUNT = 'kjls_zhaozhiwei001';
 
 // 修复路由变更后报错的问题
 const routerPush = Router.prototype.push;
@@ -39,5 +42,29 @@ export function resetRouter() {
 
 const router = createRouter()
 
+function canAccessSqlQuery() {
+  const user = useUserStore().currentUser || {};
+
+  if (!user.id) {
+    return true;
+  }
+
+  const groups = user.groups || [];
+  const userGroups = user.userGroups || [];
+  const isAllowedAccount = user.id === SQL_QUERY_ALLOWED_ACCOUNT;
+  const isSuperUser = groups.some(group => group.id === SUPER_GROUP)
+    || userGroups.some(userGroup => userGroup.groupId === SUPER_GROUP);
+
+  return isAllowedAccount && isSuperUser;
+}
+
+router.beforeEach((to, from, next) => {
+  if (to.matched.some(record => record.meta && record.meta.superOnly) && !canAccessSqlQuery()) {
+    next('/workstation/dashboard');
+    return;
+  }
+
+  next();
+});
 
 export default router
