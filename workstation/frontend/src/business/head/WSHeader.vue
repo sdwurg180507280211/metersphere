@@ -18,7 +18,7 @@
           <el-menu-item :index="'/workstation/creation'" >
             {{ $t('workstation.creation') }}
           </el-menu-item>
-          <el-menu-item :index="'/workstation/sql-query'" >
+          <el-menu-item v-if="canAccessSqlQuery" :index="'/workstation/sql-query'" >
             {{ $t('sql_query.menu') }}
           </el-menu-item>
         </el-menu>
@@ -31,6 +31,11 @@
 </template>
 <script>
 import MsHeaderRightMenus from "metersphere-frontend/src/components/layout/HeaderRightMenus";
+import {SUPER_GROUP} from "metersphere-frontend/src/utils/constants";
+import {useUserStore} from "@/store";
+
+const SQL_QUERY_ALLOWED_ACCOUNT = 'kjls_zhaozhiwei001';
+
 export default {
   components: {MsHeaderRightMenus},
   data(){
@@ -57,6 +62,18 @@ export default {
         }
         this.init();
       }
+    }
+  },
+  computed: {
+    canAccessSqlQuery() {
+      const user = useUserStore().currentUser || {};
+      const groups = user.groups || [];
+      const userGroups = user.userGroups || [];
+      const isAllowedAccount = user.id === SQL_QUERY_ALLOWED_ACCOUNT;
+      const isSuperUser = groups.some(group => group.id === SUPER_GROUP)
+        || userGroups.some(userGroup => userGroup.groupId === SUPER_GROUP);
+
+      return isAllowedAccount && isSuperUser;
     }
   },
   mounted() {

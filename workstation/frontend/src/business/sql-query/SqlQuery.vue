@@ -1,6 +1,6 @@
 <template>
   <div class="sql-query-page">
-    <section class="sql-query-main">
+    <section ref="queryMain" class="sql-query-main">
       <div class="sql-query-toolbar">
         <div class="toolbar-title">
           <h2>{{ $t('sql_query.title') }}</h2>
@@ -19,14 +19,28 @@
           <el-button size="small" icon="el-icon-delete" @click="clearSql">
             {{ $t('sql_query.clear') }}
           </el-button>
-          <el-input-number
-            v-model="limit"
-            class="limit-input"
-            size="small"
-            :min="1"
-            :max="5000"
-            :step="100"
-            controls-position="right"/>
+          <div class="toolbar-number">
+            <span>{{ $t('sql_query.limit') }}</span>
+            <el-input-number
+              v-model="limit"
+              class="limit-input"
+              size="small"
+              :min="1"
+              :max="5000"
+              :step="100"
+              controls-position="right"/>
+          </div>
+          <div class="toolbar-number">
+            <span>{{ $t('sql_query.timeout_seconds') }}</span>
+            <el-input-number
+              v-model="timeoutSeconds"
+              class="timeout-input"
+              size="small"
+              :min="1"
+              :max="300"
+              :step="5"
+              controls-position="right"/>
+          </div>
           <el-button
             type="primary"
             size="small"
@@ -39,9 +53,11 @@
         </div>
       </div>
 
-      <div class="sql-editor">
+      <div class="sql-editor" :style="editorStyle">
         <div class="editor-gutter">
-          <span v-for="line in lineNumbers" :key="line">{{ line }}</span>
+          <div class="editor-gutter-lines" :style="gutterStyle">
+            <span v-for="line in lineNumbers" :key="line">{{ line }}</span>
+          </div>
         </div>
         <textarea
           ref="sqlEditor"
@@ -49,8 +65,13 @@
           class="sql-textarea"
           spellcheck="false"
           :placeholder="$t('sql_query.placeholder')"
+          @scroll="handleEditorScroll"
           @keydown="handleKeydown"/>
       </div>
+
+      <div
+        :class="['editor-result-resizer', resizingEditor ? 'is-dragging' : '']"
+        @mousedown="startEditorResize"></div>
 
       <div class="sql-result">
         <div v-if="!result && !error && !loading" class="result-empty">
@@ -87,9 +108,23 @@
               </el-tag>
             </div>
             <div class="meta-right">
-              <el-button type="text" size="mini" :disabled="!hasRows" @click="exportCsv">
-                {{ $t('sql_query.export_csv') }}
-              </el-button>
+              <el-popover
+                placement="bottom-end"
+                width="260"
+                trigger="hover">
+                <div class="export-popover">
+                  <div class="export-popover-title">{{ $t('sql_query.excel_name') }}</div>
+                  <el-input
+                    v-model="excelName"
+                    size="mini"
+                    clearable
+                    :placeholder="$t('sql_query.excel_name_placeholder')"
+                    @keyup.enter.native="exportXlsx"/>
+                </div>
+                <el-button slot="reference" type="text" size="mini" :disabled="!hasRows" @click="exportXlsx">
+                  {{ $t('sql_query.export_xlsx') }}
+                </el-button>
+              </el-popover>
               <el-button type="text" size="mini" @click="closeResult">
                 {{ $t('sql_query.close') }}
               </el-button>
@@ -137,10 +172,14 @@
       </div>
     </section>
 
-    <aside class="sql-history">
+    <div
+      :class="['history-width-resizer', resizingHistory ? 'is-dragging' : '']"
+      @mousedown="startHistoryResize"></div>
+
+    <aside class="sql-history" :style="historyStyle">
       <div class="history-header">
         <h3>{{ $t('sql_query.history') }}</h3>
-        <el-button v-if="history.length" type="text" size="mini" @click="clearHistory">
+        <el-button v-if="localHistory.length" type="text" size="mini" @click="clearHistory">
           {{ $t('sql_query.clear_history') }}
         </el-button>
       </div>
@@ -153,19 +192,173 @@
           :key="index"
           class="history-card"
           type="button"
-          @click="loadHistory(item.sql)">
+          @click="openHistoryDetail(item)">
+          <span v-if="item.saved" class="history-saved-tag">{{ $t('sql_query.saved') }}</span>
           <span class="history-sql">{{ item.sql }}</span>
           <span class="history-time">{{ formatTime(item.timestamp) }}</span>
         </button>
       </div>
     </aside>
+
+    <el-dialog
+      :title="$t('sql_query.history_detail')"
+      :visible.sync="historyDialogVisible"
+      width="720px"
+      append-to-body>
+      <div class="history-detail-form">
+        <label>{{ $t('sql_query.sql_content') }}</label>
+        <el-input
+          v-model="historyForm.sql"
+          class="history-detail-sql"
+          type="textarea"
+          :rows="13"/>
+        <label>{{ $t('sql_query.description') }}</label>
+        <el-input
+          v-model="historyForm.description"
+          type="textarea"
+          :rows="3"
+          maxlength="500"
+          show-word-limit
+          :placeholder="$t('sql_query.description_placeholder')"/>
+      </div>
+      <span slot="footer" class="history-dialog-footer">
+        <el-button size="small" @click="historyDialogVisible = false">
+          {{ $t('sql_query.cancel') }}
+        </el-button>
+        <el-button size="small" @click="insertHistorySql">
+          {{ $t('sql_query.insert') }}
+        </el-button>
+        <el-button type="primary" size="small" :loading="savingHistory" @click="saveHistoryToDatabase">
+          {{ $t('sql_query.save') }}
+        </el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { executeSqlQuery, getSqlQueryStatus } from '@/api/sql-query';
+import {
+  executeSqlQuery,
+  getSqlQueryHistory,
+  getSqlQueryStatus,
+  saveSqlQueryHistory
+} from '@/api/sql-query';
 
 const HISTORY_KEY = 'workstation-sql-query-history';
+const DEFAULT_EDITOR_HEIGHT = 240;
+const MIN_EDITOR_HEIGHT = 140;
+const MIN_RESULT_HEIGHT = 220;
+const DEFAULT_HISTORY_WIDTH = 300;
+const MIN_HISTORY_WIDTH = 240;
+const MAX_HISTORY_WIDTH = 520;
+const XLSX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const CRC_TABLE = createCrcTable();
+
+function createCrcTable() {
+  const table = [];
+  for (let i = 0; i < 256; i++) {
+    let value = i;
+    for (let j = 0; j < 8; j++) {
+      value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    }
+    table[i] = value >>> 0;
+  }
+  return table;
+}
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) {
+    crc = CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function writeUint16(target, value) {
+  target.push(value & 0xff, (value >>> 8) & 0xff);
+}
+
+function writeUint32(target, value) {
+  target.push(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
+}
+
+function concatUint8Arrays(parts) {
+  const totalLength = parts.reduce((total, part) => total + part.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  parts.forEach(part => {
+    result.set(part, offset);
+    offset += part.length;
+  });
+  return result;
+}
+
+function encodeText(value) {
+  return new TextEncoder().encode(value);
+}
+
+function createZip(files) {
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  files.forEach(file => {
+    const nameBytes = encodeText(file.name);
+    const dataBytes = encodeText(file.content);
+    const checksum = crc32(dataBytes);
+    const localHeader = [];
+
+    writeUint32(localHeader, 0x04034b50);
+    writeUint16(localHeader, 20);
+    writeUint16(localHeader, 0);
+    writeUint16(localHeader, 0);
+    writeUint16(localHeader, 0);
+    writeUint16(localHeader, 0);
+    writeUint32(localHeader, checksum);
+    writeUint32(localHeader, dataBytes.length);
+    writeUint32(localHeader, dataBytes.length);
+    writeUint16(localHeader, nameBytes.length);
+    writeUint16(localHeader, 0);
+
+    const localPart = concatUint8Arrays([new Uint8Array(localHeader), nameBytes, dataBytes]);
+    localParts.push(localPart);
+
+    const centralHeader = [];
+    writeUint32(centralHeader, 0x02014b50);
+    writeUint16(centralHeader, 20);
+    writeUint16(centralHeader, 20);
+    writeUint16(centralHeader, 0);
+    writeUint16(centralHeader, 0);
+    writeUint16(centralHeader, 0);
+    writeUint16(centralHeader, 0);
+    writeUint32(centralHeader, checksum);
+    writeUint32(centralHeader, dataBytes.length);
+    writeUint32(centralHeader, dataBytes.length);
+    writeUint16(centralHeader, nameBytes.length);
+    writeUint16(centralHeader, 0);
+    writeUint16(centralHeader, 0);
+    writeUint16(centralHeader, 0);
+    writeUint16(centralHeader, 0);
+    writeUint32(centralHeader, 0);
+    writeUint32(centralHeader, offset);
+    centralParts.push(concatUint8Arrays([new Uint8Array(centralHeader), nameBytes]));
+
+    offset += localPart.length;
+  });
+
+  const centralDirectory = concatUint8Arrays(centralParts);
+  const endRecord = [];
+  writeUint32(endRecord, 0x06054b50);
+  writeUint16(endRecord, 0);
+  writeUint16(endRecord, 0);
+  writeUint16(endRecord, files.length);
+  writeUint16(endRecord, files.length);
+  writeUint32(endRecord, centralDirectory.length);
+  writeUint32(endRecord, offset);
+  writeUint16(endRecord, 0);
+
+  return concatUint8Arrays([...localParts, centralDirectory, new Uint8Array(endRecord)]);
+}
 
 export default {
   name: 'SqlQuery',
@@ -173,6 +366,7 @@ export default {
     return {
       sql: '',
       limit: 1000,
+      timeoutSeconds: 30,
       loading: false,
       status: {
         connected: false
@@ -180,11 +374,49 @@ export default {
       result: null,
       error: '',
       history: [],
+      localHistory: [],
+      savedHistory: [],
       currentPage: 1,
-      pageSize: 100
+      pageSize: 100,
+      excelName: '',
+      editorHeight: DEFAULT_EDITOR_HEIGHT,
+      editorScrollTop: 0,
+      resizingEditor: false,
+      resizeStartY: 0,
+      resizeStartHeight: DEFAULT_EDITOR_HEIGHT,
+      historyWidth: DEFAULT_HISTORY_WIDTH,
+      resizingHistory: false,
+      historyResizeStartX: 0,
+      historyResizeStartWidth: DEFAULT_HISTORY_WIDTH,
+      previousBodyCursor: '',
+      previousBodyUserSelect: '',
+      historyDialogVisible: false,
+      savingHistory: false,
+      historyForm: {
+        id: '',
+        sql: '',
+        description: '',
+        saved: false,
+        timestamp: null
+      }
     };
   },
   computed: {
+    editorStyle() {
+      return {
+        height: `${this.editorHeight}px`
+      };
+    },
+    gutterStyle() {
+      return {
+        transform: `translateY(-${this.editorScrollTop}px)`
+      };
+    },
+    historyStyle() {
+      return {
+        width: `${this.historyWidth}px`
+      };
+    },
     lineNumbers() {
       return Math.max(this.sql.split('\n').length, 1);
     },
@@ -213,7 +445,11 @@ export default {
   },
   mounted() {
     this.loadStatus();
-    this.loadLocalHistory();
+    this.loadHistory();
+  },
+  beforeDestroy() {
+    this.stopEditorResize();
+    this.stopHistoryResize();
   },
   methods: {
     async loadStatus() {
@@ -233,9 +469,10 @@ export default {
       }
       this.loading = true;
       this.error = '';
+      this.result = null;
       this.currentPage = 1;
       try {
-        const response = await executeSqlQuery(this.sql, this.limit);
+        const response = await executeSqlQuery(this.sql, this.limit, this.timeoutSeconds);
         this.result = response.data;
         this.saveHistory(this.sql);
       } catch (e) {
@@ -250,20 +487,131 @@ export default {
         this.execute();
       }
     },
+    handleEditorScroll(event) {
+      this.editorScrollTop = event.target.scrollTop;
+    },
+    startEditorResize(event) {
+      event.preventDefault();
+      this.resizingEditor = true;
+      this.resizeStartY = event.clientY;
+      this.resizeStartHeight = this.editorHeight;
+      document.addEventListener('mousemove', this.handleEditorResize);
+      document.addEventListener('mouseup', this.stopEditorResize);
+      this.previousBodyCursor = document.body.style.cursor;
+      this.previousBodyUserSelect = document.body.style.userSelect;
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+    },
+    handleEditorResize(event) {
+      if (!this.resizingEditor) {
+        return;
+      }
+      const nextHeight = this.resizeStartHeight + event.clientY - this.resizeStartY;
+      this.editorHeight = this.normalizeEditorHeight(nextHeight);
+    },
+    stopEditorResize() {
+      if (!this.resizingEditor) {
+        return;
+      }
+      this.resizingEditor = false;
+      document.removeEventListener('mousemove', this.handleEditorResize);
+      document.removeEventListener('mouseup', this.stopEditorResize);
+      document.body.style.cursor = this.previousBodyCursor;
+      document.body.style.userSelect = this.previousBodyUserSelect;
+    },
+    normalizeEditorHeight(height) {
+      const main = this.$refs.queryMain;
+      if (!main) {
+        return Math.max(MIN_EDITOR_HEIGHT, height);
+      }
+      const toolbarHeight = 64;
+      const resizerHeight = 8;
+      const maxHeight = Math.max(MIN_EDITOR_HEIGHT, main.clientHeight - toolbarHeight - resizerHeight - MIN_RESULT_HEIGHT);
+      return Math.min(Math.max(MIN_EDITOR_HEIGHT, height), maxHeight);
+    },
+    startHistoryResize(event) {
+      event.preventDefault();
+      this.resizingHistory = true;
+      this.historyResizeStartX = event.clientX;
+      this.historyResizeStartWidth = this.historyWidth;
+      document.addEventListener('mousemove', this.handleHistoryResize);
+      document.addEventListener('mouseup', this.stopHistoryResize);
+      this.previousBodyCursor = document.body.style.cursor;
+      this.previousBodyUserSelect = document.body.style.userSelect;
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+    },
+    handleHistoryResize(event) {
+      if (!this.resizingHistory) {
+        return;
+      }
+      const nextWidth = this.historyResizeStartWidth - (event.clientX - this.historyResizeStartX);
+      this.historyWidth = Math.min(Math.max(MIN_HISTORY_WIDTH, nextWidth), MAX_HISTORY_WIDTH);
+    },
+    stopHistoryResize() {
+      if (!this.resizingHistory) {
+        return;
+      }
+      this.resizingHistory = false;
+      document.removeEventListener('mousemove', this.handleHistoryResize);
+      document.removeEventListener('mouseup', this.stopHistoryResize);
+      document.body.style.cursor = this.previousBodyCursor;
+      document.body.style.userSelect = this.previousBodyUserSelect;
+    },
     formatSql() {
       const keywords = ['select', 'from', 'where', 'and', 'or', 'group by', 'order by', 'limit', 'left join', 'right join', 'inner join', 'on', 'as', 'having', 'in', 'is', 'not', 'null', 'like', 'between'];
-      let formatted = this.sql;
-      keywords.forEach(keyword => {
-        formatted = formatted.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), keyword.toUpperCase());
-      });
-      this.sql = formatted;
+      const pattern = new RegExp(`\\b(${keywords.join('|')})\\b`, 'gi');
+      this.sql = this.replaceOutsideLiterals(this.sql, text => text.replace(pattern, keyword => keyword.toUpperCase()));
+    },
+    replaceOutsideLiterals(value, replacer) {
+      let result = '';
+      let segment = '';
+      let quote = '';
+      let escaped = false;
+
+      const flushSegment = () => {
+        if (segment) {
+          result += replacer(segment);
+          segment = '';
+        }
+      };
+
+      for (let i = 0; i < value.length; i++) {
+        const current = value[i];
+        if (!quote) {
+          if (current === '\'' || current === '"' || current === '`') {
+            flushSegment();
+            quote = current;
+            result += current;
+          } else {
+            segment += current;
+          }
+          continue;
+        }
+
+        result += current;
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (current === '\\') {
+          escaped = true;
+        } else if (current === quote) {
+          quote = '';
+        }
+      }
+
+      flushSegment();
+      return result;
     },
     clearSql() {
       this.sql = '';
       this.error = '';
       this.result = null;
+      this.editorScrollTop = 0;
       this.$nextTick(() => {
         if (this.$refs.sqlEditor) {
+          this.$refs.sqlEditor.scrollTop = 0;
           this.$refs.sqlEditor.focus();
         }
       });
@@ -272,24 +620,42 @@ export default {
       this.result = null;
       this.error = '';
     },
+    async loadHistory() {
+      this.loadLocalHistory();
+      await this.loadSavedHistory();
+      this.mergeHistory();
+    },
     loadLocalHistory() {
       try {
-        this.history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        this.localHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
       } catch (e) {
-        this.history = [];
+        this.localHistory = [];
+      }
+    },
+    async loadSavedHistory() {
+      try {
+        const response = await getSqlQueryHistory();
+        this.savedHistory = (response.data || []).map(item => this.normalizeSavedHistoryItem(item));
+      } catch (e) {
+        this.savedHistory = [];
       }
     },
     saveHistory(sql) {
+      if (this.savedHistory.some(history => history.sql === sql)) {
+        return;
+      }
       const item = {
         sql,
         timestamp: Date.now()
       };
-      this.history = [item, ...this.history.filter(history => history.sql !== sql)].slice(0, 50);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(this.history));
+      this.localHistory = [item, ...this.localHistory.filter(history => history.sql !== sql)].slice(0, 50);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
+      this.mergeHistory();
     },
     clearHistory() {
-      this.history = [];
+      this.localHistory = [];
       localStorage.removeItem(HISTORY_KEY);
+      this.mergeHistory();
     },
     handleCurrentChange(page) {
       this.currentPage = page;
@@ -298,34 +664,247 @@ export default {
       this.pageSize = size;
       this.currentPage = 1;
     },
-    loadHistory(sql) {
-      this.sql = sql;
+    openHistoryDetail(item) {
+      this.historyForm = {
+        id: item.id || '',
+        sql: item.sql || '',
+        description: item.description || '',
+        saved: !!item.saved,
+        timestamp: item.timestamp || null
+      };
+      this.historyDialogVisible = true;
+    },
+    async saveHistoryToDatabase() {
+      if (!this.historyForm.sql || !this.historyForm.sql.trim()) {
+        return;
+      }
+      this.savingHistory = true;
+      try {
+        const response = await saveSqlQueryHistory({
+          id: this.historyForm.id,
+          sql: this.historyForm.sql,
+          description: this.historyForm.description
+        });
+        const savedItem = this.normalizeSavedHistoryItem(response.data);
+        this.savedHistory = [
+          savedItem,
+          ...this.savedHistory.filter(item => item.id !== savedItem.id)
+        ];
+        this.localHistory = this.localHistory.filter(item => item.sql !== savedItem.sql);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
+        this.historyForm = {
+          id: savedItem.id,
+          sql: savedItem.sql,
+          description: savedItem.description,
+          saved: true,
+          timestamp: savedItem.timestamp
+        };
+        this.mergeHistory();
+        this.$message.success(this.$t('sql_query.save_success'));
+      } catch (e) {
+        this.$message.error(e.message || e.data || this.$t('sql_query.save_failed'));
+      } finally {
+        this.savingHistory = false;
+      }
+    },
+    insertHistorySql() {
+      this.sql = this.historyForm.sql || '';
+      this.historyDialogVisible = false;
+      this.editorScrollTop = 0;
       this.$nextTick(() => {
         if (this.$refs.sqlEditor) {
+          this.$refs.sqlEditor.scrollTop = 0;
           this.$refs.sqlEditor.focus();
         }
       });
     },
-    exportCsv() {
+    normalizeSavedHistoryItem(item) {
+      const timestamp = item.updateTime || item.createTime || Date.now();
+      return {
+        id: item.id,
+        sql: item.sql,
+        description: item.description || '',
+        saved: !!item.saved,
+        timestamp,
+        createTime: item.createTime,
+        updateTime: item.updateTime
+      };
+    },
+    mergeHistory() {
+      const savedSqlSet = new Set(this.savedHistory.map(item => item.sql));
+      const localItems = this.localHistory
+        .filter(item => item && item.sql && !savedSqlSet.has(item.sql))
+        .map(item => ({
+          id: '',
+          sql: item.sql,
+          description: '',
+          saved: false,
+          timestamp: item.timestamp || Date.now()
+        }));
+      this.history = [...this.savedHistory, ...localItems]
+        .sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0))
+        .slice(0, 100);
+    },
+    exportXlsx() {
       if (!this.hasRows) {
         return;
       }
       const headers = this.result.columns;
-      const rows = this.result.rows.map(row => headers.map(column => this.csvValue(row[column])).join(','));
-      const content = [headers.join(','), ...rows].join('\n');
-      const blob = new Blob([`\uFEFF${content}`], { type: 'text/csv;charset=utf-8;' });
+      const rows = this.result.rows.map(row => headers.map(column => row[column]));
+      const blob = this.createXlsxBlob(headers, rows);
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `sql_result_${Date.now()}.csv`;
+      link.download = this.resolveExcelFileName();
       link.click();
       URL.revokeObjectURL(link.href);
     },
-    csvValue(value) {
-      const text = this.stringifyValue(value);
-      if (text.includes(',') || text.includes('"') || text.includes('\n')) {
-        return `"${text.replace(/"/g, '""')}"`;
+    createXlsxBlob(headers, rows) {
+      const now = new Date().toISOString();
+      const worksheet = this.createWorksheetXml(headers, rows);
+      const files = [
+        {
+          name: '[Content_Types].xml',
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            + '<Default Extension="xml" ContentType="application/xml"/>'
+            + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+            + '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+            + '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'
+            + '</Types>'
+        },
+        {
+          name: '_rels/.rels',
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+            + '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
+            + '</Relationships>'
+        },
+        {
+          name: 'docProps/core.xml',
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+            + 'xmlns:dc="http://purl.org/dc/elements/1.1/" '
+            + 'xmlns:dcterms="http://purl.org/dc/terms/" '
+            + 'xmlns:dcmitype="http://purl.org/dc/dcmitype/" '
+            + 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+            + '<dc:creator>MeterSphere</dc:creator>'
+            + `<cp:lastModifiedBy>MeterSphere</cp:lastModifiedBy><dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created>`
+            + `<dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified>`
+            + '</cp:coreProperties>'
+        },
+        {
+          name: 'docProps/app.xml',
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" '
+            + 'xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">'
+            + '<Application>MeterSphere</Application></Properties>'
+        },
+        {
+          name: 'xl/workbook.xml',
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            + 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            + '<sheets><sheet name="查询结果" sheetId="1" r:id="rId1"/></sheets></workbook>'
+        },
+        {
+          name: 'xl/_rels/workbook.xml.rels',
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+            + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+            + '</Relationships>'
+        },
+        {
+          name: 'xl/styles.xml',
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            + '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>'
+            + '<fills count="1"><fill><patternFill patternType="none"/></fill></fills>'
+            + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+            + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+            + '<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>'
+            + '</styleSheet>'
+        },
+        {
+          name: 'xl/worksheets/sheet1.xml',
+          content: worksheet
+        }
+      ];
+      return new Blob([createZip(files)], { type: XLSX_MIME_TYPE });
+    },
+    createWorksheetXml(headers, rows) {
+      const allRows = [headers, ...rows];
+      const sheetRows = allRows.map((row, rowIndex) => {
+        const rowNumber = rowIndex + 1;
+        const cells = row.map((value, columnIndex) => this.createCellXml(value, rowNumber, columnIndex + 1)).join('');
+        return `<row r="${rowNumber}">${cells}</row>`;
+      }).join('');
+      const columnCount = Math.max(headers.length, 1);
+      const rowCount = Math.max(allRows.length, 1);
+      const dimension = `A1:${this.columnName(columnCount)}${rowCount}`;
+      return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        + 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        + `<dimension ref="${dimension}"/><sheetViews><sheetView workbookViewId="0"/></sheetViews>`
+        + `<sheetFormatPr defaultRowHeight="15"/><sheetData>${sheetRows}</sheetData>`
+        + '</worksheet>';
+    },
+    createCellXml(value, rowNumber, columnNumber) {
+      if (value === null || value === undefined) {
+        return '';
       }
-      return text;
+      const cellRef = `${this.columnName(columnNumber)}${rowNumber}`;
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return `<c r="${cellRef}"><v>${value}</v></c>`;
+      }
+      if (typeof value === 'boolean') {
+        return `<c r="${cellRef}" t="b"><v>${value ? 1 : 0}</v></c>`;
+      }
+      return `<c r="${cellRef}" t="inlineStr"><is><t xml:space="preserve">${this.escapeXml(this.stringifyValue(value))}</t></is></c>`;
+    },
+    columnName(index) {
+      let name = '';
+      let value = index;
+      while (value > 0) {
+        const remainder = (value - 1) % 26;
+        name = String.fromCharCode(65 + remainder) + name;
+        value = Math.floor((value - 1) / 26);
+      }
+      return name;
+    },
+    escapeXml(value) {
+      return this.removeInvalidXmlChars(String(value))
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    },
+    removeInvalidXmlChars(value) {
+      let result = '';
+      for (let i = 0; i < value.length; i++) {
+        const code = value.charCodeAt(i);
+        if (code === 9 || code === 10 || code === 13 || code >= 32) {
+          result += value[i];
+        }
+      }
+      return result;
+    },
+    resolveExcelFileName() {
+      const customName = this.excelName.trim()
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .replace(/\s+/g, ' ');
+      const baseName = customName || `sql_result_${this.formatDateForFileName(new Date())}`;
+      return baseName.toLowerCase().endsWith('.xlsx') ? baseName : `${baseName}.xlsx`;
+    },
+    formatDateForFileName(date) {
+      const pad = value => String(value).padStart(2, '0');
+      return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
     },
     stringifyValue(value) {
       if (value === null || value === undefined) {
@@ -434,15 +1013,27 @@ export default {
   justify-content: flex-end;
 }
 
+.toolbar-number {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #606266;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .limit-input {
   width: 116px;
 }
 
+.timeout-input {
+  width: 104px;
+}
+
 .sql-editor {
-  height: 240px;
+  flex: none;
   display: flex;
   background: #1f2937;
-  border-bottom: 1px solid #dcdfe6;
 }
 
 .editor-gutter {
@@ -457,9 +1048,19 @@ export default {
   font-family: Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
   user-select: none;
+  overflow: hidden;
+}
+
+.editor-gutter-lines {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  will-change: transform;
 }
 
 .editor-gutter span {
+  flex: none;
   height: 21px;
   line-height: 21px;
 }
@@ -480,6 +1081,33 @@ export default {
 
 .sql-textarea::placeholder {
   color: #9ca3af;
+}
+
+.editor-result-resizer {
+  height: 8px;
+  flex: none;
+  position: relative;
+  background: #f5f7fa;
+  border-top: 1px solid #dcdfe6;
+  border-bottom: 1px solid #dcdfe6;
+  cursor: ns-resize;
+}
+
+.editor-result-resizer::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 3px;
+  width: 48px;
+  height: 2px;
+  margin-left: -24px;
+  border-radius: 2px;
+  background: #c0c4cc;
+}
+
+.editor-result-resizer:hover::before,
+.editor-result-resizer.is-dragging::before {
+  background: #409eff;
 }
 
 .sql-result {
@@ -575,6 +1203,18 @@ export default {
   gap: 12px;
 }
 
+.meta-right {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.export-popover-title {
+  margin-bottom: 8px;
+  color: #303133;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .table-wrap {
   flex: 1;
   min-height: 0;
@@ -650,8 +1290,34 @@ export default {
   font-size: 12px;
 }
 
+.history-width-resizer {
+  width: 8px;
+  flex: none;
+  position: relative;
+  background: #f5f7fa;
+  border-left: 1px solid #e6e6e6;
+  border-right: 1px solid #e6e6e6;
+  cursor: ew-resize;
+}
+
+.history-width-resizer::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  width: 2px;
+  height: 48px;
+  margin-top: -24px;
+  border-radius: 2px;
+  background: #c0c4cc;
+}
+
+.history-width-resizer:hover::before,
+.history-width-resizer.is-dragging::before {
+  background: #409eff;
+}
+
 .sql-history {
-  width: 300px;
   flex: none;
   display: flex;
   flex-direction: column;
@@ -684,6 +1350,7 @@ export default {
 .history-card {
   width: 100%;
   display: block;
+  position: relative;
   padding: 12px;
   margin-bottom: 8px;
   border: 1px solid #ebeef5;
@@ -698,8 +1365,22 @@ export default {
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
 }
 
+.history-saved-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #ecf5ff;
+  color: #409eff;
+  font-size: 11px;
+  line-height: 18px;
+  opacity: 0.78;
+}
+
 .history-sql {
   display: -webkit-box;
+  padding-right: 58px;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -724,6 +1405,30 @@ export default {
   font-size: 13px;
 }
 
+.history-detail-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-detail-form label {
+  color: #303133;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.history-detail-sql ::v-deep textarea {
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.history-dialog-footer {
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 @media (max-width: 1200px) {
   .sql-query-page {
     height: auto;
@@ -731,8 +1436,12 @@ export default {
     flex-direction: column;
   }
 
+  .history-width-resizer {
+    display: none;
+  }
+
   .sql-history {
-    width: auto;
+    width: auto !important;
     max-height: 260px;
     border-top: 1px solid #e6e6e6;
   }

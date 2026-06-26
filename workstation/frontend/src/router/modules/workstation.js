@@ -41,6 +41,9 @@ export default {
       path: 'sql-query',
       name: 'workstationSqlQuery',
       component: SqlQuery,
+      meta: {
+        superOnly: true,
+      },
     },
   ]
 };
