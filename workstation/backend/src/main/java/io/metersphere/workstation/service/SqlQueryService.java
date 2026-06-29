@@ -6,8 +6,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.Resource;
-import javax.sql.DataSource;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Connection;
@@ -30,7 +28,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 @Service
 public class SqlQueryService {
@@ -39,11 +36,6 @@ public class SqlQueryService {
     private static final int MAX_LIMIT = 5000;
     private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
     private static final int MAX_QUERY_TIMEOUT_SECONDS = 300;
-    private static final Pattern SELECT_PREFIX = Pattern.compile("^\\s*select\\b", Pattern.CASE_INSENSITIVE);
-    private static final Pattern WITH_PREFIX = Pattern.compile("^\\s*with\\b", Pattern.CASE_INSENSITIVE);
-    private static final Pattern COMMENT_PATTERN = Pattern.compile("(--|#|/\\*)");
-    private static final Pattern WRITE_KEYWORDS = Pattern.compile("\\b(insert|update|delete|drop|alter|truncate|create|replace|merge|call|execute|grant|revoke|set|use|load|lock|unlock|rename|analyze|optimize|repair|handler|install|uninstall)\\b", Pattern.CASE_INSENSITIVE);
-    private static final Pattern FORBIDDEN_SELECT_PATTERNS = Pattern.compile("\\binto\\s+(outfile|dumpfile)\\b|\\bfor\\s+update\\b|\\block\\s+in\\s+share\\s+mode\\b", Pattern.CASE_INSENSITIVE);
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -56,8 +48,8 @@ public class SqlQueryService {
     private static final long MAX_EPOCH_MICROS = MAX_EPOCH_MILLIS * 1000;
     private static final Map<String, String> COLUMN_LABELS = createColumnLabels();
 
-    @Resource
-    private DataSource dataSource;
+    @Value("${spring.datasource.url:}")
+    private String defaultDatasourceUrl;
 
     @Value("${metersphere.sql-query.datasource.url:}")
     private String sqlQueryDatasourceUrl;
@@ -69,44 +61,50 @@ public class SqlQueryService {
     private String sqlQueryDatasourcePassword;
 
     public SqlQueryResult query(String sql, Integer limit, Integer timeoutSeconds) throws SQLException {
-        String safeSql = validateSelectSql(sql);
+        List<String> statements = normalizeExecutableStatements(sql);
         int safeLimit = normalizeLimit(limit);
         int safeTimeoutSeconds = normalizeQueryTimeoutSeconds(timeoutSeconds);
-        String executableSql = appendLimitIfNecessary(safeSql, safeLimit);
         long start = System.currentTimeMillis();
 
+        SqlQueryResult result = null;
         try (Connection connection = getQueryConnection()) {
             connection.setReadOnly(true);
             try (Statement statement = connection.createStatement()) {
                 statement.setQueryTimeout(safeTimeoutSeconds);
                 statement.setMaxRows(safeLimit + 1);
 
-                try (ResultSet resultSet = statement.executeQuery(executableSql)) {
-                    List<ColumnDescriptor> columns = resolveColumns(resultSet.getMetaData());
-                    List<Map<String, Object>> rows = readRows(resultSet, columns, safeLimit);
-
-                    SqlQueryResult result = new SqlQueryResult();
-                    result.setColumns(toDisplayColumns(columns));
-                    result.setRows(rows.size() > safeLimit ? rows.subList(0, safeLimit) : rows);
-                    result.setRowCount(Math.min(rows.size(), safeLimit));
-                    result.setExecutionTime(System.currentTimeMillis() - start);
-                    result.setTruncated(rows.size() > safeLimit);
-                    result.setLimit(safeLimit);
-                    return result;
+                for (String statementSql : statements) {
+                    boolean hasResultSet = statement.execute(statementSql);
+                    while (true) {
+                        if (hasResultSet) {
+                            result = readCurrentResultSet(statement, safeLimit);
+                        } else if (statement.getUpdateCount() == -1) {
+                            break;
+                        }
+                        hasResultSet = statement.getMoreResults(Statement.CLOSE_CURRENT_RESULT);
+                    }
                 }
             }
         }
+
+        if (result == null) {
+            result = emptyResult(safeLimit);
+        }
+        result.setExecutionTime(System.currentTimeMillis() - start);
+        return result;
     }
 
     public SqlConnectionStatus status() {
         SqlConnectionStatus status = new SqlConnectionStatus();
-        try (Connection connection = getQueryConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("SELECT DATABASE()")) {
+        try (Connection connection = getQueryConnection()) {
+            connection.setReadOnly(true);
             status.setConnected(true);
             status.setHost(resolveHost(connection.getMetaData().getURL()));
-            if (resultSet.next()) {
-                status.setDatabase(resultSet.getString(1));
+            try (Statement statement = connection.createStatement();
+                 ResultSet resultSet = statement.executeQuery("SELECT DATABASE()")) {
+                if (resultSet.next()) {
+                    status.setDatabase(resultSet.getString(1));
+                }
             }
             status.setMessage("connected");
         } catch (Exception e) {
@@ -116,70 +114,20 @@ public class SqlQueryService {
         return status;
     }
 
-    public boolean useDedicatedQueryDatasource() {
-        return StringUtils.isNotBlank(sqlQueryDatasourceUrl);
-    }
-
-    public String validateSelectSql(String sql) {
-        if (sql == null || sql.trim().isEmpty()) {
+    public String normalizeExecutableSql(String sql) {
+        if (StringUtils.isBlank(sql)) {
             throw new IllegalArgumentException("SQL 不能为空");
         }
-
-        String normalized = stripTrailingSemicolon(sql);
-        String maskedSql = maskLiterals(normalized);
-        if (COMMENT_PATTERN.matcher(maskedSql).find()) {
-            throw new IllegalArgumentException("SQL 查询台不允许包含注释");
-        }
-        if (hasMultipleStatements(normalized)) {
-            throw new IllegalArgumentException("只允许执行单条 SELECT 语句");
-        }
-        if (!isSelectQuery(normalized, maskedSql)) {
-            throw new IllegalArgumentException("只允许执行 SELECT 或 WITH ... SELECT 语句");
-        }
-
-        if (WRITE_KEYWORDS.matcher(maskedSql).find() || FORBIDDEN_SELECT_PATTERNS.matcher(maskedSql).find()) {
-            throw new IllegalArgumentException("SQL 包含非只读或高风险语句");
-        }
-        return normalized;
+        normalizeExecutableStatements(sql);
+        return sql.trim();
     }
 
-    private boolean isSelectQuery(String sql, String maskedSql) {
-        if (SELECT_PREFIX.matcher(sql).find()) {
-            return true;
+    private List<String> normalizeExecutableStatements(String sql) {
+        List<String> statements = splitStatements(sql);
+        if (statements.isEmpty()) {
+            throw new IllegalArgumentException("SQL 不能为空");
         }
-        if (!WITH_PREFIX.matcher(sql).find()) {
-            return false;
-        }
-        return hasTopLevelSelectAfterWith(maskedSql);
-    }
-
-    private boolean hasTopLevelSelectAfterWith(String maskedSql) {
-        int depth = 0;
-        for (int i = 0; i < maskedSql.length(); i++) {
-            char current = maskedSql.charAt(i);
-            if (current == '(') {
-                depth++;
-            } else if (current == ')' && depth > 0) {
-                depth--;
-            } else if (depth == 0 && startsWithWord(maskedSql, i, "select")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean startsWithWord(String value, int index, String word) {
-        int end = index + word.length();
-        if (end > value.length() || !value.startsWith(word, index)) {
-            return false;
-        }
-        boolean leftBoundary = index == 0 || !isWordChar(value.charAt(index - 1));
-        boolean rightBoundary = end == value.length() || !isWordChar(value.charAt(end));
-        return leftBoundary && rightBoundary;
-    }
-
-    private boolean isWordChar(char value) {
-        return Character.isLetterOrDigit(value) || value == '_';
+        return statements;
     }
 
     private int normalizeLimit(Integer limit) {
@@ -196,34 +144,19 @@ public class SqlQueryService {
         return Math.min(timeoutSeconds, MAX_QUERY_TIMEOUT_SECONDS);
     }
 
-    private String appendLimitIfNecessary(String sql, int limit) {
-        String maskedSql = maskLiterals(sql);
-        if (hasTopLevelWord(maskedSql, "limit")) {
-            return sql;
-        }
-        return sql + " LIMIT " + (limit + 1);
-    }
-
     private Connection getQueryConnection() throws SQLException {
-        if (useDedicatedQueryDatasource()) {
-            return DriverManager.getConnection(sqlQueryDatasourceUrl, sqlQueryDatasourceUsername, sqlQueryDatasourcePassword);
+        String jdbcUrl = resolveQueryDatasourceUrl();
+        if (StringUtils.isBlank(jdbcUrl)) {
+            throw new IllegalStateException("SQL 查询台数据库 URL 未配置，请配置 spring.datasource.url 或 metersphere.sql-query.datasource.url");
         }
-        return dataSource.getConnection();
+        if (StringUtils.isBlank(sqlQueryDatasourceUsername) || StringUtils.isBlank(sqlQueryDatasourcePassword)) {
+            throw new IllegalStateException("SQL 查询台只读数据库账号未配置，请配置 metersphere.sql-query.datasource.username/password");
+        }
+        return DriverManager.getConnection(jdbcUrl, sqlQueryDatasourceUsername, sqlQueryDatasourcePassword);
     }
 
-    private boolean hasTopLevelWord(String maskedSql, String word) {
-        int depth = 0;
-        for (int i = 0; i < maskedSql.length(); i++) {
-            char current = maskedSql.charAt(i);
-            if (current == '(') {
-                depth++;
-            } else if (current == ')' && depth > 0) {
-                depth--;
-            } else if (depth == 0 && startsWithWord(maskedSql, i, word)) {
-                return true;
-            }
-        }
-        return false;
+    private String resolveQueryDatasourceUrl() {
+        return StringUtils.defaultIfBlank(sqlQueryDatasourceUrl, defaultDatasourceUrl);
     }
 
     private String resolveHost(String jdbcUrl) {
@@ -239,47 +172,159 @@ public class SqlQueryService {
         return questionIndex >= 0 ? sanitized.substring(0, questionIndex) : sanitized;
     }
 
-    private String stripTrailingSemicolon(String sql) {
-        String normalized = sql.trim();
-        if (normalized.endsWith(";")) {
-            normalized = normalized.substring(0, normalized.length() - 1).trim();
+    private List<String> splitStatements(String sql) {
+        List<String> statements = new ArrayList<>();
+        if (StringUtils.isBlank(sql)) {
+            return statements;
         }
-        return normalized;
-    }
-
-    private boolean hasMultipleStatements(String sql) {
-        String maskedSql = maskLiterals(sql);
-        return maskedSql.contains(";");
-    }
-
-    private String maskLiterals(String sql) {
-        StringBuilder builder = new StringBuilder(sql.length());
+        StringBuilder statement = new StringBuilder();
         char quote = 0;
         boolean escaped = false;
+        boolean lineComment = false;
+        boolean blockComment = false;
         for (int i = 0; i < sql.length(); i++) {
             char current = sql.charAt(i);
-            if (quote == 0) {
-                if (current == '\'' || current == '"' || current == '`') {
-                    quote = current;
-                    builder.append(' ');
-                } else {
-                    builder.append(current);
+            char next = i + 1 < sql.length() ? sql.charAt(i + 1) : 0;
+
+            if (lineComment) {
+                statement.append(current);
+                if (current == '\n' || current == '\r') {
+                    lineComment = false;
                 }
                 continue;
             }
+            if (blockComment) {
+                statement.append(current);
+                if (current == '*' && next == '/') {
+                    statement.append(next);
+                    i++;
+                    blockComment = false;
+                }
+                continue;
+            }
+            if (quote == 0) {
+                if (isDashCommentStart(sql, i)) {
+                    statement.append(current).append(next);
+                    i++;
+                    lineComment = true;
+                    continue;
+                }
+                if (current == '#') {
+                    statement.append(current);
+                    lineComment = true;
+                    continue;
+                }
+                if (current == '/' && next == '*') {
+                    statement.append(current).append(next);
+                    i++;
+                    blockComment = true;
+                    continue;
+                }
+                if (current == '\'' || current == '"' || current == '`') {
+                    quote = current;
+                    statement.append(current);
+                    continue;
+                }
+                if (current == ';') {
+                    addExecutableStatement(statements, statement);
+                    statement.setLength(0);
+                    continue;
+                }
+                statement.append(current);
+                continue;
+            }
 
-            builder.append(' ');
+            statement.append(current);
             if (escaped) {
                 escaped = false;
                 continue;
             }
-            if (current == '\\') {
+            if (current == '\\' && quote != '`') {
                 escaped = true;
             } else if (current == quote) {
-                quote = 0;
+                if (i + 1 < sql.length() && sql.charAt(i + 1) == quote) {
+                    statement.append(sql.charAt(i + 1));
+                    i++;
+                } else {
+                    quote = 0;
+                }
             }
         }
-        return builder.toString().toLowerCase(Locale.ROOT);
+        addExecutableStatement(statements, statement);
+        return statements;
+    }
+
+    private void addExecutableStatement(List<String> statements, StringBuilder statement) {
+        String normalized = statement.toString().trim();
+        if (StringUtils.isNotBlank(trimLeadingWhitespaceAndComments(normalized))) {
+            statements.add(normalized);
+        }
+    }
+
+    private String trimLeadingWhitespaceAndComments(String sql) {
+        int index = 0;
+        while (index < sql.length()) {
+            while (index < sql.length() && Character.isWhitespace(sql.charAt(index))) {
+                index++;
+            }
+            if (isDashCommentStart(sql, index)) {
+                index = skipLineComment(sql, index + 2);
+                continue;
+            }
+            if (index < sql.length() && sql.charAt(index) == '#') {
+                index = skipLineComment(sql, index + 1);
+                continue;
+            }
+            if (index + 1 < sql.length() && sql.charAt(index) == '/' && sql.charAt(index + 1) == '*') {
+                int end = sql.indexOf("*/", index + 2);
+                index = end >= 0 ? end + 2 : sql.length();
+                continue;
+            }
+            break;
+        }
+        return sql.substring(index).trim();
+    }
+
+    private boolean isDashCommentStart(String sql, int index) {
+        if (index + 1 >= sql.length() || sql.charAt(index) != '-' || sql.charAt(index + 1) != '-') {
+            return false;
+        }
+        return index + 2 >= sql.length() || Character.isWhitespace(sql.charAt(index + 2));
+    }
+
+    private int skipLineComment(String sql, int index) {
+        while (index < sql.length() && sql.charAt(index) != '\n' && sql.charAt(index) != '\r') {
+            index++;
+        }
+        return index;
+    }
+
+    private SqlQueryResult readCurrentResultSet(Statement statement, int safeLimit) throws SQLException {
+        try (ResultSet resultSet = statement.getResultSet()) {
+            if (resultSet == null) {
+                return emptyResult(safeLimit);
+            }
+            List<ColumnDescriptor> columns = resolveColumns(resultSet.getMetaData());
+            List<Map<String, Object>> rows = readRows(resultSet, columns, safeLimit);
+
+            SqlQueryResult result = new SqlQueryResult();
+            result.setColumns(toDisplayColumns(columns));
+            result.setRows(rows.size() > safeLimit ? new ArrayList<>(rows.subList(0, safeLimit)) : rows);
+            result.setRowCount(Math.min(rows.size(), safeLimit));
+            result.setTruncated(rows.size() > safeLimit);
+            result.setLimit(safeLimit);
+            return result;
+        }
+    }
+
+    private SqlQueryResult emptyResult(int safeLimit) {
+        SqlQueryResult result = new SqlQueryResult();
+        result.setColumns(new ArrayList<>());
+        result.setRows(new ArrayList<>());
+        result.setRowCount(0);
+        result.setTruncated(false);
+        result.setLimit(safeLimit);
+        return result;
     }
 
     private List<ColumnDescriptor> resolveColumns(ResultSetMetaData metaData) throws SQLException {

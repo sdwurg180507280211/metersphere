@@ -11,5 +11,7 @@ public class SqlQueryHistoryRequest {
 
     private String sql;
 
+    private String title;
+
     private String description;
 }

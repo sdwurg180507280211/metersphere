@@ -76,6 +76,17 @@ public class SqlQueryController {
         }
     }
 
+    @PostMapping("/history/delete")
+    public ResultHolder deleteHistory(@RequestBody SqlQueryHistoryRequest request) {
+        try {
+            String userId = checkAccess();
+            sqlQueryHistoryService.delete(userId, request.getId());
+            return ResultHolder.success(null);
+        } catch (Exception e) {
+            return ResultHolder.error(e.getMessage());
+        }
+    }
+
     private String checkAccess() {
         if (!sqlQueryEnabled) {
             MSException.throwException("SQL 查询台未开启");
