@@ -10,6 +10,13 @@
           </span>
         </div>
         <div class="toolbar-actions">
+          <el-button
+            size="small"
+            icon="el-icon-document-checked"
+            :disabled="!sql.trim()"
+            @click="openDetailDialog">
+            {{ $t('sql_query.detail') }}
+          </el-button>
           <el-button size="small" icon="el-icon-refresh" @click="loadStatus">
             {{ $t('sql_query.refresh') }}
           </el-button>
@@ -184,19 +191,25 @@
         </el-button>
       </div>
       <div class="history-list">
+        <button
+          class="history-card history-create-card"
+          type="button"
+          @click="startNewHistory">
+          {{ $t('sql_query.new_history_title') }}
+        </button>
+        <button
+          v-for="(item, index) in history"
+          :key="item.id || item.localId || item.timestamp || index"
+          :class="['history-card', isHistorySelected(item) ? 'is-selected' : '']"
+          type="button"
+          @click="useHistorySql(item)">
+          <span v-if="item.saved" class="history-saved-tag">{{ $t('sql_query.saved') }}</span>
+          <span class="history-title">{{ resolveHistoryTitle(item) }}</span>
+          <span class="history-time">{{ formatTime(item.timestamp) }}</span>
+        </button>
         <div v-if="!history.length" class="history-empty">
           {{ $t('sql_query.no_history') }}
         </div>
-        <button
-          v-for="(item, index) in history"
-          :key="index"
-          class="history-card"
-          type="button"
-          @click="openHistoryDetail(item)">
-          <span v-if="item.saved" class="history-saved-tag">{{ $t('sql_query.saved') }}</span>
-          <span class="history-sql">{{ item.sql }}</span>
-          <span class="history-time">{{ formatTime(item.timestamp) }}</span>
-        </button>
       </div>
     </aside>
 
@@ -206,6 +219,12 @@
       width="720px"
       append-to-body>
       <div class="history-detail-form">
+        <label>{{ $t('sql_query.history_record_title') }}</label>
+        <el-input
+          v-model="historyForm.title"
+          maxlength="120"
+          show-word-limit
+          :placeholder="$t('sql_query.history_record_title_placeholder')"/>
         <label>{{ $t('sql_query.sql_content') }}</label>
         <el-input
           v-model="historyForm.sql"
@@ -221,17 +240,25 @@
           show-word-limit
           :placeholder="$t('sql_query.description_placeholder')"/>
       </div>
-      <span slot="footer" class="history-dialog-footer">
-        <el-button size="small" @click="historyDialogVisible = false">
-          {{ $t('sql_query.cancel') }}
+      <div slot="footer" class="history-dialog-footer">
+        <el-button
+          v-if="historyForm.id"
+          type="danger"
+          size="small"
+          plain
+          :loading="deletingHistory"
+          @click="deleteHistoryFromDatabase">
+          {{ $t('sql_query.delete') }}
         </el-button>
-        <el-button size="small" @click="insertHistorySql">
-          {{ $t('sql_query.insert') }}
-        </el-button>
-        <el-button type="primary" size="small" :loading="savingHistory" @click="saveHistoryToDatabase">
-          {{ $t('sql_query.save') }}
-        </el-button>
-      </span>
+        <div class="history-dialog-footer-right">
+          <el-button size="small" @click="historyDialogVisible = false">
+            {{ $t('sql_query.cancel') }}
+          </el-button>
+          <el-button type="primary" size="small" :loading="savingHistory" @click="saveHistoryToDatabase">
+            {{ $t('sql_query.save') }}
+          </el-button>
+        </div>
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -241,7 +268,8 @@ import {
   executeSqlQuery,
   getSqlQueryHistory,
   getSqlQueryStatus,
-  saveSqlQueryHistory
+  saveSqlQueryHistory,
+  deleteSqlQueryHistory
 } from '@/api/sql-query';
 
 const HISTORY_KEY = 'workstation-sql-query-history';
@@ -251,6 +279,8 @@ const MIN_RESULT_HEIGHT = 220;
 const DEFAULT_HISTORY_WIDTH = 300;
 const MIN_HISTORY_WIDTH = 240;
 const MAX_HISTORY_WIDTH = 520;
+const INDENT_TEXT = '  ';
+const SQL_LINE_COMMENT = '-- ';
 const XLSX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const CRC_TABLE = createCrcTable();
 
@@ -392,13 +422,18 @@ export default {
       previousBodyUserSelect: '',
       historyDialogVisible: false,
       savingHistory: false,
+      deletingHistory: false,
       historyForm: {
         id: '',
         sql: '',
+        title: '',
         description: '',
         saved: false,
         timestamp: null
-      }
+      },
+      selectedHistory: null,
+      creatingHistory: false,
+      suppressDraftSync: false
     };
   },
   computed: {
@@ -443,6 +478,11 @@ export default {
       return this.result.rows.slice(start, start + this.pageSize);
     }
   },
+  watch: {
+    sql(value) {
+      this.persistLocalDraft(value);
+    }
+  },
   mounted() {
     this.loadStatus();
     this.loadHistory();
@@ -485,7 +525,229 @@ export default {
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
         event.preventDefault();
         this.execute();
+        return;
       }
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          this.handleShiftTab(event.target);
+        } else {
+          this.indentSelection(event.target);
+        }
+        return;
+      }
+      if (event.key === 'Enter' && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) {
+        event.preventDefault();
+        this.insertIndentedNewLine(event.target);
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key === '/') {
+        event.preventDefault();
+        this.toggleLineComment(event.target);
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key === ']') {
+        event.preventDefault();
+        this.indentSelectedLines(event.target);
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key === '[') {
+        event.preventDefault();
+        this.outdentSelectedLines(event.target, false);
+        return;
+      }
+      if (event.key === 'Home' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        this.moveToSmartLineStart(event.target, event.shiftKey);
+      }
+    },
+    handleShiftTab(editor) {
+      if (editor.selectionStart !== editor.selectionEnd) {
+        this.outdentSelectedLines(editor, false);
+        return;
+      }
+      this.moveToSmartLineStart(editor, false);
+    },
+    indentSelection(editor) {
+      if (editor.selectionStart !== editor.selectionEnd) {
+        this.indentSelectedLines(editor);
+        return;
+      }
+      this.replaceEditorRange(editor, editor.selectionStart, editor.selectionEnd, INDENT_TEXT);
+    },
+    indentSelectedLines(editor) {
+      this.transformSelectedLines(editor, line => ({
+        text: INDENT_TEXT + line,
+        editStart: 0,
+        oldLength: 0,
+        newLength: INDENT_TEXT.length
+      }));
+    },
+    outdentSelectedLines(editor, moveToLineStartWhenUnchanged = true) {
+      const selectionStart = editor.selectionStart;
+      const selectionEnd = editor.selectionEnd;
+      const transformed = this.transformSelectedLines(editor, line => {
+        const removeLength = this.getIndentRemoveLength(line);
+        if (!removeLength) {
+          return { text: line };
+        }
+        return {
+          text: line.slice(removeLength),
+          editStart: 0,
+          oldLength: removeLength,
+          newLength: 0
+        };
+      });
+      if (moveToLineStartWhenUnchanged && selectionStart === selectionEnd && !transformed) {
+        this.moveToSmartLineStart(editor, false);
+      }
+    },
+    getIndentRemoveLength(line) {
+      if (line.startsWith(INDENT_TEXT)) {
+        return INDENT_TEXT.length;
+      }
+      if (line.startsWith('\t')) {
+        return 1;
+      }
+      const spaces = line.match(/^ +/);
+      return spaces ? Math.min(spaces[0].length, INDENT_TEXT.length) : 0;
+    },
+    insertIndentedNewLine(editor) {
+      const value = this.sql;
+      const lineStart = this.getLineStart(value, editor.selectionStart);
+      const lineBeforeCursor = value.slice(lineStart, editor.selectionStart);
+      const indent = (lineBeforeCursor.match(/^\s*/) || [''])[0];
+      this.replaceEditorRange(editor, editor.selectionStart, editor.selectionEnd, `\n${indent}`);
+    },
+    toggleLineComment(editor) {
+      const value = this.sql;
+      const bounds = this.getSelectedLineBounds(value, editor.selectionStart, editor.selectionEnd);
+      const lines = value.slice(bounds.start, bounds.end).split('\n');
+      const shouldUncomment = lines
+        .filter(line => line.trim())
+        .every(line => line.slice(this.getLeadingWhitespaceLength(line)).startsWith('--'));
+
+      this.transformSelectedLines(editor, line => {
+        if (!line.trim()) {
+          return { text: line };
+        }
+        const indentLength = this.getLeadingWhitespaceLength(line);
+        if (shouldUncomment) {
+          const commentLength = line.slice(indentLength).startsWith(SQL_LINE_COMMENT)
+            ? SQL_LINE_COMMENT.length
+            : 2;
+          return {
+            text: line.slice(0, indentLength) + line.slice(indentLength + commentLength),
+            editStart: indentLength,
+            oldLength: commentLength,
+            newLength: 0
+          };
+        }
+        return {
+          text: line.slice(0, indentLength) + SQL_LINE_COMMENT + line.slice(indentLength),
+          editStart: indentLength,
+          oldLength: 0,
+          newLength: SQL_LINE_COMMENT.length
+        };
+      });
+    },
+    moveToSmartLineStart(editor, extendSelection) {
+      const value = this.sql;
+      const lineStart = this.getLineStart(value, editor.selectionStart);
+      const lineEnd = this.getLineEnd(value, editor.selectionStart);
+      const line = value.slice(lineStart, lineEnd);
+      const firstContentIndex = line.search(/\S/);
+      const smartStart = firstContentIndex >= 0 ? lineStart + firstContentIndex : lineStart;
+      const target = editor.selectionStart === smartStart ? lineStart : smartStart;
+
+      if (extendSelection) {
+        editor.setSelectionRange(target, editor.selectionEnd);
+      } else {
+        editor.setSelectionRange(target, target);
+      }
+    },
+    transformSelectedLines(editor, transformer) {
+      const value = this.sql;
+      const selectionStart = editor.selectionStart;
+      const selectionEnd = editor.selectionEnd;
+      const bounds = this.getSelectedLineBounds(value, selectionStart, selectionEnd);
+      const block = value.slice(bounds.start, bounds.end);
+      const lines = block.split('\n');
+      const edits = [];
+      let offset = bounds.start;
+      const updatedBlock = lines.map(line => {
+        const result = transformer(line) || { text: line };
+        if ((result.oldLength || result.newLength) && result.editStart !== undefined) {
+          edits.push({
+            index: offset + result.editStart,
+            oldLength: result.oldLength || 0,
+            newLength: result.newLength || 0
+          });
+        }
+        offset += line.length + 1;
+        return result.text;
+      }).join('\n');
+
+      if (updatedBlock === block) {
+        return false;
+      }
+
+      const newValue = value.slice(0, bounds.start) + updatedBlock + value.slice(bounds.end);
+      const newSelectionStart = this.adjustSelectionIndex(selectionStart, edits, true);
+      const newSelectionEnd = this.adjustSelectionIndex(selectionEnd, edits, true);
+      this.updateEditorValue(editor, newValue, newSelectionStart, newSelectionEnd);
+      return true;
+    },
+    adjustSelectionIndex(index, edits, includeInsertionAtBoundary) {
+      let adjusted = index;
+      edits.forEach(edit => {
+        if (edit.oldLength > 0) {
+          if (index > edit.index + edit.oldLength) {
+            adjusted += edit.newLength - edit.oldLength;
+          } else if (index > edit.index) {
+            adjusted += edit.newLength - (index - edit.index);
+          }
+          return;
+        }
+        if (edit.newLength > 0 && (index > edit.index || (includeInsertionAtBoundary && index === edit.index))) {
+          adjusted += edit.newLength;
+        }
+      });
+      return adjusted;
+    },
+    replaceEditorRange(editor, start, end, text) {
+      const value = this.sql;
+      const newValue = value.slice(0, start) + text + value.slice(end);
+      const cursor = start + text.length;
+      this.updateEditorValue(editor, newValue, cursor, cursor);
+    },
+    updateEditorValue(editor, value, selectionStart, selectionEnd) {
+      this.sql = value;
+      this.$nextTick(() => {
+        editor.focus();
+        editor.setSelectionRange(selectionStart, selectionEnd);
+      });
+    },
+    getSelectedLineBounds(value, selectionStart, selectionEnd) {
+      const start = this.getLineStart(value, selectionStart);
+      const endIndex = selectionEnd > selectionStart && value[selectionEnd - 1] === '\n'
+        ? selectionEnd - 1
+        : selectionEnd;
+      return {
+        start,
+        end: this.getLineEnd(value, endIndex)
+      };
+    },
+    getLineStart(value, index) {
+      return value.lastIndexOf('\n', Math.max(0, index - 1)) + 1;
+    },
+    getLineEnd(value, index) {
+      const lineEnd = value.indexOf('\n', index);
+      return lineEnd === -1 ? value.length : lineEnd;
+    },
+    getLeadingWhitespaceLength(line) {
+      const whitespace = line.match(/^\s*/);
+      return whitespace ? whitespace[0].length : 0;
     },
     handleEditorScroll(event) {
       this.editorScrollTop = event.target.scrollTop;
@@ -605,10 +867,14 @@ export default {
       return result;
     },
     clearSql() {
-      this.sql = '';
       this.error = '';
       this.result = null;
       this.editorScrollTop = 0;
+      if (!this.isSelectedLocalDraft()) {
+        this.startNewHistory();
+        return;
+      }
+      this.sql = '';
       this.$nextTick(() => {
         if (this.$refs.sqlEditor) {
           this.$refs.sqlEditor.scrollTop = 0;
@@ -624,10 +890,20 @@ export default {
       this.loadLocalHistory();
       await this.loadSavedHistory();
       this.mergeHistory();
+      this.ensureSelectedHistory();
     },
     loadLocalHistory() {
       try {
-        this.localHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        this.localHistory = history.map(item => {
+          if (item && item.localDraft && !item.localId) {
+            return {
+              ...item,
+              localId: this.createLocalDraftId()
+            };
+          }
+          return item;
+        });
       } catch (e) {
         this.localHistory = [];
       }
@@ -641,6 +917,10 @@ export default {
       }
     },
     saveHistory(sql) {
+      if (this.isSelectedLocalDraft()) {
+        this.persistLocalDraft(sql);
+        return;
+      }
       if (this.savedHistory.some(history => history.sql === sql)) {
         return;
       }
@@ -651,11 +931,56 @@ export default {
       this.localHistory = [item, ...this.localHistory.filter(history => history.sql !== sql)].slice(0, 50);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
       this.mergeHistory();
+      this.ensureSelectedHistory();
+    },
+    persistLocalDraft(sql) {
+      if (this.suppressDraftSync || !this.isSelectedLocalDraft()) {
+        return;
+      }
+      const value = sql || '';
+      const draftItem = {
+        ...this.selectedHistory,
+        sql: value,
+        timestamp: Date.now(),
+        localDraft: true
+      };
+      this.localHistory = [
+        draftItem,
+        ...this.localHistory.filter(item => item && item.localId !== draftItem.localId && item.sql !== value)
+      ].slice(0, 50);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
+      this.mergeHistory();
+      this.selectedHistory = this.findHistoryItem(draftItem) || draftItem;
+    },
+    removeLocalDraft(target = this.selectedHistory) {
+      const nextHistory = this.localHistory.filter(item => {
+        if (!item || !item.localDraft) {
+          return true;
+        }
+        if (target && target.localId) {
+          return item.localId !== target.localId;
+        }
+        return false;
+      });
+      if (nextHistory.length === this.localHistory.length) {
+        return;
+      }
+      this.localHistory = nextHistory;
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
+      this.mergeHistory();
+      if (this.isSameHistoryItem(this.selectedHistory, target)) {
+        this.selectedHistory = null;
+      }
+      this.ensureSelectedHistory();
     },
     clearHistory() {
       this.localHistory = [];
       localStorage.removeItem(HISTORY_KEY);
+      if (this.isSelectedLocalDraft()) {
+        this.selectedHistory = null;
+      }
       this.mergeHistory();
+      this.ensureSelectedHistory();
     },
     handleCurrentChange(page) {
       this.currentPage = page;
@@ -664,18 +989,74 @@ export default {
       this.pageSize = size;
       this.currentPage = 1;
     },
-    openHistoryDetail(item) {
+    useHistorySql(item, focusEditor = true) {
+      this.suppressDraftSync = true;
+      this.sql = item.sql || '';
+      this.selectedHistory = item || null;
+      this.creatingHistory = false;
+      this.editorScrollTop = 0;
+      this.$nextTick(() => {
+        this.suppressDraftSync = false;
+        if (focusEditor && this.$refs.sqlEditor) {
+          this.$refs.sqlEditor.scrollTop = 0;
+          this.$refs.sqlEditor.focus();
+        }
+      });
+    },
+    startNewHistory() {
+      const draftItem = this.createLocalDraft('');
+      this.localHistory = [draftItem, ...this.localHistory].slice(0, 50);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
+      this.mergeHistory();
+      this.error = '';
+      this.result = null;
+      this.useHistorySql(this.findHistoryItem(draftItem) || draftItem);
+      this.historyDialogVisible = false;
+    },
+    openDetailDialog() {
+      const currentSql = this.sql.trim();
+      if (!currentSql) {
+        return;
+      }
+      const existing = this.creatingHistory ? null : this.resolveCurrentHistory(currentSql);
       this.historyForm = {
-        id: item.id || '',
-        sql: item.sql || '',
-        description: item.description || '',
-        saved: !!item.saved,
-        timestamp: item.timestamp || null
+        id: existing ? existing.id : '',
+        sql: currentSql,
+        title: existing ? existing.title : '',
+        description: existing ? existing.description : '',
+        saved: existing ? !!existing.saved : false,
+        timestamp: existing ? existing.timestamp : null
       };
       this.historyDialogVisible = true;
     },
+    resolveCurrentHistory(currentSql) {
+      if (this.selectedHistory && (this.selectedHistory.saved || this.selectedHistory.localDraft)) {
+        return this.selectedHistory;
+      }
+      return this.savedHistory.find(item => item.sql === currentSql);
+    },
+    isHistorySelected(item) {
+      if (!this.selectedHistory) {
+        return false;
+      }
+      return this.isSameHistoryItem(this.selectedHistory, item);
+    },
+    isSelectedLocalDraft() {
+      return !!(this.selectedHistory && this.selectedHistory.localDraft);
+    },
     async saveHistoryToDatabase() {
       if (!this.historyForm.sql || !this.historyForm.sql.trim()) {
+        return;
+      }
+      const title = this.normalizeHistoryTitle(this.historyForm.title);
+      if (!title) {
+        this.$message.error(this.$t('sql_query.title_required'));
+        return;
+      }
+      const titleKey = this.normalizeHistoryTitleKey(title);
+      const matched = this.savedHistory.find(item => this.normalizeHistoryTitleKey(item.title) === titleKey);
+      if (matched && (!this.historyForm.id || matched.id !== this.historyForm.id)) {
+        this.$message.error(this.$t('sql_query.title_duplicate'));
         return;
       }
       this.savingHistory = true;
@@ -683,23 +1064,18 @@ export default {
         const response = await saveSqlQueryHistory({
           id: this.historyForm.id,
           sql: this.historyForm.sql,
+          title,
           description: this.historyForm.description
         });
+        const draftToRemove = this.isSelectedLocalDraft() ? this.selectedHistory : null;
         const savedItem = this.normalizeSavedHistoryItem(response.data);
-        this.savedHistory = [
-          savedItem,
-          ...this.savedHistory.filter(item => item.id !== savedItem.id)
-        ];
-        this.localHistory = this.localHistory.filter(item => item.sql !== savedItem.sql);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
-        this.historyForm = {
-          id: savedItem.id,
-          sql: savedItem.sql,
-          description: savedItem.description,
-          saved: true,
-          timestamp: savedItem.timestamp
-        };
-        this.mergeHistory();
+        this.applySavedHistoryItem(savedItem);
+        if (draftToRemove) {
+          this.removeLocalDraft(draftToRemove);
+        }
+        this.selectedHistory = savedItem;
+        this.creatingHistory = false;
+        this.historyDialogVisible = false;
         this.$message.success(this.$t('sql_query.save_success'));
       } catch (e) {
         this.$message.error(e.message || e.data || this.$t('sql_query.save_failed'));
@@ -707,22 +1083,90 @@ export default {
         this.savingHistory = false;
       }
     },
-    insertHistorySql() {
-      this.sql = this.historyForm.sql || '';
-      this.historyDialogVisible = false;
-      this.editorScrollTop = 0;
-      this.$nextTick(() => {
-        if (this.$refs.sqlEditor) {
-          this.$refs.sqlEditor.scrollTop = 0;
-          this.$refs.sqlEditor.focus();
-        }
-      });
+    async deleteHistoryFromDatabase() {
+      if (!this.historyForm.id) {
+        return;
+      }
+      const deletedId = this.historyForm.id;
+      this.deletingHistory = true;
+      try {
+        await deleteSqlQueryHistory(deletedId);
+        this.savedHistory = this.savedHistory.filter(item => item.id !== deletedId);
+        this.mergeHistory();
+        this.selectedHistory = null;
+        this.ensureSelectedHistory();
+        this.historyDialogVisible = false;
+        this.$message.success(this.$t('sql_query.delete_success'));
+      } catch (e) {
+        this.$message.error(e.message || e.data || this.$t('sql_query.delete_failed'));
+      } finally {
+        this.deletingHistory = false;
+      }
+    },
+    applySavedHistoryItem(savedItem) {
+      this.savedHistory = [
+        savedItem,
+        ...this.savedHistory.filter(item => item.id !== savedItem.id)
+      ];
+      this.localHistory = this.localHistory.filter(item => item.sql !== savedItem.sql);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
+      this.mergeHistory();
+    },
+    createLocalDraftId() {
+      return `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    },
+    createLocalDraft(sql = '') {
+      return {
+        id: '',
+        localId: this.createLocalDraftId(),
+        sql,
+        title: '',
+        description: '',
+        saved: false,
+        localDraft: true,
+        timestamp: Date.now()
+      };
+    },
+    isSameHistoryItem(left, right) {
+      if (!left || !right) {
+        return false;
+      }
+      if (left.id && right.id) {
+        return left.id === right.id;
+      }
+      if (left.localId && right.localId) {
+        return left.localId === right.localId;
+      }
+      return left.sql === right.sql && left.timestamp === right.timestamp;
+    },
+    findHistoryItem(item) {
+      return this.history.find(historyItem => this.isSameHistoryItem(historyItem, item));
+    },
+    ensureSelectedHistory() {
+      if (!this.history.length) {
+        this.startNewHistory();
+        return;
+      }
+      const matched = this.findHistoryItem(this.selectedHistory);
+      if (matched) {
+        this.selectedHistory = matched;
+        this.creatingHistory = false;
+        return;
+      }
+      this.useHistorySql(this.history[0], false);
+    },
+    normalizeHistoryTitle(title) {
+      return (title || '').trim();
+    },
+    normalizeHistoryTitleKey(title) {
+      return this.normalizeHistoryTitle(title).toLowerCase();
     },
     normalizeSavedHistoryItem(item) {
       const timestamp = item.updateTime || item.createTime || Date.now();
       return {
         id: item.id,
         sql: item.sql,
+        title: item.title || '',
         description: item.description || '',
         saved: !!item.saved,
         timestamp,
@@ -733,17 +1177,23 @@ export default {
     mergeHistory() {
       const savedSqlSet = new Set(this.savedHistory.map(item => item.sql));
       const localItems = this.localHistory
-        .filter(item => item && item.sql && !savedSqlSet.has(item.sql))
+        .filter(item => item && (item.localDraft || item.sql) && (item.localDraft || !savedSqlSet.has(item.sql)))
         .map(item => ({
           id: '',
+          localId: item.localId || (item.localDraft ? this.createLocalDraftId() : ''),
           sql: item.sql,
+          title: item.title || '',
           description: '',
           saved: false,
+          localDraft: !!item.localDraft,
           timestamp: item.timestamp || Date.now()
         }));
       this.history = [...this.savedHistory, ...localItems]
         .sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0))
         .slice(0, 100);
+    },
+    resolveHistoryTitle(item) {
+      return item.title || this.$t('sql_query.no_history_record_title');
     },
     exportXlsx() {
       if (!this.hasRows) {
@@ -1358,11 +1808,35 @@ export default {
   background: #ffffff;
   text-align: left;
   cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
 }
 
 .history-card:hover {
   border-color: #409eff;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
+}
+
+.history-card.is-selected {
+  border-color: #409eff;
+  background: #ecf5ff;
+  box-shadow: inset 3px 0 0 #409eff, 0 2px 8px rgba(64, 158, 255, 0.16);
+}
+
+.history-card.is-selected:hover {
+  border-color: #409eff;
+  background: #ecf5ff;
+  box-shadow: inset 3px 0 0 #409eff, 0 3px 10px rgba(64, 158, 255, 0.18);
+}
+
+.history-create-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  color: #409eff;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
 }
 
 .history-saved-tag {
@@ -1378,16 +1852,16 @@ export default {
   opacity: 0.78;
 }
 
-.history-sql {
+.history-title {
   display: -webkit-box;
   padding-right: 58px;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   color: #303133;
-  font-family: Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
 }
 
 .history-time {
@@ -1424,8 +1898,13 @@ export default {
 }
 
 .history-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.history-dialog-footer-right {
   display: inline-flex;
-  justify-content: flex-end;
   gap: 8px;
 }
 

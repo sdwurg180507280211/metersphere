@@ -17,3 +17,7 @@ export function getSqlQueryHistory() {
 export function saveSqlQueryHistory(data) {
   return post(`${BASE_URL}/history/save`, data);
 }
+
+export function deleteSqlQueryHistory(id) {
+  return post(`${BASE_URL}/history/delete`, { id });
+}

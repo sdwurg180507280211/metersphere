@@ -100,7 +100,7 @@ export async function update (props) {
   const { defaultPath, routeParams, routeName } = props;
   // 微服务过来的路由
   if (defaultPath || routeName) {
-    microRouter.push({
+    router.push({
       path: defaultPath,
       params: routeParams,
       name: routeName,

@@ -11,6 +11,8 @@ public class SqlQueryHistoryDTO {
 
     private String sql;
 
+    private String title;
+
     private String description;
 
     private Boolean saved;
