@@ -1,8 +1,8 @@
 import Vue from "vue"
 import Router from "vue-router"
 import Workstation from "@/router/modules/workstation";
-import {useUserStore} from "@/store";
 import {SUPER_GROUP} from "metersphere-frontend/src/utils/constants";
+import {isLogin} from "metersphere-frontend/src/api/user";
 
 const SQL_QUERY_ALLOWED_ACCOUNT = 'kjls_zhaozhiwei001';
 
@@ -42,13 +42,17 @@ export function resetRouter() {
 
 const router = createRouter()
 
-function canAccessSqlQuery() {
-  const user = useUserStore().currentUser || {};
-
-  if (!user.id) {
-    return true;
+async function loadCurrentUser() {
+  try {
+    const response = await isLogin();
+    return response.data || {};
+  } catch (e) {
+    // 登录态由共享权限守卫兜底处理，这里只避免直达页面时拿到过期用户信息。
+    return {};
   }
+}
 
+function canAccessSqlQuery(user) {
   const groups = user.groups || [];
   const userGroups = user.userGroups || [];
   const isAllowedAccount = user.id === SQL_QUERY_ALLOWED_ACCOUNT;
@@ -58,10 +62,13 @@ function canAccessSqlQuery() {
   return isAllowedAccount && isSuperUser;
 }
 
-router.beforeEach((to, from, next) => {
-  if (to.matched.some(record => record.meta && record.meta.superOnly) && !canAccessSqlQuery()) {
-    next('/workstation/dashboard');
-    return;
+router.beforeEach(async (to, from, next) => {
+  if (to.matched.some(record => record.meta && record.meta.superOnly)) {
+    const user = await loadCurrentUser();
+    if (!canAccessSqlQuery(user)) {
+      next(user.id ? '/workstation/dashboard' : '/login');
+      return;
+    }
   }
 
   next();
