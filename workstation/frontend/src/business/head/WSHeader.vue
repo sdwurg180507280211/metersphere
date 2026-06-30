@@ -34,8 +34,6 @@ import MsHeaderRightMenus from "metersphere-frontend/src/components/layout/Heade
 import {SUPER_GROUP} from "metersphere-frontend/src/utils/constants";
 import {useUserStore} from "@/store";
 
-const SQL_QUERY_ALLOWED_ACCOUNT = 'kjls_zhaozhiwei001';
-
 export default {
   components: {MsHeaderRightMenus},
   data(){
@@ -69,11 +67,8 @@ export default {
       const user = useUserStore().currentUser || {};
       const groups = user.groups || [];
       const userGroups = user.userGroups || [];
-      const isAllowedAccount = user.id === SQL_QUERY_ALLOWED_ACCOUNT;
-      const isSuperUser = groups.some(group => group.id === SUPER_GROUP)
+      return groups.some(group => group.id === SUPER_GROUP)
         || userGroups.some(userGroup => userGroup.groupId === SUPER_GROUP);
-
-      return isAllowedAccount && isSuperUser;
     }
   },
   mounted() {

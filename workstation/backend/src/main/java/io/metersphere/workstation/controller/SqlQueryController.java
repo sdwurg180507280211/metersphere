@@ -3,7 +3,6 @@ package io.metersphere.workstation.controller;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.controller.handler.ResultHolder;
-import io.metersphere.dto.UserDTO;
 import io.metersphere.request.SqlQueryHistoryRequest;
 import io.metersphere.request.SqlQueryRequest;
 import io.metersphere.service.BaseUserService;
@@ -21,8 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("workstation/sql-query")
 @RestController
 public class SqlQueryController {
-
-    private static final String SQL_QUERY_ALLOWED_ACCOUNT = "kjls_zhaozhiwei001";
 
     @Resource
     private SqlQueryService sqlQueryService;
@@ -95,14 +92,6 @@ public class SqlQueryController {
         if (StringUtils.isBlank(userId) || !baseUserService.isSuperUser(userId)) {
             MSException.throwException("仅超级管理员可使用 SQL 查询台");
         }
-        UserDTO user = baseUserService.getUserDTO(userId);
-        if (user == null || !isAllowedSqlQueryUser(user)) {
-            MSException.throwException("仅指定账号可使用 SQL 查询台");
-        }
         return userId;
-    }
-
-    private boolean isAllowedSqlQueryUser(UserDTO user) {
-        return StringUtils.equals(SQL_QUERY_ALLOWED_ACCOUNT, user.getId());
     }
 }

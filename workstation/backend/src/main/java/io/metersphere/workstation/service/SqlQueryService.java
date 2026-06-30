@@ -1,6 +1,7 @@
 package io.metersphere.workstation.service;
 
 import io.metersphere.workstation.dto.SqlConnectionStatus;
+import io.metersphere.workstation.dto.SqlQueryColumn;
 import io.metersphere.workstation.dto.SqlQueryResult;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +24,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -46,7 +46,6 @@ public class SqlQueryService {
     private static final long MAX_EPOCH_MILLIS = MAX_EPOCH_SECONDS * 1000;
     private static final long MIN_EPOCH_MICROS = MIN_EPOCH_MILLIS * 1000;
     private static final long MAX_EPOCH_MICROS = MAX_EPOCH_MILLIS * 1000;
-    private static final Map<String, String> COLUMN_LABELS = createColumnLabels();
 
     @Value("${spring.datasource.url:}")
     private String defaultDatasourceUrl;
@@ -329,28 +328,18 @@ public class SqlQueryService {
 
     private List<ColumnDescriptor> resolveColumns(ResultSetMetaData metaData) throws SQLException {
         List<ColumnDescriptor> columns = new ArrayList<>();
-        Map<String, Integer> columnCount = new HashMap<>();
         for (int i = 1; i <= metaData.getColumnCount(); i++) {
-            String label = metaData.getColumnLabel(i);
-            if (label == null || label.isEmpty()) {
-                label = metaData.getColumnName(i);
-            }
+            String label = StringUtils.defaultString(metaData.getColumnLabel(i));
             String sourceName = metaData.getColumnName(i);
-            String displayName = resolveDisplayName(label, sourceName);
-            int count = columnCount.getOrDefault(displayName, 0) + 1;
-            columnCount.put(displayName, count);
-            if (count > 1) {
-                displayName = displayName + "_" + count;
-            }
-            columns.add(new ColumnDescriptor(displayName, label, sourceName, metaData.getColumnType(i)));
+            columns.add(new ColumnDescriptor("col_" + i, label, sourceName, metaData.getColumnType(i)));
         }
         return columns;
     }
 
-    private List<String> toDisplayColumns(List<ColumnDescriptor> columns) {
-        List<String> displayColumns = new ArrayList<>();
+    private List<SqlQueryColumn> toDisplayColumns(List<ColumnDescriptor> columns) {
+        List<SqlQueryColumn> displayColumns = new ArrayList<>();
         for (ColumnDescriptor column : columns) {
-            displayColumns.add(column.getDisplayName());
+            displayColumns.add(new SqlQueryColumn(column.getKey(), column.getSourceLabel()));
         }
         return displayColumns;
     }
@@ -362,7 +351,7 @@ public class SqlQueryService {
             Map<String, Object> row = new LinkedHashMap<>();
             for (int i = 1; i <= columnCount; i++) {
                 ColumnDescriptor column = columns.get(i - 1);
-                row.put(column.getDisplayName(), convertValue(resultSet.getObject(i), column));
+                row.put(column.getKey(), convertValue(resultSet.getObject(i), column));
             }
             rows.add(row);
         }
@@ -415,26 +404,13 @@ public class SqlQueryService {
         return value;
     }
 
-    private String resolveDisplayName(String label, String sourceName) {
-        String normalizedLabel = normalizeColumnName(label);
-        if (COLUMN_LABELS.containsKey(normalizedLabel)) {
-            return COLUMN_LABELS.get(normalizedLabel);
-        }
-
-        String normalizedSourceName = normalizeColumnName(sourceName);
-        if (COLUMN_LABELS.containsKey(normalizedSourceName)) {
-            return COLUMN_LABELS.get(normalizedSourceName);
-        }
-        return label;
-    }
-
     private boolean isLikelyTimestampColumn(ColumnDescriptor column) {
         String normalizedLabel = normalizeColumnName(column.getSourceLabel());
         String normalizedSourceName = normalizeColumnName(column.getSourceName());
         return containsTimeHint(normalizedLabel)
             || containsTimeHint(normalizedSourceName)
             || containsChineseTimeHint(column.getSourceLabel())
-            || containsChineseTimeHint(column.getDisplayName());
+            || containsChineseTimeHint(column.getSourceName());
     }
 
     private boolean containsTimeHint(String name) {
@@ -483,63 +459,21 @@ public class SqlQueryService {
             .toLowerCase(Locale.ROOT);
     }
 
-    private static Map<String, String> createColumnLabels() {
-        Map<String, String> labels = new HashMap<>();
-        labels.put("id", "ID");
-        labels.put("num", "编号");
-        labels.put("name", "名称");
-        labels.put("title", "标题");
-        labels.put("description", "描述");
-        labels.put("status", "状态");
-        labels.put("type", "类型");
-        labels.put("method", "方式");
-        labels.put("priority", "优先级");
-        labels.put("creator", "创建人");
-        labels.put("create_user", "创建人");
-        labels.put("update_user", "最后更新人");
-        labels.put("maintainer", "维护人");
-        labels.put("principal", "负责人");
-        labels.put("project_id", "项目ID");
-        labels.put("project_name", "项目名称");
-        labels.put("workspace_id", "工作空间ID");
-        labels.put("workspace_name", "工作空间");
-        labels.put("module_id", "模块ID");
-        labels.put("module_name", "模块");
-        labels.put("system_name", "系统名称");
-        labels.put("system_names", "关联系统");
-        labels.put("associated_system", "关联系统");
-        labels.put("plan_name", "测试计划名称");
-        labels.put("plan_status", "测试计划状态");
-        labels.put("case_name", "用例名称");
-        labels.put("case_num", "用例编号");
-        labels.put("case_status", "用例状态");
-        labels.put("review_status", "评审状态");
-        labels.put("create_time", "创建时间");
-        labels.put("update_time", "更新时间");
-        labels.put("start_time", "开始时间");
-        labels.put("end_time", "结束时间");
-        labels.put("planned_start_time", "计划开始时间");
-        labels.put("planned_end_time", "计划结束时间");
-        labels.put("actual_start_time", "实际开始时间");
-        labels.put("actual_end_time", "实际结束时间");
-        return labels;
-    }
-
     private static class ColumnDescriptor {
-        private final String displayName;
+        private final String key;
         private final String sourceLabel;
         private final String sourceName;
         private final int jdbcType;
 
-        ColumnDescriptor(String displayName, String sourceLabel, String sourceName, int jdbcType) {
-            this.displayName = displayName;
+        ColumnDescriptor(String key, String sourceLabel, String sourceName, int jdbcType) {
+            this.key = key;
             this.sourceLabel = sourceLabel;
             this.sourceName = sourceName;
             this.jdbcType = jdbcType;
         }
 
-        String getDisplayName() {
-            return displayName;
+        String getKey() {
+            return key;
         }
 
         String getSourceLabel() {

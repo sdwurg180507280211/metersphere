@@ -4,8 +4,6 @@ import Workstation from "@/router/modules/workstation";
 import {SUPER_GROUP} from "metersphere-frontend/src/utils/constants";
 import {isLogin} from "metersphere-frontend/src/api/user";
 
-const SQL_QUERY_ALLOWED_ACCOUNT = 'kjls_zhaozhiwei001';
-
 // 修复路由变更后报错的问题
 const routerPush = Router.prototype.push;
 Router.prototype.push = function push(location) {
@@ -55,11 +53,8 @@ async function loadCurrentUser() {
 function canAccessSqlQuery(user) {
   const groups = user.groups || [];
   const userGroups = user.userGroups || [];
-  const isAllowedAccount = user.id === SQL_QUERY_ALLOWED_ACCOUNT;
-  const isSuperUser = groups.some(group => group.id === SUPER_GROUP)
+  return groups.some(group => group.id === SUPER_GROUP)
     || userGroups.some(userGroup => userGroup.groupId === SUPER_GROUP);
-
-  return isAllowedAccount && isSuperUser;
 }
 
 router.beforeEach(async (to, from, next) => {
