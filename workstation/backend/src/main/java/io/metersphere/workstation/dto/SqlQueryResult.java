@@ -10,7 +10,7 @@ import java.util.Map;
 @Setter
 public class SqlQueryResult {
 
-    private List<String> columns;
+    private List<SqlQueryColumn> columns;
 
     private List<Map<String, Object>> rows;
 

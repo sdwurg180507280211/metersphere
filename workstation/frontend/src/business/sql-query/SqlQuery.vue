@@ -143,14 +143,21 @@
               <thead>
               <tr>
                 <th class="row-index">#</th>
-                <th v-for="column in result.columns" :key="column">{{ column }}</th>
+                <th v-for="(column, columnIndex) in result.columns" :key="columnKey(column, columnIndex)">
+                  {{ columnLabel(column) }}
+                </th>
               </tr>
               </thead>
               <tbody>
               <tr v-for="(row, rowIndex) in pagedRows" :key="rowIndex">
                 <td class="row-index">{{ (currentPage - 1) * pageSize + rowIndex + 1 }}</td>
-                <td v-for="column in result.columns" :key="column" :title="stringifyValue(row[column])">
-                  <span :class="cellClass(row[column])">{{ stringifyValue(row[column]) }}</span>
+                <td
+                  v-for="(column, columnIndex) in result.columns"
+                  :key="columnKey(column, columnIndex)"
+                  :title="stringifyValue(row[columnKey(column, columnIndex)])">
+                  <span :class="cellClass(row[columnKey(column, columnIndex)])">
+                    {{ stringifyValue(row[columnKey(column, columnIndex)]) }}
+                  </span>
                 </td>
               </tr>
               </tbody>
@@ -1195,12 +1202,24 @@ export default {
     resolveHistoryTitle(item) {
       return item.title || this.$t('sql_query.no_history_record_title');
     },
+    columnKey(column, index) {
+      if (column && typeof column === 'object') {
+        return column.key || `col_${index + 1}`;
+      }
+      return column;
+    },
+    columnLabel(column) {
+      if (column && typeof column === 'object') {
+        return column.label;
+      }
+      return column;
+    },
     exportXlsx() {
       if (!this.hasRows) {
         return;
       }
-      const headers = this.result.columns;
-      const rows = this.result.rows.map(row => headers.map(column => row[column]));
+      const headers = this.result.columns.map(column => this.columnLabel(column));
+      const rows = this.result.rows.map(row => this.result.columns.map((column, index) => row[this.columnKey(column, index)]));
       const blob = this.createXlsxBlob(headers, rows);
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
