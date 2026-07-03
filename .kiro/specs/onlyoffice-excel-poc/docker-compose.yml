@@ -1,0 +1,50 @@
+services:
+  document-server:
+    image: onlyoffice/documentserver:9.4.0.1
+    container_name: metersphere-onlyoffice
+    restart: unless-stopped
+    ports:
+      - "8089:80"
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: "metersphere-onlyoffice-poc-secret"
+      JWT_HEADER: "Authorization"
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+    volumes:
+      - onlyoffice_logs:/var/log/onlyoffice
+      - onlyoffice_data:/var/www/onlyoffice/Data
+      - onlyoffice_lib:/var/lib/onlyoffice
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  poc-app:
+    image: node:24-bookworm
+    container_name: metersphere-onlyoffice-poc
+    restart: unless-stopped
+    working_dir: /app
+    command: ["node", "/app/server.js"]
+    ports:
+      - "8090:3000"
+    environment:
+      PORT: "3000"
+      JWT_SECRET: "metersphere-onlyoffice-poc-secret"
+      ONLYOFFICE_PUBLIC_URL: "http://localhost:8089"
+      ONLYOFFICE_INTERNAL_URL: "http://document-server"
+      POC_INTERNAL_URL: "http://poc-app:3000"
+    volumes:
+      - ./server.js:/app/server.js:ro
+      - ../../../test-track/backend/src/main/resources/excel-templates/testcase-template-1.xlsx:/app/template.xlsx:ro
+      - poc_files:/app/data
+    depends_on:
+      document-server:
+        condition: service_healthy
+
+volumes:
+  onlyoffice_logs:
+  onlyoffice_data:
+  onlyoffice_lib:
+  poc_files:

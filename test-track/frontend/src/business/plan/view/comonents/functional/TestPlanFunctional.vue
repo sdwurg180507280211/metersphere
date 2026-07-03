@@ -16,9 +16,10 @@
         @update:activeDom="updateActiveDom"
         :left-tip="$t('test_track.case.list')"
         :left-content="$t('test_track.case.list')"
+        :middle-tip="$t('test_track.case.excel')"
+        :middle-content="$t('test_track.case.excel')"
         :right-tip="$t('test_track.case.minder')"
-        :right-content="$t('test_track.case.minder')"
-        :middle-button-enable="false">
+        :right-content="$t('test_track.case.minder')">
 
         <functional-test-case-list
           class="table-list"
@@ -35,6 +36,11 @@
           @search="refreshTreeByCaseFilter"
           @openTestCaseRelevanceDialog="openTestCaseRelevanceDialog"
           ref="testPlanTestCaseList"/>
+        <test-plan-functional-excel
+          v-if="activeDom === 'middle'"
+          :plan-id="planId"
+          :project-id="projectId"
+        />
         <test-plan-minder
           :tree-nodes="treeNodes"
           :project-id="projectId"
@@ -66,6 +72,7 @@ import MsTestPlanCommonComponent from "../base/TestPlanCommonComponent";
 import FunctionalTestCaseList from "./FunctionalTestCaseList";
 import MsTabButton from "metersphere-frontend/src/components/MsTabButton";
 import TestPlanMinder from "@/business/common/minder/TestPlanMinder";
+import TestPlanFunctionalExcel from "./TestPlanFunctionalExcel";
 import {getCurrentProjectID} from "metersphere-frontend/src/utils/token";
 import TestPlanFunctionalRelevance from "@/business/plan/view/comonents/functional/TestPlanFunctionalRelevance";
 import IsChangeConfirm from "metersphere-frontend/src/components/IsChangeConfirm";
@@ -78,6 +85,7 @@ import {buildNodePath} from "metersphere-frontend/src/model/NodeTree";
 export default {
   name: "TestPlanFunctional",
   components: {
+    TestPlanFunctionalExcel,
     IsChangeConfirm,
     TestPlanFunctionalRelevance,
     TestPlanMinder,

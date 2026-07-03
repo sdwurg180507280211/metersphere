@@ -11,6 +11,8 @@ public class FilterChainUtils {
         filterChainDefinitionMap.put("/resource/ui/get/**", "anon");
         filterChainDefinitionMap.put("/platform/plugin/resource/**", "anon");
         filterChainDefinitionMap.put("/attachment/preview/**", "anon");
+        filterChainDefinitionMap.put("/track/onlyoffice/case/file/**", "anon");
+        filterChainDefinitionMap.put("/track/onlyoffice/case/callback/**", "anon");
         filterChainDefinitionMap.put("/*.worker.js", "anon");
         filterChainDefinitionMap.put("/*.html", "anon");
         filterChainDefinitionMap.put("/signin", "anon");
