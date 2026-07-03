@@ -67,6 +67,13 @@ public class SqlQueryHistoryService {
         return update(userId, request.getId(), normalizedSql, title, description, now);
     }
 
+    public SqlQueryHistoryDTO saveCopy(String userId, String sqlContent, String title, String description) throws SQLException {
+        String normalizedSql = sqlQueryService.normalizeExecutableSql(sqlContent);
+        String normalizedTitle = resolveUniqueCopyTitle(userId, title);
+        String normalizedDescription = normalizeDescription(description);
+        return insert(userId, normalizedSql, normalizedTitle, normalizedDescription, System.currentTimeMillis());
+    }
+
     private SqlQueryHistoryDTO insert(String userId, String sqlContent, String title, String description, long now) throws SQLException {
         String id = UUID.randomUUID().toString();
         String sql = "INSERT INTO workstation_sql_query_history "
@@ -134,6 +141,23 @@ public class SqlQueryHistoryService {
             }
         }
         return null;
+    }
+
+    private String resolveUniqueCopyTitle(String userId, String title) throws SQLException {
+        String baseTitle = StringUtils.defaultIfBlank(title, "公共 SQL").trim();
+        baseTitle = normalizeTitle(baseTitle);
+        if (StringUtils.isBlank(getIdByTitle(userId, baseTitle))) {
+            return baseTitle;
+        }
+        for (int i = 1; i <= 100; i++) {
+            String suffix = i == 1 ? " 副本" : " 副本 " + i;
+            int maxBaseLength = Math.max(1, MAX_TITLE_LENGTH - suffix.length());
+            String candidate = baseTitle.substring(0, Math.min(baseTitle.length(), maxBaseLength)) + suffix;
+            if (StringUtils.isBlank(getIdByTitle(userId, candidate))) {
+                return candidate;
+            }
+        }
+        throw new IllegalArgumentException("标题不能重复");
     }
 
     public void delete(String userId, String id) throws SQLException {

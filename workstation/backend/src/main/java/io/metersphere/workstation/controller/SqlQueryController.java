@@ -4,9 +4,11 @@ import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.controller.handler.ResultHolder;
 import io.metersphere.request.SqlQueryHistoryRequest;
+import io.metersphere.request.SqlQueryPoolRequest;
 import io.metersphere.request.SqlQueryRequest;
 import io.metersphere.service.BaseUserService;
 import io.metersphere.workstation.service.SqlQueryHistoryService;
+import io.metersphere.workstation.service.SqlQueryPoolService;
 import io.metersphere.workstation.service.SqlQueryService;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
@@ -26,6 +28,9 @@ public class SqlQueryController {
 
     @Resource
     private SqlQueryHistoryService sqlQueryHistoryService;
+
+    @Resource
+    private SqlQueryPoolService sqlQueryPoolService;
 
     @Resource
     private BaseUserService baseUserService;
@@ -78,6 +83,58 @@ public class SqlQueryController {
         try {
             String userId = checkAccess();
             sqlQueryHistoryService.delete(userId, request.getId());
+            return ResultHolder.success(null);
+        } catch (Exception e) {
+            return ResultHolder.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/pool/list")
+    public ResultHolder poolList(@RequestBody(required = false) SqlQueryPoolRequest request) {
+        try {
+            String userId = checkAccess();
+            return ResultHolder.success(sqlQueryPoolService.list(userId, request));
+        } catch (Exception e) {
+            return ResultHolder.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/pool/save")
+    public ResultHolder savePool(@RequestBody SqlQueryPoolRequest request) {
+        try {
+            String userId = checkAccess();
+            return ResultHolder.success(sqlQueryPoolService.save(userId, request));
+        } catch (Exception e) {
+            return ResultHolder.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/pool/offline")
+    public ResultHolder offlinePool(@RequestBody SqlQueryPoolRequest request) {
+        try {
+            String userId = checkAccess();
+            sqlQueryPoolService.offline(userId, request.getId());
+            return ResultHolder.success(null);
+        } catch (Exception e) {
+            return ResultHolder.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/pool/copy-to-history")
+    public ResultHolder copyPoolToHistory(@RequestBody SqlQueryPoolRequest request) {
+        try {
+            String userId = checkAccess();
+            return ResultHolder.success(sqlQueryPoolService.copyToHistory(userId, request.getId()));
+        } catch (Exception e) {
+            return ResultHolder.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/pool/use")
+    public ResultHolder usePool(@RequestBody SqlQueryPoolRequest request) {
+        try {
+            checkAccess();
+            sqlQueryPoolService.recordUse(request.getId());
             return ResultHolder.success(null);
         } catch (Exception e) {
             return ResultHolder.error(e.getMessage());

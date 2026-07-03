@@ -17,6 +17,16 @@
             @click="openDetailDialog">
             {{ $t('sql_query.detail') }}
           </el-button>
+          <el-button size="small" icon="el-icon-collection" @click="openPoolDialog">
+            {{ $t('sql_query.pool') }}
+          </el-button>
+          <el-button
+            size="small"
+            icon="el-icon-upload2"
+            :disabled="!sql.trim()"
+            @click="openPoolForm()">
+            {{ $t('sql_query.upload_pool') }}
+          </el-button>
           <el-button size="small" icon="el-icon-refresh" @click="loadStatus">
             {{ $t('sql_query.refresh') }}
           </el-button>
@@ -267,14 +277,165 @@
         </div>
       </div>
     </el-dialog>
+
+    <el-dialog
+      class="sql-pool-dialog"
+      :title="$t('sql_query.pool')"
+      :visible.sync="poolDialogVisible"
+      width="86vw"
+      top="7vh"
+      append-to-body>
+      <div class="pool-toolbar">
+        <el-input
+          v-model="poolKeyword"
+          class="pool-search"
+          size="small"
+          clearable
+          prefix-icon="el-icon-search"
+          :placeholder="$t('sql_query.pool_search_placeholder')"
+          @keyup.enter.native="loadPoolList"
+          @clear="loadPoolList"/>
+        <el-checkbox v-model="poolOnlyMine" @change="loadPoolList">
+          {{ $t('sql_query.pool_only_mine') }}
+        </el-checkbox>
+        <el-button size="small" icon="el-icon-refresh" :loading="poolLoading" @click="loadPoolList">
+          {{ $t('sql_query.refresh') }}
+        </el-button>
+        <el-button
+          type="primary"
+          size="small"
+          icon="el-icon-upload2"
+          :disabled="!sql.trim()"
+          @click="openPoolForm()">
+          {{ $t('sql_query.pool_upload_current') }}
+        </el-button>
+      </div>
+
+      <div v-loading="poolLoading" class="pool-body">
+        <div class="pool-list">
+          <button
+            v-for="item in poolList"
+            :key="item.id"
+            :class="['pool-card', isPoolSelected(item) ? 'is-selected' : '']"
+            type="button"
+            @click="selectPoolItem(item)">
+            <span class="pool-card-title">{{ item.title }}</span>
+            <span class="pool-card-summary">{{ item.summary }}</span>
+            <span class="pool-card-meta">{{ formatPoolMeta(item) }}</span>
+          </button>
+          <div v-if="!poolList.length && !poolLoading" class="pool-empty">
+            {{ $t('sql_query.pool_empty') }}
+          </div>
+        </div>
+
+        <div v-if="selectedPoolItem" class="pool-detail">
+          <div class="pool-detail-header">
+            <div class="pool-detail-title">
+              <h3>{{ selectedPoolItem.title }}</h3>
+              <p>{{ selectedPoolItem.summary }}</p>
+            </div>
+            <el-tag size="mini" type="info">
+              {{ $t('sql_query.pool_use_count', { count: selectedPoolItem.useCount || 0 }) }}
+            </el-tag>
+          </div>
+          <div class="pool-detail-meta">
+            <span>{{ selectedPoolItem.createUserName || selectedPoolItem.createUser }}</span>
+            <span>{{ formatTime(selectedPoolItem.updateTime || selectedPoolItem.createTime) }}</span>
+          </div>
+          <label>{{ $t('sql_query.sql_content') }}</label>
+          <pre class="pool-sql-preview">{{ selectedPoolItem.sql }}</pre>
+          <label>{{ $t('sql_query.description') }}</label>
+          <div class="pool-description">
+            {{ selectedPoolItem.description || $t('sql_query.pool_no_description') }}
+          </div>
+          <div class="pool-detail-actions">
+            <el-button
+              type="primary"
+              size="small"
+              :loading="insertingPool"
+              @click="insertPoolToConsole">
+              {{ $t('sql_query.pool_insert_console') }}
+            </el-button>
+            <el-button
+              size="small"
+              :loading="copyingPool"
+              @click="copyPoolToMyHistory">
+              {{ $t('sql_query.pool_copy_to_my') }}
+            </el-button>
+            <el-button size="small" @click="openPoolForm(selectedPoolItem)">
+              {{ $t('sql_query.pool_edit') }}
+            </el-button>
+            <el-button
+              type="danger"
+              size="small"
+              plain
+              :loading="offliningPool"
+              @click="offlinePoolItem">
+              {{ $t('sql_query.pool_offline') }}
+            </el-button>
+          </div>
+        </div>
+        <div v-else class="pool-detail pool-detail-empty">
+          {{ $t('sql_query.pool_detail_empty') }}
+        </div>
+      </div>
+    </el-dialog>
+
+    <el-dialog
+      :title="poolFormMode === 'edit' ? $t('sql_query.pool_edit_title') : $t('sql_query.pool_upload_title')"
+      :visible.sync="poolFormVisible"
+      width="720px"
+      append-to-body>
+      <div class="pool-form">
+        <label>{{ $t('sql_query.history_record_title') }}</label>
+        <el-input
+          v-model="poolForm.title"
+          maxlength="120"
+          show-word-limit
+          :placeholder="$t('sql_query.history_record_title_placeholder')"/>
+        <label>{{ $t('sql_query.pool_summary') }}</label>
+        <el-input
+          v-model="poolForm.summary"
+          maxlength="200"
+          show-word-limit
+          :placeholder="$t('sql_query.pool_summary_placeholder')"/>
+        <label>{{ $t('sql_query.sql_content') }}</label>
+        <el-input
+          v-model="poolForm.sql"
+          class="pool-form-sql"
+          type="textarea"
+          :rows="12"/>
+        <label>{{ $t('sql_query.description') }}</label>
+        <el-input
+          v-model="poolForm.description"
+          type="textarea"
+          :rows="3"
+          maxlength="500"
+          show-word-limit
+          :placeholder="$t('sql_query.description_placeholder')"/>
+      </div>
+      <div slot="footer" class="history-dialog-footer">
+        <el-button size="small" @click="poolFormVisible = false">
+          {{ $t('sql_query.cancel') }}
+        </el-button>
+        <el-button type="primary" size="small" :loading="poolSaving" @click="savePoolForm">
+          {{ $t('sql_query.save') }}
+        </el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import {
+  copySqlQueryPoolToHistory,
+  getSqlQueryPool,
   executeSqlQuery,
   getSqlQueryHistory,
   getSqlQueryStatus,
+  offlineSqlQueryPool,
+  recordSqlQueryPoolUse,
+  saveSqlQueryPool,
   saveSqlQueryHistory,
   deleteSqlQueryHistory
 } from '@/api/sql-query';
@@ -440,7 +601,26 @@ export default {
       },
       selectedHistory: null,
       creatingHistory: false,
-      suppressDraftSync: false
+      suppressDraftSync: false,
+      poolDialogVisible: false,
+      poolLoading: false,
+      poolKeyword: '',
+      poolOnlyMine: false,
+      poolList: [],
+      selectedPoolItem: null,
+      poolFormVisible: false,
+      poolFormMode: 'create',
+      poolSaving: false,
+      copyingPool: false,
+      insertingPool: false,
+      offliningPool: false,
+      poolForm: {
+        id: '',
+        sql: '',
+        title: '',
+        summary: '',
+        description: ''
+      }
     };
   },
   computed: {
@@ -1202,6 +1382,200 @@ export default {
     resolveHistoryTitle(item) {
       return item.title || this.$t('sql_query.no_history_record_title');
     },
+    openPoolDialog() {
+      this.poolDialogVisible = true;
+      this.loadPoolList();
+    },
+    async loadPoolList(selectedId) {
+      this.poolLoading = true;
+      const currentSelectedId = typeof selectedId === 'string'
+        ? selectedId
+        : (this.selectedPoolItem && this.selectedPoolItem.id);
+      try {
+        const response = await getSqlQueryPool({
+          keyword: this.poolKeyword,
+          onlyMine: this.poolOnlyMine
+        });
+        this.poolList = (response.data || []).map(item => this.normalizePoolItem(item));
+        this.selectedPoolItem = this.poolList.find(item => item.id === currentSelectedId) || this.poolList[0] || null;
+      } catch (e) {
+        this.poolList = [];
+        this.selectedPoolItem = null;
+        this.$message.error(e.message || e.data || this.$t('sql_query.pool_load_failed'));
+      } finally {
+        this.poolLoading = false;
+      }
+    },
+    normalizePoolItem(item) {
+      return {
+        id: item.id,
+        sql: item.sql || '',
+        title: item.title || '',
+        summary: item.summary || '',
+        description: item.description || '',
+        createUser: item.createUser || '',
+        createUserName: item.createUserName || '',
+        updateUser: item.updateUser || '',
+        updateUserName: item.updateUserName || '',
+        enabled: item.enabled !== false,
+        useCount: item.useCount || 0,
+        createTime: item.createTime,
+        updateTime: item.updateTime
+      };
+    },
+    selectPoolItem(item) {
+      this.selectedPoolItem = item;
+    },
+    isPoolSelected(item) {
+      return !!(this.selectedPoolItem && item && this.selectedPoolItem.id === item.id);
+    },
+    openPoolForm(item = null) {
+      if (item) {
+        this.poolFormMode = 'edit';
+        this.poolForm = {
+          id: item.id,
+          sql: item.sql || '',
+          title: item.title || '',
+          summary: item.summary || '',
+          description: item.description || ''
+        };
+      } else {
+        this.poolFormMode = 'create';
+        this.poolForm = {
+          id: '',
+          sql: this.sql.trim(),
+          title: this.selectedHistory && this.selectedHistory.title ? this.selectedHistory.title : '',
+          summary: '',
+          description: this.selectedHistory && this.selectedHistory.description ? this.selectedHistory.description : ''
+        };
+      }
+      this.poolFormVisible = true;
+    },
+    async savePoolForm() {
+      const title = this.normalizeHistoryTitle(this.poolForm.title);
+      const summary = (this.poolForm.summary || '').trim();
+      const sql = (this.poolForm.sql || '').trim();
+      if (!title) {
+        this.$message.error(this.$t('sql_query.title_required'));
+        return;
+      }
+      if (!summary) {
+        this.$message.error(this.$t('sql_query.pool_summary_required'));
+        return;
+      }
+      if (!sql) {
+        this.$message.error(this.$t('sql_query.pool_sql_required'));
+        return;
+      }
+      this.poolSaving = true;
+      try {
+        const response = await saveSqlQueryPool({
+          id: this.poolForm.id,
+          sql,
+          title,
+          summary,
+          description: this.poolForm.description
+        });
+        const savedItem = this.normalizePoolItem(response.data);
+        this.poolDialogVisible = true;
+        this.poolFormVisible = false;
+        await this.loadPoolList(savedItem.id);
+        this.$message.success(this.$t(this.poolFormMode === 'edit' ? 'sql_query.pool_save_success' : 'sql_query.pool_upload_success'));
+      } catch (e) {
+        this.$message.error(e.message || e.data || this.$t('sql_query.pool_save_failed'));
+      } finally {
+        this.poolSaving = false;
+      }
+    },
+    async insertPoolToConsole() {
+      if (!this.selectedPoolItem) {
+        return;
+      }
+      const poolSql = this.selectedPoolItem.sql || '';
+      if (this.sql.trim() && this.sql.trim() !== poolSql.trim()) {
+        try {
+          await this.$confirm(this.$t('sql_query.pool_overwrite_confirm'), this.$t('sql_query.pool_insert_console'), {
+            type: 'warning'
+          });
+        } catch (e) {
+          return;
+        }
+      }
+      this.insertingPool = true;
+      try {
+        await recordSqlQueryPoolUse(this.selectedPoolItem.id);
+        this.selectedPoolItem.useCount = (this.selectedPoolItem.useCount || 0) + 1;
+        this.insertSqlAsDraft(poolSql);
+        this.poolDialogVisible = false;
+        this.$message.success(this.$t('sql_query.pool_insert_success'));
+      } catch (e) {
+        this.$message.error(e.message || e.data || this.$t('sql_query.pool_insert_failed'));
+      } finally {
+        this.insertingPool = false;
+      }
+    },
+    insertSqlAsDraft(sql) {
+      const draftItem = this.createLocalDraft(sql || '');
+      this.localHistory = [draftItem, ...this.localHistory].slice(0, 50);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
+      this.mergeHistory();
+      this.error = '';
+      this.result = null;
+      this.useHistorySql(this.findHistoryItem(draftItem) || draftItem);
+    },
+    async copyPoolToMyHistory() {
+      if (!this.selectedPoolItem) {
+        return;
+      }
+      this.copyingPool = true;
+      try {
+        const response = await copySqlQueryPoolToHistory(this.selectedPoolItem.id);
+        const savedItem = this.normalizeSavedHistoryItem(response.data);
+        this.selectedPoolItem.useCount = (this.selectedPoolItem.useCount || 0) + 1;
+        this.applySavedHistoryItem(savedItem);
+        this.useHistorySql(savedItem);
+        this.poolDialogVisible = false;
+        this.$message.success(this.$t('sql_query.pool_copy_success'));
+      } catch (e) {
+        this.$message.error(e.message || e.data || this.$t('sql_query.pool_copy_failed'));
+      } finally {
+        this.copyingPool = false;
+      }
+    },
+    async offlinePoolItem() {
+      if (!this.selectedPoolItem) {
+        return;
+      }
+      try {
+        await this.$confirm(this.$t('sql_query.pool_offline_confirm'), this.$t('sql_query.pool_offline'), {
+          type: 'warning'
+        });
+      } catch (e) {
+        return;
+      }
+      this.offliningPool = true;
+      try {
+        const offlineId = this.selectedPoolItem.id;
+        await offlineSqlQueryPool(offlineId);
+        await this.loadPoolList();
+        if (this.selectedPoolItem && this.selectedPoolItem.id === offlineId) {
+          this.selectedPoolItem = this.poolList[0] || null;
+        }
+        this.$message.success(this.$t('sql_query.pool_offline_success'));
+      } catch (e) {
+        this.$message.error(e.message || e.data || this.$t('sql_query.pool_offline_failed'));
+      } finally {
+        this.offliningPool = false;
+      }
+    },
+    formatPoolMeta(item) {
+      const userName = item.createUserName || item.createUser || '';
+      const timeText = this.formatTime(item.updateTime || item.createTime);
+      if (userName && timeText) {
+        return `${userName} · ${timeText}`;
+      }
+      return userName || timeText;
+    },
     columnKey(column, index) {
       if (column && typeof column === 'object') {
         return column.key || `col_${index + 1}`;
@@ -1397,6 +1771,9 @@ export default {
       return '';
     },
     formatTime(timestamp) {
+      if (!timestamp) {
+        return '';
+      }
       return new Date(timestamp).toLocaleString();
     }
   }
@@ -1927,6 +2304,207 @@ export default {
   gap: 8px;
 }
 
+.sql-pool-dialog ::v-deep .el-dialog__body {
+  padding-top: 12px;
+}
+
+.pool-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.pool-search {
+  width: 360px;
+  max-width: 44vw;
+}
+
+.pool-body {
+  height: 58vh;
+  min-height: 420px;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.pool-list {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.pool-card {
+  width: 100%;
+  display: block;
+  padding: 13px 14px;
+  margin-bottom: 10px;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.pool-card:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
+}
+
+.pool-card.is-selected {
+  border-color: #409eff;
+  background: #ecf5ff;
+  box-shadow: inset 3px 0 0 #409eff, 0 2px 8px rgba(64, 158, 255, 0.16);
+}
+
+.pool-card-title,
+.pool-card-summary,
+.pool-card-meta {
+  display: block;
+}
+
+.pool-card-title {
+  color: #303133;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.pool-card-summary {
+  margin-top: 7px;
+  color: #606266;
+  font-size: 12px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pool-card-meta {
+  margin-top: 9px;
+  color: #909399;
+  font-size: 11px;
+  text-align: right;
+}
+
+.pool-empty {
+  padding-top: 80px;
+  color: #909399;
+  font-size: 13px;
+  text-align: center;
+}
+
+.pool-detail {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.pool-detail-empty {
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  font-size: 13px;
+}
+
+.pool-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pool-detail-title {
+  min-width: 0;
+}
+
+.pool-detail-title h3 {
+  margin: 0;
+  color: #303133;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.pool-detail-title p {
+  margin: 8px 0 0;
+  color: #606266;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.pool-detail-meta {
+  display: flex;
+  gap: 14px;
+  margin: 12px 0 16px;
+  color: #909399;
+  font-size: 12px;
+}
+
+.pool-detail label,
+.pool-form label {
+  margin-bottom: 8px;
+  color: #303133;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pool-sql-preview {
+  flex: 1;
+  min-height: 0;
+  margin: 0 0 16px;
+  padding: 14px;
+  overflow: auto;
+  border-radius: 4px;
+  background: #1f2937;
+  color: #f9fafb;
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.pool-description {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  background: #fafafa;
+  color: #606266;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.pool-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.pool-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pool-form-sql ::v-deep textarea {
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 @media (max-width: 1200px) {
   .sql-query-page {
     height: auto;
@@ -1942,6 +2520,16 @@ export default {
     width: auto !important;
     max-height: 260px;
     border-top: 1px solid #e6e6e6;
+  }
+
+  .pool-body {
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .pool-search {
+    width: 100%;
+    max-width: none;
   }
 }
 </style>
