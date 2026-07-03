@@ -44,11 +44,12 @@ getApps()
     }
     //注册子应用
     registerMicroApps(apps);
-    //启动
-    start();
+    // 启动
+    start({
+      excludeAssetFilter: (assetUrl) => /\/web-apps\/apps\/api\/documents\/api\.js(\?|$)/.test(assetUrl)
+    });
   })
   .catch(e => {
     console.error(e);
   });
-
 
