@@ -258,6 +258,8 @@
         <el-form-item :label="$t('api_test.value')">
           <el-input
             v-model="rowEditorForm.value"
+            type="textarea"
+            :rows="11"
             :placeholder="valueText(rowEditorForm)"
             :maxlength="100000"
             show-word-limit
