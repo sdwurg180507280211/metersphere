@@ -557,6 +557,53 @@ curl -X GET \
 
 ---
 
+## 最新趋势视图只读账号授权
+
+甲方通过 MySQL 账号 `dashboard_ro` 查询以下两个最新趋势视图：
+
+| 视图 | 用途 |
+|------|------|
+| `v_dashboard_case_monthly_trend_by_system` | 最近 12 个月用例新增趋势 |
+| `v_dashboard_defect_monthly_trend_by_system` | 最近 12 个月缺陷新增趋势 |
+
+在 `metersphere` 数据库执行以下 SQL：
+
+```sql
+-- 先确认账号实际的 host、认证插件和状态。
+SELECT user, host, plugin, account_locked, password_expired
+FROM mysql.user
+WHERE user = 'dashboard_ro';
+
+-- 账号不存在时创建；账号已存在时不会修改密码和认证插件。
+CREATE USER IF NOT EXISTS 'dashboard_ro'@'%' IDENTIFIED BY 'dashboard_ro';
+
+GRANT SELECT ON metersphere.v_dashboard_case_monthly_trend_by_system
+TO 'dashboard_ro'@'%';
+
+GRANT SELECT ON metersphere.v_dashboard_defect_monthly_trend_by_system
+TO 'dashboard_ro'@'%';
+
+FLUSH PRIVILEGES;
+
+SHOW GRANTS FOR 'dashboard_ro'@'%';
+```
+
+只有确认现有账号密码需要重置时，才单独执行：
+
+```sql
+ALTER USER 'dashboard_ro'@'%'
+IDENTIFIED BY 'dashboard_ro';
+```
+
+说明：
+
+- 只新增两个趋势视图的 `SELECT` 权限，不授予基础表权限。
+- 已有账号默认只执行 `GRANT`，不要在常规授权脚本中执行 `ALTER USER`，避免修改正在使用的密码或认证方式。
+- 以上 SQL 不会撤销 `dashboard_ro` 已经拥有的其他权限；执行前可先使用 `SHOW GRANTS` 核对现有授权。
+- 如果只允许固定来源 IP 访问，应将账号主机 `%` 替换为甲方实际 IP。
+
+---
+
 ## 风险与取舍
 
 | 风险 | 等级 | 处理方式 |
