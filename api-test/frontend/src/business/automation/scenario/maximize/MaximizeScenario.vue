@@ -575,7 +575,6 @@ export default {
           permissions: ['PROJECT_API_SCENARIO:READ+DELETE'],
         },
       ],
-      reloadKey: '',
       envType: this.environmentType,
       envGroupId: this.groupId,
       cookieShare: false,
@@ -960,7 +959,6 @@ export default {
     allowDrag(draggingNode, dropNode, dropType) {
       if (dropNode && draggingNode && dropType) {
         this.$emit('sort');
-        this.forceRerender();
         this.cancelBatchProcessing();
       }
     },
@@ -971,7 +969,10 @@ export default {
     },
     nodeCollapse(data) {
       if (data.resourceId) {
-        this.expandedNode.splice(this.expandedNode.indexOf(data.resourceId), 1);
+        const index = this.expandedNode.indexOf(data.resourceId);
+        if (index !== -1) {
+          this.expandedNode.splice(index, 1);
+        }
       }
     },
     getPath(id) {
@@ -1162,7 +1163,6 @@ export default {
       this.expandedNode = [];
       let resourceIds = this.getAllResourceIds();
       this.changeNodeStatus(resourceIds, this.scenarioDefinition);
-      this.forceRerender();
     },
     stepNode() {
       //改变每个节点的状态
@@ -1196,7 +1196,6 @@ export default {
         this.recursionDelete(item, this.scenarioDefinition);
       });
       this.sort();
-      this.forceRerender();
     },
     recursionDelete(resourceId, nodes) {
       for (let i = nodes.length - 1; i >= 0; i--) {
@@ -1215,11 +1214,6 @@ export default {
         }
       }
       return false;
-    },
-    forceRerender() {
-      this.$nextTick(() => {
-        store.forceRerenderIndex = getUUID();
-      });
     },
     getAllResourceIds() {
       let selectValueArr = [];
@@ -1272,7 +1266,7 @@ export default {
       }
       let isLeaf = true;
       array.forEach((item) => {
-        item.checkBox = false;
+        this.$set(item, 'checkBox', false);
         if (isLeaf && this.stepFilter.get('ALlSamplerStep').indexOf(item.type) === -1) {
           isLeaf = false;
         }
@@ -1281,9 +1275,9 @@ export default {
         }
       });
       if (node) {
-        node.isBatchProcess = this.isBatchProcess;
-        node.checkBox = false;
-        node.isLeaf = isLeaf;
+        this.$set(node, 'isBatchProcess', this.isBatchProcess);
+        this.$set(node, 'checkBox', false);
+        this.$set(node, 'isLeaf', isLeaf);
       }
     },
     checkedAll(v) {
@@ -1301,25 +1295,14 @@ export default {
         });
       }
     },
-    reloadTreeStatus() {
-      this.reloadKey = '';
-      this.$nextTick(() => {
-        this.reloadKey = 'reload';
-        let row = { resourceId: 'ms-reload-max-test' };
-        if (this.$refs.maxStepTree && this.$refs.maxStepTree.root.data) {
-          this.$refs.maxStepTree.root.data.push(row);
-          this.$refs.maxStepTree.root.data.splice(this.$refs.maxStepTree.root.data.length - 1, 1);
-        }
-      });
-    },
     hideAllTreeNode(array) {
       array.forEach((item) => {
         if (item.hashTree && item.hashTree.length > 0) {
           this.hideAllTreeNode(item.hashTree);
         }
-        item.isLeaf = this.isBatchProcess;
-        item.isBatchProcess = this.isBatchProcess;
-        item.checkBox = this.isBatchProcess;
+        this.$set(item, 'isLeaf', this.isBatchProcess);
+        this.$set(item, 'isBatchProcess', this.isBatchProcess);
+        this.$set(item, 'checkBox', this.isBatchProcess);
       });
     },
     // handleExport() {

@@ -506,7 +506,6 @@ export default {
       this.request.hashTree.splice(index, 1);
       this.sort();
       this.reload();
-      this.forceRerender();
     },
     copyRow(row) {
       let obj = JSON.parse(JSON.stringify(row));
@@ -520,7 +519,6 @@ export default {
       }
       this.sort();
       this.reload();
-      this.forceRerender();
     },
     allowDrop(draggingNode, dropNode, dropType) {
       // 增加插件权限控制
@@ -533,13 +531,7 @@ export default {
       if (dropNode && draggingNode && dropType) {
         this.reload();
         this.filter();
-        this.forceRerender();
       }
-    },
-    forceRerender() {
-      this.$nextTick(() => {
-        store.forceRerenderIndex = getUUID();
-      });
     },
     reload() {
       this.isReloadData = true;
@@ -572,16 +564,16 @@ export default {
           this.tabType === 'pre' &&
           (step.type === 'JSR223PreProcessor' || step.type === 'JDBCPreProcessor' || step.type === 'ConstantTimer')
         ) {
-          step.index = Number(index);
+          this.$set(step, 'index', Number(index));
           index++;
         } else if (
           this.tabType === 'post' &&
           (step.type === 'JSR223PostProcessor' || step.type === 'JDBCPostProcessor' || step.type === 'Extract')
         ) {
-          step.index = Number(index);
+          this.$set(step, 'index', Number(index));
           index++;
         } else if (this.tabType === 'assertionsRule' && step.type === 'Assertions') {
-          step.index = Number(index);
+          this.$set(step, 'index', Number(index));
           index++;
         }
         // 兼容历史数据

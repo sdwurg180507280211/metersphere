@@ -11,9 +11,7 @@ import {
   TransactionController,
 } from '@/business/definition/model/ApiTestModel';
 import { getUUID } from 'metersphere-frontend/src/utils';
-import { useApiStore } from '@/store';
 
-const store = useApiStore();
 export function buttons(this_) {
   let buttons = [
     {
@@ -193,7 +191,6 @@ export function setNode(_this, node) {
           _this.scenarioDefinition.splice(_this.selectedTreeNode.index, 0, node);
         }
       }
-      store.forceRerenderIndex = getUUID();
     } else {
       //选择场景时，直接添加到当前场景
       if (

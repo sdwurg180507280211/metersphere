@@ -201,7 +201,7 @@ export function scenarioSort(_this) {
 export function recursiveSorting(_this, arr, scenarioProjectId) {
   for (let i = 0; i < arr.length; i++) {
     const step = arr[i];
-    step.index = i + 1;
+    _this.$set(step, 'index', i + 1);
     if (
       step.type === ELEMENT_TYPE.LoopController &&
       step.loopType === 'LOOP_COUNT' &&
