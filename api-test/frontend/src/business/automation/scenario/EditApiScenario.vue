@@ -956,7 +956,6 @@ export default {
       if (this.$refs.stepTree && this.$refs.stepTree.root && this.$refs.stepTree.root.childNodes) {
         this.recursionExpansion([], this.$refs.stepTree.root.childNodes);
       }
-      this.reloadTreeStatus();
     },
     cancelBatchProcessing() {
       this.isBatchProcess = false;
@@ -966,16 +965,6 @@ export default {
       }
       this.selectDataCounts = 0;
       this.commandTreeNode();
-      this.reloadTreeStatus();
-    },
-    reloadTreeStatus() {
-      this.$nextTick(() => {
-        let row = { resourceId: 'ms-reload-test' };
-        if (this.$refs.stepTree && this.$refs.stepTree.root.data) {
-          this.$refs.stepTree.root.data.push(row);
-          this.$refs.stepTree.root.data.splice(this.$refs.stepTree.root.data.length - 1, 1);
-        }
-      });
     },
     openOrClose(node, data) {
       node.expanded = !node.expanded;
@@ -986,7 +975,7 @@ export default {
       if (nodes && nodes.type === 'GenericController' && nodes.hashTree) {
         let data = nodes.hashTree.filter((v) => v.type !== 'Assertions');
         for (let i = 0; i < data.length; i++) {
-          data[i].index = i + 1;
+          this.$set(data[i], 'index', i + 1);
         }
       }
     },
@@ -996,9 +985,9 @@ export default {
     },
     hideAllTreeNode(array) {
       array.forEach((item) => {
-        item.isLeaf = this.isBatchProcess;
-        item.isBatchProcess = this.isBatchProcess;
-        item.checkBox = this.isBatchProcess;
+        this.$set(item, 'isLeaf', this.isBatchProcess);
+        this.$set(item, 'isBatchProcess', this.isBatchProcess);
+        this.$set(item, 'checkBox', this.isBatchProcess);
         if (item.hashTree && item.hashTree.length > 0) {
           this.hideAllTreeNode(item.hashTree);
         }
@@ -1017,7 +1006,7 @@ export default {
         nodeType = node.type;
       }
       array.forEach((item) => {
-        item.checkBox = false;
+        this.$set(item, 'checkBox', false);
         if (isLeaf && this.stepFilter.get('ALlSamplerStep').indexOf(item.type) === -1) {
           isLeaf = false;
         } else if (
@@ -1031,13 +1020,13 @@ export default {
         if (item.hashTree && item.hashTree.length > 0) {
           this.commandTreeNode(item, item.hashTree);
         } else {
-          item.isLeaf = true;
+          this.$set(item, 'isLeaf', true);
         }
       });
       if (node) {
-        node.isBatchProcess = this.isBatchProcess;
-        node.checkBox = false;
-        node.isLeaf = isLeaf;
+        this.$set(node, 'isBatchProcess', this.isBatchProcess);
+        this.$set(node, 'checkBox', false);
+        this.$set(node, 'isLeaf', isLeaf);
       }
     },
     currentUser: () => {
@@ -1559,7 +1548,6 @@ export default {
         return;
       }
       setComponent(type, this, plugin);
-      store.forceRerenderIndex = getUUID();
     },
     nodeClick(data, node) {
       if (
@@ -1614,7 +1602,7 @@ export default {
         let step = stepArray[i];
         // 计算 index 和 projectId
         if (!isGeneric && !this.stepFilter.get('ALlSamplerStep').includes(step.type)) {
-          step.index = Number(i) + 1;
+          this.$set(step, 'index', Number(i) + 1);
         }
         step.projectId = step.projectId || scenarioProjectId || this.projectId;
 
@@ -1668,7 +1656,6 @@ export default {
       if (this.selectedTreeNode) {
         if (this.stepFilter.get('SpecialSteps').indexOf(this.selectedTreeNode.type) !== -1) {
           this.scenarioDefinition.splice(this.selectedTreeNode.index, 0, request);
-          store.forceRerenderIndex = getUUID();
         } else {
           this.selectedTreeNode.hashTree.push(request);
         }
@@ -1696,7 +1683,6 @@ export default {
           if (this.selectedTreeNode) {
             if (this.stepFilter.get('SpecialSteps').indexOf(this.selectedTreeNode.type) !== -1) {
               this.scenarioDefinition.splice(this.selectedTreeNode.index, 0, item);
-              store.forceRerenderIndex = getUUID();
             } else {
               this.selectedTreeNode.hashTree.push(item);
             }
@@ -1754,7 +1740,6 @@ export default {
       if (this.selectedTreeNode) {
         if (this.stepFilter.get('SpecialSteps').indexOf(this.selectedTreeNode.type) !== -1) {
           this.scenarioDefinition.splice(this.selectedTreeNode.index, 0, request);
-          store.forceRerenderIndex = getUUID();
         } else {
           this.selectedTreeNode.hashTree.push(request);
         }
@@ -1815,7 +1800,6 @@ export default {
               hashTree.splice(index, 1);
             }
             this.sort();
-            this.forceRerender();
           }
         },
       });
@@ -1859,11 +1843,6 @@ export default {
       this.loading = true;
       this.$nextTick(() => {
         this.loading = false;
-      });
-    },
-    forceRerender() {
-      this.$nextTick(() => {
-        store.forceRerenderIndex = getUUID();
       });
     },
     run() {
@@ -2016,7 +1995,6 @@ export default {
     nodeDragEnd(draggingNode, dropNode, dropType) {
       if (dropNode && draggingNode && dropType) {
         this.sort();
-        this.forceRerender();
         this.cancelBatchProcessing();
       }
     },
@@ -2676,8 +2654,6 @@ export default {
             this.sort();
             if (this.scenarioDefinition.length <= 1) {
               this.cancelBatchProcessing();
-            } else {
-              this.forceRerender();
             }
           }
         },

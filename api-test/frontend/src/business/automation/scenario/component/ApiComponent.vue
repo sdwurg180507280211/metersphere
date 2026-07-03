@@ -428,7 +428,7 @@ export default {
     sort() {
       for (let i = 0; i < this.request.hashTree.length; i++) {
         const step = this.request.hashTree[i];
-        step.index = i + 1;
+        this.$set(step, 'index', i + 1);
         if (!step.resourceId) {
           step.resourceId = getUUID();
         }

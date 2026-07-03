@@ -6,9 +6,7 @@
           v-if="data.index"
           class="el-step__icon is-text"
           :style="{ color: color, 'background-color': backgroundColor }">
-          <div class="el-step__icon-inner" :key="forceRerenderIndex">
-            {{ data.index }}
-          </div>
+          <div class="el-step__icon-inner">{{ data.index }}</div>
         </div>
         <el-tag class="ms-left-btn" size="small" :style="{ color: color, 'background-color': backgroundColor }"
           >{{ title }}
@@ -264,9 +262,6 @@ export default {
       } else {
         return '';
       }
-    },
-    forceRerenderIndex() {
-      return store.forceRerenderIndex;
     },
     isSingleButton() {
       if (this.data.type === 'ConstantTimer' || this.data.type === 'Assertions') {
