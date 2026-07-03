@@ -21,3 +21,23 @@ export function saveSqlQueryHistory(data) {
 export function deleteSqlQueryHistory(id) {
   return post(`${BASE_URL}/history/delete`, { id });
 }
+
+export function getSqlQueryPool(data = {}) {
+  return post(`${BASE_URL}/pool/list`, data);
+}
+
+export function saveSqlQueryPool(data) {
+  return post(`${BASE_URL}/pool/save`, data);
+}
+
+export function offlineSqlQueryPool(id) {
+  return post(`${BASE_URL}/pool/offline`, { id });
+}
+
+export function copySqlQueryPoolToHistory(id) {
+  return post(`${BASE_URL}/pool/copy-to-history`, { id });
+}
+
+export function recordSqlQueryPoolUse(id) {
+  return post(`${BASE_URL}/pool/use`, { id });
+}
