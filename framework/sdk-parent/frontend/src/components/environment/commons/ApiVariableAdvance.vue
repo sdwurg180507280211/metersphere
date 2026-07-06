@@ -55,9 +55,9 @@
               <h1>{{ $t('api_test.request.jmeter_func') }}</h1>
               <el-table border :data="jmeterFuncs" class="adjust-table table-content" height="400"
                         @row-click="handleRowClick">
-                <el-table-column prop="type" label="Type" width="150"/>
-                <el-table-column prop="name" label="Functions" width="250"/>
-                <el-table-column prop="description" label="Description"/>
+                <el-table-column prop="type" label="类型" width="150"/>
+                <el-table-column prop="name" label="函数" width="250"/>
+                <el-table-column prop="description" label="说明"/>
               </el-table>
             </div>
           </el-col>

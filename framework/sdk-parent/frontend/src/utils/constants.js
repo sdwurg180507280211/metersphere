@@ -96,6 +96,11 @@ export const REQUEST_HEADERS = [
   {value: 'Warning'}
 ]
 
+const translateMockFunction = (key, fallback) => {
+  const value = i18n.t(key);
+  return value === key ? fallback : value;
+};
+
 export const MOCKJS_FUNC = [
   {name: '@boolean', des: i18n.t('api_test.request.boolean'), ex: true},
   {name: '@natural', des: i18n.t('api_test.request.natural'), ex: 72834},
@@ -118,9 +123,9 @@ export const MOCKJS_FUNC = [
   {name: '@sentence', des: i18n.t('api_test.request.sentence'), ex: "Hfi fpqnqerrs sghxldx oqpghvnmy"},
   {name: '@word', des: i18n.t('api_test.request.word'), ex: "shnjlyazvi"},
   {name: '@title', des: i18n.t('api_test.request.title'), ex: "Tefsdc Vhs Ujx"},
-  {name: '@cparagraph', des: i18n.t('api_test.request.cparagraph'), ex: "色青元处才不米拉律消叫别金如上。"},
-  {name: '@csentence', des: i18n.t('api_test.request.csentence'), ex: "与形府部速她运改织图集料进完。"},
-  {name: '@cword', des: i18n.t('api_test.request.cword'), ex: "满"},
+  {name: '@cparagraph', des: translateMockFunction('api_test.request.cparagraph', '段落'), ex: "色青元处才不米拉律消叫别金如上。"},
+  {name: '@csentence', des: translateMockFunction('api_test.request.csentence', '句子'), ex: "与形府部速她运改织图集料进完。"},
+  {name: '@cword', des: translateMockFunction('api_test.request.cword', '词语'), ex: "满"},
   {name: '@ctitle', des: i18n.t('api_test.request.ctitle'), ex: "运满前省快"},
   {name: '@first', des: i18n.t('api_test.request.first'), ex: "Mary"},
   {name: '@last', des: i18n.t('api_test.request.last'), ex: "Miller"},
@@ -150,71 +155,71 @@ export const MOCKJS_FUNC = [
 ]
 
 export const JMETER_FUNC = [
-  {type: "Information", name: "${__threadNum}", description: "get thread number"},
-  {type: "Information", name: "${__threadGroupName}", description: "get thread group name"},
-  {type: "Information", name: "${__samplerName}", description: "get the sampler name (label)"},
-  {type: "Information", name: "${__machineIP}", description: "get the local machine IP address"},
-  {type: "Information", name: "${__machineName}", description: "get the local machine name"},
-  {type: "Information", name: "${__time}", description: "return current time in various formats"},
+  {type: "信息", name: "${__threadNum}", description: "获取线程号"},
+  {type: "信息", name: "${__threadGroupName}", description: "获取线程组名称"},
+  {type: "信息", name: "${__samplerName}", description: "获取取样器名称（标签）"},
+  {type: "信息", name: "${__machineIP}", description: "获取本机 IP 地址"},
+  {type: "信息", name: "${__machineName}", description: "获取本机名称"},
+  {type: "信息", name: "${__time}", description: "以多种格式返回当前时间"},
   {
-    type: "Information",
+    type: "信息",
     name: "${__timeShift}",
-    description: "return a date in various formats with the specified amount of seconds/minutes/hours/days added"
+    description: "返回指定增加秒/分/时/天后的日期，支持多种格式"
   },
-  {type: "Information", name: "${__log}", description: "log (or display) a message (and return the value)"},
-  {type: "Information", name: "${__logn}", description: "log (or display) a message (empty return value)"},
-  {type: "Input", name: "${__StringFromFile}", description: "read a line from a file"},
-  {type: "Input", name: "${__FileToString}", description: "read an entire file"},
-  {type: "Input", name: "${__CSVRead}", description: "read from CSV delimited file"},
-  {type: "Input", name: "${__XPath}", description: "Use an XPath expression to read from a file"},
-  {type: "Input", name: "${__StringToFile}", description: "write a string to a file"},
-  {type: "Calculation", name: "${__counter}", description: "generate an incrementing number"},
+  {type: "信息", name: "${__log}", description: "记录（或显示）一条消息（并返回该值）"},
+  {type: "信息", name: "${__logn}", description: "记录（或显示）一条消息（返回值为空）"},
+  {type: "输入", name: "${__StringFromFile}", description: "从文件中读取一行"},
+  {type: "输入", name: "${__FileToString}", description: "读取整个文件"},
+  {type: "输入", name: "${__CSVRead}", description: "从 CSV 分隔文件中读取"},
+  {type: "输入", name: "${__XPath}", description: "使用 XPath 表达式从文件中读取"},
+  {type: "输入", name: "${__StringToFile}", description: "将字符串写入文件"},
+  {type: "计算", name: "${__counter}", description: "生成递增数字"},
   {
-    type: "Formatting",
+    type: "格式化",
     name: "${__dateTimeConvert}",
-    description: "Convert a date or time from source to target format"
+    description: "将日期或时间从源格式转换为目标格式"
   },
-  {type: "Calculation", name: "${__digest}", description: "Generate a digest (SHA-1, SHA-256, MD5...)"},
-  {type: "Calculation", name: "${__intSum}", description: "add int numbers"},
-  {type: "Calculation", name: "${__longSum}", description: "add long numbers"},
-  {type: "Calculation", name: "${__Random}", description: "generate a random number"},
-  {type: "Calculation", name: "${__RandomDate}", description: "generate random date within a specific date range"},
+  {type: "计算", name: "${__digest}", description: "生成摘要（SHA-1、SHA-256、MD5 等）"},
+  {type: "计算", name: "${__intSum}", description: "整数相加"},
+  {type: "计算", name: "${__longSum}", description: "长整数相加"},
+  {type: "计算", name: "${__Random}", description: "生成随机数"},
+  {type: "计算", name: "${__RandomDate}", description: "在指定日期范围内生成随机日期"},
   {
-    type: "Calculation",
+    type: "计算",
     name: "${__RandomFromMultipleVars}",
-    description: "extracts an element from the values of a set of variables separated by |"
+    description: "从以 | 分隔的一组变量值中随机提取一个元素"
   },
-  {type: "Calculation", name: "${__RandomString}", description: "generate a random string"},
-  {type: "Calculation", name: "${__UUID}", description: "generate a random type 4 UUID"},
-  {type: "Scripting", name: "${__groovy}", description: "run an Apache Groovy script"},
-  {type: "Scripting", name: "${__BeanShell}", description: "run a BeanShell script"},
-  {type: "Scripting", name: "${__javaScript}", description: "process JavaScript (Nashorn)"},
-  {type: "Scripting", name: "${__jexl2}", description: "evaluate a Commons Jexl2 expression"},
-  {type: "Scripting", name: "${__jexl3}", description: "evaluate a Commons Jexl3 expression"},
-  {type: "Properties", name: "${__isPropDefined}", description: "Test if a property exists"},
-  {type: "Properties", name: "${__property}", description: "read a property"},
-  {type: "Properties", name: "${__P}", description: "read a property (shorthand method)"},
-  {type: "Properties", name: "${__setProperty}", description: "set a JMeter property"},
-  {type: "Variables", name: "${__split}", description: "Split a string into variables"},
-  {type: "Variables", name: "${__eval}", description: "evaluate a variable expression"},
-  {type: "Variables", name: "${__evalVar}", description: "evaluate an expression stored in a variable"},
-  {type: "Properties", name: "${__isVarDefined}", description: "Test if a variable exists"},
-  {type: "Variables", name: "${__V}", description: "evaluate a variable name"},
-  {type: "String", name: "${__char}", description: "generate Unicode char values from a list of numbers"},
-  {type: "String", name: "${__changeCase}", description: "Change case following different modes"},
-  {type: "String", name: "${__escapeHtml}", description: "Encode strings using HTML encoding"},
-  {type: "String", name: "${__escapeOroRegexpChars}", description: "quote meta chars used by ORO regular expression"},
-  {type: "String", name: "${__escapeXml}", description: "Encode strings using XMl encoding"},
-  {type: "String", name: "${__regexFunction}", description: "parse previous response using a regular expression"},
-  {type: "String", name: "${__unescape}", description: "Process strings containing Java escapes (e.g. \n & \t)"},
-  {type: "String", name: "${__unescapeHtml}", description: "Decode HTML-encoded strings"},
-  {type: "String", name: "${__urldecode}", description: "Decode a application/x-www-form-urlencoded string"},
+  {type: "计算", name: "${__RandomString}", description: "生成随机字符串"},
+  {type: "计算", name: "${__UUID}", description: "生成随机类型 4 的 UUID"},
+  {type: "脚本", name: "${__groovy}", description: "运行 Apache Groovy 脚本"},
+  {type: "脚本", name: "${__BeanShell}", description: "运行 BeanShell 脚本"},
+  {type: "脚本", name: "${__javaScript}", description: "执行 JavaScript（Nashorn）"},
+  {type: "脚本", name: "${__jexl2}", description: "计算 Commons Jexl2 表达式"},
+  {type: "脚本", name: "${__jexl3}", description: "计算 Commons Jexl3 表达式"},
+  {type: "属性", name: "${__isPropDefined}", description: "判断属性是否存在"},
+  {type: "属性", name: "${__property}", description: "读取属性"},
+  {type: "属性", name: "${__P}", description: "读取属性（简写方法）"},
+  {type: "属性", name: "${__setProperty}", description: "设置 JMeter 属性"},
+  {type: "变量", name: "${__split}", description: "将字符串拆分为多个变量"},
+  {type: "变量", name: "${__eval}", description: "计算变量表达式"},
+  {type: "变量", name: "${__evalVar}", description: "计算存储在变量中的表达式"},
+  {type: "属性", name: "${__isVarDefined}", description: "判断变量是否存在"},
+  {type: "变量", name: "${__V}", description: "计算变量名"},
+  {type: "字符串", name: "${__char}", description: "从数字列表生成 Unicode 字符"},
+  {type: "字符串", name: "${__changeCase}", description: "按不同模式转换大小写"},
+  {type: "字符串", name: "${__escapeHtml}", description: "对字符串进行 HTML 编码"},
+  {type: "字符串", name: "${__escapeOroRegexpChars}", description: "转义 ORO 正则表达式中的元字符"},
+  {type: "字符串", name: "${__escapeXml}", description: "对字符串进行 XML 编码"},
+  {type: "字符串", name: "${__regexFunction}", description: "使用正则表达式解析上次响应"},
+  {type: "字符串", name: "${__unescape}", description: "处理包含 Java 转义字符的字符串（如 \n 和 \t）"},
+  {type: "字符串", name: "${__unescapeHtml}", description: "解码 HTML 编码的字符串"},
+  {type: "字符串", name: "${__urldecode}", description: "解码 application/x-www-form-urlencoded 字符串"},
   {
-    type: "String",
+    type: "字符串",
     name: "${__urlencode}",
-    description: "Encode a string to a application/x-www-form-urlencoded string"
+    description: "将字符串编码为 application/x-www-form-urlencoded 格式"
   },
-  {type: "String", name: "${__TestPlanName}", description: "Return name of current test plan"},
+  {type: "字符串", name: "${__TestPlanName}", description: "返回当前测试计划名称"},
 ]
 
 export const ORIGIN_COLOR = '#783887';
