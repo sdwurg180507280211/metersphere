@@ -6,12 +6,10 @@ import io.metersphere.controller.handler.ResultHolder;
 import io.metersphere.request.SqlQueryHistoryRequest;
 import io.metersphere.request.SqlQueryPoolRequest;
 import io.metersphere.request.SqlQueryRequest;
-import io.metersphere.service.BaseUserService;
 import io.metersphere.workstation.service.SqlQueryHistoryService;
 import io.metersphere.workstation.service.SqlQueryPoolService;
 import io.metersphere.workstation.service.SqlQueryService;
 import jakarta.annotation.Resource;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,9 +29,6 @@ public class SqlQueryController {
 
     @Resource
     private SqlQueryPoolService sqlQueryPoolService;
-
-    @Resource
-    private BaseUserService baseUserService;
 
     @Value("${metersphere.sql-query.enabled:true}")
     private boolean sqlQueryEnabled;
@@ -145,10 +140,6 @@ public class SqlQueryController {
         if (!sqlQueryEnabled) {
             MSException.throwException("SQL 查询台未开启");
         }
-        String userId = SessionUtils.getUserId();
-        if (StringUtils.isBlank(userId) || !baseUserService.isSuperUser(userId)) {
-            MSException.throwException("仅超级管理员可使用 SQL 查询台");
-        }
-        return userId;
+        return SessionUtils.getUserId();
     }
 }
