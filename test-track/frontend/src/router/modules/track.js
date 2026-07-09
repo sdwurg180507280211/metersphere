@@ -1,4 +1,15 @@
 import Layout from "metersphere-frontend/src/business/app-layout";
+import {getCurrentUserId} from "metersphere-frontend/src/utils/token";
+
+const REQUIREMENT_POOL_VISIBLE_USER_ID = 'kjls_zhaozhiwei001';
+
+function checkRequirementPoolVisible(to, from, next) {
+  if (getCurrentUserId() === REQUIREMENT_POOL_VISIBLE_USER_ID) {
+    next();
+  } else {
+    next('/track/plan/all');
+  }
+}
 
 export default {
   path: "/track",
@@ -69,8 +80,8 @@ export default {
     {
       path: "requirement-pool/list",
       name: "requirementPool",
+      beforeEnter: checkRequirementPoolVisible,
       component: () => import('@/business/requirement-pool/list.vue')
     }
   ]
 };
-
