@@ -21,10 +21,12 @@
 <script>
 
 import ProjectSwitch from "metersphere-frontend/src/components/head/ProjectSwitch";
-import {getCurrentProjectID} from "metersphere-frontend/src/utils/token";
+import {getCurrentProjectID, getCurrentUserId} from "metersphere-frontend/src/utils/token";
 import MsHeaderRightMenus from "metersphere-frontend/src/components/layout/HeaderRightMenus";
 import {PROJECT_NAME} from "metersphere-frontend/src/utils/constants";
 import {hasPermission} from "@/business/utils/sdk-utils";
+
+const REQUIREMENT_POOL_VISIBLE_USER_ID = 'kjls_zhaozhiwei001';
 
 export default {
   name: "TrackHeaderMenus",
@@ -55,11 +57,13 @@ export default {
           name: this.$t('test_track.review.test_review'),
           permission: 'PROJECT_TRACK_REVIEW:READ'
         },
-        {
-          path: '/track/requirement-pool/list',
-          name: '需求池',
-          permission: 'PROJECT_TRACK_PLAN:READ'
-        },
+        ...(this.isRequirementPoolVisible() ? [
+          {
+            path: '/track/requirement-pool/list',
+            name: '需求池',
+            permission: 'PROJECT_TRACK_PLAN:READ'
+          }
+        ] : []),
         {
           path: '/track/plan/all',
           name: this.$t('test_track.plan.test_plan'),
@@ -84,6 +88,8 @@ export default {
       handler(to, from) {
         if (to.path.indexOf("/track/review") >= 0) {
           this.pathName = '/track/review/all';
+        } else if (to.path.indexOf("/track/requirement-pool") >= 0) {
+          this.pathName = '/track/requirement-pool/list';
         } else if (to.path.indexOf("/track/plan") >= 0) {
           this.pathName = '/track/plan/all';
         } else if (to.path.indexOf("/track/case") >= 0) {
@@ -140,6 +146,9 @@ export default {
     },
     getProjectId() {
       return getCurrentProjectID();
+    },
+    isRequirementPoolVisible() {
+      return getCurrentUserId() === REQUIREMENT_POOL_VISIBLE_USER_ID;
     }
   }
 };
