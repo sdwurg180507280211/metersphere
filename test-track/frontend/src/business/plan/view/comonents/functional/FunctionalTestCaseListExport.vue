@@ -1,14 +1,24 @@
 <script>
+import Vue from "vue";
 import FunctionalTestCaseList from "./FunctionalTestCaseList";
 import {getCurrentProjectID} from "metersphere-frontend/src/utils/token";
 import {fileDownloadPost} from "@/business/utils/sdk-utils";
 import {useStore} from "@/store";
+import TestCaseExportToExcel from "@/business/case/components/export/TestCaseExportToExcel";
 
 const store = useStore();
 
 export default {
   name: "FunctionalTestCaseListExport",
   extends: FunctionalTestCaseList,
+  data() {
+    return {
+      exportExcelDialog: null,
+    }
+  },
+  beforeDestroy() {
+    this.destroyExportExcelDialog();
+  },
   computed: {
     buttons() {
       const exportExcelButton = {
@@ -69,34 +79,29 @@ export default {
       return [...new Set(rows.map(row => row && row.caseId).filter(id => !!id))];
     },
 
-    getDefaultExcelExportFieldParam() {
-      return {
-        baseHeaders: [
-          {id: 'ID', name: 'ID'},
-          {id: 'name', name: this.$t("test_track.case.name")},
-          {id: 'nodeId', name: this.$t("test_track.case.module")},
-          {id: 'prerequisite', name: this.$t("test_track.case.prerequisite")},
-          {id: 'remark', name: this.$t("commons.remark")},
-          {id: 'stepDesc', name: this.$t("test_track.case.step_describe")},
-          {id: 'stepResult', name: this.$t("test_track.case.expected_results")},
-          {id: 'stepModel', name: this.$t("test_track.case.step_model")},
-          {id: 'tags', name: this.$t("commons.tag")},
-        ],
-        customHeaders: this.getDefaultCustomExportHeaders(),
-        otherHeaders: [],
+    getExportExcelDialog() {
+      if (this.exportExcelDialog) {
+        return this.exportExcelDialog;
       }
+
+      const ExportExcelDialog = Vue.extend(TestCaseExportToExcel);
+      this.exportExcelDialog = new ExportExcelDialog({parent: this});
+      this.exportExcelDialog.$on('exportTestCase', this.exportTestCase);
+      this.exportExcelDialog.$mount();
+      document.body.appendChild(this.exportExcelDialog.$el);
+      return this.exportExcelDialog;
     },
 
-    getDefaultCustomExportHeaders() {
-      if (!this.testCaseTemplate || !Array.isArray(this.testCaseTemplate.customFields)) {
-        return [];
+    destroyExportExcelDialog() {
+      if (!this.exportExcelDialog) {
+        return;
       }
-      return this.testCaseTemplate.customFields
-        .filter(item => item && item.id)
-        .map(item => ({
-          id: item.id,
-          name: item.name,
-        }));
+      this.exportExcelDialog.$off('exportTestCase', this.exportTestCase);
+      this.exportExcelDialog.$destroy();
+      if (this.exportExcelDialog.$el && this.exportExcelDialog.$el.parentNode) {
+        this.exportExcelDialog.$el.parentNode.removeChild(this.exportExcelDialog.$el);
+      }
+      this.exportExcelDialog = null;
     },
 
     buildExportTestCaseParam(fieldParam = {}) {
@@ -161,7 +166,12 @@ export default {
     },
 
     handleBatchExportToExcel() {
-      this.exportTestCase("excel", this.getDefaultExcelExportFieldParam());
+      const caseIds = this.getSelectedCaseIds();
+      if (caseIds.length < 1) {
+        this.$warning(this.$t("test_track.case.check_select"));
+        return;
+      }
+      this.getExportExcelDialog().open(caseIds.length, false);
     },
 
     handleBatchExportToXmind() {
