@@ -63,7 +63,7 @@
 <script>
 import NodeTree from "metersphere-frontend/src/components/module/MsNodeTree";
 import MsTestPlanCommonComponent from "../base/TestPlanCommonComponent";
-import FunctionalTestCaseList from "./FunctionalTestCaseList";
+import FunctionalTestCaseList from "./FunctionalTestCaseListExport";
 import MsTabButton from "metersphere-frontend/src/components/MsTabButton";
 import TestPlanMinder from "@/business/common/minder/TestPlanMinder";
 import {getCurrentProjectID} from "metersphere-frontend/src/utils/token";
