@@ -121,6 +121,7 @@ import {diff} from 'jsondiffpatch';
 import { getScenarioById, getScenarioByTrash } from '@/api/scenario';
 import { getOwnerProjectIds, getProject, getProjectConfig } from '@/api/project';
 import { getModuleByProjectId } from '@/api/scenario-module';
+import { cloneStepTree } from '@/business/automation/api-automation';
 import { useApiStore } from '@/store';
 
 const store = useApiStore();
@@ -501,8 +502,16 @@ export default {
           description: t.currentScenario.description,
           scenarioDefinition: t.currentScenario.scenarioDefinition,
         };
-        const oldScenario = v1 ? JSON.parse(JSON.stringify(v1)) : null;
-        const newScenario = JSON.parse(JSON.stringify(v2));
+        const oldScenario = v1
+          ? {
+              ...v1,
+              scenarioDefinition: (v1.scenarioDefinition || []).map((s) => cloneStepTree(s)),
+            }
+          : null;
+        const newScenario = {
+          ...v2,
+          scenarioDefinition: (v2.scenarioDefinition || []).map((s) => cloneStepTree(s)),
+        };
         if (oldScenario && oldScenario.scenarioDefinition) {
           this.deleteResourceIds(oldScenario.scenarioDefinition);
         }

@@ -233,7 +233,7 @@ export function copyScenarioRow(row, node) {
   const parent = node.parent;
   const hashTree = parent.data.hashTree || parent.data;
   // 深度复制
-  let obj = JSON.parse(JSON.stringify(row));
+  let obj = cloneStepTree(row);
   if (obj.hashTree && obj.hashTree.length > 0) {
     resetResourceId(obj.hashTree);
   }
@@ -257,6 +257,65 @@ export function resetResourceId(hashTree) {
       resetResourceId(item.hashTree);
     }
   });
+}
+
+// UI 临时字段，快照和保存 payload 不需要携带
+const STEP_UI_FIELDS = new Set([
+  'requestResult',
+  'isBatchProcess',
+  'checkBox',
+  'showExtend',
+  'isLeaf',
+  'active',
+]);
+
+/**
+ * 递归克隆步骤树，跳过 UI 临时字段。
+ * 相比 JSON.parse(JSON.stringify()) 只复制业务字段，
+ * 避免复制 requestResult 等大体积调试结果。
+ */
+export function cloneStepTree(node) {
+  if (!node) return node;
+  const clone = {};
+  for (const key of Object.keys(node)) {
+    if (STEP_UI_FIELDS.has(key)) continue;
+    const val = node[key];
+    if (Array.isArray(val)) {
+      clone[key] = val.map((item) =>
+        item && typeof item === 'object' ? cloneStepTree(item) : item
+      );
+    } else if (val && typeof val === 'object') {
+      clone[key] = cloneStepTree(val);
+    } else {
+      clone[key] = val;
+    }
+  }
+  return clone;
+}
+
+/**
+ * 构造场景快照，用于版本对比的 scenarioDefinitionOrg。
+ * 只复制顶层元数据 + 克隆步骤树，不做整棵 scenarioDefinition 的 JSON 序列化。
+ */
+export function buildScenarioSnapshot(currentScenario, scenarioDefinition) {
+  return {
+    apiScenarioModuleId: currentScenario.apiScenarioModuleId,
+    name: currentScenario.name,
+    status: currentScenario.status,
+    principal: currentScenario.principal,
+    level: currentScenario.level,
+    tags: currentScenario.tags,
+    description: currentScenario.description,
+    scenarioDefinition: scenarioDefinition.map((step) => cloneStepTree(step)),
+  };
+}
+
+/**
+ * 浅拷贝场景对象并覆盖指定字段，用于调试运行。
+ * 避免对整个 scenario 做 JSON 深拷贝。
+ */
+export function cloneScenarioForDebug(scenario, overrides) {
+  return Object.assign({}, scenario, overrides);
 }
 
 export function getReportMessageSocket(reportId) {
