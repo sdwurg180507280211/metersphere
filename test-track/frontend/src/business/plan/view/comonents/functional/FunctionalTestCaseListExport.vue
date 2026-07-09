@@ -11,52 +11,41 @@ export default {
   extends: FunctionalTestCaseList,
   computed: {
     buttons() {
-      const exportButton = {
-        name: this.$t("test_track.case.import.case_export"),
+      const exportExcelButton = {
+        name: this.$t("test_track.case.export.export_to_excel"),
+        tips: this.$t("test_track.case.export.export_to_excel_tips"),
+        handleClick: this.handleBatchExportToExcel,
         permissions: ["PROJECT_TRACK_CASE:READ+EXPORT"],
-        children: [
-          {
-            name: this.$t("test_track.case.export.export_to_excel"),
-            tips: this.$t("test_track.case.export.export_to_excel_tips"),
-            handleClick: this.handleBatchExportToExcel,
-            permissions: ["PROJECT_TRACK_CASE:READ+EXPORT"],
-          },
-          {
-            name: this.$t("test_track.case.export.export_to_xmind"),
-            tips: this.$t("test_track.case.export.export_to_xmind_tips"),
-            handleClick: this.handleBatchExportToXmind,
-            permissions: ["PROJECT_TRACK_CASE:READ+EXPORT"],
-          },
-        ],
+      };
+
+      const exportXmindButton = {
+        name: this.$t("test_track.case.export.export_to_xmind"),
+        tips: this.$t("test_track.case.export.export_to_xmind_tips"),
+        handleClick: this.handleBatchExportToXmind,
+        permissions: ["PROJECT_TRACK_CASE:READ+EXPORT"],
+      };
+
+      const batchEditButton = {
+        name: this.$t('test_track.case.batch_edit_case'), handleClick: this.handleBatchEdit,
+        permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_EDIT']
+      };
+
+      const batchUnlinkButton = {
+        name: this.$t('test_track.case.batch_unlink'), handleClick: this.handleDeleteBatch,
+        permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_DELETE']
       };
 
       if (this.planStatus === 'Archived') {
-        return [
-          exportButton,
-          {
-            name: this.$t('test_track.case.batch_edit_case'), handleClick: this.handleBatchEdit,
-            isDisable: true,
-            permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_EDIT']
-          },
-          {
-            name: this.$t('test_track.case.batch_unlink'), handleClick: this.handleDeleteBatch,
-            isDisable: true,
-            permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_DELETE']
-          }
-        ]
-      } else {
-        return [
-          exportButton,
-          {
-            name: this.$t('test_track.case.batch_edit_case'), handleClick: this.handleBatchEdit,
-            permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_EDIT']
-          },
-          {
-            name: this.$t('test_track.case.batch_unlink'), handleClick: this.handleDeleteBatch,
-            permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_DELETE']
-          }
-        ]
+        batchEditButton.isDisable = true;
+        batchUnlinkButton.isDisable = true;
       }
+
+      return [
+        exportExcelButton,
+        exportXmindButton,
+        batchEditButton,
+        batchUnlinkButton,
+      ]
     },
   },
   methods: {
