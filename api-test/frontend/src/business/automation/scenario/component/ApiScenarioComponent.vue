@@ -113,6 +113,7 @@ import { getUUID, strMapToObj } from 'metersphere-frontend/src/utils';
 import { STEP } from '@/business/automation/scenario/Setting';
 import { getOwnerProjectIds, getProject } from '@/api/project';
 import { getScenarioById, setScenarioDomain } from '@/api/scenario';
+import { cloneScenarioForDebug } from '@/business/automation/api-automation';
 
 export default {
   name: 'ApiScenarioComponent',
@@ -207,7 +208,7 @@ export default {
         return;
       }
       this.scenario.run = true;
-      let runScenario = JSON.parse(JSON.stringify(this.scenario));
+      let runScenario = cloneScenarioForDebug(this.scenario, {});
       let variables = this.currentScenario.variables;
 
       // 合并自身依赖场景变量

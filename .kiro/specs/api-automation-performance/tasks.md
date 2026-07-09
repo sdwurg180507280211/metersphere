@@ -88,19 +88,19 @@
 
 ### 3.1 深拷贝审计
 
-- [ ] 3.1.1 查找 `JSON.parse(JSON.stringify())` 使用点
-- [ ] 3.1.2 查找保存链路中的全树递归和复制逻辑
-- [ ] 3.1.3 查找调试链路中的全树递归和复制逻辑
-- [ ] 3.1.4 查找版本对比链路中的复制和字段清理逻辑
+- [x] 3.1.1 查找 `JSON.parse(JSON.stringify())` 使用点
+- [x] 3.1.2 查找保存链路中的全树递归和复制逻辑
+- [x] 3.1.3 查找调试链路中的全树递归和复制逻辑
+- [x] 3.1.4 查找版本对比链路中的复制和字段清理逻辑
 
 ### 3.2 payload 构造
 
-- [ ] 3.2.1 设计保存 payload 字段白名单
-- [ ] 3.2.2 设计调试 payload 字段白名单
-- [ ] 3.2.3 设计版本 diff payload 字段规范化规则
-- [ ] 3.2.4 新增 `buildScenarioSavePayload`
-- [ ] 3.2.5 新增 `buildScenarioDebugPayload`
-- [ ] 3.2.6 新增 `buildScenarioDiffPayload`
+- [x] 3.2.1 设计保存 payload 字段白名单
+- [x] 3.2.2 设计调试 payload 字段白名单
+- [x] 3.2.3 设计版本 diff payload 字段规范化规则
+- [x] 3.2.4 新增 `buildScenarioSavePayload`
+- [x] 3.2.5 新增 `buildScenarioDebugPayload`
+- [x] 3.2.6 新增 `buildScenarioDiffPayload`
 
 ### 3.3 正确性验证
 
@@ -214,7 +214,7 @@
 | P0 | 性能样本和基线 | 待开始 |
 | P1 | `ScenarioDiff.vue` 左右树虚拟化 | 代码完成，待浏览器场景验证 |
 | P2 | 强制刷新链路重构 | 代码完成，待浏览器场景验证 |
-| P3 | 保存/调试深拷贝结构化 | 待开始 |
+| P3 | 保存/调试深拷贝结构化 | 代码完成，待浏览器场景验证 |
 | P4 | 单步骤组件内部渲染成本优化 | 待开始 |
 | P5 | 大场景按需展开和按需挂载 | 待开始 |
 
@@ -232,5 +232,16 @@
 - [x] 步骤序号更新改为 Vue 2 响应式 `$set`
 - [x] 主编辑器批量状态字段改为 `$set` 响应式更新，不再重建树或写入假节点
 - [x] 删除最大化编辑器未使用的 `push + splice` 假节点刷新逻辑
+- [x] `npm run lint`
+- [x] `npm run build`
+
+### 2026-07-07 保存/调试深拷贝结构化优化
+
+- [x] 新增 `cloneStepTree`：递归克隆步骤树，跳过 requestResult/isBatchProcess/checkBox/showExtend/isLeaf/active 等 UI 临时字段
+- [x] 新增 `buildScenarioSnapshot`：替代 EditApiScenario.vue 保存成功后和初始化时两处 scenarioDefinitionOrg 深拷贝
+- [x] 新增 `cloneScenarioForDebug`：替代 ApiScenarioComponent.vue 调试时整对象深拷贝为浅拷贝
+- [x] ApiAutomation.vue 版本对比深拷贝改为 cloneStepTree，元数据直接引用
+- [x] api-automation.js copyScenarioRow 深拷贝改为 cloneStepTree
+- [x] EditApiScenario.vue copyRow 深拷贝改为 cloneStepTree
 - [x] `npm run lint`
 - [x] `npm run build`

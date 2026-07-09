@@ -658,6 +658,8 @@ import { getUUID, objToStrMap, strMapToObj } from 'metersphere-frontend/src/util
 import { hasLicense, hasPermissions } from 'metersphere-frontend/src/utils/permission';
 import OutsideClick from './common/outside-click';
 import {
+  buildScenarioSnapshot,
+  cloneStepTree,
   getReportMessageSocket,
   handleCtrlREvent,
   handleCtrlSEvent,
@@ -1820,7 +1822,7 @@ export default {
       const parent = node.parent;
       const hashTree = parent.data.hashTree || parent.data;
       // 深度复制
-      const obj = JSON.parse(JSON.stringify(row));
+      const obj = cloneStepTree(row);
       obj.resourceId = getUUID();
       if (obj.hashTree && obj.hashTree.length > 0) {
         this.resetResourceId(obj.hashTree, obj.referenced);
@@ -2055,17 +2057,8 @@ export default {
                 }
                 this.pluginDelStep = false;
                 // 记录改变后的数据数据
-                let v1 = {
-                  apiScenarioModuleId: this.currentScenario.apiScenarioModuleId,
-                  name: this.currentScenario.name,
-                  status: this.currentScenario.status,
-                  principal: this.currentScenario.principal,
-                  level: this.currentScenario.level,
-                  tags: this.currentScenario.tags,
-                  description: this.currentScenario.description,
-                  scenarioDefinition: JSON.parse(JSON.stringify(this.scenarioDefinition)),
-                };
-                this.currentScenario.scenarioDefinitionOrg = v1;
+                this.currentScenario.scenarioDefinitionOrg =
+                  buildScenarioSnapshot(this.currentScenario, this.scenarioDefinition);
                 this.currentScenario.scenarioDefinition = this.scenarioDefinition;
                 this.$emit('refresh', this.currentScenario);
                 resolve();
@@ -2187,18 +2180,9 @@ export default {
             this.reloadTree = getUUID();
           }
           // 记录初始化数据
-          let v1 = {
-            apiScenarioModuleId: this.currentScenario.apiScenarioModuleId,
-            name: this.currentScenario.name,
-            status: this.currentScenario.status,
-            principal: this.currentScenario.principal,
-            level: this.currentScenario.level,
-            tags: this.currentScenario.tags,
-            description: this.currentScenario.description,
-            scenarioDefinition: JSON.parse(JSON.stringify(this.scenarioDefinition)),
-          };
 
-          this.currentScenario.scenarioDefinitionOrg = v1;
+          this.currentScenario.scenarioDefinitionOrg =
+            buildScenarioSnapshot(this.currentScenario, this.scenarioDefinition);
           this.currentScenario.scenarioDefinition = this.scenarioDefinition;
         });
       }
