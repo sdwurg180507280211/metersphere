@@ -3,7 +3,6 @@
   <div>
     <ms-test-plan-header-bar>
       <template v-slot:info>
-        <el-button type="text" class="back-button" @click="backToPlanList">← 返回</el-button>
         <select-menu
           :data="testPlans"
           :current-data="currentPlan"
@@ -13,6 +12,7 @@
       <template v-slot:menu>
         <el-menu v-if="isMenuShow" :active-text-color="color" :default-active="activeIndex"
                  class="el-menu-demo header-menu" mode="horizontal" @select="handleSelect">
+          <el-menu-item index="back">← 返回</el-menu-item>
           <el-menu-item v-if="microServiceActivated('track')" index="functional">{{ $t('test_track.functional_test_case') }}</el-menu-item>
           <el-menu-item v-if="microServiceActivated('api')" index="api" v-modules="['api']">{{ $t('test_track.api_test_case') }}</el-menu-item>
           <el-menu-item v-if="microServiceActivated('ui') && hasLicense()" index="ui" v-modules="['ui']">{{ $t('test_track.ui_test_case') }}</el-menu-item>
@@ -240,6 +240,10 @@ export default {
       this.$router.push('/track/plan/view/' + plan.id);
     },
     handleSelect(key) {
+      if (key === 'back') {
+        this.backToPlanList();
+        return;
+      }
       let isTestCaseMinderChanged = useStore().isTestCaseMinderChanged;
       if (key !== 'functional' && isTestCaseMinderChanged) {
         if (this.currentPlan.status === 'Archived') {
@@ -289,11 +293,6 @@ export default {
 </script>
 
 <style scoped>
-
-.back-button {
-  margin-right: 12px;
-  padding: 0;
-}
 
 .select-menu {
   display: inline-block;
