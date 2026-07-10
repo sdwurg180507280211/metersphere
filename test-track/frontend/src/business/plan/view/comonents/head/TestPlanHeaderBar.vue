@@ -1,5 +1,8 @@
 <template>
   <div class="test-plan-header-bar">
+    <div class="header-back" v-if="$slots.back">
+      <slot name="back"></slot>
+    </div>
     <div class="header-info">
       <slot name="info"></slot>
     </div>
@@ -32,8 +35,15 @@ export default {
 
 .test-plan-header-bar {
   height: 50px;
+  display: flex;
+  align-items: center;
   background-color: #FFF;
   border-bottom: 2px solid #E6E6E6;
+}
+
+.header-back {
+  flex: 0 0 auto;
+  padding: 0 12px;
 }
 
 .header-info {

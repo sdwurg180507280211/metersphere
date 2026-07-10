@@ -2,6 +2,15 @@
 
   <div>
     <ms-test-plan-header-bar>
+      <template v-slot:back>
+        <el-button
+          plain
+          size="mini"
+          icon="el-icon-back"
+          @click="backToPlanList"
+        >{{ $t("test_track.return") }}
+        </el-button>
+      </template>
       <template v-slot:info>
         <select-menu
           :data="testPlans"
@@ -12,7 +21,6 @@
       <template v-slot:menu>
         <el-menu v-if="isMenuShow" :active-text-color="color" :default-active="activeIndex"
                  class="el-menu-demo header-menu" mode="horizontal" @select="handleSelect">
-          <el-menu-item index="back">← 返回</el-menu-item>
           <el-menu-item v-if="microServiceActivated('track')" index="functional">{{ $t('test_track.functional_test_case') }}</el-menu-item>
           <el-menu-item v-if="microServiceActivated('api')" index="api" v-modules="['api']">{{ $t('test_track.api_test_case') }}</el-menu-item>
           <el-menu-item v-if="microServiceActivated('ui') && hasLicense()" index="ui" v-modules="['ui']">{{ $t('test_track.ui_test_case') }}</el-menu-item>
@@ -240,10 +248,6 @@ export default {
       this.$router.push('/track/plan/view/' + plan.id);
     },
     handleSelect(key) {
-      if (key === 'back') {
-        this.backToPlanList();
-        return;
-      }
       let isTestCaseMinderChanged = useStore().isTestCaseMinderChanged;
       if (key !== 'functional' && isTestCaseMinderChanged) {
         if (this.currentPlan.status === 'Archived') {
