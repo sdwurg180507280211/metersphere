@@ -29,6 +29,7 @@ public class SqlQueryPoolService {
     private static final int MAX_TITLE_LENGTH = 120;
     private static final int MAX_SUMMARY_LENGTH = 200;
     private static final int MAX_DESCRIPTION_LENGTH = 500;
+    private static final String RESTORE_DELETED_TITLE_ERROR = "SQL_QUERY_POOL_TITLE_DELETED";
 
     @Resource
     private DataSource dataSource;
@@ -84,16 +85,22 @@ public class SqlQueryPoolService {
         String summary = normalizeSummary(request.getSummary());
         String description = normalizeDescription(request.getDescription());
         long now = System.currentTimeMillis();
-        String titleMatchedId = getIdByTitle(title);
+        SqlQueryPoolDTO titleMatched = getByTitle(title);
 
         if (StringUtils.isBlank(request.getId())) {
-            if (StringUtils.isNotBlank(titleMatchedId)) {
-                throw new IllegalArgumentException("公共池标题不能重复");
+            if (titleMatched != null) {
+                if (Boolean.TRUE.equals(titleMatched.getEnabled())) {
+                    throw new IllegalArgumentException("公共池标题不能重复");
+                }
+                if (!Boolean.TRUE.equals(request.getRestoreDeleted())) {
+                    throw new IllegalArgumentException(RESTORE_DELETED_TITLE_ERROR);
+                }
+                return restore(userId, titleMatched.getId(), sqlContent, title, summary, description, now);
             }
             return insert(userId, sqlContent, title, summary, description, now);
         }
 
-        if (StringUtils.isNotBlank(titleMatchedId) && !StringUtils.equals(titleMatchedId, request.getId())) {
+        if (titleMatched != null && !StringUtils.equals(titleMatched.getId(), request.getId())) {
             throw new IllegalArgumentException("公共池标题不能重复");
         }
         return update(userId, request.getId(), sqlContent, title, summary, description, now);
@@ -140,7 +147,8 @@ public class SqlQueryPoolService {
         }
     }
 
-    private SqlQueryPoolDTO insert(String userId, String sqlContent, String title, String summary, String description, long now) throws SQLException {
+    private SqlQueryPoolDTO insert(String userId, String sqlContent, String title, String summary,
+                                   String description, long now) throws SQLException {
         String id = UUID.randomUUID().toString();
         String sql = "INSERT INTO workstation_sql_query_pool "
             + "(id, sql_content, title, summary, description, create_user, update_user, enabled, use_count, create_time, update_time) "
@@ -161,7 +169,29 @@ public class SqlQueryPoolService {
         return getEnabledById(id);
     }
 
-    private SqlQueryPoolDTO update(String userId, String id, String sqlContent, String title, String summary, String description, long now) throws SQLException {
+    private SqlQueryPoolDTO restore(String userId, String id, String sqlContent, String title, String summary,
+                                    String description, long now) throws SQLException {
+        String sql = "UPDATE workstation_sql_query_pool "
+            + "SET sql_content = ?, title = ?, summary = ?, description = ?, update_user = ?, enabled = 1, update_time = ? "
+            + "WHERE id = ? AND enabled = 0";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, sqlContent);
+            statement.setString(2, title);
+            statement.setString(3, summary);
+            statement.setString(4, description);
+            statement.setString(5, userId);
+            statement.setLong(6, now);
+            statement.setString(7, id);
+            if (statement.executeUpdate() == 0) {
+                throw new IllegalArgumentException("公共池记录状态已变化，请刷新后重试");
+            }
+        }
+        return getEnabledById(id);
+    }
+
+    private SqlQueryPoolDTO update(String userId, String id, String sqlContent, String title, String summary,
+                                   String description, long now) throws SQLException {
         String sql = "UPDATE workstation_sql_query_pool "
             + "SET sql_content = ?, title = ?, summary = ?, description = ?, update_user = ?, update_time = ? "
             + "WHERE id = ? AND enabled = 1";
@@ -202,14 +232,16 @@ public class SqlQueryPoolService {
         return null;
     }
 
-    private String getIdByTitle(String title) throws SQLException {
-        String sql = "SELECT id FROM workstation_sql_query_pool WHERE title = ? LIMIT 1";
+    private SqlQueryPoolDTO getByTitle(String title) throws SQLException {
+        String sql = "SELECT id, sql_content, title, summary, description, create_user, update_user, enabled, "
+            + "use_count, create_time, update_time "
+            + "FROM workstation_sql_query_pool WHERE title = ? LIMIT 1";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, title);
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    return resultSet.getString("id");
+                    return mapPool(resultSet);
                 }
             }
         }
@@ -251,7 +283,7 @@ public class SqlQueryPoolService {
 
     private String normalizeSummary(String summary) {
         if (StringUtils.isBlank(summary)) {
-            throw new IllegalArgumentException("简介不能为空");
+            return null;
         }
         String normalized = summary.trim();
         if (normalized.length() > MAX_SUMMARY_LENGTH) {
