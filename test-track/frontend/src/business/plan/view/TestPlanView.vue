@@ -3,6 +3,7 @@
   <div>
     <ms-test-plan-header-bar>
       <template v-slot:info>
+        <el-button type="text" class="back-button" @click="backToPlanList">← 返回</el-button>
         <select-menu
           :data="testPlans"
           :current-data="currentPlan"
@@ -181,6 +182,9 @@ export default {
     this.genRedirectParam();
   },
   methods: {
+    backToPlanList() {
+      this.$router.push({path: '/track/plan/all', query: {restoreState: 'true'}});
+    },
     microServiceActivated(serviceName) {
       return this.microApp && this.microApp[serviceName];
     },
@@ -285,6 +289,11 @@ export default {
 </script>
 
 <style scoped>
+
+.back-button {
+  margin-right: 12px;
+  padding: 0;
+}
 
 .select-menu {
   display: inline-block;
