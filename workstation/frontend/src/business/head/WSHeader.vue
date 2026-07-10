@@ -18,7 +18,6 @@
           <el-menu-item :index="'/workstation/creation'" >
             {{ $t('workstation.creation') }}
           </el-menu-item>
-         <el-menu-item v-if="canAccessSqlQuery" :index="'/workstation/sql-query'" >
           <el-menu-item :index="'/workstation/sql-query'" >
             {{ $t('sql_query.menu') }}
           </el-menu-item>
