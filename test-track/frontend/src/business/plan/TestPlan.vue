@@ -47,6 +47,8 @@ export default {
       enableAsideHidden: true,
       treeNodes: [],
       restoreNodeId: null,
+      restoringReturnState: false,
+      restoreTimer: null,
     };
   },
   computed: {
@@ -66,6 +68,11 @@ export default {
       this.$router.push('/track/plan/all');
     } else if (this.$route.query.restoreState === 'true') {
       this.restoreReturnState();
+    }
+  },
+  destroyed() {
+    if (this.restoreTimer) {
+      clearTimeout(this.restoreTimer);
     }
   },
   watch: {
@@ -106,31 +113,46 @@ export default {
       sessionStorage.setItem(this.getReturnStateKey(), JSON.stringify(state));
     },
     restoreReturnState() {
+      if (this.restoringReturnState) {
+        return;
+      }
       const stateText = sessionStorage.getItem(this.getReturnStateKey());
       if (!stateText) {
         return;
       }
       try {
         const state = JSON.parse(stateText);
+        this.restoringReturnState = true;
         this.restoreNodeId = state.nodeId;
         this.currentSelectNodes = state.currentSelectNodes || [];
         this.condition = state.condition || {};
         if (this.restoreNodeId) {
           this.currentNode = {data: {id: this.restoreNodeId}};
         }
-        this.$nextTick(() => {
-          const list = this.$refs.testPlanList;
-          if (list) {
-            list.condition = state.condition || list.condition;
-            list.currentPage = state.currentPage || 1;
-            list.pageSize = state.pageSize || list.pageSize;
-            list.initTableData(this.currentSelectNodes);
-          }
-          this.applyRestoredNode();
-        });
+        this.$nextTick(() => this.restoreListStateWhenReady(state));
       } catch (e) {
+        this.restoringReturnState = false;
         sessionStorage.removeItem(this.getReturnStateKey());
       }
+    },
+    restoreListStateWhenReady(state, retryCount = 0) {
+      const list = this.$refs.testPlanList;
+      if (!list || list.cardLoading) {
+        if (retryCount < 100) {
+          this.restoreTimer = setTimeout(() => {
+            this.restoreListStateWhenReady(state, retryCount + 1);
+          }, 50);
+        } else {
+          this.restoringReturnState = false;
+        }
+        return;
+      }
+      list.condition = state.condition || list.condition;
+      list.currentPage = state.currentPage || 1;
+      list.pageSize = state.pageSize || list.pageSize;
+      list.initTableData(this.currentSelectNodes);
+      this.applyRestoredNode();
+      this.restoringReturnState = false;
     },
     findNodeById(nodes, id) {
       if (!nodes || !id) {
