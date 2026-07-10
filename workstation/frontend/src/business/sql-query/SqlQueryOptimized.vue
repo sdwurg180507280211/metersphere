@@ -20,7 +20,7 @@ const FALLBACK_TOOLBAR_HEIGHT = 64;
 const FALLBACK_RESIZER_HEIGHT = 8;
 const RESULT_COLLAPSE_THRESHOLD = 24;
 const MORE_MENU_WIDTH = 236;
-const MORE_MENU_HEIGHT = 166;
+const MORE_MENU_HEIGHT = 90;
 const MORE_MENU_RIGHT = 96;
 const MORE_MENU_TOP = 38;
 const originalOpenPoolForm = SqlQuery.methods.openPoolForm;
@@ -345,7 +345,7 @@ export default {
   display: none;
 }
 
-/* 点击“更多”后以下拉菜单形式显示高级设置。 */
+/* 点击“更多”后以下拉菜单形式显示行数与超时设置。 */
 .sql-query-optimized.show-advanced-options /deep/ .toolbar-actions::before {
   content: '';
   position: absolute;
@@ -353,38 +353,12 @@ export default {
   right: 96px;
   z-index: 25;
   width: 236px;
-  height: 166px;
+  height: 90px;
   pointer-events: none;
   background: #FFFFFF;
   border: 1px solid #DCDFE6;
   border-radius: 4px;
   box-shadow: 0 6px 18px rgba(31, 45, 61, 0.14);
-}
-
-.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .el-button:nth-of-type(4),
-.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .el-button:nth-of-type(5) {
-  display: flex !important;
-  align-items: center;
-  justify-content: flex-start;
-  position: absolute;
-  right: 96px;
-  z-index: 26;
-  width: 236px;
-  height: 36px;
-  margin: 0 !important;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: #606266;
-}
-
-.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .el-button:nth-of-type(4) {
-  top: 44px;
-}
-
-.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .el-button:nth-of-type(5) {
-  top: 80px;
 }
 
 .sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number {
@@ -404,11 +378,11 @@ export default {
 }
 
 .sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number:nth-of-type(1) {
-  top: 116px;
+  top: 44px;
 }
 
 .sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number:nth-of-type(2) {
-  top: 158px;
+  top: 86px;
 }
 
 .sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number .el-input-number {
