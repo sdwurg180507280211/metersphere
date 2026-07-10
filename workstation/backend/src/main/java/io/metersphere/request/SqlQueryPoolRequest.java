@@ -20,4 +20,9 @@ public class SqlQueryPoolRequest {
     private String keyword;
 
     private Boolean onlyMine;
+
+    /**
+     * 当同名公共 SQL 已被软删除时，是否确认恢复该记录。
+     */
+    private Boolean restoreDeleted;
 }
