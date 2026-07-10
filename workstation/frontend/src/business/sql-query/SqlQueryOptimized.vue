@@ -19,6 +19,10 @@ const MIN_EDITOR_HEIGHT = 140;
 const FALLBACK_TOOLBAR_HEIGHT = 64;
 const FALLBACK_RESIZER_HEIGHT = 8;
 const RESULT_COLLAPSE_THRESHOLD = 24;
+const MORE_MENU_WIDTH = 236;
+const MORE_MENU_HEIGHT = 166;
+const MORE_MENU_RIGHT = 96;
+const MORE_MENU_TOP = 38;
 const originalOpenPoolForm = SqlQuery.methods.openPoolForm;
 const originalExecute = SqlQuery.methods.execute;
 const originalInsertSqlAsDraft = SqlQuery.methods.insertSqlAsDraft;
@@ -225,9 +229,59 @@ export default {
       resultCollapsed: false
     };
   },
+  beforeDestroy() {
+    this.removeAdvancedOptionsMouseWatcher();
+  },
   methods: {
     toggleAdvancedOptions() {
-      this.advancedOptionsVisible = !this.advancedOptionsVisible;
+      this.setAdvancedOptionsVisible(!this.advancedOptionsVisible);
+    },
+    setAdvancedOptionsVisible(visible) {
+      this.advancedOptionsVisible = !!visible;
+      if (this.advancedOptionsVisible) {
+        this.$nextTick(this.addAdvancedOptionsMouseWatcher);
+      } else {
+        this.removeAdvancedOptionsMouseWatcher();
+      }
+    },
+    addAdvancedOptionsMouseWatcher() {
+      this.removeAdvancedOptionsMouseWatcher();
+      document.addEventListener('mousemove', this.handleAdvancedOptionsMouseMove);
+    },
+    removeAdvancedOptionsMouseWatcher() {
+      document.removeEventListener('mousemove', this.handleAdvancedOptionsMouseMove);
+    },
+    handleAdvancedOptionsMouseMove(event) {
+      if (!this.advancedOptionsVisible || !this.$el) {
+        return;
+      }
+      const toolbar = this.$el.querySelector('.toolbar-actions');
+      if (!toolbar) {
+        this.setAdvancedOptionsVisible(false);
+        return;
+      }
+
+      const x = event.clientX;
+      const y = event.clientY;
+      const toolbarRect = toolbar.getBoundingClientRect();
+      const moreButton = toolbar.querySelector('.el-button:nth-of-type(3)');
+      const moreButtonRect = moreButton && moreButton.getBoundingClientRect();
+      const menuRect = {
+        left: toolbarRect.right - MORE_MENU_RIGHT - MORE_MENU_WIDTH,
+        right: toolbarRect.right - MORE_MENU_RIGHT,
+        top: toolbarRect.top + MORE_MENU_TOP,
+        bottom: toolbarRect.top + MORE_MENU_TOP + MORE_MENU_HEIGHT
+      };
+
+      if (!this.isPointInRect(x, y, moreButtonRect) && !this.isPointInRect(x, y, menuRect)) {
+        this.setAdvancedOptionsVisible(false);
+      }
+    },
+    isPointInRect(x, y, rect) {
+      if (!rect) {
+        return false;
+      }
+      return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
     },
     handleResultCollapsedChange(collapsed) {
       this.resultCollapsed = !!collapsed;
@@ -300,6 +354,7 @@ export default {
   z-index: 25;
   width: 236px;
   height: 166px;
+  pointer-events: none;
   background: #FFFFFF;
   border: 1px solid #DCDFE6;
   border-radius: 4px;
@@ -359,9 +414,11 @@ export default {
 .sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number .el-input-number {
   width: 120px;
 }
+</style>
 
-/* 公共池打开时即自动加载，去掉重复的刷新按钮。 */
-.sql-query-optimized /deep/ .pool-toolbar > .el-button:first-of-type {
-  display: none;
+<style>
+/* 公共池弹窗 append-to-body，需使用全局样式隐藏重复刷新按钮。 */
+.sql-pool-dialog .pool-toolbar > .el-button:first-of-type {
+  display: none !important;
 }
 </style>
