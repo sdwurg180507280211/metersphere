@@ -230,7 +230,7 @@ export default {
     };
   },
   beforeDestroy() {
-    this.removeAdvancedOptionsMouseWatcher();
+    this.removeAdvancedOptionsClickWatcher();
   },
   methods: {
     toggleAdvancedOptions() {
@@ -239,19 +239,19 @@ export default {
     setAdvancedOptionsVisible(visible) {
       this.advancedOptionsVisible = !!visible;
       if (this.advancedOptionsVisible) {
-        this.$nextTick(this.addAdvancedOptionsMouseWatcher);
+        this.$nextTick(this.addAdvancedOptionsClickWatcher);
       } else {
-        this.removeAdvancedOptionsMouseWatcher();
+        this.removeAdvancedOptionsClickWatcher();
       }
     },
-    addAdvancedOptionsMouseWatcher() {
-      this.removeAdvancedOptionsMouseWatcher();
-      document.addEventListener('mousemove', this.handleAdvancedOptionsMouseMove);
+    addAdvancedOptionsClickWatcher() {
+      this.removeAdvancedOptionsClickWatcher();
+      document.addEventListener('mousedown', this.handleAdvancedOptionsDocumentClick);
     },
-    removeAdvancedOptionsMouseWatcher() {
-      document.removeEventListener('mousemove', this.handleAdvancedOptionsMouseMove);
+    removeAdvancedOptionsClickWatcher() {
+      document.removeEventListener('mousedown', this.handleAdvancedOptionsDocumentClick);
     },
-    handleAdvancedOptionsMouseMove(event) {
+    handleAdvancedOptionsDocumentClick(event) {
       if (!this.advancedOptionsVisible || !this.$el) {
         return;
       }
