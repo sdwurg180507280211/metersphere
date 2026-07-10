@@ -39,7 +39,7 @@ const OptimizedSqlQuery = Vue.extend({
   },
   methods: {
     /**
-     * 顶部原“上传公共池”入口改为查询设置开关。
+     * 顶部原“上传公共池”入口改为“更多”下拉开关。
      * 公共池弹窗内的“上传当前 SQL”仍复用原逻辑。
      */
     openPoolForm(item = null) {
@@ -249,26 +249,115 @@ export default {
   border-bottom-color: transparent;
 }
 
-/* 顶部第三个按钮由“上传公共池”改作查询设置开关，隐藏原上传图标。 */
+.sql-query-optimized /deep/ .toolbar-actions {
+  position: relative;
+}
+
+/* 顶部第三个按钮作为“更多”下拉开关，隐藏原上传图标和原文案。 */
+.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3) {
+  min-width: 64px;
+  font-size: 0;
+}
+
 .sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3) i {
   display: none;
 }
 
-/* 默认隐藏刷新连接、格式化、行数与超时设置。 */
+.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3)::before {
+  content: '更多';
+  font-size: 14px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3)::after {
+  content: '▾';
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+/* 清空按钮不再展示。 */
+.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(6) {
+  display: none !important;
+}
+
+/* 默认隐藏更多菜单中的刷新连接、格式化、行数与超时设置。 */
 .sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(4),
 .sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(5),
 .sql-query-optimized /deep/ .toolbar-actions > .toolbar-number {
   display: none;
 }
 
-/* 点击“查询设置”后再显示高级设置。 */
+/* 点击“更多”后以下拉菜单形式显示高级设置。 */
+.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions::before {
+  content: '';
+  position: absolute;
+  top: 38px;
+  right: 96px;
+  z-index: 25;
+  width: 236px;
+  height: 166px;
+  background: #FFFFFF;
+  border: 1px solid #DCDFE6;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(31, 45, 61, 0.14);
+}
+
 .sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .el-button:nth-of-type(4),
 .sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .el-button:nth-of-type(5) {
-  display: inline-block;
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  position: absolute;
+  right: 96px;
+  z-index: 26;
+  width: 236px;
+  height: 36px;
+  margin: 0 !important;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #606266;
+}
+
+.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .el-button:nth-of-type(4) {
+  top: 44px;
+}
+
+.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .el-button:nth-of-type(5) {
+  top: 80px;
 }
 
 .sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number {
-  display: inline-flex;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  position: absolute;
+  right: 96px;
+  z-index: 26;
+  width: 236px;
+  height: 42px;
+  margin: 0 !important;
+  padding: 4px 14px;
+  box-sizing: border-box;
+  background: transparent;
+  color: #606266;
+}
+
+.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number:nth-of-type(1) {
+  top: 116px;
+}
+
+.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number:nth-of-type(2) {
+  top: 158px;
+}
+
+.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number .el-input-number {
+  width: 120px;
 }
 
 /* 公共池打开时即自动加载，去掉重复的刷新按钮。 */
