@@ -239,7 +239,7 @@ export default {
       const list = this.$refs.testPlanList;
       if (list) {
         list.currentPage = 1;
-        list.initTableData([]);
+        list.restoreTableData([]);
       }
     },
     setTreeNodes(data) {
