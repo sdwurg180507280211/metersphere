@@ -161,7 +161,6 @@ export default {
         ? state.pageSize
         : list.pageSize;
       list.restoreTableData(this.currentSelectNodes);
-      this.applyRestoredNode();
       this.finishReturnStateRestore();
     },
     initializeDefaultList() {
