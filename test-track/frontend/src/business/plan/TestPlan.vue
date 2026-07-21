@@ -2,7 +2,7 @@
   <ms-container>
     <ms-aside-container page-key="TEST_PLAN_LIST" max-width="600px" :enable-aside-hidden.sync="enableAsideHidden" class="plan-aside">
       <test-plan-node-tree ref="planNodeTree" :plan-condition="condition" @setTreeNodes="setTreeNodes"
-                                  @nodeSelectEvent="handleCaseNodeSelect" @refreshTable="refreshTestPlanList"/>
+                                   @nodeSelectEvent="handleCaseNodeSelect" @refreshTable="refreshTestPlanList"/>
     </ms-aside-container>
 
     <ms-main-container>
@@ -24,13 +24,15 @@
 <script>
 import {TEST_PLAN_CONFIGS} from "metersphere-frontend/src/components/search/search-components";
 import TestPlanNodeTree from "@/business/module/TestPlanNodeTree.vue";
-import TestPlanList from './components/TestPlanList';
+import TestPlanList from './components/TestPlanListWithReturnState';
 import TestPlanEdit from './components/TestPlanEdit';
 import MsContainer from "metersphere-frontend/src/components/MsContainer";
 import MsAsideContainer from "metersphere-frontend/src/components/MsAsideContainer";
 import MsMainContainer from "metersphere-frontend/src/components/MsMainContainer";
 import {getCurrentProjectID} from "metersphere-frontend/src/utils/token";
 import TestCaseReviewList from "@/business/review/components/TestCaseReviewList.vue";
+
+const TEST_PLAN_LIST_STATE_KEY = "TEST_PLAN_LIST_RETURN_STATE";
 
 export default {
   name: "TestPlan",
@@ -44,6 +46,9 @@ export default {
       currentSelectNodes: [],
       enableAsideHidden: true,
       treeNodes: [],
+      treeLoaded: false,
+      restoreNodeId: null,
+      restoringReturnState: false,
     };
   },
   computed: {
@@ -51,10 +56,22 @@ export default {
       return getCurrentProjectID();
     },
   },
+  beforeRouteLeave(to, from, next) {
+    if (to.path.indexOf("/track/plan/view/") >= 0) {
+      this.saveReturnState();
+      const list = this.$refs.testPlanList;
+      if (list && list.prepareReturnStateRestore) {
+        list.prepareReturnStateRestore();
+      }
+    }
+    next();
+  },
   mounted() {
     if (this.$route.path.indexOf("/track/plan/create") >= 0) {
       this.openTestPlanEditDialog();
       this.$router.push('/track/plan/all');
+    } else if (this.isRestoreRoute(this.$route)) {
+      this.restoreReturnState();
     }
   },
   watch: {
@@ -67,16 +84,168 @@ export default {
         this.openTestPlanEditDialog();
         this.$router.push('/track/plan/all');
       } else if (to.path.indexOf("/track/plan/all") >= 0) {
-        // 清空模块树相关参数
-        this.currentNode = null;
-        this.currentSelectNodes = [];
-        this.$refs.planNodeTree.currentNode = {};
+        if (this.isRestoreRoute(to)) {
+          this.restoreReturnState();
+          return;
+        }
+        this.resetModuleSelection();
       }
     }
   },
   methods: {
+    isRestoreRoute(route) {
+      return route && route.query && route.query.restoreState === 'true';
+    },
+    getReturnStateKey() {
+      return TEST_PLAN_LIST_STATE_KEY + "_" + (this.projectId || "default");
+    },
+    saveReturnState() {
+      const list = this.$refs.testPlanList;
+      const nodeId = this.currentNode && this.currentNode.data ? this.currentNode.data.id : null;
+      const state = {
+        nodeId,
+        currentSelectNodes: this.currentSelectNodes || [],
+        condition: list && list.condition ? list.condition : this.condition,
+        currentPage: list ? list.currentPage : 1,
+        pageSize: list ? list.pageSize : 10,
+      };
+      sessionStorage.setItem(this.getReturnStateKey(), JSON.stringify(state));
+    },
+    restoreReturnState() {
+      if (this.restoringReturnState) {
+        return;
+      }
+      this.restoringReturnState = true;
+      const stateKey = this.getReturnStateKey();
+      const stateText = sessionStorage.getItem(stateKey);
+      sessionStorage.removeItem(stateKey);
+      if (!stateText) {
+        this.initializeDefaultList();
+        this.finishReturnStateRestore();
+        return;
+      }
+      try {
+        const state = JSON.parse(stateText);
+        const list = this.$refs.testPlanList;
+        if (!list) {
+          this.$nextTick(() => {
+            this.restoringReturnState = false;
+            this.restoreReturnStateFromState(state);
+          });
+          return;
+        }
+        this.restoreReturnStateFromState(state);
+      } catch (e) {
+        this.initializeDefaultList();
+        this.finishReturnStateRestore();
+      }
+    },
+    restoreReturnStateFromState(state) {
+      const list = this.$refs.testPlanList;
+      if (!list) {
+        this.initializeDefaultList();
+        this.finishReturnStateRestore();
+        return;
+      }
+      this.restoreNodeId = state.nodeId || 'root';
+      this.currentSelectNodes = Array.isArray(state.currentSelectNodes)
+        ? state.currentSelectNodes
+        : [];
+      this.condition = state.condition || {};
+      this.currentNode = {data: {id: this.restoreNodeId}};
+      list.condition = state.condition || list.condition;
+      list.currentPage = Number.isInteger(state.currentPage) && state.currentPage > 0
+        ? state.currentPage
+        : 1;
+      list.pageSize = Number.isInteger(state.pageSize) && state.pageSize > 0
+        ? state.pageSize
+        : list.pageSize;
+      list.restoreTableData(this.currentSelectNodes);
+      this.applyRestoredNode();
+      this.finishReturnStateRestore();
+    },
+    initializeDefaultList() {
+      const list = this.$refs.testPlanList;
+      if (list) {
+        list.restoreTableData([]);
+      } else {
+        this.$nextTick(() => {
+          const nextList = this.$refs.testPlanList;
+          if (nextList) {
+            nextList.restoreTableData([]);
+          }
+        });
+      }
+    },
+    finishReturnStateRestore() {
+      this.restoringReturnState = false;
+      this.clearRestoreQuery();
+    },
+    clearRestoreQuery() {
+      if (!this.isRestoreRoute(this.$route)) {
+        return;
+      }
+      const query = {...this.$route.query};
+      delete query.restoreState;
+      const resolved = this.$router.resolve({
+        path: this.$route.path,
+        query,
+      });
+      window.history.replaceState(window.history.state, '', resolved.href);
+    },
+    resetModuleSelection() {
+      this.restoreNodeId = null;
+      this.currentNode = null;
+      this.currentSelectNodes = [];
+      if (this.$refs.planNodeTree) {
+        this.$refs.planNodeTree.currentNode = {};
+      }
+    },
+    findNodeById(nodes, id) {
+      if (!nodes || !id) {
+        return null;
+      }
+      for (let node of nodes) {
+        if (node.id === id) {
+          return node;
+        }
+        const child = this.findNodeById(node.children, id);
+        if (child) {
+          return child;
+        }
+      }
+      return null;
+    },
+    applyRestoredNode() {
+      if (!this.restoreNodeId || !this.treeLoaded || !this.$refs.planNodeTree) {
+        return;
+      }
+      const restoreNodeId = this.restoreNodeId;
+      const nodeData = restoreNodeId === 'root'
+        ? {id: 'root'}
+        : this.findNodeById(this.treeNodes, restoreNodeId);
+      if (nodeData) {
+        this.currentNode = {data: nodeData};
+        this.$refs.planNodeTree.currentNode = this.currentNode;
+        this.$nextTick(() => this.$refs.planNodeTree.justSetCurrentKey());
+        this.restoreNodeId = null;
+        return;
+      }
+      this.restoreNodeId = null;
+      this.currentSelectNodes = [];
+      this.currentNode = {data: {id: 'root'}};
+      this.$refs.planNodeTree.currentNode = this.currentNode;
+      this.$nextTick(() => this.$refs.planNodeTree.justSetCurrentKey());
+      const list = this.$refs.testPlanList;
+      if (list) {
+        list.currentPage = 1;
+        list.restoreTableData([]);
+      }
+    },
     setTreeNodes(data) {
-      this.treeNodes = data;
+      this.treeNodes = data || [];
+      this.treeLoaded = true;
+      this.applyRestoredNode();
     },
     setCondition(data) {
       this.condition = data;
@@ -92,6 +261,7 @@ export default {
       this.$refs.planNodeTree.list();
     },
     handleCaseNodeSelect(node, nodeIds, pNodes) {
+      this.restoreNodeId = null;
       this.currentNode = node;
       this.currentSelectNodes = nodeIds;
       this.$refs.testPlanList.initTableData(nodeIds);
