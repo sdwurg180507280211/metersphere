@@ -1,0 +1,83 @@
+```mermaid
+flowchart TD
+    A["待评估"]
+    B["继续测试"]
+    C["已提交"]
+    D["审批通过"]
+    E["Prepare / 未开始"]
+    F["Underway / 进行中"]
+    G["Completed / 已完成"]
+    J["Finished / 已结束"]
+    K["Archived / 已归档"]
+    H["已驳回"]
+    I["免测已提交 / 已结束"]
+
+    A -->|"继续测试并回传需求平台"| B
+    B -->|"确认提交并回传需求平台"| C
+    C -->|"需求平台审批通过"| D
+    D -->|"进入测试执行"| E
+    E -->|"开始测试"| F
+    F -->|"测试完成"| G
+    G -->|"到达计划结束时间"| J
+    J -->|"归档"| K
+
+    A -->|"提交免测：填写免测说明并回传需求平台"| I
+    C -->|"需求平台驳回"| H
+    H -->|"修改后再次提交"| C
+
+    classDef pending fill:#EAF2F8,stroke:#6B8EAD,color:#1F2933
+    classDef active fill:#E8F5E9,stroke:#6BA56B,color:#1F2933
+    classDef submit fill:#FFF4CE,stroke:#D6A600,color:#1F2933
+    classDef reject fill:#FDECEC,stroke:#C95F5F,color:#1F2933
+    classDef normal fill:#F2F4F7,stroke:#9AA6B2,color:#1F2933
+
+    class A pending
+    class B,D active
+    class C submit
+    class H,I reject
+    class E,F,G,J,K normal
+```
+
+
+
+
+
+```mermaid
+flowchart LR
+    A["待评估"]
+    B["继续测试"]
+    C["已提交"]
+    D["审批通过"]
+    E["Prepare / 未开始"]
+    F["Underway / 进行中"]
+    G["Completed / 已完成"]
+    J["Finished / 已结束"]
+    K["Archived / 已归档"]
+    H["已驳回"]
+    I["免测已提交 / 已结束"]
+    A -->|"继续测试并回传需求平台"| B
+    B -->|"确认提交并回传需求平台"| C
+    C -->|"需求平台审批通过"| D
+    D -->|"进入测试执行"| E
+    E -->|"开始测试"| F
+    F -->|"测试完成"| G
+    G -->|"到达计划结束时间"| J
+    J -->|"归档"| K
+
+    A -->|"提交免测：填写免测说明并回传需求平台"| I
+    H -->|"需求平台驳回"| C
+    C -->|"修改后再次提交"| H
+
+    classDef pending fill:#EAF2F8,stroke:#6B8EAD,color:#1F2933
+    classDef active fill:#E8F5E9,stroke:#6BA56B,color:#1F2933
+    classDef submit fill:#FFF4CE,stroke:#D6A600,color:#1F2933
+    classDef reject fill:#FDECEC,stroke:#C95F5F,color:#1F2933
+    classDef normal fill:#F2F4F7,stroke:#9AA6B2,color:#1F2933
+
+    class A pending
+    class B,D active
+    class C submit
+    class H,I reject
+    class E,F,G,J,K normal
+```
+
