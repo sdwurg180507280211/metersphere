@@ -20,13 +20,19 @@ export default {
       this.restoreQueryReady = false;
     },
     restoreTableData(nodeIds) {
-      this.restoreQueryReady = true;
-      return this.initTableData(nodeIds);
+      const request = this.queryTableData(nodeIds);
+      this.$nextTick(() => {
+        this.restoreQueryReady = true;
+      });
+      return request;
     },
     initTableData(nodeIds) {
       if (this.isReturnRestoreRoute() && !this.restoreQueryReady) {
         return Promise.resolve();
       }
+      return this.queryTableData(nodeIds);
+    },
+    queryTableData(nodeIds) {
       const requestId = ++this.tableRequestId;
       this.cardLoading = true;
       this.condition.nodeIds = [];
