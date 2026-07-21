@@ -149,6 +149,9 @@ export default {
     },
     setVariables(v, h) {
       this.data.variables = v;
+      if (h !== undefined) {
+        this.data.headers = h;
+      }
     },
     setScenario() {
       this.dialogVisible = true;
