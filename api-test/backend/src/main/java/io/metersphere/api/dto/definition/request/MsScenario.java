@@ -202,6 +202,8 @@ public class MsScenario extends MsTestElement {
     }
 
     private boolean setRefScenario(List<MsTestElement> hashTree) {
+        List<ScenarioVariable> snapshotVariables = this.getVariables();
+        List<KeyValue> snapshotHeaders = this.getHeaders();
         try {
             ApiScenarioMapper apiAutomationService = CommonBeanFactory.getBean(ApiScenarioMapper.class);
             ApiScenarioWithBLOBs scenario = apiAutomationService.selectByPrimaryKey(this.getId());
@@ -212,13 +214,17 @@ public class MsScenario extends MsTestElement {
                 this.setName(scenario.getName());
                 this.setProjectId(scenario.getProjectId());
                 LinkedList<MsTestElement> sourceHashTree = JSONUtil.readValue(element.optString(ElementConstants.HASH_TREE));
-                // 场景变量
-                if (StringUtils.isNotEmpty(element.optString("variables"))) {
+                // 场景变量：引用场景保留当前步骤保存的快照，避免原场景变量被其他人修改后影响已引用场景
+                if (snapshotVariables == null && StringUtils.isNotEmpty(element.optString("variables"))) {
                     this.setVariables(JSONUtil.parseArray(element.optString("variables"), ScenarioVariable.class));
+                } else {
+                    this.setVariables(snapshotVariables);
                 }
-                // 场景请求头
-                if (StringUtils.isNotEmpty(element.optString("headers"))) {
+                // 场景请求头：同场景变量一样保留快照
+                if (snapshotHeaders == null && StringUtils.isNotEmpty(element.optString("headers"))) {
                     this.setHeaders(JSONUtil.parseArray(element.optString("headers"), KeyValue.class));
+                } else {
+                    this.setHeaders(snapshotHeaders);
                 }
                 this.setHashTree(sourceHashTree);
                 hashTree.clear();
