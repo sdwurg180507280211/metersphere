@@ -10,6 +10,7 @@ export default {
     return {
       tableRequestId: 0,
       restoreQueryReady: !this.isReturnRestoreRoute(),
+      returnRestoreQueryStarted: false,
     };
   },
   methods: {
@@ -18,12 +19,18 @@ export default {
     },
     prepareReturnStateRestore() {
       this.restoreQueryReady = false;
+      this.returnRestoreQueryStarted = false;
     },
     restoreTableData(nodeIds) {
+      if (this.isReturnRestoreRoute() && this.returnRestoreQueryStarted) {
+        return Promise.resolve();
+      }
+      this.returnRestoreQueryStarted = true;
       const request = this.queryTableData(nodeIds);
-      this.$nextTick(() => {
+      setTimeout(() => {
+        this.returnRestoreQueryStarted = false;
         this.restoreQueryReady = true;
-      });
+      }, 0);
       return request;
     },
     initTableData(nodeIds) {
