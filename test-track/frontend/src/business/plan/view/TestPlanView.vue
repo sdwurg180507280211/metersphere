@@ -2,6 +2,15 @@
 
   <div>
     <ms-test-plan-header-bar>
+      <template v-slot:back>
+        <el-button
+          plain
+          size="mini"
+          icon="el-icon-back"
+          @click="backToPlanList"
+        >{{ $t("test_track.return") }}
+        </el-button>
+      </template>
       <template v-slot:info>
         <select-menu
           :data="testPlans"
@@ -181,6 +190,9 @@ export default {
     this.genRedirectParam();
   },
   methods: {
+    backToPlanList() {
+      this.$router.push({path: '/track/plan/all', query: {restoreState: 'true'}});
+    },
     microServiceActivated(serviceName) {
       return this.microApp && this.microApp[serviceName];
     },
