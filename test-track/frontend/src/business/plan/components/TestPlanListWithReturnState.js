@@ -3,6 +3,8 @@ import {deepClone} from "metersphere-frontend/src/utils/tableUtils";
 import {getCurrentProjectID} from "metersphere-frontend/src/utils/token";
 import {testPlanList, testPlanMetric} from "@/api/remote/plan/test-plan";
 
+const TEST_PLAN_LIST_STATE_KEY = "TEST_PLAN_LIST_RETURN_STATE";
+
 export default {
   name: "TestPlanListWithReturnState",
   extends: BaseTestPlanList,
@@ -16,6 +18,27 @@ export default {
   methods: {
     isReturnRestoreRoute() {
       return this.$route.query && this.$route.query.restoreState === "true";
+    },
+    getReturnStateKey() {
+      return TEST_PLAN_LIST_STATE_KEY + "_" + (getCurrentProjectID() || "default");
+    },
+    saveReturnStateBeforeOpen() {
+      const nodeId = this.currentNode && this.currentNode.data ? this.currentNode.data.id : null;
+      const state = {
+        nodeId,
+        currentSelectNodes: this.currentSelectNodes || [],
+        condition: this.condition,
+        currentPage: this.currentPage,
+        pageSize: this.pageSize,
+      };
+      sessionStorage.setItem(this.getReturnStateKey(), JSON.stringify(state));
+    },
+    intoPlan(row, column, event) {
+      if (row && row.id && column && column.label !== this.$t("commons.operating")) {
+        this.saveReturnStateBeforeOpen();
+        this.prepareReturnStateRestore();
+      }
+      return BaseTestPlanList.methods.intoPlan.call(this, row, column, event);
     },
     prepareReturnStateRestore() {
       this.restoreQueryReady = false;
