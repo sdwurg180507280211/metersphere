@@ -90,6 +90,7 @@ export default {
           return;
         }
         // 清空模块树相关参数
+        this.restoreNodeId = null;
         this.currentNode = null;
         this.currentSelectNodes = [];
         this.$refs.planNodeTree.currentNode = {};
@@ -131,6 +132,7 @@ export default {
         }
         this.$nextTick(() => this.restoreListStateWhenReady(state));
       } catch (e) {
+        this.restoreNodeId = null;
         this.restoringReturnState = false;
         sessionStorage.removeItem(this.getReturnStateKey());
       }
@@ -143,6 +145,7 @@ export default {
             this.restoreListStateWhenReady(state, retryCount + 1);
           }, 50);
         } else {
+          this.restoreNodeId = null;
           this.restoringReturnState = false;
         }
         return;
@@ -173,13 +176,16 @@ export default {
       if (!this.restoreNodeId || !this.$refs.planNodeTree) {
         return;
       }
-      const nodeData = this.restoreNodeId === 'root'
+      const restoreNodeId = this.restoreNodeId;
+      const nodeData = restoreNodeId === 'root'
         ? {id: 'root'}
-        : this.findNodeById(this.treeNodes, this.restoreNodeId);
+        : this.findNodeById(this.treeNodes, restoreNodeId);
       if (nodeData) {
         this.currentNode = {data: nodeData};
         this.$refs.planNodeTree.currentNode = this.currentNode;
         this.$nextTick(() => this.$refs.planNodeTree.justSetCurrentKey());
+        // 恢复节点只允许应用一次，避免后续刷新树时反复覆盖用户新选择的模块
+        this.restoreNodeId = null;
       }
     },
     setTreeNodes(data) {
@@ -200,6 +206,8 @@ export default {
       this.$refs.planNodeTree.list();
     },
     handleCaseNodeSelect(node, nodeIds, pNodes) {
+      // 用户主动切换模块后，立即释放历史恢复状态，避免旧节点再次覆盖当前选择
+      this.restoreNodeId = null;
       this.currentNode = node;
       this.currentSelectNodes = nodeIds;
       this.$refs.testPlanList.initTableData(nodeIds);
