@@ -96,6 +96,12 @@ export default {
     isRestoreRoute(route) {
       return route && route.query && route.query.restoreState === 'true';
     },
+    cloneReturnStateValue(value, fallback) {
+      if (value === undefined || value === null) {
+        return fallback;
+      }
+      return JSON.parse(JSON.stringify(value));
+    },
     getReturnStateKey() {
       return TEST_PLAN_LIST_STATE_KEY + "_" + (this.projectId || "default");
     },
@@ -147,20 +153,32 @@ export default {
         this.finishReturnStateRestore();
         return;
       }
-      this.restoreNodeId = state.nodeId || 'root';
-      this.currentSelectNodes = Array.isArray(state.currentSelectNodes)
-        ? state.currentSelectNodes
-        : [];
-      this.condition = state.condition || {};
-      this.currentNode = {data: {id: this.restoreNodeId}};
-      list.condition = state.condition || list.condition;
-      list.currentPage = Number.isInteger(state.currentPage) && state.currentPage > 0
+      const restoredCondition = this.cloneReturnStateValue(state.condition, {});
+      const restoredNodeIds = this.cloneReturnStateValue(state.currentSelectNodes, []);
+      const restoredPage = Number.isInteger(state.currentPage) && state.currentPage > 0
         ? state.currentPage
         : 1;
-      list.pageSize = Number.isInteger(state.pageSize) && state.pageSize > 0
+      const restoredPageSize = Number.isInteger(state.pageSize) && state.pageSize > 0
         ? state.pageSize
         : list.pageSize;
+      this.restoreNodeId = state.nodeId || 'root';
+      this.currentSelectNodes = restoredNodeIds;
+      this.condition = this.cloneReturnStateValue(restoredCondition, {});
+      this.currentNode = {data: {id: this.restoreNodeId}};
+      list.condition = this.cloneReturnStateValue(restoredCondition, {});
+      list.currentPage = restoredPage;
+      list.pageSize = restoredPageSize;
       list.restoreTableData(this.currentSelectNodes);
+      this.$nextTick(() => {
+        const restoredList = this.$refs.testPlanList;
+        if (!restoredList) {
+          return;
+        }
+        restoredList.condition = this.cloneReturnStateValue(restoredCondition, {});
+        restoredList.currentPage = restoredPage;
+        restoredList.pageSize = restoredPageSize;
+        this.condition = restoredList.condition;
+      });
       this.finishReturnStateRestore();
     },
     initializeDefaultList() {
