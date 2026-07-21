@@ -2,7 +2,7 @@
   <ms-container>
     <ms-aside-container page-key="TEST_PLAN_LIST" max-width="600px" :enable-aside-hidden.sync="enableAsideHidden" class="plan-aside">
       <test-plan-node-tree ref="planNodeTree" :plan-condition="condition" @setTreeNodes="setTreeNodes"
-                                  @nodeSelectEvent="handleCaseNodeSelect" @refreshTable="refreshTestPlanList"/>
+                                   @nodeSelectEvent="handleCaseNodeSelect" @refreshTable="refreshTestPlanList"/>
     </ms-aside-container>
 
     <ms-main-container>
@@ -32,6 +32,8 @@ import MsMainContainer from "metersphere-frontend/src/components/MsMainContainer
 import {getCurrentProjectID} from "metersphere-frontend/src/utils/token";
 import TestCaseReviewList from "@/business/review/components/TestCaseReviewList.vue";
 
+const TEST_PLAN_LIST_STATE_KEY = "TEST_PLAN_LIST_RETURN_STATE";
+
 export default {
   name: "TestPlan",
   components: {
@@ -44,6 +46,9 @@ export default {
       currentSelectNodes: [],
       enableAsideHidden: true,
       treeNodes: [],
+      restoreNodeId: null,
+      restoringReturnState: false,
+      restoreTimer: null,
     };
   },
   computed: {
@@ -51,10 +56,23 @@ export default {
       return getCurrentProjectID();
     },
   },
+  beforeRouteLeave(to, from, next) {
+    if (to.path.indexOf("/track/plan/view/") >= 0) {
+      this.saveReturnState();
+    }
+    next();
+  },
   mounted() {
     if (this.$route.path.indexOf("/track/plan/create") >= 0) {
       this.openTestPlanEditDialog();
       this.$router.push('/track/plan/all');
+    } else if (this.$route.query.restoreState === 'true') {
+      this.restoreReturnState();
+    }
+  },
+  destroyed() {
+    if (this.restoreTimer) {
+      clearTimeout(this.restoreTimer);
     }
   },
   watch: {
@@ -67,7 +85,12 @@ export default {
         this.openTestPlanEditDialog();
         this.$router.push('/track/plan/all');
       } else if (to.path.indexOf("/track/plan/all") >= 0) {
+        if (to.query.restoreState === 'true') {
+          this.restoreReturnState();
+          return;
+        }
         // 清空模块树相关参数
+        this.restoreNodeId = null;
         this.currentNode = null;
         this.currentSelectNodes = [];
         this.$refs.planNodeTree.currentNode = {};
@@ -75,8 +98,99 @@ export default {
     }
   },
   methods: {
+    getReturnStateKey() {
+      return TEST_PLAN_LIST_STATE_KEY + "_" + (this.projectId || "default");
+    },
+    saveReturnState() {
+      const list = this.$refs.testPlanList;
+      const nodeId = this.currentNode && this.currentNode.data ? this.currentNode.data.id : null;
+      const state = {
+        nodeId: nodeId,
+        currentSelectNodes: this.currentSelectNodes || [],
+        condition: list && list.condition ? list.condition : this.condition,
+        currentPage: list ? list.currentPage : 1,
+        pageSize: list ? list.pageSize : 10,
+      };
+      sessionStorage.setItem(this.getReturnStateKey(), JSON.stringify(state));
+    },
+    restoreReturnState() {
+      if (this.restoringReturnState) {
+        return;
+      }
+      const stateText = sessionStorage.getItem(this.getReturnStateKey());
+      if (!stateText) {
+        return;
+      }
+      try {
+        const state = JSON.parse(stateText);
+        this.restoringReturnState = true;
+        this.restoreNodeId = state.nodeId;
+        this.currentSelectNodes = state.currentSelectNodes || [];
+        this.condition = state.condition || {};
+        if (this.restoreNodeId) {
+          this.currentNode = {data: {id: this.restoreNodeId}};
+        }
+        this.$nextTick(() => this.restoreListStateWhenReady(state));
+      } catch (e) {
+        this.restoreNodeId = null;
+        this.restoringReturnState = false;
+        sessionStorage.removeItem(this.getReturnStateKey());
+      }
+    },
+    restoreListStateWhenReady(state, retryCount = 0) {
+      const list = this.$refs.testPlanList;
+      if (!list || list.cardLoading) {
+        if (retryCount < 100) {
+          this.restoreTimer = setTimeout(() => {
+            this.restoreListStateWhenReady(state, retryCount + 1);
+          }, 50);
+        } else {
+          this.restoreNodeId = null;
+          this.restoringReturnState = false;
+        }
+        return;
+      }
+      list.condition = state.condition || list.condition;
+      list.currentPage = state.currentPage || 1;
+      list.pageSize = state.pageSize || list.pageSize;
+      list.initTableData(this.currentSelectNodes);
+      this.applyRestoredNode();
+      this.restoringReturnState = false;
+    },
+    findNodeById(nodes, id) {
+      if (!nodes || !id) {
+        return null;
+      }
+      for (let node of nodes) {
+        if (node.id === id) {
+          return node;
+        }
+        const child = this.findNodeById(node.children, id);
+        if (child) {
+          return child;
+        }
+      }
+      return null;
+    },
+    applyRestoredNode() {
+      if (!this.restoreNodeId || !this.$refs.planNodeTree) {
+        return;
+      }
+      const restoreNodeId = this.restoreNodeId;
+      const nodeData = restoreNodeId === 'root'
+        ? {id: 'root'}
+        : this.findNodeById(this.treeNodes, restoreNodeId);
+      if (nodeData) {
+        this.currentNode = {data: nodeData};
+        this.$refs.planNodeTree.currentNode = this.currentNode;
+        this.$nextTick(() => this.$refs.planNodeTree.justSetCurrentKey());
+        // 恢复节点只允许应用一次，避免后续刷新树时反复覆盖用户新选择的模块
+        this.restoreNodeId = null;
+      }
+    },
     setTreeNodes(data) {
       this.treeNodes = data;
+      this.applyRestoredNode();
     },
     setCondition(data) {
       this.condition = data;
@@ -92,6 +206,8 @@ export default {
       this.$refs.planNodeTree.list();
     },
     handleCaseNodeSelect(node, nodeIds, pNodes) {
+      // 用户主动切换模块后，立即释放历史恢复状态，避免旧节点再次覆盖当前选择
+      this.restoreNodeId = null;
       this.currentNode = node;
       this.currentSelectNodes = nodeIds;
       this.$refs.testPlanList.initTableData(nodeIds);
