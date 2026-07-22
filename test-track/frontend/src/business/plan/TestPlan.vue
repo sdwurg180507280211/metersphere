@@ -6,6 +6,10 @@
     </ms-aside-container>
 
     <ms-main-container>
+      <requirement-workflow-workbench
+        ref="requirementWorkflowWorkbench"
+        @open-report="openTestPlanReport"
+      />
       <test-plan-list
         @openTestPlanEditDialog="openTestPlanEditDialog"
         @testPlanEdit="openTestPlanEditDialog"
@@ -26,6 +30,7 @@ import {TEST_PLAN_CONFIGS} from "metersphere-frontend/src/components/search/sear
 import TestPlanNodeTree from "@/business/module/TestPlanNodeTree.vue";
 import TestPlanList from './components/TestPlanList';
 import TestPlanEdit from './components/TestPlanEdit';
+import RequirementWorkflowWorkbench from './components/RequirementWorkflowWorkbench';
 import MsContainer from "metersphere-frontend/src/components/MsContainer";
 import MsAsideContainer from "metersphere-frontend/src/components/MsAsideContainer";
 import MsMainContainer from "metersphere-frontend/src/components/MsMainContainer";
@@ -37,6 +42,7 @@ const TEST_PLAN_LIST_STATE_KEY = "TEST_PLAN_LIST_RETURN_STATE";
 export default {
   name: "TestPlan",
   components: {
+    RequirementWorkflowWorkbench,
     TestCaseReviewList,
     TestPlanNodeTree, MsMainContainer, MsAsideContainer, MsContainer, TestPlanList, TestPlanEdit},
   data() {
@@ -94,6 +100,9 @@ export default {
         this.currentNode = null;
         this.currentSelectNodes = [];
         this.$refs.planNodeTree.currentNode = {};
+        if (this.$refs.requirementWorkflowWorkbench) {
+          this.$refs.requirementWorkflowWorkbench.refresh();
+        }
       }
     }
   },
@@ -198,9 +207,17 @@ export default {
     openTestPlanEditDialog(data) {
       this.$refs.testPlanEditDialog.openTestPlanEditDialog(data, this.currentNode);
     },
+    openTestPlanReport(plan) {
+      if (this.$refs.testPlanList) {
+        this.$refs.testPlanList.openReport(plan);
+      }
+    },
     refreshTestPlanList(nodeIds) {
       this.$refs.testPlanList.condition = {components: TEST_PLAN_CONFIGS};
       this.$refs.testPlanList.initTableData(nodeIds ? nodeIds : this.currentSelectNodes);
+      if (this.$refs.requirementWorkflowWorkbench) {
+        this.$refs.requirementWorkflowWorkbench.refresh();
+      }
     },
     refreshTreeByCondition() {
       this.$refs.planNodeTree.list();
