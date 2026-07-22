@@ -64,10 +64,13 @@ public class IssuesController {
     @RequiresPermissions(PermissionConstants.PROJECT_TRACK_ISSUE_READ)
     public Pager<List<IssuesDao>> list(@PathVariable int goPage, @PathVariable int pageSize, @RequestBody IssuesRequest request) {
         issuesService.setFilterParam(request);
-        
-        // 在分页之前添加用户组权限过滤（避免 PageHelper 拦截用户组查询 SQL）
-        issuesService.addUserGroupFilter(request);
-        
+
+        // 默认进入缺陷列表时仅展示当前用户创建或处理的缺陷；主动搜索后查询项目范围内数据
+        if (shouldApplyDefaultUserGroupFilter(request)) {
+            // 必须在 PageHelper.startPage() 之前查询用户组，避免分页插件拦截用户组查询 SQL
+            issuesService.addUserGroupFilter(request);
+        }
+
         if (request.getThisWeekUnClosedTestPlanIssue() || request.getUnClosedTestPlanIssue() || request.getAllTestPlanIssue()) {
             if (CollectionUtils.isEmpty(request.getFilterIds())) {
                 Page<List<Issues>> page = PageHelper.startPage(goPage, pageSize, true);
@@ -76,6 +79,17 @@ public class IssuesController {
         }
         Page<List<Issues>> page = PageHelper.startPage(goPage, pageSize, true);
         return PageUtils.setPageInfo(page, issuesService.list(request));
+    }
+
+    /**
+     * 判断当前请求是否为缺陷列表默认加载。
+     * 高级搜索组件即使没有填写条件，也会传入空的 combine 对象，因此可以与首次加载区分。
+     */
+    private boolean shouldApplyDefaultUserGroupFilter(IssuesRequest request) {
+        boolean noAdvancedSearch = request.getCombine() == null;
+        boolean noKeyword = request.getName() == null || request.getName().trim().isEmpty();
+        boolean noTableFilter = request.getFilters() == null || request.getFilters().isEmpty();
+        return noAdvancedSearch && noKeyword && noTableFilter;
     }
 
     @PostMapping("/dashboard/list/{goPage}/{pageSize}")
@@ -319,4 +333,3 @@ public class IssuesController {
         return issuesService.getUserGroupInProject(projectId, userId);
     }
 }
-
