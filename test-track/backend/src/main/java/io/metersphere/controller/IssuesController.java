@@ -64,10 +64,13 @@ public class IssuesController {
     @RequiresPermissions(PermissionConstants.PROJECT_TRACK_ISSUE_READ)
     public Pager<List<IssuesDao>> list(@PathVariable int goPage, @PathVariable int pageSize, @RequestBody IssuesRequest request) {
         issuesService.setFilterParam(request);
-        
-        // 在分页之前添加用户组权限过滤（避免 PageHelper 拦截用户组查询 SQL）
-        issuesService.addUserGroupFilter(request);
-        
+
+        // 首次进入或重置高级搜索时，默认查询当前用户创建或处理的缺陷。
+        // 点击高级搜索“查询”后 combine 至少为空对象，此时不再追加本人过滤条件。
+        if (request.getCombine() == null) {
+            issuesService.addUserGroupFilter(request);
+        }
+
         if (request.getThisWeekUnClosedTestPlanIssue() || request.getUnClosedTestPlanIssue() || request.getAllTestPlanIssue()) {
             if (CollectionUtils.isEmpty(request.getFilterIds())) {
                 Page<List<Issues>> page = PageHelper.startPage(goPage, pageSize, true);
@@ -308,7 +311,7 @@ public class IssuesController {
      * 我在做：查询用户在项目中的用户组ID
      * 目的是：供前端判断用户属于哪个用户组（developer/tester），从而施加相应的权限过滤
      * 如果不这样做：前端无法知道用户的用户组，无法实现用户组权限过滤
-     * 
+     *
      * @param projectId 项目ID
      * @param userId 用户ID
      * @return 用户组ID（如 'developer', 'tester'），如果不属于任何用户组则返回null
@@ -319,4 +322,3 @@ public class IssuesController {
         return issuesService.getUserGroupInProject(projectId, userId);
     }
 }
-
