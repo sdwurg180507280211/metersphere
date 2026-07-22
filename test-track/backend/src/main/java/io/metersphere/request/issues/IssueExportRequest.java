@@ -21,6 +21,10 @@ public class IssueExportRequest {
     private List<String> exportIds;
     private List<OrderRequest> orders;
     private Map<String, List<IssueExportHeader>> exportFields;
+    private Map<String, List<String>> filters;
+    private List<String> moduleIds;
+    private List<String> nodeIds;
+    private List<String> unSelectIds;
 
     /**
      * 列表搜索

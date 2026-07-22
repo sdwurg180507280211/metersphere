@@ -65,12 +65,6 @@ public class IssuesController {
     public Pager<List<IssuesDao>> list(@PathVariable int goPage, @PathVariable int pageSize, @RequestBody IssuesRequest request) {
         issuesService.setFilterParam(request);
 
-        // 首次进入或重置高级搜索时，默认查询当前用户创建或处理的缺陷。
-        // 点击高级搜索“查询”后 combine 至少为空对象，此时不再追加本人过滤条件。
-        if (request.getCombine() == null) {
-            issuesService.addUserGroupFilter(request);
-        }
-
         if (request.getThisWeekUnClosedTestPlanIssue() || request.getUnClosedTestPlanIssue() || request.getAllTestPlanIssue()) {
             if (CollectionUtils.isEmpty(request.getFilterIds())) {
                 Page<List<Issues>> page = PageHelper.startPage(goPage, pageSize, true);
