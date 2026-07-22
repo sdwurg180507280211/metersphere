@@ -6,7 +6,8 @@
           <ms-table-header :create-permission="['PROJECT_TRACK_ISSUE:READ+CREATE']" :condition.sync="page.condition"
                            @search="search" @create="handleCreate"
                            :create-tip="$t('test_track.issue.create_issue')"
-                           :tip="$t('commons.search_by_name_or_id')">
+                           :tip="$t('commons.search_by_name_or_id')"
+                           module-key="ISSUE_LIST">
             <template v-slot:button>
 
               <span v-if="isThirdPart && hasPermission('PROJECT_TRACK_ISSUE:READ+CREATE')">
