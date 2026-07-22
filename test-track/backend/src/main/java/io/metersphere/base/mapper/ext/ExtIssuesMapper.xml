@@ -206,26 +206,6 @@
 
     <sql id="queryWhereCondition">
         <where>
-            <!-- 用户组权限过滤：开发人员组和测试人员组只能看到创建人或处理人是自己的缺陷 -->
-            <if test="request.userGroupId != null and request.currentUserId != null">
-                <if test="request.userGroupId == 'developer' or request.userGroupId == 'tester'">
-                    and (
-                        issues.creator = #{request.currentUserId}
-                        or exists (
-                            select 1 from custom_field_issues cfi
-                            inner join custom_field cf on cfi.field_id = cf.id
-                            where cfi.resource_id = issues.id
-                              and cf.name = '处理人'
-                              and cf.scene = 'ISSUE'
-                              and cf.system = 1
-                              and (cf.project_id = issues.project_id or cf.global = 1)
-                              <!-- 注意：自定义字段值使用 JSON 格式存储，字符串类型会带双引号，这是 MeterSphere 的统一设计，所有自定义字段都是如此-->
-                              and trim(both '"' from cfi.value) = #{request.currentUserId}
-                        )
-                    )
-                </if>
-            </if>
-
             <if test="request.combine != null">
                 <include refid="combine">
                     <property name="condition" value="request.combine"/>

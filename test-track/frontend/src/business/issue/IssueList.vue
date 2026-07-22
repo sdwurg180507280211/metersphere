@@ -239,6 +239,7 @@ import MsMainContainer from "metersphere-frontend/src/components/MsMainContainer
 import {getCurrentProjectID, getCurrentUserId, getCurrentWorkspaceId} from "metersphere-frontend/src/utils/token";
 import {hasLicense, hasPermission} from "metersphere-frontend/src/utils/permission";
 import {getProjectMember, getProjectMemberUserFilter} from "@/api/user";
+import {getUserGroupProject} from "@/api/user-group";
 import {LOCAL} from "metersphere-frontend/src/utils/constants";
 import {TEST_TRACK_ISSUE_LIST} from "metersphere-frontend/src/components/search/search-components";
 import {generateColumnKey, getAdvSearchCustomField} from "metersphere-frontend/src/components/search/custom-component";
@@ -314,6 +315,8 @@ export default {
       associatedSystemMap: new Map(),
       hasLicense: false,
       syncDisable: false,
+      currentUserGroupId: null,
+      userGroupFilterKeys: [],
       columns: {
         num: {
           sortable: true,
@@ -363,6 +366,8 @@ export default {
       this.dataSelectRange = "";
     }
     this.loading = true;
+    this.currentUserGroupId = null;
+    this.userGroupFilterKeys = [];
     this.$nextTick(() => {
       // 解决错位问题
       window.addEventListener('resize', this.tableDoLayout);
@@ -382,7 +387,14 @@ export default {
       // 目的是：确保表头字段和数据同时准备好后再渲染表格，避免分阶段加载导致页面闪烁。
       // 如果不这样做，就无法实现：getIssues() 和 getIssuePartTemplateWithProject() 并行执行时，
       // 数据先返回会导致表格先渲染（但字段还没准备好），等模板返回后表格重新渲染，用户体验差。
-      getProjectMember()
+      getUserGroupProject(getCurrentProjectID(), getCurrentUserId())
+        .then((response) => {
+          this.currentUserGroupId = response.data;
+        })
+        .catch(() => {
+          this.currentUserGroupId = null;
+        })
+        .then(() => getProjectMember())
         .then((response) => {
           this.members = response.data;
           this.userFilter = response.data.map(u => {
@@ -390,6 +402,7 @@ export default {
           });
           getIssuePartTemplateWithProject((template) => {
             this.initFields(template);
+            this.applyUserGroupFilter();
             // 模板加载完成后再加载数据，确保表头和数据同时准备好
             this.getIssues();
           }, () => {
@@ -544,7 +557,14 @@ export default {
 
       if (this.$refs.table) this.$refs.table.reloadTable();
     },
-    search() {
+    search(event = {}) {
+      if (event.source === 'advanced') {
+        if (event.action === 'reset') {
+          this.applyUserGroupFilter();
+        } else {
+          this.clearUserGroupFilter();
+        }
+      }
       // 添加搜索条件时，当前页设置成第一页
       this.page.currentPage = 1;
       this.pageRefresh = false;
@@ -734,6 +754,10 @@ export default {
         "exportIds": this.$refs.table.selectIds,
         "exportFields": data,
         "orders": getLastTableSortField(this.tableHeaderKey),
+        "filters": this.page.condition.filters,
+        "moduleIds": this.page.condition.moduleIds,
+        "nodeIds": this.page.condition.nodeIds,
+        "unSelectIds": this.page.condition.unSelectIds,
         "combine": this.page.condition.combine,
         "name": this.page.condition.name
       }
@@ -865,6 +889,41 @@ export default {
         this.$set(this.availableTransitionsCache, issue.id, statusField.options || []);
         Vue.delete(this.availableTransitionsLoading, issue.id);
       });
+    },
+    applyUserGroupFilter() {
+      this.clearUserGroupFilter();
+      if (!['developer', 'tester'].includes(this.currentUserGroupId)) {
+        return;
+      }
+
+      if (!this.page.condition.filters) {
+        this.$set(this.page.condition, 'filters', {});
+      }
+
+      let filterKey;
+      if (this.currentUserGroupId === 'developer') {
+        const handlerField = (this.issueTemplate.customFields || [])
+          .find(field => field.name === '处理人');
+        if (!handlerField) {
+          return;
+        }
+        filterKey = generateColumnKey(handlerField);
+      } else {
+        filterKey = 'creator';
+      }
+
+      this.$set(this.page.condition.filters, filterKey, [getCurrentUserId()]);
+      this.userGroupFilterKeys = [filterKey];
+    },
+    clearUserGroupFilter() {
+      if (!this.page.condition.filters) {
+        this.userGroupFilterKeys = [];
+        return;
+      }
+      this.userGroupFilterKeys.forEach(key => {
+        this.$delete(this.page.condition.filters, key);
+      });
+      this.userGroupFilterKeys = [];
     },
     editParam() {
       let id = this.$route.query.id;

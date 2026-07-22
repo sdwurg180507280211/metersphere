@@ -5,13 +5,13 @@
       :condition.sync="condition"
       :style="{width: baseSearchWidth + 'px'}"
       :tip="baseSearchTip"
-      @change="search"/>
+      @change="baseSearch"/>
     <ms-table-adv-search-bar
       :show-link="showAdvSearchLink"
       :condition.sync="condition"
       :module-key="moduleKey"
       :project-id="projectId"
-      @search="search"
+      @search="advancedSearch"
       class="ms-adv-search"
       ref="advSearch"/>
   </div>
@@ -69,8 +69,14 @@ export default {
     },
   },
   methods: {
-    search() {
-      this.$emit("search");
+    baseSearch() {
+      this.$emit("search", {source: "base"});
+    },
+    advancedSearch(condition) {
+      this.$emit("search", {
+        source: "advanced",
+        action: condition === undefined ? "reset" : "search"
+      });
     },
     resetAdvSearch() {
       if (this.$refs.advSearch) {
