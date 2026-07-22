@@ -366,8 +366,8 @@ export default {
       this.dataSelectRange = "";
     }
     this.loading = true;
+    this.clearUserGroupFilter();
     this.currentUserGroupId = null;
-    this.userGroupFilterKeys = [];
     this.$nextTick(() => {
       // 解决错位问题
       window.addEventListener('resize', this.tableDoLayout);
@@ -558,12 +558,10 @@ export default {
       if (this.$refs.table) this.$refs.table.reloadTable();
     },
     search(event = {}) {
-      if (event.source === 'advanced') {
-        if (event.action === 'reset') {
-          this.applyUserGroupFilter();
-        } else {
-          this.clearUserGroupFilter();
-        }
+      if (event.source === 'advanced' && event.action === 'search') {
+        this.clearUserGroupFilter();
+      } else {
+        this.applyUserGroupFilter();
       }
       // 添加搜索条件时，当前页设置成第一页
       this.page.currentPage = 1;
