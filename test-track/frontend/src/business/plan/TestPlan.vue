@@ -28,7 +28,7 @@
 <script>
 import {TEST_PLAN_CONFIGS} from "metersphere-frontend/src/components/search/search-components";
 import TestPlanNodeTree from "@/business/module/TestPlanNodeTree.vue";
-import TestPlanList from './components/TestPlanList';
+import TestPlanList from './components/TestPlanListWithReturnState';
 import TestPlanEdit from './components/TestPlanEdit';
 import RequirementWorkflowWorkbench from './components/RequirementWorkflowWorkbench';
 import MsContainer from "metersphere-frontend/src/components/MsContainer";
@@ -52,9 +52,9 @@ export default {
       currentSelectNodes: [],
       enableAsideHidden: true,
       treeNodes: [],
+      treeLoaded: false,
       restoreNodeId: null,
       restoringReturnState: false,
-      restoreTimer: null,
     };
   },
   computed: {
@@ -65,6 +65,10 @@ export default {
   beforeRouteLeave(to, from, next) {
     if (to.path.indexOf("/track/plan/view/") >= 0) {
       this.saveReturnState();
+      const list = this.$refs.testPlanList;
+      if (list && list.prepareReturnStateRestore) {
+        list.prepareReturnStateRestore();
+      }
     }
     next();
   },
@@ -72,13 +76,8 @@ export default {
     if (this.$route.path.indexOf("/track/plan/create") >= 0) {
       this.openTestPlanEditDialog();
       this.$router.push('/track/plan/all');
-    } else if (this.$route.query.restoreState === 'true') {
+    } else if (this.isRestoreRoute(this.$route)) {
       this.restoreReturnState();
-    }
-  },
-  destroyed() {
-    if (this.restoreTimer) {
-      clearTimeout(this.restoreTimer);
     }
   },
   watch: {
@@ -91,15 +90,11 @@ export default {
         this.openTestPlanEditDialog();
         this.$router.push('/track/plan/all');
       } else if (to.path.indexOf("/track/plan/all") >= 0) {
-        if (to.query.restoreState === 'true') {
+        if (this.isRestoreRoute(to)) {
           this.restoreReturnState();
           return;
         }
-        // 清空模块树相关参数
-        this.restoreNodeId = null;
-        this.currentNode = null;
-        this.currentSelectNodes = [];
-        this.$refs.planNodeTree.currentNode = {};
+        this.resetModuleSelection();
         if (this.$refs.requirementWorkflowWorkbench) {
           this.$refs.requirementWorkflowWorkbench.refresh();
         }
@@ -107,6 +102,15 @@ export default {
     }
   },
   methods: {
+    isRestoreRoute(route) {
+      return route && route.query && route.query.restoreState === 'true';
+    },
+    cloneReturnStateValue(value, fallback) {
+      if (value === undefined || value === null) {
+        return fallback;
+      }
+      return JSON.parse(JSON.stringify(value));
+    },
     getReturnStateKey() {
       return TEST_PLAN_LIST_STATE_KEY + "_" + (this.projectId || "default");
     },
@@ -114,7 +118,7 @@ export default {
       const list = this.$refs.testPlanList;
       const nodeId = this.currentNode && this.currentNode.data ? this.currentNode.data.id : null;
       const state = {
-        nodeId: nodeId,
+        nodeId,
         currentSelectNodes: this.currentSelectNodes || [],
         condition: list && list.condition ? list.condition : this.condition,
         currentPage: list ? list.currentPage : 1,
@@ -126,45 +130,102 @@ export default {
       if (this.restoringReturnState) {
         return;
       }
-      const stateText = sessionStorage.getItem(this.getReturnStateKey());
+      this.restoringReturnState = true;
+      const stateKey = this.getReturnStateKey();
+      const stateText = sessionStorage.getItem(stateKey);
+      sessionStorage.removeItem(stateKey);
       if (!stateText) {
+        this.initializeDefaultList();
+        this.finishReturnStateRestore();
         return;
       }
       try {
         const state = JSON.parse(stateText);
-        this.restoringReturnState = true;
-        this.restoreNodeId = state.nodeId;
-        this.currentSelectNodes = state.currentSelectNodes || [];
-        this.condition = state.condition || {};
-        if (this.restoreNodeId) {
-          this.currentNode = {data: {id: this.restoreNodeId}};
+        const list = this.$refs.testPlanList;
+        if (!list) {
+          this.$nextTick(() => {
+            this.restoringReturnState = false;
+            this.restoreReturnStateFromState(state);
+          });
+          return;
         }
-        this.$nextTick(() => this.restoreListStateWhenReady(state));
+        this.restoreReturnStateFromState(state);
       } catch (e) {
-        this.restoreNodeId = null;
-        this.restoringReturnState = false;
-        sessionStorage.removeItem(this.getReturnStateKey());
+        this.initializeDefaultList();
+        this.finishReturnStateRestore();
       }
     },
-    restoreListStateWhenReady(state, retryCount = 0) {
+    restoreReturnStateFromState(state) {
       const list = this.$refs.testPlanList;
-      if (!list || list.cardLoading) {
-        if (retryCount < 100) {
-          this.restoreTimer = setTimeout(() => {
-            this.restoreListStateWhenReady(state, retryCount + 1);
-          }, 50);
-        } else {
-          this.restoreNodeId = null;
-          this.restoringReturnState = false;
-        }
+      if (!list) {
+        this.initializeDefaultList();
+        this.finishReturnStateRestore();
         return;
       }
-      list.condition = state.condition || list.condition;
-      list.currentPage = state.currentPage || 1;
-      list.pageSize = state.pageSize || list.pageSize;
-      list.initTableData(this.currentSelectNodes);
-      this.applyRestoredNode();
+      const restoredCondition = this.cloneReturnStateValue(state.condition, {});
+      const restoredNodeIds = this.cloneReturnStateValue(state.currentSelectNodes, []);
+      const restoredPage = Number.isInteger(state.currentPage) && state.currentPage > 0
+        ? state.currentPage
+        : 1;
+      const restoredPageSize = Number.isInteger(state.pageSize) && state.pageSize > 0
+        ? state.pageSize
+        : list.pageSize;
+      this.restoreNodeId = state.nodeId || 'root';
+      this.currentSelectNodes = restoredNodeIds;
+      this.condition = this.cloneReturnStateValue(restoredCondition, {});
+      this.currentNode = {data: {id: this.restoreNodeId}};
+      list.condition = this.cloneReturnStateValue(restoredCondition, {});
+      list.currentPage = restoredPage;
+      list.pageSize = restoredPageSize;
+      list.restoreTableData(this.currentSelectNodes);
+      this.$nextTick(() => {
+        const restoredList = this.$refs.testPlanList;
+        if (!restoredList) {
+          return;
+        }
+        restoredList.condition = this.cloneReturnStateValue(restoredCondition, {});
+        restoredList.currentPage = restoredPage;
+        restoredList.pageSize = restoredPageSize;
+        this.condition = restoredList.condition;
+      });
+      this.finishReturnStateRestore();
+    },
+    initializeDefaultList() {
+      const list = this.$refs.testPlanList;
+      if (list) {
+        list.restoreTableData([]);
+      } else {
+        this.$nextTick(() => {
+          const nextList = this.$refs.testPlanList;
+          if (nextList) {
+            nextList.restoreTableData([]);
+          }
+        });
+      }
+    },
+    finishReturnStateRestore() {
       this.restoringReturnState = false;
+      this.clearRestoreQuery();
+    },
+    clearRestoreQuery() {
+      if (!this.isRestoreRoute(this.$route)) {
+        return;
+      }
+      const query = {...this.$route.query};
+      delete query.restoreState;
+      const resolved = this.$router.resolve({
+        path: this.$route.path,
+        query,
+      });
+      window.history.replaceState(window.history.state, '', resolved.href);
+    },
+    resetModuleSelection() {
+      this.restoreNodeId = null;
+      this.currentNode = null;
+      this.currentSelectNodes = [];
+      if (this.$refs.planNodeTree) {
+        this.$refs.planNodeTree.currentNode = {};
+      }
     },
     findNodeById(nodes, id) {
       if (!nodes || !id) {
@@ -182,7 +243,7 @@ export default {
       return null;
     },
     applyRestoredNode() {
-      if (!this.restoreNodeId || !this.$refs.planNodeTree) {
+      if (!this.restoreNodeId || !this.treeLoaded || !this.$refs.planNodeTree) {
         return;
       }
       const restoreNodeId = this.restoreNodeId;
@@ -193,12 +254,23 @@ export default {
         this.currentNode = {data: nodeData};
         this.$refs.planNodeTree.currentNode = this.currentNode;
         this.$nextTick(() => this.$refs.planNodeTree.justSetCurrentKey());
-        // 恢复节点只允许应用一次，避免后续刷新树时反复覆盖用户新选择的模块
         this.restoreNodeId = null;
+        return;
+      }
+      this.restoreNodeId = null;
+      this.currentSelectNodes = [];
+      this.currentNode = {data: {id: 'root'}};
+      this.$refs.planNodeTree.currentNode = this.currentNode;
+      this.$nextTick(() => this.$refs.planNodeTree.justSetCurrentKey());
+      const list = this.$refs.testPlanList;
+      if (list) {
+        list.currentPage = 1;
+        list.restoreTableData([]);
       }
     },
     setTreeNodes(data) {
-      this.treeNodes = data;
+      this.treeNodes = data || [];
+      this.treeLoaded = true;
       this.applyRestoredNode();
     },
     setCondition(data) {
@@ -223,7 +295,6 @@ export default {
       this.$refs.planNodeTree.list();
     },
     handleCaseNodeSelect(node, nodeIds, pNodes) {
-      // 用户主动切换模块后，立即释放历史恢复状态，避免旧节点再次覆盖当前选择
       this.restoreNodeId = null;
       this.currentNode = node;
       this.currentSelectNodes = nodeIds;
