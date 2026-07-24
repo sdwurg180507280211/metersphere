@@ -18,6 +18,21 @@ public class ScenarioVariable {
     private String name;
 
     /**
+     * 写时复制来源变量 ID，仅在页面编辑和保存拆分时使用，不保存到公共变量定义。
+     */
+    private String sourceVariableId;
+
+    /**
+     * 当前展示值是否来自当前用户副本，仅作为无感知切换标记。
+     */
+    private Boolean personalCopy;
+
+    /**
+     * 页面读取公共变量时的场景版本，用于并发新增和删除校验。
+     */
+    private Integer sourceScenarioVersion;
+
+    /**
      * 常量值，列表值[] ,计数器输出格式，随机数输出格式
      */
     private String value;
