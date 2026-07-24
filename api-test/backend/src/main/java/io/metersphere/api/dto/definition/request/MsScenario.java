@@ -18,6 +18,7 @@ import io.metersphere.environment.service.BaseEnvGroupProjectService;
 import io.metersphere.environment.service.BaseEnvironmentService;
 import io.metersphere.plugin.core.MsParameter;
 import io.metersphere.plugin.core.MsTestElement;
+import io.metersphere.service.scenario.ApiScenarioVariableCopyService;
 import io.metersphere.utils.LoggerUtil;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -50,6 +51,11 @@ public class MsScenario extends MsTestElement {
     private Boolean variableEnable;
     private static final String BODY_FILE_DIR = FileUtils.BODY_FILE_DIR;
     private Boolean mixEnable;
+
+    /**
+     * 仅在本次执行对象中传递，用于引用场景解析用户变量副本，不写入公共场景定义。
+     */
+    private String executionUserId;
 
     public MsScenario() {
     }
@@ -202,8 +208,6 @@ public class MsScenario extends MsTestElement {
     }
 
     private boolean setRefScenario(List<MsTestElement> hashTree) {
-        List<ScenarioVariable> snapshotVariables = this.getVariables();
-        List<KeyValue> snapshotHeaders = this.getHeaders();
         try {
             ApiScenarioMapper apiAutomationService = CommonBeanFactory.getBean(ApiScenarioMapper.class);
             ApiScenarioWithBLOBs scenario = apiAutomationService.selectByPrimaryKey(this.getId());
@@ -214,17 +218,15 @@ public class MsScenario extends MsTestElement {
                 this.setName(scenario.getName());
                 this.setProjectId(scenario.getProjectId());
                 LinkedList<MsTestElement> sourceHashTree = JSONUtil.readValue(element.optString(ElementConstants.HASH_TREE));
-                // 场景变量：引用场景保留当前步骤保存的快照，避免原场景变量被其他人修改后影响已引用场景
-                if (snapshotVariables == null && StringUtils.isNotEmpty(element.optString("variables"))) {
-                    this.setVariables(JSONUtil.parseArray(element.optString("variables"), ScenarioVariable.class));
-                } else {
-                    this.setVariables(snapshotVariables);
+                List<ScenarioVariable> sourceVariables = new LinkedList<>();
+                if (StringUtils.isNotEmpty(element.optString("variables"))) {
+                    sourceVariables = JSONUtil.parseArray(element.optString("variables"), ScenarioVariable.class);
                 }
-                // 场景请求头：同场景变量一样保留快照
-                if (snapshotHeaders == null && StringUtils.isNotEmpty(element.optString("headers"))) {
+                ApiScenarioVariableCopyService variableCopyService = CommonBeanFactory.getBean(ApiScenarioVariableCopyService.class);
+                this.setVariables(variableCopyService.resolveExecutionVariables(this.getId(), sourceVariables, this.executionUserId));
+                variableCopyService.applyToElements(sourceHashTree, this.executionUserId);
+                if (StringUtils.isNotEmpty(element.optString("headers"))) {
                     this.setHeaders(JSONUtil.parseArray(element.optString("headers"), KeyValue.class));
-                } else {
-                    this.setHeaders(snapshotHeaders);
                 }
                 this.setHashTree(sourceHashTree);
                 hashTree.clear();
