@@ -36,6 +36,13 @@
                  FROM user_group
                           JOIN `user` ON user_group.user_id = `user`.id
                  WHERE user_group.source_id = #{request.projectId}
+                 <if test="request.name != null and request.name != ''">
+                     AND (
+                         `user`.id LIKE CONCAT('%', #{request.name}, '%')
+                         OR `user`.name LIKE CONCAT('%', #{request.name}, '%')
+                         OR `user`.email LIKE CONCAT('%', #{request.name}, '%')
+                     )
+                 </if>
                  ORDER BY `user`.update_time DESC) temp
     </select>
     <select id="getProjectMemberGroups" resultType="io.metersphere.base.domain.Group">
