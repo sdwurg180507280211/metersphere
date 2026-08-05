@@ -18,6 +18,7 @@ public class FilterChainUtils {
         filterChainDefinitionMap.put("/ldap/open", "anon");
         filterChainDefinitionMap.put("/signout", "anon");
         filterChainDefinitionMap.put("/is-login", "anon");
+        filterChainDefinitionMap.put("/captcha", "anon");
         filterChainDefinitionMap.put("/we_com/info", "anon");
         filterChainDefinitionMap.put("/ding_talk/info", "anon");
         filterChainDefinitionMap.put("/lark/info", "anon");

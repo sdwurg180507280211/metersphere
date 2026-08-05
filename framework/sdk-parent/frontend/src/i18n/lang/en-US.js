@@ -532,6 +532,9 @@ const message = {
   login: {
     normal_Login: 'Normal Login',
     auth_not_enable: 'Authentication is not enabled',
+    captcha_placeholder: 'Enter captcha',
+    captcha_required: 'Please enter captcha',
+    captcha_click_refresh: 'Click to refresh captcha',
   },
   license: {
     title: 'Authorization management',
