@@ -5,8 +5,8 @@
         <el-card class="table-card">
           <template v-slot:header>
             <ms-table-header :create-permission="['PROJECT_USER:READ+CREATE']" :condition.sync="condition"
-                             @search="initTableData" @create="create"
-                             :create-tip="$t('member.create')" :have-search="false"/>
+                             @search="search" @create="create"
+                             :create-tip="$t('member.create')" :tip="$t('commons.search_by_name_or_id')"/>
           </template>
           <el-table border class="adjust-table ms-select-all-fixed" :data="tableData" style="width: 100%"
                     :height="screenHeight"
@@ -137,9 +137,15 @@ export default {
     create() {
       this.$refs.editMember.open();
     },
+    search() {
+      this.currentPage = 1;
+      this.initTableData();
+    },
     initTableData() {
-      let param = {};
-      param.projectId = this.projectId;
+      let param = {
+        projectId: this.projectId,
+        name: this.condition.name
+      };
       if (this.projectId) {
         this.cardLoading = getProjectMembers(this.currentPage, this.pageSize, param).then(response => {
           let data = response.data;
