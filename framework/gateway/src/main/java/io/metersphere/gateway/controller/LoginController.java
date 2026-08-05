@@ -14,8 +14,10 @@ import io.metersphere.dto.UserDTO;
 import io.metersphere.gateway.log.annotation.MsAuditLog;
 import io.metersphere.gateway.service.AuthSourceService;
 import io.metersphere.gateway.service.BaseDisplayService;
+import io.metersphere.gateway.service.CaptchaService;
 import io.metersphere.gateway.service.SystemParameterService;
 import io.metersphere.gateway.service.UserLoginService;
+import io.metersphere.i18n.Translator;
 import io.metersphere.request.LoginRequest;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.BooleanUtils;
@@ -54,6 +56,8 @@ public class LoginController {
     @Resource
     private SystemParameterService systemParameterService;
     @Resource
+    private CaptchaService captchaService;
+    @Resource
     private StringRedisTemplate stringRedisTemplate;
 
     @GetMapping(value = "/is-login")
@@ -83,6 +87,10 @@ public class LoginController {
     @PostMapping(value = "/signin")
     @MsAuditLog(module = OperLogModule.AUTH_TITLE, type = OperLogConstants.LOGIN, title = "登录")
     public Mono<ResultHolder> login(@RequestBody LoginRequest request, WebSession session, Locale locale) {
+        // 登录验证码校验
+        if (!captchaService.verify(request.getCaptchaId(), request.getCaptcha())) {
+            return Mono.just(ResultHolder.error(Translator.get("captcha_error")));
+        }
         return Mono.just(userLoginService.loginLocal(request, session, locale))
                 .subscribeOn(Schedulers.boundedElastic())
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not found user info or invalid password")))

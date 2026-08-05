@@ -16,6 +16,7 @@ import io.metersphere.log.annotation.MsAuditLog;
 import io.metersphere.request.LoginRequest;
 import io.metersphere.service.BaseDisplayService;
 import io.metersphere.service.BaseUserService;
+import io.metersphere.service.CaptchaService;
 import io.metersphere.service.SSOLogoutService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,6 +38,8 @@ public class LoginController {
 
     @Resource
     private BaseUserService baseUserService;
+    @Resource
+    private CaptchaService captchaService;
     @Resource
     private BaseDisplayService baseDisplayService;
     @Resource
@@ -75,6 +78,10 @@ public class LoginController {
     @PostMapping(value = "/signin")
     @MsAuditLog(module = OperLogModule.AUTH_TITLE, type = OperLogConstants.LOGIN, title = "登录")
     public ResultHolder login(@RequestBody LoginRequest request) {
+        // 登录验证码校验
+        if (!captchaService.verify(request.getCaptchaId(), request.getCaptcha())) {
+            return ResultHolder.error(Translator.get("captcha_error"));
+        }
         SessionUser sessionUser = SessionUtils.getUser();
         if (sessionUser != null) {
             if (!StringUtils.equals(sessionUser.getId(), request.getUsername())) {

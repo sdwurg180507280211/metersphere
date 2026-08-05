@@ -534,6 +534,9 @@ const message = {
   login: {
     normal_Login: '普通登录',
     auth_not_enable: '认证未开启',
+    captcha_placeholder: '请输入验证码',
+    captcha_required: '请输入验证码',
+    captcha_click_refresh: '点击刷新验证码',
   },
   license: {
     title: '授权管理',

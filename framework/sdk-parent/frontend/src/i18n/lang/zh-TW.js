@@ -533,6 +533,9 @@ const message = {
   login: {
     normal_Login: '普通登錄',
     auth_not_enable: '認證未開啟',
+    captcha_placeholder: '請輸入驗證碼',
+    captcha_required: '請輸入驗證碼',
+    captcha_click_refresh: '點擊刷新驗證碼',
   },
   license: {
     title: '授權管理',
