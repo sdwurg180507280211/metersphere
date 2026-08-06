@@ -1,0 +1,38 @@
+# MeterSphere OpenResty 上传白名单网关（本地 Mac dev 适配版）
+#
+# 作用：在浏览器/调用方 与 后端 gateway(8000) 之间加一层反向代理，
+#       对所有 multipart/form-data 文件上传做扩展名白名单拦截（401/400 拒绝）。
+#
+# 接入前提：先用 metersphere-control-panel 把后端服务（至少 gateway:8000）跑起来，
+#           各服务是宿主机 localhost 进程，不是 docker 容器。
+#
+# 转发目标：host.docker.internal:8000（docker 容器访问宿主机 gateway）。
+#           若你改为裸跑 openresty（不用 docker），把 nginx.conf 里的
+#           proxy_pass 改成 http://127.0.0.1:8000 即可。
+#
+# 离线镜像：桌面 /Users/edy/Desktop/openresty/openresty.tar 是离线镜像，
+#           内网服务器先 `docker load -i openresty.tar` 再 up。
+#           注意：该 tar 103MB，不纳入 git（见 .gitignore 约定）。
+
+services:
+  openresty:
+    # 固定版本，避免 latest 漂移导致行为不一致
+    image: openresty/openresty:1.25.3.2-2-alpine
+    container_name: ms-openresty
+    ports:
+      - "8081:8081"
+    volumes:
+      # 主配置（项目内，受 git 管理）
+      - ./nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+      # 日志目录（可写）
+      - ./logs:/usr/local/openresty/nginx/logs
+    # 让容器内可解析宿主机的 gateway:8000（Mac Docker Desktop 默认可用，Linux 需此行）
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/openresty/nginx/sbin/nginx", "-t"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
