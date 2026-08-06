@@ -41,6 +41,8 @@ public class LoginController {
     @Resource
     private CaptchaService captchaService;
     @Resource
+    private io.metersphere.service.LoginFailService loginFailService;
+    @Resource
     private BaseDisplayService baseDisplayService;
     @Resource
     private SSOLogoutService ssoLogoutService;
@@ -78,6 +80,10 @@ public class LoginController {
     @PostMapping(value = "/signin")
     @MsAuditLog(module = OperLogModule.AUTH_TITLE, type = OperLogConstants.LOGIN, title = "登录")
     public ResultHolder login(@RequestBody LoginRequest request) {
+        // 登录失败锁定检查
+        if (loginFailService.isLocked(request.getUsername())) {
+            return ResultHolder.error(Translator.get("login_fail_lock"));
+        }
         // 登录验证码校验
         if (!captchaService.verify(request.getCaptchaId(), request.getCaptcha())) {
             return ResultHolder.error(Translator.get("captcha_error"));
@@ -89,16 +95,30 @@ public class LoginController {
             }
         }
         SecurityUtils.getSubject().getSession().setAttribute("authenticate", UserSource.LOCAL.name());
-        ResultHolder result = baseUserService.login(request);
-        /*
-         * 历史逻辑（已停用，仅保留参考）：
-         * - 登录后通过 ResultHolder.message 返回 "true/false"，用于前端顶部“初始/弱密码提示条”
-         * - 现已不再驱动任何前端展示，所以注释掉，不删除以便后续需要时恢复/重构为审计或管理员告警能力
-         *
-         * boolean changePassword = baseUserService.checkWhetherChangePasswordOrNot(request);
-         * result.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
-         */
-        return result;
+        try {
+            ResultHolder result = baseUserService.login(request);
+            if (result.isSuccess()) {
+                loginFailService.clearFail(request.getUsername());
+                // 登录是否提示修改密码
+                boolean changePassword = baseUserService.checkWhetherChangePasswordOrNot(request);
+                result.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
+            } else {
+                int failCount = loginFailService.incrementFail(request.getUsername());
+                int remaining = 5 - failCount;
+                if (remaining > 0) {
+                    result.setMessage(String.format(Translator.get("login_fail_attempt_count"), remaining));
+                }
+            }
+            return result;
+        } catch (Exception e) {
+            int failCount = loginFailService.incrementFail(request.getUsername());
+            int remaining = 5 - failCount;
+            if (remaining > 0) {
+                String msg = e.getMessage() + String.format(Translator.get("login_fail_attempt_count"), remaining);
+                return ResultHolder.error(msg);
+            }
+            return ResultHolder.error(Translator.get("login_fail_lock"));
+        }
     }
 
     @GetMapping(value = "/currentUser")
