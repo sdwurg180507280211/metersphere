@@ -15,6 +15,7 @@ import io.metersphere.gateway.log.annotation.MsAuditLog;
 import io.metersphere.gateway.service.AuthSourceService;
 import io.metersphere.gateway.service.BaseDisplayService;
 import io.metersphere.gateway.service.CaptchaService;
+import io.metersphere.gateway.service.LoginFailService;
 import io.metersphere.gateway.service.SystemParameterService;
 import io.metersphere.gateway.service.UserLoginService;
 import io.metersphere.i18n.Translator;
@@ -58,6 +59,8 @@ public class LoginController {
     @Resource
     private CaptchaService captchaService;
     @Resource
+    private LoginFailService loginFailService;
+    @Resource
     private StringRedisTemplate stringRedisTemplate;
 
     @GetMapping(value = "/is-login")
@@ -87,26 +90,37 @@ public class LoginController {
     @PostMapping(value = "/signin")
     @MsAuditLog(module = OperLogModule.AUTH_TITLE, type = OperLogConstants.LOGIN, title = "登录")
     public Mono<ResultHolder> login(@RequestBody LoginRequest request, WebSession session, Locale locale) {
+        // 登录失败锁定检查
+        if (loginFailService.isLocked(request.getUsername())) {
+            return Mono.just(ResultHolder.error(Translator.get("login_fail_lock")));
+        }
         // 登录验证码校验
         if (!captchaService.verify(request.getCaptchaId(), request.getCaptcha())) {
             return Mono.just(ResultHolder.error(Translator.get("captcha_error")));
         }
-        return Mono.just(userLoginService.loginLocal(request, session, locale))
+        return Mono.fromCallable(() -> userLoginService.loginLocal(request, session, locale))
                 .subscribeOn(Schedulers.boundedElastic())
+                .doOnNext(user -> loginFailService.clearFail(request.getUsername()))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not found user info or invalid password")))
-                .map(ResultHolder::success);
-                /*
-                 * 历史逻辑（已停用，仅保留参考）：
-                 * - 登录后通过 ResultHolder.message 返回 "true/false"，用于前端顶部“初始/弱密码提示条”
-                 * - 现已不再驱动任何前端展示，所以注释掉，不删除以便后续需要时恢复/重构为审计或管理员告警能力
-                 *
-                 * .map(rh -> {
-                 *     // 登录是否提示修改密码（弱密码检查）
-                 *     boolean changePassword = userLoginService.checkWhetherChangePasswordOrNot(request);
-                 *     rh.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
-                 *     return rh;
-                 * });
-                 */
+                .map(ResultHolder::success)
+                .onErrorResume(e -> {
+                    int failCount = loginFailService.incrementFail(request.getUsername());
+                    int remaining = 5 - failCount;
+                    if (remaining > 0) {
+                        String msg = (e.getMessage() != null ? e.getMessage() : "")
+                                + String.format(Translator.get("login_fail_attempt_count"), remaining);
+                        return Mono.just(ResultHolder.error(msg));
+                    }
+                    return Mono.just(ResultHolder.error(Translator.get("login_fail_lock")));
+                })
+                .map(rh -> {
+                    if (rh.isSuccess()) {
+                        // 登录是否提示修改密码
+                        boolean changePassword = userLoginService.checkWhetherChangePasswordOrNot(request);
+                        rh.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
+                    }
+                    return rh;
+                });
     }
 
     @GetMapping(value = "/currentUser")
