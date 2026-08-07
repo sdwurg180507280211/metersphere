@@ -11,6 +11,7 @@ import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.user.SessionUser;
 import io.metersphere.commons.utils.CodingUtil;
 import io.metersphere.commons.utils.JSON;
+import io.metersphere.commons.utils.PasswordEncoder;
 import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.controller.handler.ResultHolder;
 import io.metersphere.dto.GroupResourceDTO;
@@ -98,8 +99,8 @@ public class BaseUserService {
         // 默认1:启用状态
         user.setStatus(UserStatus.NORMAL);
         user.setSource(UserSource.LOCAL.name());
-        // 密码使用 MD5
-        user.setPassword(CodingUtil.md5(user.getPassword()));
+        // 密码使用 BCrypt
+        user.setPassword(PasswordEncoder.encode(user.getPassword()));
         checkEmailIsExist(user.getEmail());
         userMapper.insertSelective(user);
     }
@@ -301,6 +302,9 @@ public class BaseUserService {
         return projectList;
     }
 
+    /**
+     * 密码校验：直接读 hash，统一判断 MD5/BCrypt（selectPasswordById 返回 String，不受脱敏拦截器影响）
+     */
     public boolean checkUserPassword(String userId, String password) {
         if (StringUtils.isBlank(userId)) {
             MSException.throwException(Translator.get("user_name_is_null"));
@@ -308,9 +312,31 @@ public class BaseUserService {
         if (StringUtils.isBlank(password)) {
             MSException.throwException(Translator.get("password_is_null"));
         }
+        String storedPassword = baseUserMapper.selectPasswordById(userId);
+        if (storedPassword == null) {
+            return false;
+        }
+        if (storedPassword.startsWith("$2")) {
+            return PasswordEncoder.matches(password, storedPassword);
+        }
+        // MD5 老密码
+        if (CodingUtil.md5(password).equals(storedPassword)) {
+            // 自动升级为 BCrypt
+            User user = new User();
+            user.setId(userId);
+            user.setPassword(PasswordEncoder.encode(password));
+            user.setUpdateTime(System.currentTimeMillis());
+            baseUserMapper.updatePassword(user);
+            return true;
+        }
+        return false;
+    }
+
+    private User getUserById(String userId) {
         UserExample example = new UserExample();
-        example.createCriteria().andIdEqualTo(userId).andPasswordEqualTo(CodingUtil.md5(password));
-        return userMapper.countByExample(example) > 0;
+        example.createCriteria().andIdEqualTo(userId);
+        List<User> users = userMapper.selectByExample(example);
+        return CollectionUtils.isEmpty(users) ? null : users.get(0);
     }
 
     public void setLanguage(String lang) {
@@ -325,23 +351,42 @@ public class BaseUserService {
 
     /*修改当前用户用户密码*/
     private User updateCurrentUserPwd(EditPassWordRequest request) {
-        String oldPassword = CodingUtil.md5(request.getPassword(), StandardCharsets.UTF_8.name());
-        String newPassword = request.getNewpassword();
-        String newPasswordMd5 = CodingUtil.md5(newPassword);
-        if (StringUtils.equals(oldPassword, newPasswordMd5)) {
+        String userId = SessionUtils.getUser().getId();
+        String oldPassword = request.getPassword();
+        // 直接读 hash，统一判断 MD5/BCrypt
+        String storedPassword = baseUserMapper.selectPasswordById(userId);
+        if (storedPassword == null) {
+            MSException.throwException(Translator.get("password_modification_failed"));
             return null;
         }
-        UserExample userExample = new UserExample();
-        userExample.createCriteria().andIdEqualTo(SessionUtils.getUser().getId()).andPasswordEqualTo(oldPassword);
-        List<User> users = userMapper.selectByExample(userExample);
-        if (!CollectionUtils.isEmpty(users)) {
-            User user = users.get(0);
-            user.setPassword(CodingUtil.md5(newPassword));
-            user.setUpdateTime(System.currentTimeMillis());
-            return user;
+        boolean oldPasswordOk;
+        if (storedPassword.startsWith("$2")) {
+            oldPasswordOk = PasswordEncoder.matches(oldPassword, storedPassword);
+        } else {
+            // MD5 老密码
+            oldPasswordOk = CodingUtil.md5(oldPassword).equals(storedPassword);
+            if (oldPasswordOk) {
+                // 自动升级为 BCrypt
+                User upgradeUser = new User();
+                upgradeUser.setId(userId);
+                upgradeUser.setPassword(PasswordEncoder.encode(oldPassword));
+                upgradeUser.setUpdateTime(System.currentTimeMillis());
+                baseUserMapper.updatePassword(upgradeUser);
+            }
         }
-        MSException.throwException(Translator.get("password_modification_failed"));
-        return null;
+        if (!oldPasswordOk) {
+            MSException.throwException(Translator.get("password_modification_failed"));
+            return null;
+        }
+        String newPassword = PasswordEncoder.encode(request.getNewpassword());
+        // 新旧密码相同则不允许修改
+        if (PasswordEncoder.matches(request.getNewpassword(), storedPassword)) {
+            return null;
+        }
+        User user = getUserById(userId);
+        user.setPassword(newPassword);
+        user.setUpdateTime(System.currentTimeMillis());
+        return user;
     }
 
     public int updateCurrentUserPassword(EditPassWordRequest request) {
@@ -352,8 +397,8 @@ public class BaseUserService {
     /*管理员修改用户密码*/
     private User updateUserPwd(EditPassWordRequest request) {
         User user = userMapper.selectByPrimaryKey(request.getId());
-        String newPassword = request.getNewpassword();
-        user.setPassword(CodingUtil.md5(newPassword));
+        String newPassword = PasswordEncoder.encode(request.getNewpassword());
+        user.setPassword(newPassword);
         user.setUpdateTime(System.currentTimeMillis());
         return user;
     }
@@ -706,12 +751,15 @@ public class BaseUserService {
     public boolean checkWhetherChangePasswordOrNot(LoginRequest request) {
         // 升级之后 admin 还使用弱密码也提示修改
         if (StringUtils.equals("admin", request.getUsername())) {
-            UserExample example = new UserExample();
-            example.createCriteria().andIdEqualTo("admin")
-                    .andPasswordEqualTo(CodingUtil.md5("metersphere"));
-            return userMapper.countByExample(example) > 0;
+            String storedPassword = baseUserMapper.selectPasswordById("admin");
+            if (storedPassword == null) {
+                return false;
+            }
+            if (storedPassword.startsWith("$2")) {
+                return PasswordEncoder.matches("metersphere", storedPassword);
+            }
+            return CodingUtil.md5("metersphere").equals(storedPassword);
         }
-
         return false;
     }
 
