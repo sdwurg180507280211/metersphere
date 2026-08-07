@@ -87,7 +87,6 @@ function setVariablesFiles(obj, scenarioFiles, scenarioFileIds) {
     });
   }
 }
-
 async function checkFile(scenarioFiles) {
   return new Promise((resolve, reject) => {
     scenarioFiles.forEach((item) => {
@@ -141,12 +140,8 @@ export async function saveScenario(url, scenario, scenarioDefinition, _this, suc
   let config = getUploadConfig(url, formData);
   editScenario(config).then(
     (response) => {
-      const result = response.data;
-      if (result && result.data && result.data.version !== undefined) {
-        scenario.version = result.data.version;
-      }
       if (success) {
-        success(result);
+        success(response.data);
       }
     },
     (error) => {
