@@ -17,6 +17,8 @@ public interface BaseUserMapper {
 
     String getDefaultLanguage(String paramKey);
 
+    String selectPasswordById(String id);
+
     List<User> searchUser(String condition);
 
     List<UserDetail> queryTypeByIds(List<String> userIds);

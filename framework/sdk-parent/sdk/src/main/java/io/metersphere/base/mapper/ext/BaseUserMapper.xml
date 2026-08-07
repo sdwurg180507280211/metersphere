@@ -78,10 +78,13 @@
        password=#{password,jdbcType=VARCHAR},
        update_time = #{updateTime,jdbcType=BIGINT}
     WHERE  id=#{id,jdbcType=VARCHAR}
-   </update>
-    <select id="getDefaultLanguage" parameterType="java.lang.String" resultType="java.lang.String">
+   </update>   <select id="getDefaultLanguage" parameterType="java.lang.String" resultType="java.lang.String">
     SELECT param_value FROM system_parameter
     WHERE param_key=#{paramKey,jdbcType=VARCHAR}
+   </select>
+
+   <select id="selectPasswordById" parameterType="java.lang.String" resultType="java.lang.String">
+    SELECT password FROM user WHERE id = #{id,jdbcType=VARCHAR}
    </select>
 
     <select id="searchUser" parameterType="java.lang.String" resultType="io.metersphere.base.domain.User">

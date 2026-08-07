@@ -167,8 +167,8 @@ public class UserService {
         // 默认1:启用状态
         user.setStatus(UserStatus.NORMAL);
         user.setSource(UserSource.LOCAL.name());
-        // 密码使用 MD5
-        user.setPassword(CodingUtil.md5(user.getPassword()));
+        // 密码使用 BCrypt
+        user.setPassword(PasswordEncoder.encode(user.getPassword()));
         checkEmailIsExist(user.getEmail());
         userMapper.insertSelective(user);
     }
@@ -467,8 +467,7 @@ public class UserService {
     /*管理员修改用户密码*/
     private User updateUserPwd(EditPassWordRequest request) {
         User user = userMapper.selectByPrimaryKey(request.getId());
-        String newPassword = request.getNewpassword();
-        user.setPassword(CodingUtil.md5(newPassword));
+        user.setPassword(PasswordEncoder.encode(request.getNewpassword()));
         user.setUpdateTime(System.currentTimeMillis());
         return user;
     }
