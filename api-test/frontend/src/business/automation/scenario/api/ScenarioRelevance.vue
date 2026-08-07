@@ -113,12 +113,6 @@ export default {
     },
   },
   methods: {
-    cloneSnapshot(data, defaultValue = []) {
-      if (data === undefined || data === null) {
-        return defaultValue;
-      }
-      return JSON.parse(JSON.stringify(data));
-    },
     changeButtonLoadingType() {
       this.buttonIsWorking = false;
     },
@@ -134,13 +128,13 @@ export default {
               id: item.id,
               name: item.name,
               type: 'scenario',
-              headers: this.cloneSnapshot(scenarioDefinition.headers),
-              variables: this.cloneSnapshot(scenarioDefinition.variables),
-              environmentMap: this.cloneSnapshot(scenarioDefinition.environmentMap, {}),
+              headers: scenarioDefinition.headers,
+              variables: scenarioDefinition.variables,
+              environmentMap: scenarioDefinition.environmentMap,
               referenced: referenced,
               refType: 'scenario',
               resourceId: getUUID(),
-              hashTree: this.cloneSnapshot(scenarioDefinition.hashTree),
+              hashTree: scenarioDefinition.hashTree,
               projectId: item.projectId,
               num: item.num,
               customNum: item.customNum,
