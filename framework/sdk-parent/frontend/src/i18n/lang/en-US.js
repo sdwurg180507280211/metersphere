@@ -1053,7 +1053,7 @@ const message = {
     mobile_number_format_is_incorrect: 'Mobile number format is incorrect',
     email_format_is_incorrect: 'Email format is incorrect',
     password_format_is_incorrect:
-      'Valid password: 6-65 digits, English upper and lower case letters + numbers + special characters (optional)',
+      'Password must be at least 8 characters and contain letters, numbers, and special characters',
     old_password: 'Old Password',
     new_password: 'New Password',
     repeat_password: 'Repeat',

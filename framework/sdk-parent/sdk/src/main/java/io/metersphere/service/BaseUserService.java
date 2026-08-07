@@ -100,6 +100,9 @@ public class BaseUserService {
         user.setStatus(UserStatus.NORMAL);
         user.setSource(UserSource.LOCAL.name());
         // 密码使用 BCrypt
+        if (!PasswordEncoder.validateComplexity(user.getPassword())) {
+            MSException.throwException(Translator.get("password_complexity_invalid"));
+        }
         user.setPassword(PasswordEncoder.encode(user.getPassword()));
         checkEmailIsExist(user.getEmail());
         userMapper.insertSelective(user);
@@ -378,6 +381,9 @@ public class BaseUserService {
             MSException.throwException(Translator.get("password_modification_failed"));
             return null;
         }
+        if (!PasswordEncoder.validateComplexity(request.getNewpassword())) {
+            MSException.throwException(Translator.get("password_complexity_invalid"));
+        }
         String newPassword = PasswordEncoder.encode(request.getNewpassword());
         // 新旧密码相同则不允许修改
         if (PasswordEncoder.matches(request.getNewpassword(), storedPassword)) {
@@ -396,6 +402,9 @@ public class BaseUserService {
 
     /*管理员修改用户密码*/
     private User updateUserPwd(EditPassWordRequest request) {
+        if (!PasswordEncoder.validateComplexity(request.getNewpassword())) {
+            MSException.throwException(Translator.get("password_complexity_invalid"));
+        }
         User user = userMapper.selectByPrimaryKey(request.getId());
         String newPassword = PasswordEncoder.encode(request.getNewpassword());
         user.setPassword(newPassword);
