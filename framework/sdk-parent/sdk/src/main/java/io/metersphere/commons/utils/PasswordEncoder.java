@@ -31,4 +31,17 @@ public class PasswordEncoder {
         // 旧数据走 MD5
         return StringUtils.equals(CodingUtil.md5(rawPassword), storedPassword);
     }
+
+    /**
+     * 密码复杂度校验：最小长度 8 位，必须同时包含字母、数字和特殊字符
+     */
+    public static boolean validateComplexity(String password) {
+        if (StringUtils.isBlank(password) || password.length() < 8) {
+            return false;
+        }
+        boolean hasLetter = password.matches(".*[a-zA-Z].*");
+        boolean hasDigit = password.matches(".*\\d.*");
+        boolean hasSpecial = password.matches(".*[^a-zA-Z0-9\\s].*");
+        return hasLetter && hasDigit && hasSpecial;
+    }
 }
