@@ -457,6 +457,17 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
+        <!-- 配置文件密码加密，传递给所有依赖 SDK 的业务模块 -->
+        <dependency>
+            <groupId>com.github.ulisesbocchio</groupId>
+            <artifactId>jasypt-spring-boot-starter</artifactId>
+        </dependency>
+        <!-- jasypt 核心包，确保 StringEncryptor 类在运行时 classpath 中 -->
+        <dependency>
+            <groupId>org.jasypt</groupId>
+            <artifactId>jasypt</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>

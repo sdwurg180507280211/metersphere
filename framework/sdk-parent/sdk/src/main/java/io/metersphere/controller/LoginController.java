@@ -20,6 +20,7 @@ import io.metersphere.service.CaptchaService;
 import io.metersphere.service.SSOLogoutService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.shiro.SecurityUtils;
