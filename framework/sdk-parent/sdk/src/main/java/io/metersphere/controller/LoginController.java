@@ -96,11 +96,11 @@ public class LoginController {
         }
         SecurityUtils.getSubject().getSession().setAttribute("authenticate", UserSource.LOCAL.name());
         try {
+            // 在登录（含自动升级）之前检查是否需要强制修改密码
+            boolean changePassword = baseUserService.checkWhetherChangePasswordOrNot(request);
             ResultHolder result = baseUserService.login(request);
             if (result.isSuccess()) {
                 loginFailService.clearFail(request.getUsername());
-                // 登录是否提示修改密码
-                boolean changePassword = baseUserService.checkWhetherChangePasswordOrNot(request);
                 result.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
             } else {
                 int failCount = loginFailService.incrementFail(request.getUsername());

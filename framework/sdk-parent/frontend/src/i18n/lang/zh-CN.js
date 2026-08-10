@@ -1044,6 +1044,8 @@ const message = {
     new_password: '新密码',
     repeat_password: '确认密码',
     inconsistent_passwords: '两次输入的密码不一致',
+    force_change_password_title: '首次登录，请修改初始密码',
+    force_change_password_desc: '为了保障账户安全，请设置一个新的密码',
     remove_member: '确定要移除该成员吗',
     org_remove_member: '将该用户从组织中移除，将同时移除该组织下所有工作空间的权限，确定要移除该成员吗？',
     input_id_or_email: '请输入用户 ID, 或者 用户邮箱',

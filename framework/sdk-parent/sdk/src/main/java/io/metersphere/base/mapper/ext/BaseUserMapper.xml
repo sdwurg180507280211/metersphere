@@ -76,7 +76,8 @@
     UPDATE user
     SET
        password=#{password,jdbcType=VARCHAR},
-       update_time = #{updateTime,jdbcType=BIGINT}
+       update_time = #{updateTime,jdbcType=BIGINT},
+       need_change_password = #{needChangePassword,jdbcType=TINYINT}
     WHERE  id=#{id,jdbcType=VARCHAR}
    </update>   <select id="getDefaultLanguage" parameterType="java.lang.String" resultType="java.lang.String">
     SELECT param_value FROM system_parameter

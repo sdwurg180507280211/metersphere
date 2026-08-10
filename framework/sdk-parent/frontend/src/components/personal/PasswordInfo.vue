@@ -1,17 +1,17 @@
 <template>
   <div>
-    <el-form :model="ruleForm" :rules="rules" ref="editPasswordForm" label-width="120px" class="demo-ruleForm" size="small">
+    <el-form :model="form" :rules="rules" ref="editPasswordForm" label-width="120px" class="demo-ruleForm" size="small">
       <el-form-item :label="$t('member.old_password')" prop="password" style="margin-bottom: 29px">
-        <el-input v-model="ruleForm.password" autocomplete="off" show-password/>
+        <el-input v-model="form.password" autocomplete="off" show-password/>
       </el-form-item>
       <el-form-item :label="$t('member.new_password')" prop="newpassword">
-        <el-input v-model="ruleForm.newpassword" autocomplete="off" show-password/>
+        <el-input v-model="form.newpassword" autocomplete="off" show-password/>
       </el-form-item>
       <el-form-item :label="$t('member.repeat_password')" prop="repeatPassword">
-        <el-input v-model="ruleForm.repeatPassword" autocomplete="off" show-password/>
+        <el-input v-model="form.repeatPassword" autocomplete="off" show-password/>
       </el-form-item>
       <el-form-item>
-        <el-button @click="cancel">{{ $t('commons.cancel') }}</el-button>
+        <el-button v-if="!forceChange" @click="cancel">{{ $t('commons.cancel') }}</el-button>
         <el-button type="primary" @click="updatePassword('editPasswordForm')" @keydown.enter.native.prevent>{{ $t('commons.confirm') }}</el-button>
       </el-form-item>
     </el-form>
@@ -22,11 +22,16 @@
 import {useUserStore} from "@/store";
 import {updatePassword} from "../../api/user";
 
-const userStore = useUserStore();
 export default {
   name: 'PasswordInfo',
   data() {
     return {
+      form: {
+        password: this.ruleForm.password || '',
+        id: this.ruleForm.id || '',
+        newpassword: '',
+        repeatPassword: ''
+      },
       result: {},
       updatePasswordPath: '/user/update/password',
       rules: {
@@ -55,7 +60,14 @@ export default {
     }
   },
   props: {
-    ruleForm: {}
+    ruleForm: {
+      type: Object,
+      default: () => ({})
+    },
+    forceChange: {
+      type: Boolean,
+      default: false
+    }
   },
   methods: {
     cancel() {
@@ -67,17 +79,21 @@ export default {
     updatePassword(editPasswordForm) {
       this.$refs[editPasswordForm].validate(valid => {
         if (valid) {
-          if (this.ruleForm.newpassword !== this.ruleForm.repeatPassword) {
+          if (this.form.newpassword !== this.form.repeatPassword) {
             this.$warning(this.$t('member.inconsistent_passwords'));
             return;
           }
-          this.result = updatePassword(this.ruleForm)
+          this.result = updatePassword(this.form)
             .then(response => {
               if (!response.data) {
                 this.$error(this.$t('commons.personal_password_info'));
               } else {
                 this.$success(this.$t('commons.modify_success'));
-                userStore.userLogout();
+                if (this.forceChange) {
+                  this.$emit("forceChangeSuccess");
+                } else {
+                  useUserStore().userLogout();
+                }
               }
             });
         } else {

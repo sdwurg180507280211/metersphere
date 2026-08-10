@@ -1058,6 +1058,8 @@ const message = {
     new_password: 'New Password',
     repeat_password: 'Repeat',
     inconsistent_passwords: 'The two passwords entered are inconsistent',
+    force_change_password_title: 'First login, please change your initial password',
+    force_change_password_desc: 'For account security, please set a new password',
     remove_member: 'Are you sure you want to remove this member',
     org_remove_member:
       'Removing the user from the organization will also remove permissions from all workspaces under the organization. Are you sure you want to remove the member ?',
