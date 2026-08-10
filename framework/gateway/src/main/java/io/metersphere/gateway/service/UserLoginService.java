@@ -91,11 +91,14 @@ public class UserLoginService {
             }
             userId = user.getId();
         }
+        // 在密码验证（含自动升级）之前检查是否需要强制修改密码
+        boolean needsPwdChange = checkPasswordNeedsChange(user);
         // 密码验证
         if (!checkUserPassword(userId, password)) {
             throw new RuntimeException(Translator.get("password_is_incorrect"));
         }
         user.setPassword(null);
+        user.setNeedChangePassword(needsPwdChange);
         return user;
     }
 
@@ -498,16 +501,36 @@ public class UserLoginService {
         return signatureArray[0];
     }
 
-    public boolean checkWhetherChangePasswordOrNot(LoginRequest request) {
-        // 升级之后 admin 还使用弱密码也提示修改
-        if (StringUtils.equals("admin", request.getUsername())) {
-            User user = getUserWithPassword("admin");
-            if (user != null) {
-                return PasswordEncoder.matches("metersphere", user.getPassword());
-            }
+    /**
+     * 检查用户是否需要强制修改密码（在密码验证/自动升级之前调用）
+     * - 管理员创建的新用户（needChangePassword = true）
+     * - 密码匹配已知弱密码 abcdMS123%/Abc123.
+     * - admin 使用默认密码 metersphere
+     * <p>
+     * 注意：老用户的自定义 MD5 密码不在此强制，会在 checkUserPassword 中静默升级
+     */
+    private boolean checkPasswordNeedsChange(UserDTO user) {
+        if (user == null) {
+            return false;
+        }
+        // 检查是否需要强制修改密码（管理员创建的新用户）
+        if (Boolean.TRUE.equals(user.getNeedChangePassword())) {
+            return true;
+        }
+        String pwd = user.getPassword();
+        if (pwd == null) {
+            return false;
+        }
+        // 已知弱密码 → 需要强制修改
+        if (PasswordEncoder.matches("abcdMS123%", pwd)
+                || PasswordEncoder.matches("Abc123.", pwd)) {
+            return true;
+        }
+        // admin 仍使用默认密码
+        if ("admin".equals(user.getId())) {
+            return PasswordEncoder.matches("metersphere", pwd);
         }
         return false;
     }
-
 
 }

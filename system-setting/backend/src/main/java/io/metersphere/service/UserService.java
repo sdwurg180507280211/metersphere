@@ -167,6 +167,7 @@ public class UserService {
         // 默认1:启用状态
         user.setStatus(UserStatus.NORMAL);
         user.setSource(UserSource.LOCAL.name());
+        user.setNeedChangePassword(true);
         // 密码使用 BCrypt
         if (!PasswordEncoder.validateComplexity(user.getPassword())) {
             MSException.throwException(Translator.get("password_complexity_invalid"));
@@ -478,6 +479,7 @@ public class UserService {
         User user = userMapper.selectByPrimaryKey(request.getId());
         user.setPassword(PasswordEncoder.encode(request.getNewpassword()));
         user.setUpdateTime(System.currentTimeMillis());
+        user.setNeedChangePassword(true);
         return user;
     }
 

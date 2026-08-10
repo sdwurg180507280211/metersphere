@@ -99,6 +99,7 @@ public class BaseUserService {
         // 默认1:启用状态
         user.setStatus(UserStatus.NORMAL);
         user.setSource(UserSource.LOCAL.name());
+        user.setNeedChangePassword(true);
         // 密码使用 BCrypt
         if (!PasswordEncoder.validateComplexity(user.getPassword())) {
             MSException.throwException(Translator.get("password_complexity_invalid"));
@@ -329,6 +330,7 @@ public class BaseUserService {
             user.setId(userId);
             user.setPassword(PasswordEncoder.encode(password));
             user.setUpdateTime(System.currentTimeMillis());
+            user.setNeedChangePassword(false);
             baseUserMapper.updatePassword(user);
             return true;
         }
@@ -374,6 +376,7 @@ public class BaseUserService {
                 upgradeUser.setId(userId);
                 upgradeUser.setPassword(PasswordEncoder.encode(oldPassword));
                 upgradeUser.setUpdateTime(System.currentTimeMillis());
+                upgradeUser.setNeedChangePassword(false);
                 baseUserMapper.updatePassword(upgradeUser);
             }
         }
@@ -392,6 +395,7 @@ public class BaseUserService {
         User user = getUserById(userId);
         user.setPassword(newPassword);
         user.setUpdateTime(System.currentTimeMillis());
+        user.setNeedChangePassword(false);
         return user;
     }
 
@@ -409,6 +413,7 @@ public class BaseUserService {
         String newPassword = PasswordEncoder.encode(request.getNewpassword());
         user.setPassword(newPassword);
         user.setUpdateTime(System.currentTimeMillis());
+        user.setNeedChangePassword(true);
         return user;
     }
 
@@ -757,17 +762,36 @@ public class BaseUserService {
         return map;
     }
 
+    /**
+     * 检查用户是否需要强制修改密码（在登录中自动升级之前调用）
+     * - 管理员创建的新用户（needChangePassword = true）
+     * - 密码匹配已知弱密码 abcdMS123%/Abc123.
+     * - admin 使用默认密码 metersphere
+     * <p>
+     * 注意：老用户的自定义 MD5 密码不在此强制，会在 checkUserPassword 中静默升级
+     */
     public boolean checkWhetherChangePasswordOrNot(LoginRequest request) {
-        // 升级之后 admin 还使用弱密码也提示修改
-        if (StringUtils.equals("admin", request.getUsername())) {
-            String storedPassword = baseUserMapper.selectPasswordById("admin");
-            if (storedPassword == null) {
-                return false;
-            }
-            if (storedPassword.startsWith("$2")) {
-                return PasswordEncoder.matches("metersphere", storedPassword);
-            }
-            return CodingUtil.md5("metersphere").equals(storedPassword);
+        String userId = request.getUsername();
+        if (StringUtils.isBlank(userId)) {
+            return false;
+        }
+        // 检查是否需要强制修改密码（管理员创建的新用户）
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user != null && Boolean.TRUE.equals(user.getNeedChangePassword())) {
+            return true;
+        }
+        String storedPassword = baseUserMapper.selectPasswordById(userId);
+        if (storedPassword == null) {
+            return false;
+        }
+        // 已知弱密码 → 需要强制修改
+        if (PasswordEncoder.matches("abcdMS123%", storedPassword)
+                || PasswordEncoder.matches("Abc123.", storedPassword)) {
+            return true;
+        }
+        // admin 使用默认密码 metersphere → 需要强制修改
+        if (StringUtils.equals("admin", userId)) {
+            return PasswordEncoder.matches("metersphere", storedPassword);
         }
         return false;
     }

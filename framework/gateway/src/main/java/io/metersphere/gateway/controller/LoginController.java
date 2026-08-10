@@ -102,7 +102,15 @@ public class LoginController {
                 .subscribeOn(Schedulers.boundedElastic())
                 .doOnNext(user -> loginFailService.clearFail(request.getUsername()))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not found user info or invalid password")))
-                .map(ResultHolder::success)
+                .map(opt -> {
+                    ResultHolder rh = ResultHolder.success(opt);
+                    if (opt != null && opt.isPresent()) {
+                        // 在 boundedElastic 线程上从 SessionUser 读取标志，避免在 Netty 线程上访问 session
+                        boolean changePassword = Boolean.TRUE.equals(opt.get().getNeedChangePassword());
+                        rh.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
+                    }
+                    return rh;
+                })
                 .onErrorResume(e -> {
                     int failCount = loginFailService.incrementFail(request.getUsername());
                     int remaining = 5 - failCount;
@@ -112,14 +120,6 @@ public class LoginController {
                         return Mono.just(ResultHolder.error(msg));
                     }
                     return Mono.just(ResultHolder.error(Translator.get("login_fail_lock")));
-                })
-                .map(rh -> {
-                    if (rh.isSuccess()) {
-                        // 登录是否提示修改密码
-                        boolean changePassword = userLoginService.checkWhetherChangePasswordOrNot(request);
-                        rh.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
-                    }
-                    return rh;
                 });
     }
 

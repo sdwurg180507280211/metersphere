@@ -1043,6 +1043,8 @@ const message = {
     new_password: '新密碼',
     repeat_password: '確認密碼',
     inconsistent_passwords: '兩次輸入的密碼不一致',
+    force_change_password_title: '首次登錄，請修改初始密碼',
+    force_change_password_desc: '為了保障賬戶安全，請設置一個新的密碼',
     remove_member: '確定要移除該成員嗎',
     org_remove_member: '將該用戶從組織中移除，將同時移除該組織下所有工作空間的權限，確定要移除該成員嗎？',
     input_id_or_email: '請輸入用戶 ID, 或者 用戶郵箱',
