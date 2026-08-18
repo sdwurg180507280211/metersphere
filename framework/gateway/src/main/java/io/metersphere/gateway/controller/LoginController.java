@@ -25,6 +25,7 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -90,6 +91,10 @@ public class LoginController {
     @PostMapping(value = "/signin")
     @MsAuditLog(module = OperLogModule.AUTH_TITLE, type = OperLogConstants.LOGIN, title = "登录")
     public Mono<ResultHolder> login(@RequestBody LoginRequest request, WebSession session, Locale locale) {
+        // 设置语言环境，确保锁定检查和验证码检查的国际化提示使用正确的语言
+        if (locale != null) {
+            LocaleContextHolder.setLocale(locale);
+        }
         // 登录失败锁定检查
         if (loginFailService.isLocked(request.getUsername())) {
             return Mono.just(ResultHolder.error(Translator.get("login_fail_lock")));
