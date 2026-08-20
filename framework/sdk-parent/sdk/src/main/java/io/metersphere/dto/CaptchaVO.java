@@ -5,6 +5,10 @@ import lombok.Data;
 @Data
 public class CaptchaVO {
     /**
+     * 是否启用验证码，默认启用
+     */
+    private boolean enabled = true;
+    /**
      * 验证码唯一标识，登录时需回传
      */
     private String captchaId;
