@@ -19,10 +19,6 @@ const MIN_EDITOR_HEIGHT = 140;
 const FALLBACK_TOOLBAR_HEIGHT = 64;
 const FALLBACK_RESIZER_HEIGHT = 8;
 const RESULT_COLLAPSE_THRESHOLD = 24;
-const MORE_MENU_WIDTH = 236;
-const MORE_MENU_HEIGHT = 90;
-const MORE_MENU_RIGHT = 96;
-const MORE_MENU_TOP = 38;
 const originalOpenPoolForm = SqlQuery.methods.openPoolForm;
 const originalExecute = SqlQuery.methods.execute;
 const originalInsertSqlAsDraft = SqlQuery.methods.insertSqlAsDraft;
@@ -261,21 +257,36 @@ export default {
         return;
       }
 
-      const x = event.clientX;
-      const y = event.clientY;
-      const toolbarRect = toolbar.getBoundingClientRect();
       const moreButton = toolbar.querySelector('.el-button:nth-of-type(3)');
-      const moreButtonRect = moreButton && moreButton.getBoundingClientRect();
-      const menuRect = {
-        left: toolbarRect.right - MORE_MENU_RIGHT - MORE_MENU_WIDTH,
-        right: toolbarRect.right - MORE_MENU_RIGHT,
-        top: toolbarRect.top + MORE_MENU_TOP,
-        bottom: toolbarRect.top + MORE_MENU_TOP + MORE_MENU_HEIGHT
-      };
-
-      if (!this.isPointInRect(x, y, moreButtonRect) && !this.isPointInRect(x, y, menuRect)) {
-        this.setAdvancedOptionsVisible(false);
+      if (this.isEventInsideElement(event, moreButton) || this.isEventInsideMoreMenu(event, toolbar)) {
+        return;
       }
+      this.setAdvancedOptionsVisible(false);
+    },
+    isEventInsideElement(event, element) {
+      return !!(element && (element === event.target || element.contains(event.target)));
+    },
+    isEventInsideMoreMenu(event, toolbar) {
+      const menuItems = Array.from(toolbar.querySelectorAll('.toolbar-number'));
+      if (menuItems.some(item => this.isEventInsideElement(event, item))) {
+        return true;
+      }
+      const menuRect = this.resolveAdvancedOptionsRect(menuItems);
+      return this.isPointInRect(event.clientX, event.clientY, menuRect);
+    },
+    resolveAdvancedOptionsRect(elements) {
+      const rects = elements
+        .map(element => element.getBoundingClientRect())
+        .filter(rect => rect.width > 0 && rect.height > 0);
+      if (!rects.length) {
+        return null;
+      }
+      return rects.reduce((merged, rect) => ({
+        left: Math.min(merged.left, rect.left),
+        right: Math.max(merged.right, rect.right),
+        top: Math.min(merged.top, rect.top),
+        bottom: Math.max(merged.bottom, rect.bottom)
+      }));
     },
     isPointInRect(x, y, rect) {
       if (!rect) {
