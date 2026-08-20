@@ -3,6 +3,7 @@ package io.metersphere.service;
 import io.metersphere.commons.utils.CaptchaUtil;
 import io.metersphere.dto.CaptchaVO;
 import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -12,11 +13,19 @@ public class CaptchaService {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Value("${login.captcha.enabled:true}")
+    private boolean captchaEnabled;
+
     public CaptchaVO generate() {
+        if (!captchaEnabled) {
+            CaptchaVO captcha = new CaptchaVO();
+            captcha.setEnabled(false);
+            return captcha;
+        }
         return CaptchaUtil.createCaptcha(stringRedisTemplate);
     }
 
     public boolean verify(String captchaId, String code) {
-        return CaptchaUtil.verifyCaptcha(stringRedisTemplate, captchaId, code);
+        return !captchaEnabled || CaptchaUtil.verifyCaptcha(stringRedisTemplate, captchaId, code);
     }
 }
