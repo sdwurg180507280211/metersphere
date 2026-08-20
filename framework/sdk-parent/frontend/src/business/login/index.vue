@@ -45,7 +45,7 @@
                   maxlength="65"
                   show-word-limit />
               </el-form-item>
-              <el-form-item prop="captcha">
+              <el-form-item prop="captcha" v-if="captchaEnabled">
                 <div class="captcha-row">
                   <el-input
                     v-model="form.captcha"
@@ -144,6 +144,7 @@ export default {
         authenticate: 'LOCAL',
         captcha: '',
       },
+      captchaEnabled: true,
       captchaId: '',
       captchaImg: '',
       preheat: true,
@@ -174,7 +175,7 @@ export default {
     },
     preheat: function (val) {
       // 登录表单渲染完成后，若验证码仍为空则重新加载
-      if (!val && !this.captchaImg) {
+      if (!val && this.captchaEnabled && !this.captchaImg) {
         this.refreshCaptcha();
       }
     },
@@ -262,7 +263,7 @@ export default {
   },
 
   mounted() {
-    // 进入页面即加载验证码，避免首次打开时验证码空白
+    // 进入页面即加载验证码，同时获取验证码启用状态
     this.refreshCaptcha();
   },
 
@@ -380,9 +381,11 @@ export default {
           this.checkRedirectUrl();
         })
         .catch((error) => {
-          // 登录失败刷新验证码
-          this.refreshCaptcha();
-          this.form.captcha = '';
+          // 登录失败时，仅在启用验证码的情况下刷新验证码
+          if (this.captchaEnabled) {
+            this.refreshCaptcha();
+            this.form.captcha = '';
+          }
           if (error && error.success === false && error.message) {
             this.$message.error(error.message);
           }
@@ -391,6 +394,13 @@ export default {
     refreshCaptcha() {
       getCaptcha()
         .then((response) => {
+          this.captchaEnabled = response.data.enabled !== false;
+          if (!this.captchaEnabled) {
+            this.captchaId = '';
+            this.captchaImg = '';
+            this.form.captcha = '';
+            return;
+          }
           this.captchaId = response.data.captchaId;
           this.captchaImg = response.data.img;
         })
