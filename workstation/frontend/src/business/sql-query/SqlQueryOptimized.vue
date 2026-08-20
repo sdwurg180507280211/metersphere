@@ -307,21 +307,13 @@ export default {
   position: relative;
 }
 
-/* 顶部第三个按钮作为“更多”下拉开关，隐藏原上传图标和原文案。 */
+/* 顶部第三个按钮作为“更多”下拉开关，隐藏原上传图标，文案直接使用 i18n。 */
 .sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3) {
   min-width: 64px;
-  font-size: 0;
 }
 
 .sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3) i {
   display: none;
-}
-
-.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3)::before {
-  content: '更多';
-  font-size: 14px;
-  line-height: 1;
-  vertical-align: middle;
 }
 
 .sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3)::after {
