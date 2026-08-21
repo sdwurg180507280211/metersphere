@@ -167,8 +167,12 @@ public class UserService {
         // 默认1:启用状态
         user.setStatus(UserStatus.NORMAL);
         user.setSource(UserSource.LOCAL.name());
-        // 密码使用 MD5
-        user.setPassword(CodingUtil.md5(user.getPassword()));
+        user.setNeedChangePassword(true);
+        // 密码使用 BCrypt
+        if (!PasswordEncoder.validateComplexity(user.getPassword())) {
+            MSException.throwException(Translator.get("password_complexity_invalid"));
+        }
+        user.setPassword(PasswordEncoder.encode(user.getPassword()));
         checkEmailIsExist(user.getEmail());
         userMapper.insertSelective(user);
     }
@@ -451,6 +455,9 @@ public class UserService {
         if (StringUtils.equals(oldPassword, newPasswordMd5)) {
             return null;
         }
+        if (!PasswordEncoder.validateComplexity(newPassword)) {
+            MSException.throwException(Translator.get("password_complexity_invalid"));
+        }
         UserExample userExample = new UserExample();
         userExample.createCriteria().andIdEqualTo(SessionUtils.getUser().getId()).andPasswordEqualTo(oldPassword);
         List<User> users = userMapper.selectByExample(userExample);
@@ -466,10 +473,13 @@ public class UserService {
 
     /*管理员修改用户密码*/
     private User updateUserPwd(EditPassWordRequest request) {
+        if (!PasswordEncoder.validateComplexity(request.getNewpassword())) {
+            MSException.throwException(Translator.get("password_complexity_invalid"));
+        }
         User user = userMapper.selectByPrimaryKey(request.getId());
-        String newPassword = request.getNewpassword();
-        user.setPassword(CodingUtil.md5(newPassword));
+        user.setPassword(PasswordEncoder.encode(request.getNewpassword()));
         user.setUpdateTime(System.currentTimeMillis());
+        user.setNeedChangePassword(true);
         return user;
     }
 

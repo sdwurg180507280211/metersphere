@@ -1,5 +1,13 @@
 <template>
-  <el-container>
+  <!-- 强制修改密码页面：阻塞所有页面导航 -->
+  <div v-if="changePassword" class="force-change-pwd-wrapper">
+    <div class="force-change-pwd-card">
+      <h2 class="force-change-pwd-title">{{ $t('member.force_change_password_title') }}</h2>
+      <p class="force-change-pwd-desc">{{ $t('member.force_change_password_desc') }}</p>
+      <password-info :rule-form="pwdForm" :force-change="true" @forceChangeSuccess="onPwdChanged"/>
+    </div>
+  </div>
+  <el-container v-else>
     <el-header :height="headerHeight" class="ms-header-w">
       <el-row>
         <el-col>
@@ -48,6 +56,7 @@ import MsAsideMenus from "../../components/layout/AsideMenus";
 import MsView from "../../components/layout/View";
 import MxLicenseMessage from "../../components/MxLicenseMessage";
 import MxTheme from "../../components/MxTheme";
+import PasswordInfo from "../../components/personal/PasswordInfo";
 import {hasLicense} from "../../utils/permission";
 import {setAsideColor, setColor, setCustomizeColor, setDefaultTheme, setLightColor} from "../../utils";
 import {ORIGIN_COLOR} from "../../utils/constants";
@@ -58,7 +67,7 @@ import {getModuleList} from "../../api/module";
 
 export default {
   name: "AppLayout",
-  components: {MsView, MsAsideFooter, MsAsideHeader, MsAsideMenus, MxLicenseMessage, MxTheme},
+  components: {MsView, MsAsideFooter, MsAsideHeader, MsAsideMenus, MxLicenseMessage, MxTheme, PasswordInfo},
   data() {
     return {
       licenseHeader: null,
@@ -83,6 +92,11 @@ export default {
       },
       announcementScroll: false,
       announcementScrollSpeed: 15,  // 滚动速度（秒），默认15秒
+      pwdForm: {
+        password: '',
+        newpassword: '',
+        repeatPassword: ''
+      },
     };
   },
   created() {
@@ -154,6 +168,9 @@ export default {
         };
       }
       return {};
+    },
+    changePassword() {
+      return JSON.parse(sessionStorage.getItem("changePassword"));
     }
   },
   methods: {
@@ -229,6 +246,10 @@ export default {
       } else {
         this.headerHeight = "0px";
       }
+    },
+    onPwdChanged() {
+      sessionStorage.setItem('changePassword', 'false');
+      window.location.reload();
     },
     getDisplayInfo() {
       this.result = getDisplayInfo()
@@ -385,6 +406,36 @@ export default {
   100% {
     transform: translateX(-100%);
   }
+}
+
+.force-change-pwd-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+.force-change-pwd-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  padding: 40px 50px;
+  width: 480px;
+}
+
+.force-change-pwd-title {
+  text-align: center;
+  font-size: 20px;
+  color: #303133;
+  margin-bottom: 10px;
+}
+
+.force-change-pwd-desc {
+  text-align: center;
+  color: #909399;
+  font-size: 14px;
+  margin-bottom: 30px;
 }
 
 .ms-left-aside {

@@ -532,6 +532,9 @@ const message = {
   login: {
     normal_Login: 'Normal Login',
     auth_not_enable: 'Authentication is not enabled',
+    captcha_placeholder: 'Enter captcha',
+    captcha_required: 'Please enter captcha',
+    captcha_click_refresh: 'Click to refresh captcha',
   },
   license: {
     title: 'Authorization management',
@@ -1050,11 +1053,13 @@ const message = {
     mobile_number_format_is_incorrect: 'Mobile number format is incorrect',
     email_format_is_incorrect: 'Email format is incorrect',
     password_format_is_incorrect:
-      'Valid password: 6-65 digits, English upper and lower case letters + numbers + special characters (optional)',
+      'Password must be at least 8 characters and contain letters, numbers, and special characters',
     old_password: 'Old Password',
     new_password: 'New Password',
     repeat_password: 'Repeat',
     inconsistent_passwords: 'The two passwords entered are inconsistent',
+    force_change_password_title: 'First login, please change your initial password',
+    force_change_password_desc: 'For account security, please set a new password',
     remove_member: 'Are you sure you want to remove this member',
     org_remove_member:
       'Removing the user from the organization will also remove permissions from all workspaces under the organization. Are you sure you want to remove the member ?',

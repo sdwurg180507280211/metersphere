@@ -14,14 +14,18 @@ import io.metersphere.dto.UserDTO;
 import io.metersphere.gateway.log.annotation.MsAuditLog;
 import io.metersphere.gateway.service.AuthSourceService;
 import io.metersphere.gateway.service.BaseDisplayService;
+import io.metersphere.gateway.service.CaptchaService;
+import io.metersphere.gateway.service.LoginFailService;
 import io.metersphere.gateway.service.SystemParameterService;
 import io.metersphere.gateway.service.UserLoginService;
+import io.metersphere.i18n.Translator;
 import io.metersphere.request.LoginRequest;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +58,10 @@ public class LoginController {
     @Resource
     private SystemParameterService systemParameterService;
     @Resource
+    private CaptchaService captchaService;
+    @Resource
+    private LoginFailService loginFailService;
+    @Resource
     private StringRedisTemplate stringRedisTemplate;
 
     @GetMapping(value = "/is-login")
@@ -83,22 +91,41 @@ public class LoginController {
     @PostMapping(value = "/signin")
     @MsAuditLog(module = OperLogModule.AUTH_TITLE, type = OperLogConstants.LOGIN, title = "登录")
     public Mono<ResultHolder> login(@RequestBody LoginRequest request, WebSession session, Locale locale) {
-        return Mono.just(userLoginService.loginLocal(request, session, locale))
+        // 设置语言环境，确保锁定检查和验证码检查的国际化提示使用正确的语言
+        if (locale != null) {
+            LocaleContextHolder.setLocale(locale);
+        }
+        // 登录失败锁定检查
+        if (loginFailService.isLocked(request.getUsername())) {
+            return Mono.just(ResultHolder.error(Translator.get("login_fail_lock")));
+        }
+        // 登录验证码校验
+        if (!captchaService.verify(request.getCaptchaId(), request.getCaptcha())) {
+            return Mono.just(ResultHolder.error(Translator.get("captcha_error")));
+        }
+        return Mono.fromCallable(() -> userLoginService.loginLocal(request, session, locale))
                 .subscribeOn(Schedulers.boundedElastic())
+                .doOnNext(user -> loginFailService.clearFail(request.getUsername()))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not found user info or invalid password")))
-                .map(ResultHolder::success);
-                /*
-                 * 历史逻辑（已停用，仅保留参考）：
-                 * - 登录后通过 ResultHolder.message 返回 "true/false"，用于前端顶部“初始/弱密码提示条”
-                 * - 现已不再驱动任何前端展示，所以注释掉，不删除以便后续需要时恢复/重构为审计或管理员告警能力
-                 *
-                 * .map(rh -> {
-                 *     // 登录是否提示修改密码（弱密码检查）
-                 *     boolean changePassword = userLoginService.checkWhetherChangePasswordOrNot(request);
-                 *     rh.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
-                 *     return rh;
-                 * });
-                 */
+                .map(opt -> {
+                    ResultHolder rh = ResultHolder.success(opt);
+                    if (opt != null && opt.isPresent()) {
+                        // 在 boundedElastic 线程上从 SessionUser 读取标志，避免在 Netty 线程上访问 session
+                        boolean changePassword = Boolean.TRUE.equals(opt.get().getNeedChangePassword());
+                        rh.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
+                    }
+                    return rh;
+                })
+                .onErrorResume(e -> {
+                    int failCount = loginFailService.incrementFail(request.getUsername());
+                    int remaining = 5 - failCount;
+                    if (remaining > 0) {
+                        String msg = (e.getMessage() != null ? e.getMessage() : "")
+                                + String.format(Translator.get("login_fail_attempt_count"), remaining);
+                        return Mono.just(ResultHolder.error(msg));
+                    }
+                    return Mono.just(ResultHolder.error(Translator.get("login_fail_lock")));
+                });
     }
 
     @GetMapping(value = "/currentUser")
