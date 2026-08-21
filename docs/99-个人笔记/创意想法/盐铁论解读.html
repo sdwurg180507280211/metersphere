@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>盐铁论 — 深度解读</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5efe0;
+    --text: #3d3226;
+    --accent: #8b4513;
+    --gold: #b8860b;
+    --card: #faf6ee;
+    --border: #d4c5a9;
+    --timeline: #a0522d;
+    --highlight: #fef3c7;
+    --side-gov: #8b4513;
+    --side-literati: #2d6a4f;
+  }
+
+  body {
+    font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", "STSong", serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.9;
+    overflow-x: hidden;
+  }
+
+  /* ── 全局纹理 ── */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(139,69,19,.008) 2px, rgba(139,69,19,.008) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(139,69,19,.005) 3px, rgba(139,69,19,.005) 6px);
+    opacity: .6;
+  }
+  .ink-dot {
+    position: fixed; pointer-events: none; z-index: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(139,69,19,.06) 0%, transparent 70%);
+    animation: inkFloat linear infinite;
+  }
+  @keyframes inkFloat {
+    0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+    10%  { opacity: .7; }
+    90%  { opacity: .5; }
+    100% { transform: translateY(-110vh) translateX(40px) scale(1.6); opacity: 0; }
+  }
+
+  /* ── Hero ── */
+  .hero {
+    position: relative; z-index: 2;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    background: linear-gradient(180deg, #f5efe0 0%, #ede4d3 50%, #e5dac8 100%);
+    overflow: hidden;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(184,134,11,.08) 0%, transparent 70%);
+  }
+  .hero-brush {
+    position: absolute;
+    font-size: clamp(120px, 20vw, 260px);
+    font-weight: 900;
+    color: rgba(139,69,19,.035);
+    white-space: nowrap;
+    pointer-events: none; user-select: none;
+  }
+  .hero-brush.top { top: 2%; left: 5%; }
+  .hero-brush.btm { bottom: 2%; right: 3%; }
+  .hero-content { position: relative; z-index: 1; padding: 2rem; }
+  .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 900;
+    background: linear-gradient(180deg, #5c3d1e 0%, #8b4513 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: .12em; margin-bottom: .3em;
+  }
+  .hero .sub { font-size: clamp(1rem, 2vw, 1.35rem); color: #8b6914; letter-spacing: .16em; margin-bottom: 2rem; }
+  .hero .meta { display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap; font-size: .95rem; color: #7a6a55; }
+  .hero .meta span { white-space: nowrap; }
+  .scroll-hint {
+    position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+    animation: bob 2s ease-in-out infinite;
+    color: #b8860b; font-size: .9rem; letter-spacing: .08em;
+  }
+  @keyframes bob { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(8px)} }
+
+  /* ══════════════════════════════════════════════ */
+  /* 第 1-2 页：窄栏（时间线、背景）                    */
+  /* ══════════════════════════════════════════════ */
+  .narrow-section {
+    max-width: 860px; margin: 0 auto; padding: 5rem 1.5rem;
+    position: relative; z-index: 1;
+  }
+  .section-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .cloud-deco { position: absolute; opacity: .07; animation: cloudDrift 20s ease-in-out infinite; }
+  .cloud-deco.n1 { top: 8%; left: -60px; width: 180px; animation-delay: 0s; }
+  .cloud-deco.n2 { top: 40%; right: -80px; width: 240px; animation-delay: -7s; }
+  .cloud-deco.n3 { bottom: 15%; left: -40px; width: 200px; animation-delay: -14s; }
+  @keyframes cloudDrift { 0%,100%{transform:translateX(0)} 50%{transform:translateX(30px)} }
+  .mountain-svg { position: absolute; bottom: 0; left: 0; width: 100%; opacity: .04; }
+  .seal-stamp {
+    position: absolute; width: 100px; height: 100px; opacity: .06;
+    border: 2px solid var(--accent); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; font-weight: 900; color: var(--accent);
+    transform: rotate(-8deg); letter-spacing: .1em;
+  }
+  .seal-stamp.r1 { top: 10%; right: 5%; }
+  .seal-stamp.r2 { bottom: 15%; left: 3%; transform: rotate(5deg); }
+  .bamboo-lines {
+    position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: .5;
+    background: repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(139,69,19,.03) 38px, rgba(139,69,19,.03) 39px);
+  }
+
+  .section-title {
+    font-size: 1.8rem; font-weight: 800;
+    text-align: center; letter-spacing: .1em; margin-bottom: 2.5rem; position: relative;
+  }
+  .section-title::after {
+    content: ""; display: block; width: 48px; height: 3px;
+    background: var(--accent); margin: .6rem auto 0; border-radius: 2px;
+  }
+
+  /* ── Timeline ── */
+  .timeline { position: relative; padding-left: 2rem; }
+  .timeline::before {
+    content: ""; position: absolute; left: 8px; top: 0; bottom: 0;
+    width: 2px; background: var(--timeline); border-radius: 1px;
+  }
+  .tl-item { position: relative; margin-bottom: 2.2rem; padding-left: 1.8rem; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -22px; top: .55rem;
+    width: 12px; height: 12px;
+    background: var(--card); border: 2px solid var(--timeline); border-radius: 50%;
+  }
+  .tl-year { font-size: .85rem; color: var(--gold); font-weight: 700; letter-spacing: .06em; }
+  .tl-title { font-size: 1.1rem; font-weight: 700; margin: .15em 0 .25em; }
+  .tl-desc { color: #5c4f3c; font-size: .95rem; }
+
+  /* ══════════════════════════════════════════════ */
+  /* 第 3 页起：全宽布局                               */
+  /* ══════════════════════════════════════════════ */
+  .wide-section {
+    position: relative; z-index: 1;
+    padding: 6rem max(2rem, 5vw);
+  }
+  .wide-inner { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+
+  .wide-title {
+    font-size: clamp(2rem, 4vw, 3rem); font-weight: 900;
+    text-align: center; letter-spacing: .12em; margin-bottom: .8rem; position: relative;
+  }
+  .wide-subtitle {
+    text-align: center; color: var(--gold); font-size: 1.1rem;
+    letter-spacing: .08em; margin-bottom: 3.5rem;
+  }
+  .wide-title::after {
+    content: ""; display: block; width: 56px; height: 3px;
+    background: var(--accent); margin: .8rem auto 0; border-radius: 2px;
+  }
+
+  /* ── 沉浸式开篇引用 ── */
+  .immersive-quote {
+    position: relative; z-index: 1;
+    padding: 5rem 2rem; text-align: center;
+    background: linear-gradient(180deg, #faf3e4 0%, #f5efe0 40%, #ede4d3 100%);
+  }
+  .immersive-quote .big-quote {
+    font-size: clamp(1.5rem, 3.5vw, 2.4rem);
+    font-weight: 700; letter-spacing: .06em; line-height: 1.8;
+    max-width: 900px; margin: 0 auto; color: #4a3520;
+  }
+  .immersive-quote .big-quote mark {
+    background: linear-gradient(180deg, transparent 60%, rgba(184,134,11,.25) 60%);
+  }
+  .immersive-quote .big-source {
+    margin-top: 1.5rem; color: var(--gold); font-size: .95rem; letter-spacing: .06em;
+  }
+  .immersive-quote .bg-char {
+    position: absolute; font-size: 20vw; font-weight: 900;
+    color: rgba(139,69,19,.025); pointer-events: none; user-select: none;
+  }
+  .immersive-quote .bg-char.left { top: -5%; left: 2%; }
+  .immersive-quote .bg-char.right { bottom: -5%; right: 2%; }
+
+  /* ── 解读双栏 ── */
+  .dual-analysis {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;
+    margin-top: 3rem;
+  }
+  .analysis-col h3 {
+    font-size: 1.25rem; font-weight: 800; margin-bottom: 1.2rem;
+    padding-bottom: .5rem; border-bottom: 2px solid var(--border);
+  }
+  .analysis-col.original h3 { color: var(--side-gov); }
+  .analysis-col.interpret h3 { color: var(--side-literati); }
+  .analysis-col p { font-size: .95rem; color: #5c4f3c; margin-bottom: 1rem; }
+  .analysis-col .tag {
+    display: inline-block; font-size: .75rem; font-weight: 700; padding: .15em .6em;
+    border-radius: 3px; letter-spacing: .04em; margin-right: .4em; margin-bottom: .4em;
+  }
+  .analysis-col.original .tag { background: #fde8d0; color: var(--side-gov); }
+  .analysis-col.interpret .tag { background: #d8f3dc; color: var(--side-literati); }
+
+  /* ── 十大命题全景网格 ── */
+  .topic-mosaic {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem; margin-top: 2rem;
+  }
+  .topic-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 2rem; transition: transform .25s, box-shadow .25s;
+    position: relative; overflow: hidden;
+  }
+  .topic-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,.1); }
+  .topic-card .tc-num {
+    font-size: 3rem; font-weight: 900; color: rgba(139,69,19,.07);
+    position: absolute; top: .2rem; right: 1rem; line-height: 1;
+  }
+  .topic-card h3 {
+    font-size: 1.2rem; font-weight: 800; margin-bottom: .8rem;
+    position: relative; z-index: 1;
+  }
+  .topic-card .tc-conflict {
+    display: flex; gap: .5rem; align-items: center; margin-bottom: .8rem;
+    font-size: .85rem;
+  }
+  .tc-conflict span { font-weight: 700; }
+  .tc-conflict .gov-side { color: var(--side-gov); }
+  .tc-conflict .lit-side { color: var(--side-literati); }
+  .tc-conflict .vs { color: #ccc; font-size: .75rem; }
+  .topic-card .tc-quote {
+    font-size: .88rem; color: #7a6a55; font-style: italic;
+    padding-left: .8rem; border-left: 3px solid var(--gold);
+  }
+
+  /* ── 人物深入 ── */
+  .figures-detailed {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 2rem; margin-top: 2rem;
+  }
+  .fig-detail {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 2.5rem 2rem; transition: transform .25s, box-shadow .25s;
+  }
+  .fig-detail:hover { transform: translateY(-4px); box-shadow: 0 14px 40px rgba(0,0,0,.1); }
+  .fig-detail .fig-header {
+    display: flex; align-items: center; gap: 1.2rem; margin-bottom: 1.5rem;
+  }
+  .fig-detail .fig-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; font-weight: 900; flex-shrink: 0;
+  }
+  .fig-detail.sang .fig-avatar { background: #fde8d0; color: var(--side-gov); }
+  .fig-detail.huo  .fig-avatar { background: #e8e0d5; color: #6b5b45; }
+  .fig-detail.lit  .fig-avatar { background: #d8f3dc; color: var(--side-literati); }
+  .fig-detail h3 { font-size: 1.3rem; }
+  .fig-detail .fig-role { font-size: .82rem; color: var(--gold); letter-spacing: .06em; }
+  .fig-detail .fig-body p { font-size: .93rem; color: #5c4f3c; margin-bottom: .7rem; }
+  .fig-detail .fig-body .highlight-text {
+    padding: .6rem 1rem; background: var(--highlight); border-radius: 6px;
+    font-size: .88rem; color: #6b4d1e; margin: .8rem 0; font-style: italic;
+  }
+
+  /* ── 桓宽笔法 ── */
+  .narrative-analysis {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 2rem;
+    align-items: start;
+  }
+  .nar-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 2rem;
+  }
+  .nar-card h3 { font-size: 1.15rem; font-weight: 800; margin-bottom: 1rem; }
+  .nar-card p, .nar-card li { font-size: .93rem; color: #5c4f3c; }
+  .nar-card ul { list-style: none; padding: 0; }
+  .nar-card li { padding: .4em 0 .4em 1.2em; position: relative; }
+  .nar-card li::before { content: "·"; position: absolute; left: 0; font-weight: 900; color: var(--accent); }
+
+  /* ── 辩论修辞技巧 ── */
+  .rhetoric-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem; margin-top: 2rem;
+  }
+  .rhet-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.8rem;
+  }
+  .rhet-card h4 { font-size: 1.1rem; font-weight: 800; margin-bottom: .6rem; color: var(--accent); }
+  .rhet-card .rhet-example {
+    font-size: .85rem; color: #6b4d1e; font-style: italic;
+    padding: .5rem .8rem; background: var(--highlight); border-radius: 4px; margin: .6rem 0;
+  }
+  .rhet-card p { font-size: .88rem; color: #5c4f3c; }
+
+  /* ── 时间轴影响 ── */
+  .influence-timeline {
+    position: relative; padding: 2rem 0;
+  }
+  .influence-timeline::before {
+    content: ""; position: absolute; left: 50%; top: 0; bottom: 0;
+    width: 2px; background: var(--border); transform: translateX(-50%);
+  }
+  .inf-item {
+    display: flex; align-items: flex-start; margin-bottom: 2.5rem;
+    position: relative;
+  }
+  .inf-item:nth-child(odd) { flex-direction: row; }
+  .inf-item:nth-child(even) { flex-direction: row-reverse; }
+  .inf-dot {
+    position: absolute; left: 50%; top: .5rem; transform: translateX(-50%);
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--card); border: 3px solid var(--accent); z-index: 1;
+  }
+  .inf-content {
+    width: 44%; padding: 1.5rem; background: var(--card);
+    border: 1px solid var(--border); border-radius: 10px;
+  }
+  .inf-era { font-size: .85rem; font-weight: 700; color: var(--gold); letter-spacing: .06em; }
+  .inf-content h4 { font-size: 1.05rem; margin: .3em 0 .4em; }
+  .inf-content p { font-size: .9rem; color: #5c4f3c; }
+
+  /* ── 经典原文 ── */
+  .classic-excerpt {
+    max-width: 800px; margin: 3rem auto 0; padding: 2.5rem;
+    background: linear-gradient(135deg, #fef9f0 0%, #faf3e4 100%);
+    border: 1px solid var(--border); border-radius: 12px;
+  }
+  .classic-excerpt h3 { text-align: center; font-size: 1.2rem; margin-bottom: 1.5rem; color: var(--accent); }
+  .classic-excerpt .yuanwen {
+    font-size: 1.05rem; line-height: 2.2; text-indent: 2em; color: #4a3520;
+  }
+  .classic-excerpt .yuanwen em { font-style: normal; background: var(--highlight); padding: 0 .2em; }
+  .classic-excerpt .zhushi { font-size: .85rem; color: #8b6914; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px dashed var(--border); }
+
+  /* ── 逐篇精读 ── */
+  .chapter-entry {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
+    padding: 2.5rem 0; border-bottom: 1px solid rgba(212,197,169,.5);
+    align-items: start;
+  }
+  .chapter-entry:last-child { border-bottom: none; }
+  .chapter-entry .ch-head {
+    display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem;
+  }
+  .chapter-entry .ch-num {
+    font-size: 2rem; font-weight: 900; color: var(--accent); opacity: .25;
+    line-height: 1; flex-shrink: 0;
+  }
+  .chapter-entry .ch-name { font-size: 1.25rem; font-weight: 800; letter-spacing: .06em; }
+  .chapter-entry .ch-text {
+    font-size: .98rem; line-height: 2; color: #4a3520;
+    padding: 1.2rem 1.5rem; background: linear-gradient(135deg, #fef9f0, #faf6ee);
+    border-radius: 10px; border-left: 3px solid var(--accent);
+  }
+  .chapter-entry .ch-text mark {
+    background: linear-gradient(180deg, transparent 60%, rgba(184,134,11,.2) 60%);
+  }
+  .chapter-entry .ch-text .speaker {
+    display: inline-block; font-size: .72rem; font-weight: 700;
+    padding: .1em .5em; border-radius: 3px; margin-right: .4em;
+    vertical-align: middle; letter-spacing: .04em;
+  }
+  .chapter-entry .ch-text .speaker.gov { background: #fde8d0; color: var(--side-gov); }
+  .chapter-entry .ch-text .speaker.lit { background: #d8f3dc; color: var(--side-literati); }
+  .chapter-entry .ch-analysis h4 {
+    font-size: 1.05rem; font-weight: 800; color: var(--accent); margin-bottom: .8rem;
+  }
+  .chapter-entry .ch-analysis p {
+    font-size: .92rem; color: #5c4f3c; margin-bottom: .7rem; line-height: 1.85;
+  }
+  .chapter-entry .ch-analysis .highlight-box {
+    padding: .8rem 1rem; background: var(--highlight); border-radius: 6px;
+    font-size: .85rem; color: #6b4d1e; margin: .8rem 0; font-style: italic;
+  }
+  @media (max-width: 768px) {
+    .chapter-entry { grid-template-columns: 1fr; gap: 1.5rem; }
+  }
+
+  /* ── Footer ── */
+  .footer {
+    position: relative; z-index: 1;
+    text-align: center; padding: 3rem 1.5rem;
+    border-top: 1px solid var(--border); color: #9a8a72; font-size: .85rem;
+    background: linear-gradient(0deg, #e8dcc8 0%, #efe7d8 60%, transparent 100%);
+  }
+  .footer::before {
+    content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+    background: radial-gradient(ellipse at 50% 100%, rgba(139,69,19,.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Reveal ── */
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity .6s, transform .6s; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── Divider ── */
+  .section-divider {
+    text-align: center; padding: 2rem 0; position: relative; z-index: 1;
+  }
+  .section-divider span {
+    display: inline-block; width: 60px; height: 2px; background: var(--border);
+    vertical-align: middle;
+  }
+  .section-divider .diamond {
+    display: inline-block; width: 10px; height: 10px;
+    background: var(--accent); transform: rotate(45deg);
+    margin: 0 1rem; vertical-align: middle; opacity: .5;
+  }
+
+  @media (max-width: 768px) {
+    .dual-analysis { grid-template-columns: 1fr; gap: 2rem; }
+    .narrative-analysis { grid-template-columns: 1fr; gap: 2rem; }
+    .topic-mosaic { grid-template-columns: 1fr; }
+    .figures-detailed { grid-template-columns: 1fr; }
+    .influence-timeline::before { left: 20px; }
+    .inf-item, .inf-item:nth-child(even) { flex-direction: row; }
+    .inf-dot { left: 20px; }
+    .inf-content { width: calc(100% - 50px); margin-left: 40px; }
+    .wide-section { padding: 4rem 1.2rem; }
+    .immersive-quote { padding: 3rem 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- 第 1 页：Hero                                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-brush top">鹽鐵論</div>
+  <div class="hero-brush btm">鹽鐵論</div>
+  <div class="hero-content">
+    <h1>盐铁论</h1>
+    <p class="sub">中国古代第一场经济政策大辩论</p>
+    <div class="meta">
+      <span>西汉·桓宽 整理</span>
+      <span>始元六年（前81年）</span>
+      <span>共六十篇</span>
+    </div>
+  </div>
+  <div class="scroll-hint">▼ 开始解读</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- 第 2 页：历史背景（窄栏）                                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section class="narrow-section reveal" style="position:relative;">
+  <div class="section-bg">
+    <svg class="cloud-deco n1" viewBox="0 0 200 120"><path d="M30 90 Q50 40 100 45 Q130 10 170 40 Q195 30 190 60 Q200 90 170 100 L30 100 Z" fill="var(--accent)"/></svg>
+    <svg class="cloud-deco n2" viewBox="0 0 200 120"><path d="M20 80 Q45 35 95 40 Q125 8 165 38 Q190 28 185 58 Q200 85 165 95 L20 95 Z" fill="var(--accent)"/></svg>
+    <svg class="cloud-deco n3" viewBox="0 0 200 120"><path d="M25 85 Q50 38 100 43 Q135 12 170 42 Q195 32 185 62 Q200 88 165 98 L25 98 Z" fill="var(--accent)"/></svg>
+  </div>
+  <h2 class="section-title">历史背景</h2>
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-year">前 141 年</div>
+      <div class="tl-title">汉武帝即位</div>
+      <div class="tl-desc">刘彻登基，开创汉朝鼎盛时期，对外连年征伐匈奴，对内大兴土木。</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">前 119 年</div>
+      <div class="tl-title">盐铁官营确立</div>
+      <div class="tl-desc">为筹措军费，武帝采纳桑弘羊等人建议，将盐、铁、酒收归国家专营。在全国设盐官三十六处、铁官四十八处。</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">前 110 年</div>
+      <div class="tl-title">均输平准法推行</div>
+      <div class="tl-desc">桑弘羊推行均输法（政府统一调运物资）、平准法（政府调控物价），国家深度介入商业流通领域。</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">前 87 年</div>
+      <div class="tl-title">武帝去世</div>
+      <div class="tl-desc">汉武帝驾崩，年仅八岁的汉昭帝即位，霍光、桑弘羊等受遗诏辅政。朝政由霍光实际掌握。</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">前 81 年</div>
+      <div class="tl-title">盐铁会议召开</div>
+      <div class="tl-desc">霍光以昭帝名义召集各地"贤良文学"六十余人，与以桑弘羊为首的政府官员展开大辩论。核心议题：盐铁专卖该不该废除？</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">约前 70 年</div>
+      <div class="tl-title">《盐铁论》成书</div>
+      <div class="tl-desc">桓宽（字次公，汝南人，治《公羊春秋》）据会议记录"推衍盐铁之议，增广条目"，整理为六十篇对话体著作。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- 第 3 页：开篇·本议第一 —— 辩论的起点（全宽沉浸式）      -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section class="immersive-quote reveal">
+  <div class="bg-char left">本</div>
+  <div class="bg-char right">議</div>
+  <h2 class="wide-title" style="margin-bottom:2rem;">开篇 · 本议第一</h2>
+  <p class="wide-subtitle" style="margin-bottom:1.5rem;">辩论的起点——贤良文学的宣战檄文</p>
+  <div class="big-quote">
+    "今郡国有<mark>盐铁、酒榷、均输</mark>，与民争利。<br>
+    散敦厚之朴，成<mark>贪鄙之化</mark>。<br>
+    是以百姓就本者寡，趋末者众。"
+  </div>
+  <p class="big-source">—— 贤良文学，《盐铁论·本议第一》</p>
+</section>
+
+<section class="wide-section reveal">
+  <div class="wide-inner">
+    <div class="dual-analysis">
+      <div class="analysis-col original">
+        <h3>文言原文解读</h3>
+        <p>文章开篇，贤良文学便以<strong>三句话直击要害</strong>，将盐铁官营、酒类专卖、均输平准三大政策一并列为攻击目标。</p>
+        <p>他们用了一个极为精准的动词——<strong>"争"</strong>。政府不是管理经济，而是与百姓争夺利益。一个"争"字，将国家干预经济的合法性彻底否定。</p>
+        <p>随后上升到道德层面：这些政策<strong>"散敦厚之朴，成贪鄙之化"</strong>——破坏了淳朴的民风，助长了贪婪的风气。经济政策不仅损害民生，更在腐蚀整个社会的道德根基。</p>
+        <p>最后落脚到社会结构：<strong>"百姓就本者寡，趋末者众"</strong>——农业人口流失，商业投机盛行。国家政策引导百姓弃农经商，动摇了以农立国的根本。</p>
+        <div>
+          <span class="tag">以义为先</span><span class="tag">藏富于民</span><span class="tag">重本抑末</span>
+        </div>
+      </div>
+      <div class="analysis-col interpret">
+        <h3>深层逻辑分析</h3>
+        <p>这段开场白看似简短，实则包含着一个精心构建的<strong>三层论证结构</strong>：</p>
+        <p><strong>第一层（经济）</strong>：官营政策损害了百姓的直接经济利益，"与民争利"是最具冲击力的指控——它暗示这个政府不像父母，而像一个贪心的商人。</p>
+        <p><strong>第二层（道德）</strong>：从经济伤害上升到文化腐蚀。贤良文学的主张非常深刻：一个社会的道德风气不是天生的，而是被制度塑造的。坏的制度会让好人变坏。</p>
+        <p><strong>第三层（国本）</strong>：回到国家存续的根本问题——农业。这是对法家"富国强兵"路线的釜底抽薪式攻击：你的政策不但没有富强，反而在挖国家的根基。</p>
+        <div>
+          <span class="tag">三层论证</span><span class="tag">经济→道德→国本</span><span class="tag">釜底抽薪</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="classic-excerpt">
+      <h3>桑弘羊的回应</h3>
+      <div class="yuanwen">
+        大夫曰："<em>匈奴背叛不臣，数为寇暴于边鄙</em>。备之则劳中国之士，不备则侵盗不止。先帝哀边人之久患，苦为虏所系获也，故修障塞，饬烽燧，屯戍以备之。边用度不足，故兴盐铁、设酒榷、置均输。<em>蓄货长财，以佐助边费</em>。"
+      </div>
+      <div class="zhushi">
+        桑弘羊的回应显示了极高的话术技巧：他不是在"辩解"，而是在"叙事"。用一个宏大的国家安全叙事——匈奴威胁→边防需要→军费不足→盐铁官营——将一项经济政策包装成<strong>保家卫国的必要之恶</strong>。这个逻辑的妙处在于：谁反对盐铁官营，谁就是在置国家安全于不顾。
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"><span></span><i class="diamond"></i><span></span></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- 第 4 页：逐篇精读 —— 原文精选深度解读                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section class="wide-section reveal">
+  <div class="wide-inner">
+    <h2 class="wide-title">逐篇精读</h2>
+    <p class="wide-subtitle">从六十篇中精选九章原文，逐句解读</p>
+
+    <!-- ═══ 力耕第二 ═══ -->
+    <div class="chapter-entry">
+      <div class="ch-text-col">
+        <div class="ch-head">
+          <span class="ch-num">02</span>
+          <span class="ch-name">力耕第二 · 农业与商业之辩</span>
+        </div>
+        <div class="ch-text">
+          <p><span class="speaker lit">文学</span>古者<mark>尚力务本</mark>，种树养蚕，衣食足而后教化兴。今郡国<mark>弃本逐末</mark>，民趋商贾，背农桑。耕者少而食者众，一人耕之，十人聚而食之，欲天下无饥，不可得也。</p>
+          <p style="margin-top:.8em;"><span class="speaker gov">大夫</span>富国何必用本农，足民何必井田也？<mark>圣人通变</mark>，与时推移。管子曰："仓廪实而知礼节。"不务积聚，虽尧舜不能治天下。</p>
+        </div>
+      </div>
+      <div class="ch-analysis">
+        <h4>解读：重农还是重商？</h4>
+        <p>这是中国历史上最早的"实体经济 vs 虚拟经济"之争。文学以<strong>生产力底线</strong>论证——一人种地十人吃，必然产生粮食危机。这个论证在今天依然有效：制造业空心化的国家，最终会丧失经济自主权。</p>
+        <p>桑弘羊的反驳则跳出了农业本位的框架，引管仲之言强调财富积累本身才是文明的基础——<strong>"仓廪实而知礼节"</strong>，富了自然有道德。这是一种务实的、非意识形态化的经济观。</p>
+        <div class="highlight-box">核心对立：文学认为"生产方式决定道德"（农耕使人朴实），桑弘羊认为"财富水平决定道德"（有钱才讲文明）。双方各说对了一半。</div>
+      </div>
+    </div>
+
+    <!-- ═══ 通有第三 ═══ -->
+    <div class="chapter-entry">
+      <div class="ch-text-col">
+        <div class="ch-head">
+          <span class="ch-num">03</span>
+          <span class="ch-name">通有第三 · 商贸流通之辩</span>
+        </div>
+        <div class="ch-text">
+          <p><span class="speaker gov">大夫</span>故<mark>物流通，有无均</mark>。陇蜀之丹漆旄羽，荆扬之皮革骨象，江南之楠梓竹箭，燕齐之鱼盐旃裘，待商而通，待工而成。故圣人立工商以通有无。</p>
+          <p style="margin-top:.8em;"><span class="speaker lit">文学</span>今世俗<mark>雕琢奇巧</mark>，以相夸耀。商贾转毂百数，废居居邑，逐利如狂。此非安民之道也。</p>
+        </div>
+      </div>
+      <div class="ch-analysis">
+        <h4>解读：贸易创造价值还是滋生投机？</h4>
+        <p>桑弘羊在这里表现出惊人的经济学洞察力。他描述的是<strong>比较优势和贸易分工</strong>——各地物产不同，通过商路互通有无。这几乎就是亚当·斯密"看不见的手"在公元前一世纪的中国版本。</p>
+        <p>文学的反驳则指向商业的<strong>道德外溢效应</strong>——当商人炫富成为风尚，整个社会的价值观就会扭曲。这个观察非常精准：消费主义的本质问题不是"买东西"，而是"买给别人看"。</p>
+        <div class="highlight-box">这场辩论触及了市场经济的一个核心悖论：贸易确实创造财富，但财富的炫耀性消费确实腐蚀社会。两千年后的今天，我们依然在讨论同一问题。</div>
+      </div>
+    </div>
+
+    <!-- ═══ 错币第四 ═══ -->
+    <div class="chapter-entry">
+      <div class="ch-text-col">
+        <div class="ch-head">
+          <span class="ch-num">04</span>
+          <span class="ch-name">错币第四 · 货币制度之争</span>
+        </div>
+        <div class="ch-text">
+          <p><span class="speaker gov">大夫</span><mark>币数变而民愈贫</mark>。古者市朝而无刀币，各以其所有易其所无。后世造币立禁，奸伪并行。故<mark>统一之制，禁民私铸</mark>，则奸伪息矣。</p>
+          <p style="margin-top:.8em;"><span class="speaker lit">文学</span>铸钱之禁，设为阱罟。<mark>上挟铜山，下锢民利</mark>。虽有峻法，奸伪不止。不如使民得铸，官定其式，则利归于下而奸无所容。</p>
+        </div>
+      </div>
+      <div class="ch-analysis">
+        <h4>解读：货币该由国家垄断还是民间自由？</h4>
+        <p>这场辩论展现了一个惊人的事实：在中国公元前一世纪，货币政策的讨论已经达到了令人咋舌的深度。桑弘羊主张国家垄断铸币权（统一币制），文学则提出了一种<strong>"官定标准、民可私铸"</strong>的半自由方案。</p>
+        <p>历史的走向验证了桑弘羊——中国此后两千年一直由国家垄断铸币权。但文学的担忧"上挟铜山，下锢民利"同样有先见之明：当货币发行权完全掌握在政府手中，通货膨胀就成了政府掠夺民间财富最隐蔽的手段。</p>
+        <div class="highlight-box">这场辩论的核心分歧在于：你信任政府的管理能力，还是信任市场的自我调节？这个选择两千年后依然没有定论。</div>
+      </div>
+    </div>
+
+    <!-- ═══ 非鞅第七 ═══ -->
+    <div class="chapter-entry">
+      <div class="ch-text-col">
+        <div class="ch-head">
+          <span class="ch-num">07</span>
+          <span class="ch-name">非鞅第七 · 商鞅功过之辩</span>
+        </div>
+        <div class="ch-text">
+          <p><span class="speaker lit">文学</span>商鞅以<mark>峻法酷刑</mark>治秦，秦人不聊生。弃仁义而尚首功，卒车裂族夷，为天下笑。斯人自负其能以敖世，令子孙无置锥之地。此所谓<mark>作法自毙</mark>者也。</p>
+          <p style="margin-top:.8em;"><span class="speaker gov">大夫</span>秦任商鞅，<mark>国以富强，民以殷盛</mark>。其后卒并六国而成帝业。今以赵高之亡秦而非商鞅，犹以崇侯之乱殷而非伊尹也。不察其所以兴，而议其所以亡，岂不谬哉！</p>
+        </div>
+      </div>
+      <div class="ch-analysis">
+        <h4>解读：改革的代价与功业如何权衡？</h4>
+        <p>这是全书最精彩的一场意识形态交锋。文学打出道德牌——商鞅苛法虐民、终遭车裂，证明恶政终将反噬。桑弘羊则拿出了<strong>历史上最强有力的反证</strong>：商鞅变法使秦国从边陲弱邦一跃成为统一六国的霸主。</p>
+        <p>桑弘羊的辩护极为巧妙：他将秦的灭亡归咎于赵高（秦二世时期的宦官），而非商鞅的制度。这就像说——<strong>一把好刀被坏人用来杀人，你不该怪铸刀的铁匠</strong>。这个比喻的深层含义是：桑弘羊在为汉武帝时期的扩张政策辩护——武功的代价不是政策的问题，而是执行的问题。</p>
+        <div class="highlight-box">这章的本质是"目的与手段"之争。商鞅的问题也是桑弘羊的问题：以短期富强为目标的激进改革，其长期代价是否值得？</div>
+      </div>
+    </div>
+
+    <!-- ═══ 刺权第九 ═══ -->
+    <div class="chapter-entry">
+      <div class="ch-text-col">
+        <div class="ch-head">
+          <span class="ch-num">09</span>
+          <span class="ch-name">刺权第九 · 权力与财富的集中</span>
+        </div>
+        <div class="ch-text">
+          <p><span class="speaker lit">文学</span>今<mark>公卿大夫</mark>，身兼官爵，田宅逾制。专山泽之利，擅工商之便。富者田连阡陌，贫者无立锥之地。贵人之家，<mark>舆服僭上</mark>，众庶仿效，奢侈无度，此非所以教民也。</p>
+        </div>
+      </div>
+      <div class="ch-analysis">
+        <h4>解读："田连阡陌"与"无立锥之地"</h4>
+        <p>文学在这里打出了一张<strong>阶级分析</strong>的牌，而且打得极为漂亮。"富者田连阡陌，贫者无立锥之地"成为此后两千年中国古代社会批判最经典的名句，被无数后世文人引用。</p>
+        <p>但请注意：文学并非站在"无产阶级"立场批判富人。他们代表的是<strong>被官商合体挤压的中小地主和商人</strong>。他们反对的不是"有人富"，而是"官商勾结式的富"。盐铁官营的本质是——国家利用公权力垄断了原来属于民间商人的利润空间。文学的口号"与民争利"中，"民"首先指的是商人阶层，不是全体百姓。</p>
+        <div class="highlight-box">历史讽刺：文学以"扶农"为名反对官营商业，但他们真正捍卫的其实是地方商业资本的利益。中国古代的"重农抑商"话语，很多时候恰恰是商人在说话。</div>
+      </div>
+    </div>
+
+    <!-- ═══ 论儒第十一 ═══ -->
+    <div class="chapter-entry">
+      <div class="ch-text-col">
+        <div class="ch-head">
+          <span class="ch-num">11</span>
+          <span class="ch-name">论儒第十一 · 儒家到底有没有用？</span>
+        </div>
+        <div class="ch-text">
+          <p><span class="speaker gov">大夫</span>儒者<mark>口能言治乱，而身不能行</mark>。安国尊君之道，儒者未尝闻也。孔子修道鲁卫之间，<mark>教化不施</mark>，七十二君而不遇。孟轲守旧术，不知世务，困于齐梁。今儒者释耒耜而学其术，此犹无耳而欲调钟鼓也。</p>
+        </div>
+      </div>
+      <div class="ch-analysis">
+        <h4>解读：理想主义者的不实用？</h4>
+        <p>桑弘羊这段攻击杀伤力极强。他没有在理论上争辩儒家学说对不对，而是直接质疑儒家的<strong>实用性</strong>——你们说的那么好听，为什么孔子和孟子自己一辈子都找不到一份稳定的工作？</p>
+        <p>这个论证的背后是两种知识观的冲突：<strong>"有用之学"vs"无用之学"</strong>。桑弘羊代表的是法家的实用主义——能富国强兵的知识才是真知识。但历史最终给出了微妙答案：秦用法家统一天下、二世而亡；汉用儒家治天下、延续四百年。短期的"有用"在长期尺度上未必最有用。</p>
+        <div class="highlight-box">这段辩论在今天依然有回响：人文学科"有没有用"、文人"能不能干事"，两千年来一直是中国知识界的核心焦虑。</div>
+      </div>
+    </div>
+
+    <!-- ═══ 国疾第二十八 ═══ -->
+    <div class="chapter-entry">
+      <div class="ch-text-col">
+        <div class="ch-head">
+          <span class="ch-num">28</span>
+          <span class="ch-name">国疾第二十八 · 贫富分化的根源</span>
+        </div>
+        <div class="ch-text">
+          <p><span class="speaker lit">文学</span>今<mark>公卿子孙</mark>，被服绮縠，食必粱肉。农夫妻子，不得温饱。<mark>一人犯法，阖门遭戮</mark>。富者买爵，贫者鬻子。此岂治国之体乎？</p>
+          <p style="margin-top:.8em;"><span class="speaker gov">大夫</span>水有猵獭而池鱼劳，<mark>强有所加而弱受制</mark>。智者有百人之功，愚者有不更本之事。此天地之分，非人所能易也。</p>
+        </div>
+      </div>
+      <div class="ch-analysis">
+        <h4>解读：贫富差距是天经地义的吗？</h4>
+        <p>这段辩论触及了最根本的分配正义问题。文学用强烈的情感冲击——<strong>"富者买爵，贫者鬻子"</strong>（富人买官，穷人卖孩子）——展现了一个极端不平等的社会的残酷画面。</p>
+        <p>桑弘羊的回应则展现出近乎冷酷的理性主义：就像池鱼惧怕水獭、弱者受制于强者，这是<strong>自然的秩序</strong>。他的"智者有百人之功"类似于今天的"能力主义"——聪明人产出百倍，自然应当拥有百倍，这很公平。</p>
+        <div class="highlight-box">这场辩论预示了此后两千年的核心政治哲学分歧：不平等是社会自然秩序（保守派），还是制度不公的结果（改革派）？</div>
+      </div>
+    </div>
+
+    <!-- ═══ 救匮第三十 ═══ -->
+    <div class="chapter-entry">
+      <div class="ch-text-col">
+        <div class="ch-head">
+          <span class="ch-num">30</span>
+          <span class="ch-name">救匮第三十 · 如何解决财政困境</span>
+        </div>
+        <div class="ch-text">
+          <p><span class="speaker lit">文学</span>方今之务，<mark>省徭役，薄赋敛</mark>。农人纳其获，女工效其功。今赋敛既重，吏复渔夺。田虽三十，而以顷亩出税，乐岁粒米狼戾而不得食。此<mark>民所以流亡</mark>者也。</p>
+          <p style="margin-top:.8em;"><span class="speaker gov">大夫</span>边用不足，内府空虚。不赋敛于民，将何以给之？且民非独耕而食也，<mark>工商食官</mark>，犹耕者之仰田也。</p>
+        </div>
+      </div>
+      <div class="ch-analysis">
+        <h4>解读：减税还是保财政？</h4>
+        <p>文学的指控非常具体——不仅是赋税高，更是<strong>赋税制度不合理</strong>。按亩征税意味着丰年农民吃不饱（因为粮食多价格低，但税是固定的），这反映了农业社会最残酷的经济逻辑。</p>
+        <p>桑弘羊没有否认民间疾苦，而是把话题拉回现实：边境在打仗，国库没钱，你们说减税，那军费从哪来？这是一个<strong>无法回避的硬约束</strong>。他进一步提出"工商食官"的概念——国家养活工商阶层来服务国家需要，类似于今天国有企业和政府采购的逻辑。</p>
+        <div class="highlight-box">这场辩论本质上没有赢家。减税则军费无着，不减则民怨沸腾。汉武帝留下的结构性困境，最终由他的孙子汉宣帝通过"休养生息"而非"减税"来化解。</div>
+      </div>
+    </div>
+
+    <!-- ═══ 刑德第五十五 ═══ -->
+    <div class="chapter-entry">
+      <div class="ch-text-col">
+        <div class="ch-head">
+          <span class="ch-num">55</span>
+          <span class="ch-name">刑德第五十五 · 刑罚与德教的终极之辩</span>
+        </div>
+        <div class="ch-text">
+          <p><span class="speaker lit">文学</span><mark>法能刑人而不能使人廉，能杀人而不能使人仁</mark>。道之以政，齐之以刑，民免而无耻。道之以德，齐之以礼，有耻且格。</p>
+          <p style="margin-top:.8em;"><span class="speaker gov">大夫</span>令严而民慎，法简而民轻。故<mark>礼让不足禁邪，而刑法可以止暴</mark>。今废仁义之柄，而专任刑法，此秦所以失天下也。然废刑法而专任德教，其失一也。故<mark>圣人兼用</mark>之。</p>
+        </div>
+      </div>
+      <div class="ch-analysis">
+        <h4>解读：全书最有洞见的一段</h4>
+        <p>文学的论证直接引用《论语》——"道之以政，齐之以刑，民免而无耻"——纯粹的法治社会将制造出精于钻法律漏洞却毫无廉耻的公民。这不正是对现代法治社会最深刻的警告吗？</p>
+        <p>但桑弘羊在这里展现了<strong>罕见的智慧</strong>——他没有像往常一样为法家站台，而是罕见地承认了双方的不足：纯粹法治会像秦朝一样灭亡，纯粹德治同样会失败，<strong>"圣人兼用之"</strong>。这是《盐铁论》全书中最接近"综合真理"的一刻。</p>
+        <div class="highlight-box">桑弘羊在这里超越了自己的立场。他承认治国需要德法并用——这是他全书最诚实、最深刻的一段发言。</div>
+      </div>
+    </div>
+
+    <!-- ═══ 大论第五十九 ═══ -->
+    <div class="chapter-entry">
+      <div class="ch-text-col">
+        <div class="ch-head">
+          <span class="ch-num">59</span>
+          <span class="ch-name">大论第五十九 · 最后的总结陈词</span>
+        </div>
+        <div class="ch-text">
+          <p><span class="speaker lit">文学</span>为政而<mark>宜于民</mark>者，固当不易。何必变古易常，以乱天下？天地之利，当以养民。今<mark>夺民之利而归于上</mark>，非长久之道也。</p>
+          <p style="margin-top:.8em;"><span class="speaker gov">大夫</span>治世不一道，便国不必法古。汤武之王，不循古而兴；殷夏之灭，不易礼而亡。故<mark>时移则法移</mark>。今不取法于今，而欲循三代之旧，是犹却行而求及前人也。</p>
+        </div>
+      </div>
+      <div class="ch-analysis">
+        <h4>解读：双方最后的立场</h4>
+        <p>全书终章，双方回到了最根本的哲学分歧。文学坚持<strong>"不变"就是最好</strong>——因为任何改变都可能以损害民众为代价。这是一种深刻的保守主义智慧：承认我们不知道改变会带来什么后果，所以最好维持现状。</p>
+        <p>桑弘羊的最终陈词掷地有声：<strong>"时移则法移"</strong>。时代变了，制度必须跟着变。他以汤武革命和商周兴亡为例，证明"不变法"才会亡国。这段话也是中国改革思想史上最经典的宣言之一。</p>
+        <div class="highlight-box">全书以分歧结束，没有结论。这正是《盐铁论》的伟大之处——它没有给读者一个"正确答案"，而是让两千年的读者自己去寻找平衡点。</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="section-divider"><span></span><i class="diamond"></i><span></span></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- 第 5 页：逐题剖析 —— 十大辩论维度（全宽卡片网格）       -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section class="wide-section reveal">
+  <div class="wide-inner">
+    <h2 class="wide-title">逐题剖析</h2>
+    <p class="wide-subtitle">《盐铁论》六十篇涵盖的十大核心论域</p>
+
+    <div class="topic-mosaic">
+      <div class="topic-card">
+        <div class="tc-num">01</div>
+        <h3>盐铁专卖存废</h3>
+        <div class="tc-conflict">
+          <span class="gov-side">桑弘羊：以充国库</span>
+          <span class="vs">VS</span>
+          <span class="lit-side">文学：与民争利</span>
+        </div>
+        <p class="tc-quote">"盐铁之利，所以佐百姓之急，足军旅之费，务蓄积以备乏绝。"——桑弘羊</p>
+        <p class="tc-quote">"与民争利，散敦厚之朴，成贪鄙之化。"——文学</p>
+      </div>
+
+      <div class="topic-card">
+        <div class="tc-num">02</div>
+        <h3>均输平准利弊</h3>
+        <div class="tc-conflict">
+          <span class="gov-side">桑弘羊：平抑物价</span>
+          <span class="vs">VS</span>
+          <span class="lit-side">文学：与民争利</span>
+        </div>
+        <p class="tc-quote">"平准则民不失职，均输则民齐劳逸。"——桑弘羊</p>
+        <p class="tc-quote">"均输之物，非民所须，释其所有，责其所无。"——文学</p>
+      </div>
+
+      <div class="topic-card">
+        <div class="tc-num">03</div>
+        <h3>对外战争与和亲</h3>
+        <div class="tc-conflict">
+          <span class="gov-side">桑弘羊：以武止暴</span>
+          <span class="vs">VS</span>
+          <span class="lit-side">文学：以德怀远</span>
+        </div>
+        <p class="tc-quote">"不征则不顺，不伐则不服。当此之时，非用兵无以定天下。"——桑弘羊</p>
+        <p class="tc-quote">"古者贵以德而贱用兵。文王是也，行义而天下归之。"——文学</p>
+      </div>
+
+      <div class="topic-card">
+        <div class="tc-num">04</div>
+        <h3>法治还是德治</h3>
+        <div class="tc-conflict">
+          <span class="gov-side">桑弘羊：重法令</span>
+          <span class="vs">VS</span>
+          <span class="lit-side">文学：重教化</span>
+        </div>
+        <p class="tc-quote">"令严而民慎，法简而民轻。无法不可为治。"——桑弘羊</p>
+        <p class="tc-quote">"法能刑人而不能使人廉。导民以德，则民归厚。"——文学</p>
+      </div>
+
+      <div class="topic-card">
+        <div class="tc-num">05</div>
+        <h3>官营铁器质量</h3>
+        <div class="tc-conflict">
+          <span class="gov-side">桑弘羊：统一标准</span>
+          <span class="vs">VS</span>
+          <span class="lit-side">文学：粗劣害农</span>
+        </div>
+        <p class="tc-quote">"卒徒工匠，以县官日给食，作工各以其事，其势必完。"——桑弘羊</p>
+        <p class="tc-quote">"县官鼓铸铁器，大抵多为大器，不给民用。民用钝弊，割草不痛。"——文学</p>
+      </div>
+
+      <div class="topic-card">
+        <div class="tc-num">06</div>
+        <h3>农商本末之辩</h3>
+        <div class="tc-conflict">
+          <span class="gov-side">桑弘羊：农商皆重</span>
+          <span class="vs">VS</span>
+          <span class="lit-side">文学：重本抑末</span>
+        </div>
+        <p class="tc-quote">"富国何必用本农，足民何必井田也？"——桑弘羊</p>
+        <p class="tc-quote">"工商盛而本业荒。国以民为本，民以食为天。"——文学</p>
+      </div>
+
+      <div class="topic-card">
+        <div class="tc-num">07</div>
+        <h3>贫富分化问题</h3>
+        <div class="tc-conflict">
+          <span class="gov-side">桑弘羊：能者多得</span>
+          <span class="vs">VS</span>
+          <span class="lit-side">文学：贫富悬殊</span>
+        </div>
+        <p class="tc-quote">"智者有百人之功，愚者有不更本之事。"——桑弘羊</p>
+        <p class="tc-quote">"富者田连阡陌，贫者无立锥之地。"——文学</p>
+      </div>
+
+      <div class="topic-card">
+        <div class="tc-num">08</div>
+        <h3>选官用人制度</h3>
+        <div class="tc-conflict">
+          <span class="gov-side">桑弘羊：选贤任能</span>
+          <span class="vs">VS</span>
+          <span class="lit-side">文学：以德为先</span>
+        </div>
+        <p class="tc-quote">"富者以财贾官，勇者以死射功。"——桑弘羊</p>
+        <p class="tc-quote">"选举者，务在得人，不宜以富贵取。"——文学</p>
+      </div>
+
+      <div class="topic-card">
+        <div class="tc-num">09</div>
+        <h3>奢侈与节俭</h3>
+        <div class="tc-conflict">
+          <span class="gov-side">桑弘羊：奢俭由人</span>
+          <span class="vs">VS</span>
+          <span class="lit-side">文学：上行下效</span>
+        </div>
+        <p class="tc-quote">"宫室舆马，衣服器械，各以便生而适其欲。"——桑弘羊</p>
+        <p class="tc-quote">"上为之，下效之。上好奢靡，则民风日下。"——文学</p>
+      </div>
+
+      <div class="topic-card">
+        <div class="tc-num">10</div>
+        <h3>历史经验之争</h3>
+        <div class="tc-conflict">
+          <span class="gov-side">桑弘羊：法先王变</span>
+          <span class="vs">VS</span>
+          <span class="lit-side">文学：法先王道</span>
+        </div>
+        <p class="tc-quote">"治世不一道，便国不必法古。"——桑弘羊（引商鞅）</p>
+        <p class="tc-quote">"为政而宜于民者，固当不易。何必变古？"——文学</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"><span></span><i class="diamond"></i><span></span></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- 第 5 页：言锋交错 —— 辩论的修辞艺术                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section class="wide-section reveal">
+  <div class="wide-inner">
+    <h2 class="wide-title">言锋交错</h2>
+    <p class="wide-subtitle">《盐铁论》中的辩论修辞技巧</p>
+
+    <div class="rhetoric-grid">
+      <div class="rhet-card">
+        <h4>引经据典 · 权威加持</h4>
+        <p>双方大量引用《诗经》《尚书》《春秋》以及孔子、孟子、管仲、商鞅等先贤言论。贤良文学引用儒家经典占据道德高地，桑弘羊则引法家先驱为自己辩护。</p>
+        <div class="rhet-example">"《诗》云：'哀此鳏寡。' 陛下垂大惠，哀元元之未赡。"——文学引《诗经·小雅》</div>
+      </div>
+
+      <div class="rhet-card">
+        <h4>历史类比 · 借古讽今</h4>
+        <p>贤良文学频繁以秦朝二世而亡为鉴，暗示汉武帝政策的危险性。桑弘羊则举管仲治齐、商鞅强秦的例子，论证国家干预经济的正面效果。</p>
+        <div class="rhet-example">"昔秦以力取天下，以法守之，然不旋踵而亡。此岂非弃仁义之故乎？"——文学</div>
+      </div>
+
+      <div class="rhet-card">
+        <h4>比喻生动 · 形象制胜</h4>
+        <p>双方都擅长用生动的比喻使抽象论点变得通俗。贤良文学将官营铁器比作"割草不痛"的钝器，桑弘羊则用"射虎不成反为所噬"来强调对恶必须严惩。</p>
+        <div class="rhet-example">"今县官作铁器，多苦恶，用费不省，割草不痛。农夫消于刍牧，而民间困匮。"——文学</div>
+      </div>
+
+      <div class="rhet-card">
+        <h4>归谬反问 · 逻辑追击</h4>
+        <p>桑弘羊是归谬法的高手。当文学主张废除盐铁专营时，他不直接反驳，而是反问："匈奴未灭，何以罢盐铁？"将问题转化为：你要边境安全还是废除官营？</p>
+        <div class="rhet-example">"今议者欲罢之，内空府库之藏，外乏执备之用。使备塞乘城之士饥寒于边，将何以赡之？"——桑弘羊</div>
+      </div>
+
+      <div class="rhet-card">
+        <h4>排比铺陈 · 气势夺人</h4>
+        <p>桑弘羊善用排比句式列举武帝的武功成就，营造不可反驳的磅礴气势。文学则用排比罗列民间疾苦，以情感冲击打动听众。</p>
+        <div class="rhet-example">"先帝兴义兵以诛暴强，东灭朝鲜，西定冉駹，南擒百越，北挫强胡。"——桑弘羊</div>
+      </div>
+
+      <div class="rhet-card">
+        <h4>偷换概念 · 转移战场</h4>
+        <p>桑弘羊多次将经济政策问题转化为国家安全问题。贤良文学则将政策利弊转化为道德善恶。双方心知肚明：辩论的胜负不在逻辑严密，而在谁能占据听众心中的"正当性"位置。</p>
+        <div class="rhet-example">文学质疑铁器质量 → 桑弘羊回应边防将士的牺牲。双方从未在同一层面上真正交锋。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"><span></span><i class="diamond"></i><span></span></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- 第 6 页：人物群像 —— 三方势力的性格与诉求              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section class="wide-section reveal">
+  <div class="wide-inner">
+    <h2 class="wide-title">人物群像</h2>
+    <p class="wide-subtitle">盐铁论背后的三方势力</p>
+
+    <div class="figures-detailed">
+      <div class="fig-detail sang">
+        <div class="fig-header">
+          <div class="fig-avatar">桑</div>
+          <div>
+            <h3>桑弘羊</h3>
+            <div class="fig-role">御史大夫 · 官营派总代表</div>
+          </div>
+        </div>
+        <div class="fig-body">
+          <p>洛阳富商之子，<strong>十三岁以心算入宫</strong>为武帝侍从。此后四十余年执掌汉朝财政，先后推行盐铁官营、均输平准、酒类专卖，是武帝经济帝国的总设计师。</p>
+          <p>在辩论中，他以<strong>一人之力对抗六十余名贤良文学</strong>，前后发言一百余次，是整部《盐铁论》中出场最多、言辞最锋利的人物。他精通商鞅、管仲之学，同时又熟读儒家典籍，能在对方引经据典时以彼之道还施彼身。</p>
+          <div class="highlight-text">"治世不一道，便国不必法古。汤、武之王也，不循古而兴；殷、夏之灭也，不易礼而亡。"</div>
+          <p>他的悲剧在于：他为之辩护的体系是汉武帝的遗产，而武帝已死。会议次年，桑弘羊因卷入燕王谋反案被处死，终年七十三岁。</p>
+        </div>
+      </div>
+
+      <div class="fig-detail huo">
+        <div class="fig-header">
+          <div class="fig-avatar">霍</div>
+          <div>
+            <h3>霍光</h3>
+            <div class="fig-role">大司马大将军 · 幕后操盘手</div>
+          </div>
+        </div>
+        <div class="fig-body">
+          <p>骠骑将军霍去病异母弟，武帝临终前被指定为<strong>首席托孤大臣</strong>。为人沉静详审，出入宫禁二十余年未尝有过，是西汉中期最有政治手腕的权臣。</p>
+          <p>霍光本人<strong>并未出席盐铁会议</strong>，但会议本身就是他一手策划的——召集在野儒生攻击桑弘羊的政策，实质上是对桑弘羊政治势力的削弱。他深谙"以民意制衡政敌"之道。</p>
+          <div class="highlight-text">霍光的精明：让民间代表发声批判，自己保持"中立"。胜了，是他的政治胜利；败了，是儒生们的"妄议"。</div>
+          <p>盐铁会议后，桑弘羊势力被压制，霍光彻底掌控朝政，开启了长达二十年的"霍光时代"。他虽权倾朝野，但治国尚属稳健，为后来的"昭宣中兴"奠定了基础。</p>
+        </div>
+      </div>
+
+      <div class="fig-detail lit">
+        <div class="fig-header">
+          <div class="fig-avatar">贤</div>
+          <div>
+            <h3>贤良文学</h3>
+            <div class="fig-role">六十余名儒生 · 民间声音</div>
+          </div>
+        </div>
+        <div class="fig-body">
+          <p>从各郡国选拔的<strong>六十余名知识分子</strong>，核心人物包括鲁万生、中山刘子雍、九江祝生等。他们大多是地方上的儒学学者，代表的是被武帝时代国家扩张政策挤压的地方利益集团。</p>
+          <p>他们不是天真的理想主义者。他们的批判背后是<strong>实实在在的经济诉求</strong>——地方豪强和中小地主希望重新获得商业自由，不愿国家垄断最赚钱的行业。道德话语是他们的武器，经济利益才是动力。</p>
+          <div class="highlight-text">"愿罢盐铁、酒榷、均输，所以进本退末，广利农业，便也。"——看似道德诉求，实则利益驱动</div>
+          <p>他们虽然在辩论中声势浩大，但最终只获得了象征性的让步（废除酒类专卖）。然而他们的言论被桓宽记录流传，在思想史上赢得了长久的胜利。</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:700px;margin:3rem auto 0;padding:2rem;background:var(--card);border:1px solid var(--border);border-radius:12px;text-align:center;">
+      <h4 style="font-size:1.1rem;color:var(--accent);margin-bottom:.8rem;">桓宽：记录者的立场</h4>
+      <p style="font-size:.92rem;color:#5c4f3c;">
+        桓宽本人是汝南人，治《公羊春秋》，<strong>立场明显偏向贤良文学</strong>。在《盐铁论》中，他总是给贤良文学更多篇幅、更漂亮的辞藻，而对桑弘羊虽然也记录了其精彩反驳，但整体上将其塑造成一个"固执己见"的形象。司马迁之后、班固之前，桓宽的《盐铁论》是汉代最重要的私人著述之一。
+      </p>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"><span></span><i class="diamond"></i><span></span></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- 第 7 页：千年回响 —— 盐铁论的历史影响                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section class="wide-section reveal">
+  <div class="wide-inner">
+    <h2 class="wide-title">千年回响</h2>
+    <p class="wide-subtitle">从汉代到今天，《盐铁论》如何塑造了中国人的经济思维</p>
+
+    <div class="influence-timeline">
+      <div class="inf-item">
+        <div class="inf-dot"></div>
+        <div class="inf-content">
+          <div class="inf-era">西汉 · 始元六年</div>
+          <h4>盐铁会议：政策微调而非体系废除</h4>
+          <p>废除酒类专卖，关内取消铁官。但盐铁专卖的主体制度保留。这是中国历史上第一次通过公开辩论调整经济政策的案例。</p>
+        </div>
+      </div>
+
+      <div class="inf-item">
+        <div class="inf-dot"></div>
+        <div class="inf-content">
+          <div class="inf-era">东汉 · 班固《汉书》</div>
+          <h4>被纳入正史的经济思想</h4>
+          <p>班固在《汉书·食货志》中大量引用《盐铁论》内容，将其从一部"会议纪要"升格为王朝经济思想的经典文本。从此历代王朝讨论盐铁政策时必引《盐铁论》。</p>
+        </div>
+      </div>
+
+      <div class="inf-item">
+        <div class="inf-dot"></div>
+        <div class="inf-content">
+          <div class="inf-era">唐宋 · 盐铁使与财政改革</div>
+          <h4>从刘晏到王安石——官营思想的延续</h4>
+          <p>唐代刘晏改革盐政，在不废除专卖的前提下提高效率，实际上回应了贤良文学对"官营低效"的批评。宋代王安石变法中的均输、市易法，几乎是对桑弘羊均输平准的翻版，引发新一轮"国进民退"还是"国退民进"的争论。</p>
+        </div>
+      </div>
+
+      <div class="inf-item">
+        <div class="inf-dot"></div>
+        <div class="inf-content">
+          <div class="inf-era">明清 · 经世致用之学</div>
+          <h4>从顾炎武到魏源</h4>
+          <p>明清之际的思想家重新发现《盐铁论》的价值。顾炎武《天下郡国利病书》多处引用，魏源提出"师夷长技以制夷"时亦回顾盐铁论中政府主导资源配置的逻辑。中国传统经济思想的"大政府"脉络在此清晰可见。</p>
+        </div>
+      </div>
+
+      <div class="inf-item">
+        <div class="inf-dot"></div>
+        <div class="inf-content">
+          <div class="inf-era">20-21 世纪 · 当代回响</div>
+          <h4>关于国有企业、政府与市场的新一轮辩论</h4>
+          <p>从计划经济到改革开放，从国企改革到当前的"国进民退"争论，《盐铁论》提出的核心问题——<strong>国家应在多大程度上干预经济？</strong>——从未离开中国思想的中心舞台。两千年前的辩论，至今仍是我们每天面对的考题。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="classic-excerpt" style="margin-top:3rem;">
+      <h3>总结：为何要读《盐铁论》？</h3>
+      <div class="yuanwen" style="text-indent:0;">
+        <p>第一，它是<strong>中国古代最完整的经济政策辩论记录</strong>。从中可以看到，两千年前的中国人已经能够就公共政策的利弊、国家与市场的边界展开系统性的、高水平的辩论。</p>
+        <p style="margin-top:.8em;">第二，它让我们看清<strong>中国国家干预主义的思想渊源</strong>。从管仲到商鞅，从桑弘羊到王安石，甚至到现代，一条"国家主导经济发展"的思路在中国传统中根深蒂固。</p>
+        <p style="margin-top:.8em;">第三，它告诉我们，<strong>经济问题从来不只是经济问题</strong>。在盐铁会议上，辩论很快从"盐铁是否该官营"扩展到战争与和平、法治与德治、奢侈与节俭、用人标准——因为任何经济政策都是价值观的选择，都关乎"我们要成为什么样的社会"。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- Footer                                                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<footer class="footer">
+  <p>盐铁论 — 始元六年（公元前81年）· 桓宽撰 · 共六十篇</p>
+  <p style="margin-top:.4em;">"夫盐铁之议，起于兵备，充于国用，合于王道，切于人事。"</p>
+</footer>
+
+<script>
+  // 浮动墨点
+  (function() {
+    const body = document.body;
+    for (let i = 0; i < 15; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'ink-dot';
+      const size = Math.random() * 100 + 50;
+      dot.style.width = size + 'px';
+      dot.style.height = size + 'px';
+      dot.style.left = Math.random() * 100 + '%';
+      dot.style.bottom = -(Math.random() * 80 + 20) + 'px';
+      dot.style.animationDuration = (Math.random() * 25 + 20) + 's';
+      dot.style.animationDelay = -(Math.random() * 25) + 's';
+      body.appendChild(dot);
+    }
+  })();
+
+  // 滚动渐显
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: .12 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
