@@ -1,5 +1,5 @@
 <template>
-  <div class="sql-query-page">
+  <div :class="['sql-query-page', { 'is-result-collapsed': resultCollapsed }]">
     <section ref="queryMain" class="sql-query-main">
       <div class="sql-query-toolbar">
         <div class="toolbar-title">
@@ -21,43 +21,11 @@
             {{ $t('sql_query.pool') }}
           </el-button>
           <el-button
+            class="sql-query-more-button"
             size="small"
-            icon="el-icon-upload2"
-            :disabled="!sql.trim()"
-            @click="openPoolForm()">
+            @click="toggleAdvancedOptions">
             {{ $t('sql_query.upload_pool') }}
           </el-button>
-          <el-button size="small" icon="el-icon-refresh" @click="loadStatus">
-            {{ $t('sql_query.refresh') }}
-          </el-button>
-          <el-button size="small" icon="el-icon-magic-stick" @click="formatSql">
-            {{ $t('sql_query.format') }}
-          </el-button>
-          <el-button size="small" icon="el-icon-delete" @click="clearSql">
-            {{ $t('sql_query.clear') }}
-          </el-button>
-          <div class="toolbar-number">
-            <span>{{ $t('sql_query.limit') }}</span>
-            <el-input-number
-              v-model="limit"
-              class="limit-input"
-              size="small"
-              :min="1"
-              :max="5000"
-              :step="100"
-              controls-position="right"/>
-          </div>
-          <div class="toolbar-number">
-            <span>{{ $t('sql_query.timeout_seconds') }}</span>
-            <el-input-number
-              v-model="timeoutSeconds"
-              class="timeout-input"
-              size="small"
-              :min="1"
-              :max="300"
-              :step="5"
-              controls-position="right"/>
-          </div>
           <el-button
             type="primary"
             size="small"
@@ -67,6 +35,33 @@
             @click="execute">
             {{ $t('sql_query.run') }}
           </el-button>
+          <div
+            v-if="advancedOptionsVisible"
+            class="sql-query-advanced-menu"
+            @mousedown.stop>
+            <div class="sql-query-advanced-setting">
+              <span>{{ $t('sql_query.limit') }}</span>
+              <el-input-number
+                v-model="limit"
+                class="limit-input"
+                size="small"
+                :min="1"
+                :max="5000"
+                :step="100"
+                controls-position="right"/>
+            </div>
+            <div class="sql-query-advanced-setting">
+              <span>{{ $t('sql_query.timeout_seconds') }}</span>
+              <el-input-number
+                v-model="timeoutSeconds"
+                class="timeout-input"
+                size="small"
+                :min="1"
+                :max="300"
+                :step="5"
+                controls-position="right"/>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -91,7 +86,10 @@
         @mousedown="startEditorResize"></div>
 
       <div class="sql-result">
-        <div v-if="!result && !error && !loading" class="result-empty">
+        <div v-if="!result && !error && !loading" class="result-empty result-state-panel">
+          <el-button class="result-state-close" type="text" size="mini" @click="closeResult">
+            {{ $t('sql_query.close') }}
+          </el-button>
           <i class="el-icon-data-analysis"></i>
           <p>{{ $t('sql_query.empty') }}</p>
           <div class="quick-hints">
@@ -101,12 +99,18 @@
           </div>
         </div>
 
-        <div v-if="loading && !result" class="result-loading">
+        <div v-if="loading && !result" class="result-loading result-state-panel">
+          <el-button class="result-state-close" type="text" size="mini" @click="closeResult">
+            {{ $t('sql_query.close') }}
+          </el-button>
           <i class="el-icon-loading"></i>
           <p>{{ $t('sql_query.loading') }}</p>
         </div>
 
-        <div v-if="error" class="result-error">
+        <div v-if="error" class="result-error result-state-panel">
+          <el-button class="result-state-close" type="text" size="mini" @click="closeResult">
+            {{ $t('sql_query.close') }}
+          </el-button>
           <div class="error-title">
             <i class="el-icon-warning-outline"></i>
             {{ $t('sql_query.failed') }}
@@ -298,9 +302,6 @@
         <el-checkbox v-model="poolOnlyMine" @change="loadPoolList">
           {{ $t('sql_query.pool_only_mine') }}
         </el-checkbox>
-        <el-button size="small" icon="el-icon-refresh" :loading="poolLoading" @click="loadPoolList">
-          {{ $t('sql_query.refresh') }}
-        </el-button>
         <el-button
           type="primary"
           size="small"
@@ -441,9 +442,12 @@ import {
 } from '@/api/sql-query';
 
 const HISTORY_KEY = 'workstation-sql-query-history';
+const RESTORE_DELETED_TITLE_ERROR = 'SQL_QUERY_POOL_TITLE_DELETED';
 const DEFAULT_EDITOR_HEIGHT = 240;
 const MIN_EDITOR_HEIGHT = 140;
-const MIN_RESULT_HEIGHT = 220;
+const FALLBACK_TOOLBAR_HEIGHT = 64;
+const FALLBACK_RESIZER_HEIGHT = 8;
+const RESULT_COLLAPSE_THRESHOLD = 24;
 const DEFAULT_HISTORY_WIDTH = 300;
 const MIN_HISTORY_WIDTH = 240;
 const MAX_HISTORY_WIDTH = 520;
@@ -565,6 +569,8 @@ export default {
       sql: '',
       limit: 1000,
       timeoutSeconds: 30,
+      advancedOptionsVisible: false,
+      resultCollapsed: false,
       loading: false,
       status: {
         connected: false
@@ -673,12 +679,66 @@ export default {
   mounted() {
     this.loadStatus();
     this.loadHistory();
+    window.addEventListener('resize', this.handleResultPanelResize);
   },
   beforeDestroy() {
+    this.removeAdvancedOptionsClickWatcher();
     this.stopEditorResize();
     this.stopHistoryResize();
+    window.removeEventListener('resize', this.handleResultPanelResize);
   },
   methods: {
+    toggleAdvancedOptions() {
+      this.setAdvancedOptionsVisible(!this.advancedOptionsVisible);
+    },
+    setAdvancedOptionsVisible(visible) {
+      this.advancedOptionsVisible = !!visible;
+      if (this.advancedOptionsVisible) {
+        this.$nextTick(this.addAdvancedOptionsClickWatcher);
+      } else {
+        this.removeAdvancedOptionsClickWatcher();
+      }
+    },
+    addAdvancedOptionsClickWatcher() {
+      this.removeAdvancedOptionsClickWatcher();
+      document.addEventListener('mousedown', this.handleAdvancedOptionsDocumentClick);
+    },
+    removeAdvancedOptionsClickWatcher() {
+      document.removeEventListener('mousedown', this.handleAdvancedOptionsDocumentClick);
+    },
+    handleAdvancedOptionsDocumentClick(event) {
+      if (!this.advancedOptionsVisible || !this.$el) {
+        return;
+      }
+      const menu = this.$el.querySelector('.sql-query-advanced-menu');
+      const moreButton = this.$el.querySelector('.sql-query-more-button');
+      if (this.isEventInsideElement(event, moreButton) || this.isEventInsideElement(event, menu)) {
+        return;
+      }
+      this.setAdvancedOptionsVisible(false);
+    },
+    isEventInsideElement(event, element) {
+      return !!(element && (element === event.target || element.contains(event.target)));
+    },
+    setResultCollapsed(collapsed) {
+      this.resultCollapsed = !!collapsed;
+    },
+    resolveEditorFullHeight() {
+      const main = this.$refs.queryMain;
+      if (!main) {
+        return Math.max(MIN_EDITOR_HEIGHT, this.editorHeight || MIN_EDITOR_HEIGHT);
+      }
+      const toolbar = main.querySelector('.sql-query-toolbar');
+      const resizer = main.querySelector('.editor-result-resizer');
+      const toolbarHeight = toolbar ? toolbar.offsetHeight : FALLBACK_TOOLBAR_HEIGHT;
+      const resizerHeight = resizer ? resizer.offsetHeight : FALLBACK_RESIZER_HEIGHT;
+      return Math.max(MIN_EDITOR_HEIGHT, main.clientHeight - toolbarHeight - resizerHeight);
+    },
+    handleResultPanelResize() {
+      if (this.resultCollapsed) {
+        this.editorHeight = this.resolveEditorFullHeight();
+      }
+    },
     async loadStatus() {
       try {
         const response = await getSqlQueryStatus();
@@ -694,6 +754,7 @@ export default {
       if (!this.sql.trim()) {
         return;
       }
+      this.setResultCollapsed(false);
       this.loading = true;
       this.error = '';
       this.result = null;
@@ -969,14 +1030,11 @@ export default {
       document.body.style.userSelect = this.previousBodyUserSelect;
     },
     normalizeEditorHeight(height) {
-      const main = this.$refs.queryMain;
-      if (!main) {
-        return Math.max(MIN_EDITOR_HEIGHT, height);
-      }
-      const toolbarHeight = 64;
-      const resizerHeight = 8;
-      const maxHeight = Math.max(MIN_EDITOR_HEIGHT, main.clientHeight - toolbarHeight - resizerHeight - MIN_RESULT_HEIGHT);
-      return Math.min(Math.max(MIN_EDITOR_HEIGHT, height), maxHeight);
+      const maxHeight = this.resolveEditorFullHeight();
+      const nextHeight = Math.min(Math.max(MIN_EDITOR_HEIGHT, height), maxHeight);
+      const shouldCollapse = nextHeight >= maxHeight - RESULT_COLLAPSE_THRESHOLD;
+      this.setResultCollapsed(shouldCollapse);
+      return shouldCollapse ? maxHeight : nextHeight;
     },
     startHistoryResize(event) {
       event.preventDefault();
@@ -1007,71 +1065,11 @@ export default {
       document.body.style.cursor = this.previousBodyCursor;
       document.body.style.userSelect = this.previousBodyUserSelect;
     },
-    formatSql() {
-      const keywords = ['select', 'from', 'where', 'and', 'or', 'group by', 'order by', 'limit', 'left join', 'right join', 'inner join', 'on', 'as', 'having', 'in', 'is', 'not', 'null', 'like', 'between'];
-      const pattern = new RegExp(`\\b(${keywords.join('|')})\\b`, 'gi');
-      this.sql = this.replaceOutsideLiterals(this.sql, text => text.replace(pattern, keyword => keyword.toUpperCase()));
-    },
-    replaceOutsideLiterals(value, replacer) {
-      let result = '';
-      let segment = '';
-      let quote = '';
-      let escaped = false;
-
-      const flushSegment = () => {
-        if (segment) {
-          result += replacer(segment);
-          segment = '';
-        }
-      };
-
-      for (let i = 0; i < value.length; i++) {
-        const current = value[i];
-        if (!quote) {
-          if (current === '\'' || current === '"' || current === '`') {
-            flushSegment();
-            quote = current;
-            result += current;
-          } else {
-            segment += current;
-          }
-          continue;
-        }
-
-        result += current;
-        if (escaped) {
-          escaped = false;
-          continue;
-        }
-        if (current === '\\') {
-          escaped = true;
-        } else if (current === quote) {
-          quote = '';
-        }
-      }
-
-      flushSegment();
-      return result;
-    },
-    clearSql() {
-      this.error = '';
-      this.result = null;
-      this.editorScrollTop = 0;
-      if (!this.isSelectedLocalDraft()) {
-        this.startNewHistory();
-        return;
-      }
-      this.sql = '';
-      this.$nextTick(() => {
-        if (this.$refs.sqlEditor) {
-          this.$refs.sqlEditor.scrollTop = 0;
-          this.$refs.sqlEditor.focus();
-        }
-      });
-    },
     closeResult() {
       this.result = null;
       this.error = '';
+      this.editorHeight = this.resolveEditorFullHeight();
+      this.setResultCollapsed(true);
     },
     async loadHistory() {
       this.loadLocalHistory();
@@ -1182,6 +1180,7 @@ export default {
       this.selectedHistory = item || null;
       this.creatingHistory = false;
       this.editorScrollTop = 0;
+      this.setResultCollapsed(false);
       this.$nextTick(() => {
         this.suppressDraftSync = false;
         if (focusEditor && this.$refs.sqlEditor) {
@@ -1191,6 +1190,7 @@ export default {
       });
     },
     startNewHistory() {
+      this.setResultCollapsed(false);
       const draftItem = this.createLocalDraft('');
       this.localHistory = [draftItem, ...this.localHistory].slice(0, 50);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
@@ -1459,30 +1459,52 @@ export default {
         this.$message.error(this.$t('sql_query.title_required'));
         return;
       }
-      if (!summary) {
-        this.$message.error(this.$t('sql_query.pool_summary_required'));
-        return;
-      }
       if (!sql) {
         this.$message.error(this.$t('sql_query.pool_sql_required'));
         return;
       }
+
+      const payload = {
+        id: this.poolForm.id,
+        sql,
+        title,
+        summary,
+        description: this.poolForm.description
+      };
+
       this.poolSaving = true;
       try {
-        const response = await saveSqlQueryPool({
-          id: this.poolForm.id,
-          sql,
-          title,
-          summary,
-          description: this.poolForm.description
-        });
+        let response;
+        try {
+          response = await saveSqlQueryPool(payload);
+        } catch (error) {
+          const message = error && (error.message || error.data || String(error));
+          if (!message || !message.includes(RESTORE_DELETED_TITLE_ERROR)) {
+            throw error;
+          }
+
+          await this.$confirm(
+            this.$t('sql_query.pool_restore_confirm', { title }),
+            this.$t('sql_query.pool_restore_title'),
+            { type: 'warning' }
+          );
+          response = await saveSqlQueryPool({ ...payload, restoreDeleted: true });
+        }
+
         const savedItem = this.normalizePoolItem(response.data);
         this.poolDialogVisible = true;
         this.poolFormVisible = false;
         await this.loadPoolList(savedItem.id);
-        this.$message.success(this.$t(this.poolFormMode === 'edit' ? 'sql_query.pool_save_success' : 'sql_query.pool_upload_success'));
-      } catch (e) {
-        this.$message.error(e.message || e.data || this.$t('sql_query.pool_save_failed'));
+        this.$message.success(this.$t(
+          this.poolFormMode === 'edit' ? 'sql_query.pool_save_success' : 'sql_query.pool_upload_success'
+        ));
+      } catch (error) {
+        if (error === 'cancel' || error === 'close') {
+          return;
+        }
+        this.$message.error(
+          (error && (error.message || error.data)) || this.$t('sql_query.pool_save_failed')
+        );
       } finally {
         this.poolSaving = false;
       }
@@ -1515,6 +1537,7 @@ export default {
       }
     },
     insertSqlAsDraft(sql) {
+      this.setResultCollapsed(false);
       const draftItem = this.createLocalDraft(sql || '');
       this.localHistory = [draftItem, ...this.localHistory].slice(0, 50);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(this.localHistory));
@@ -1789,6 +1812,14 @@ export default {
   color: #1f2933;
 }
 
+.sql-query-page.is-result-collapsed .sql-result {
+  display: none;
+}
+
+.sql-query-page.is-result-collapsed .editor-result-resizer {
+  border-bottom-color: transparent;
+}
+
 .sql-query-main {
   flex: 1;
   display: flex;
@@ -1852,6 +1883,7 @@ export default {
 }
 
 .toolbar-actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1859,13 +1891,42 @@ export default {
   justify-content: flex-end;
 }
 
-.toolbar-number {
-  display: inline-flex;
+.sql-query-more-button::after {
+  content: '▾';
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.sql-query-advanced-menu {
+  position: absolute;
+  top: 38px;
+  right: 74px;
+  z-index: 25;
+  width: 236px;
+  padding: 4px 0;
+  background: #FFFFFF;
+  border: 1px solid #DCDFE6;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(31, 45, 61, 0.14);
+}
+
+.sql-query-advanced-setting {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  height: 42px;
+  padding: 4px 14px;
+  box-sizing: border-box;
   color: #606266;
   font-size: 12px;
   white-space: nowrap;
+}
+
+.sql-query-advanced-setting .el-input-number {
+  width: 120px;
 }
 
 .limit-input {
@@ -1962,6 +2023,16 @@ export default {
   flex-direction: column;
   min-height: 0;
   background: #ffffff;
+}
+
+.result-state-panel {
+  position: relative;
+}
+
+.result-state-close {
+  position: absolute;
+  top: 10px;
+  right: 18px;
 }
 
 .result-empty,
