@@ -4,7 +4,7 @@ import Focus from '@/business/focus/Focus'
 import Creation from '@/business/creation/Creation'
 import Dashboard from '@/business/dashboard/Dashboard'
 import AdvancedSearch from '@/business/advanced-search/AdvancedSearch'
-import SqlQuery from '@/business/sql-query/SqlQueryOptimized'
+import SqlQuery from '@/business/sql-query/SqlQueryResultExpand'
 
 export default {
   path: "/workstation",
