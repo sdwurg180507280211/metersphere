@@ -382,9 +382,6 @@ public class IssuesService {
     }
 
     public IssuesWithBLOBs updateIssues(IssuesUpdateRequest issuesRequest) {
-        IssuesWithBLOBs before = issuesService.getIssue(issuesRequest.getId());
-
-        PlatformIssuesUpdateRequest platformIssuesUpdateRequest = JSON.parseObject(JSON.toJSONString(issuesRequest), PlatformIssuesUpdateRequest.class);
         Project project = baseProjectService.getProjectById(issuesRequest.getProjectId());
         if (StringUtils.isNotBlank(project.getPlatform()) && StringUtils.isNotBlank(issuesRequest.getPlatform()) &&
                 !StringUtils.equals(project.getPlatform(), issuesRequest.getPlatform())) {
@@ -392,6 +389,43 @@ public class IssuesService {
             issuesService.handleTestCaseIssues(issuesRequest);
             MSException.throwException(Translator.get("platform_not_match"));
         }
+
+        List<CustomFieldResourceDTO> editFields = issuesRequest.getEditFields();
+        List<CustomFieldResourceDTO> addFields = issuesRequest.getAddFields();
+        IssuesWithBLOBs currentIssue = issuesMapper.selectByPrimaryKey(issuesRequest.getId());
+        if (currentIssue != null && (StringUtils.isBlank(currentIssue.getPlatform())
+                || StringUtils.equalsIgnoreCase(currentIssue.getPlatform(), IssuesManagePlatform.Local.toString()))) {
+            CustomField statusField = baseCustomFieldService.getCustomFieldByName(
+                    currentIssue.getProjectId(), SystemCustomField.ISSUE_STATUS);
+            if (statusField != null) {
+                String targetStatus = getIssueStatusValue(editFields, statusField.getId());
+                if (StringUtils.isBlank(targetStatus)) {
+                    targetStatus = getIssueStatusValue(addFields, statusField.getId());
+                }
+                String currentStatus = issueStatusTransitionService.getCurrentStatus(currentIssue);
+                boolean statusChanged = StringUtils.isNotBlank(targetStatus)
+                        && !StringUtils.equals(currentStatus, targetStatus);
+                boolean transitionToReopened = statusChanged && StringUtils.equals(targetStatus, "reopened");
+                if (statusChanged) {
+                    issueStatusTransitionService.transitionStatus(currentIssue.getId(), targetStatus, null);
+                }
+                editFields = removeIssueStatusField(editFields, statusField.getId());
+                addFields = removeIssueStatusField(addFields, statusField.getId());
+
+                if (transitionToReopened) {
+                    CustomField retestCountField = baseCustomFieldService.getCustomFieldByName(
+                            currentIssue.getProjectId(), SystemCustomField.ISSUE_RETEST_COUNT);
+                    if (retestCountField != null) {
+                        editFields = removeCustomFieldById(editFields, retestCountField.getId());
+                        addFields = removeCustomFieldById(addFields, retestCountField.getId());
+                    }
+                }
+            }
+        }
+
+        // 状态流转由专用服务记录，普通字段快照从流转完成后开始，避免重复记录状态和复测次数。
+        IssuesWithBLOBs before = issuesService.getIssue(issuesRequest.getId());
+        PlatformIssuesUpdateRequest platformIssuesUpdateRequest = JSON.parseObject(JSON.toJSONString(issuesRequest), PlatformIssuesUpdateRequest.class);
         if (PlatformPluginService.isPluginPlatform(project.getPlatform())) {
             Platform platform = platformPluginService.getPlatform(project.getPlatform());
             if (platform.isAttachmentUploadSupport()) {
@@ -426,13 +460,52 @@ public class IssuesService {
             });
         }
 
-        customFieldIssuesService.editFields(issuesRequest.getId(), issuesRequest.getEditFields());
-        customFieldIssuesService.addFields(issuesRequest.getId(), issuesRequest.getAddFields());
+        customFieldIssuesService.editFields(issuesRequest.getId(), editFields);
+        customFieldIssuesService.addFields(issuesRequest.getId(), addFields);
 
         IssuesWithBLOBs after = issuesService.getIssue(issuesRequest.getId());
         this.trySaveIssueChangeLog(before, after);
 
         return after;
+    }
+
+    private String getIssueStatusValue(List<CustomFieldResourceDTO> fields, String statusFieldId) {
+        if (CollectionUtils.isEmpty(fields)) {
+            return null;
+        }
+        for (CustomFieldResourceDTO field : fields) {
+            if (isIssueStatusField(field, statusFieldId)) {
+                String value = field.getValue();
+                if (StringUtils.isBlank(value) || StringUtils.equalsAny(value, "null", "[]")) {
+                    return null;
+                }
+                return JSON.parseObject(value, String.class);
+            }
+        }
+        return null;
+    }
+
+    private List<CustomFieldResourceDTO> removeIssueStatusField(List<CustomFieldResourceDTO> fields, String statusFieldId) {
+        if (CollectionUtils.isEmpty(fields)) {
+            return fields;
+        }
+        return fields.stream()
+                .filter(field -> !isIssueStatusField(field, statusFieldId))
+                .collect(Collectors.toList());
+    }
+
+    private List<CustomFieldResourceDTO> removeCustomFieldById(List<CustomFieldResourceDTO> fields, String fieldId) {
+        if (CollectionUtils.isEmpty(fields)) {
+            return fields;
+        }
+        return fields.stream()
+                .filter(field -> field == null || !StringUtils.equals(field.getFieldId(), fieldId))
+                .collect(Collectors.toList());
+    }
+
+    private boolean isIssueStatusField(CustomFieldResourceDTO field, String statusFieldId) {
+        return field != null && (StringUtils.equals(field.getFieldId(), statusFieldId)
+                || StringUtils.equals(field.getName(), SystemCustomField.ISSUE_STATUS));
     }
 
     public void saveFollows(String issueId, List<String> follows) {
@@ -745,36 +818,6 @@ public class IssuesService {
         return issues;
     }
 
-
-    /**
-     * 添加用户组权限过滤
-     * 开发人员组和测试人员组只能看到创建人或处理人是自己的缺陷
-     *
-     * 我在做：查询用户所属的用户组，并根据用户组添加权限过滤条件
-     * 目的是：限制开发人员组和测试人员组只能看到与自己相关的缺陷
-     * 如果不这样做：这两个用户组的成员可以看到所有缺陷，不符合权限要求
-     *
-     * 注意：此方法必须在 PageHelper.startPage() 之前调用
-     * 原因：PageHelper 会拦截方法中的第一条 SQL 并应用分页
-     * 如果在 list() 方法中调用，会导致用户组查询被分页，而真正的缺陷查询没有分页
-     */
-    public void addUserGroupFilter(IssuesRequest request) {
-        String userId = SessionUtils.getUserId();
-        String projectId = request.getProjectId();
-
-        if (StringUtils.isBlank(userId) || StringUtils.isBlank(projectId)) {
-            return;
-        }
-
-        // 查询用户在当前项目中的用户组
-        String userGroupId = extIssuesMapper.getUserGroupInProject(userId, projectId);
-
-        // 如果用户属于开发人员组或测试人员组，则添加过滤条件
-        if ("developer".equals(userGroupId) || "tester".equals(userGroupId)) {
-            request.setCurrentUserId(userId);
-            request.setUserGroupId(userGroupId);
-        }
-    }
 
     /**
      * 获取用户在项目中所属的用户组
@@ -2100,6 +2143,10 @@ public class IssuesService {
         request.setWorkspaceId(exportRequest.getWorkspaceId());
         request.setSelectAll(exportRequest.getIsSelectAll());
         request.setExportIds(exportRequest.getExportIds());
+        request.setFilters(exportRequest.getFilters());
+        request.setModuleIds(exportRequest.getModuleIds());
+        request.setNodeIds(exportRequest.getNodeIds());
+        request.setNotInIds(exportRequest.getUnSelectIds());
         // 列表搜索条件
         request.setName(exportRequest.getName());
         // 高级搜索条件
@@ -2118,9 +2165,6 @@ public class IssuesService {
         ServiceUtils.setBaseQueryRequestCustomMultipleFields(request);
         // 设置当前用户ID，用于跨项目搜索时的权限过滤
         request.setUserId(SessionUtils.getUserId());
-
-        // 添加用户组权限过滤（导出时也需要应用权限过滤）
-        addUserGroupFilter(request);
 
         List<IssuesDao> issues = extIssuesMapper.getIssues(request);
 
