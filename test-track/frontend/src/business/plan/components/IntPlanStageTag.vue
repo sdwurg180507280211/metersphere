@@ -31,26 +31,27 @@ export default {
     meta() {
       const plan = this.plan || {};
 
-      // 原执行状态中的终止/执行态具有明确业务含义，优先兜底，避免业务阶段字段未及时回写时显示滞后。
+      // 取消和归档是明确的终止状态，优先于业务阶段显示。
       if (plan.status === "Cancelled") {
         return STAGE_META.CANCELLED;
       }
       if (plan.status === "Archived") {
         return STAGE_META.ARCHIVED;
       }
-      if (plan.status === "Completed" || plan.status === "Finished") {
-        return STAGE_META.DONE;
-      }
-      if (plan.status === "Underway") {
-        return STAGE_META.TEST_EXECUTION;
-      }
 
+      // 全流程平台驱动的明确业务阶段优先，不能再被旧执行状态覆盖。
       const explicitStage = plan.intStage || plan.requirementFlowStage || plan.workflowStage;
       if (explicitStage && STAGE_META[explicitStage]) {
         return STAGE_META[explicitStage];
       }
 
-      // “测试准备”不能仅凭原 Prepare 判断，必须由审批结果或明确业务阶段驱动。
+      // 兼容历史数据：只有没有明确INT阶段时，才用原执行状态兜底。
+      if (plan.status === "Underway") {
+        return STAGE_META.TEST_EXECUTION;
+      }
+      if (plan.status === "Completed" || plan.status === "Finished") {
+        return STAGE_META.DONE;
+      }
       if (plan.requirementApprovalStatus === "APPROVED") {
         return STAGE_META.TEST_PREPARATION;
       }

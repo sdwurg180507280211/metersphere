@@ -152,7 +152,8 @@ public class RequirementTestPlanSyncService {
         plan.setWorkspaceId(project.getWorkspaceId());
         plan.setName(requirementName);
         plan.setStatus(TestPlanStatus.Prepare.name());
-        plan.setCreateTime(now);
+        // 全流程平台已提供需求提出时间时保留该时间，缺失时才使用本地接收时间。
+        plan.setCreateTime(msg.getCreateTime() != null ? msg.getCreateTime() : now);
         plan.setUpdateTime(now);
         plan.setCreator(mapping.getPrincipalId());
         plan.setProjectId(project.getId());
