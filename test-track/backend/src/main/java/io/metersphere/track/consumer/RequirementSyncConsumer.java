@@ -2,7 +2,7 @@ package io.metersphere.track.consumer;
 
 import com.alibaba.fastjson.JSON;
 import io.metersphere.requirement.pool.dto.RequirementSyncMessage;
-import io.metersphere.requirement.pool.service.RequirementPoolService;
+import io.metersphere.requirement.sync.service.RequirementTestPlanSyncService;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * 需求同步消息消费者
- * 消费RocketMQ消息，根据operationType分发到不同的业务逻辑
+ * 需求同步消息消费者。
+ * 正式主流程直接创建、更新或取消测试计划，需求池仅保留历史兼容能力。
  */
 @Slf4j
 @Component
@@ -37,7 +37,7 @@ public class RequirementSyncConsumer implements InitializingBean {
     private String consumerGroup;
 
     @Resource
-    private RequirementPoolService requirementPoolService;
+    private RequirementTestPlanSyncService requirementTestPlanSyncService;
 
     private DefaultMQPushConsumer consumer;
 
@@ -66,9 +66,10 @@ public class RequirementSyncConsumer implements InitializingBean {
                         try {
                             String body = new String(msg.getBody(), StandardCharsets.UTF_8);
                             RequirementSyncMessage syncMessage = JSON.parseObject(body, RequirementSyncMessage.class);
-                            log.info("[需求MQ-接收] msgId={}, topic={}, dmpNum={}, operationType={}, traceId={}",
-                                    msg.getMsgId(), msg.getTopic(), syncMessage.getDmpNum(), syncMessage.getOperationType(), syncMessage.getTraceId());
-                            requirementPoolService.handleSyncMessage(syncMessage);
+                            log.info("[需求MQ-接收] msgId={}, topic={}, dmpNum={}, operationType={}, approvalStatus={}, traceId={}",
+                                    msg.getMsgId(), msg.getTopic(), syncMessage.getDmpNum(), syncMessage.getOperationType(),
+                                    syncMessage.getApprovalStatus(), syncMessage.getTraceId());
+                            requirementTestPlanSyncService.handleSyncMessage(syncMessage);
                             log.info("[需求MQ-消费成功] msgId={}, dmpNum={}, traceId={}",
                                     msg.getMsgId(), syncMessage.getDmpNum(), syncMessage.getTraceId());
                         } catch (Exception e) {

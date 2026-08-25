@@ -47,5 +47,19 @@ public class TestPlan implements Serializable {
 
     private String requirementNumber;
 
+    private String requirementDocUrl;
+
+    private String requirementSystemName;
+
+    private Long requirementSyncEventTime;
+
+    private String intStage;
+
+    private String requirementApprovalStatus;
+
+    private String requirementApprovalComment;
+
+    private Long requirementApprovalTime;
+
     private static final long serialVersionUID = 1L;
 }

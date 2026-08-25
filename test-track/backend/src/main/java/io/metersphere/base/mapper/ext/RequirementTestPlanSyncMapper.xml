@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="io.metersphere.base.mapper.ext.RequirementTestPlanSyncMapper">
+
+    <resultMap id="RequirementPlanResultMap" type="io.metersphere.base.domain.TestPlan"
+               extends="io.metersphere.base.mapper.TestPlanMapper.BaseResultMap">
+        <result column="requirement_doc_url" property="requirementDocUrl" jdbcType="VARCHAR"/>
+        <result column="requirement_system_name" property="requirementSystemName" jdbcType="VARCHAR"/>
+        <result column="requirement_sync_event_time" property="requirementSyncEventTime" jdbcType="BIGINT"/>
+        <result column="int_stage" property="intStage" jdbcType="VARCHAR"/>
+        <result column="requirement_approval_status" property="requirementApprovalStatus" jdbcType="VARCHAR"/>
+        <result column="requirement_approval_comment" property="requirementApprovalComment" jdbcType="VARCHAR"/>
+        <result column="requirement_approval_time" property="requirementApprovalTime" jdbcType="BIGINT"/>
+    </resultMap>
+
+    <select id="selectByRequirementNumber" resultMap="RequirementPlanResultMap">
+        select *
+        from test_plan
+        where requirement_number = #{requirementNumber}
+        limit 1
+    </select>
+
+    <select id="selectEnabledSystemMapping" resultType="io.metersphere.requirement.sync.dto.RequirementSystemMapping">
+        select id,
+               system_key as systemKey,
+               system_name as systemName,
+               project_id as projectId,
+               node_id as nodeId,
+               principal_id as principalId,
+               enabled,
+               create_time as createTime,
+               update_time as updateTime
+        from requirement_system_mapping
+        where enabled = 1
+          and (system_key = #{systemKey} or system_name = #{systemKey})
+        order by case when system_key = #{systemKey} then 0 else 1 end
+        limit 1
+    </select>
+
+    <insert id="insertSyncedTestPlan">
+        insert into test_plan (
+            id, workspace_id, `name`, `status`, create_time, update_time, creator,
+            project_id, execution_times, automatic_status_update, repeat_case, node_id, node_path,
+            requirement_number, requirement_doc_url, requirement_system_name,
+            requirement_sync_event_time, int_stage, requirement_approval_status,
+            requirement_approval_comment, requirement_approval_time
+        ) values (
+            #{plan.id}, #{plan.workspaceId}, #{plan.name}, #{plan.status},
+            #{plan.createTime}, #{plan.updateTime}, #{plan.creator}, #{plan.projectId},
+            #{plan.executionTimes}, #{plan.automaticStatusUpdate}, #{plan.repeatCase}, #{plan.nodeId}, #{plan.nodePath},
+            #{plan.requirementNumber}, #{plan.requirementDocUrl}, #{plan.requirementSystemName},
+            #{plan.requirementSyncEventTime}, #{plan.intStage}, #{plan.requirementApprovalStatus},
+            #{plan.requirementApprovalComment}, #{plan.requirementApprovalTime}
+        )
+    </insert>
+
+    <update id="updateSyncedTestPlan">
+        update test_plan
+        set `name` = coalesce(#{plan.name}, `name`),
+            requirement_doc_url = coalesce(#{plan.requirementDocUrl}, requirement_doc_url),
+            requirement_system_name = coalesce(#{plan.requirementSystemName}, requirement_system_name),
+            requirement_sync_event_time = #{plan.requirementSyncEventTime},
+            int_stage = coalesce(#{plan.intStage}, int_stage),
+            update_time = #{plan.updateTime}
+        where id = #{plan.id}
+    </update>
+
+    <update id="cancelSyncedTestPlan">
+        update test_plan
+        set `status` = 'Cancelled',
+            int_stage = 'CANCELLED',
+            actual_start_time = null,
+            actual_end_time = null,
+            requirement_sync_event_time = #{eventTime},
+            update_time = #{updateTime}
+        where id = #{id}
+    </update>
+
+    <update id="updateApproval">
+        update test_plan
+        set requirement_approval_status = #{approvalStatus},
+            requirement_approval_comment = #{approvalComment},
+            requirement_approval_time = #{approvalTime},
+            int_stage = #{intStage},
+            update_time = #{updateTime}
+        where id = #{id}
+    </update>
+
+</mapper>

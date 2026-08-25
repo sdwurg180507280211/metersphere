@@ -47,6 +47,9 @@ public class RequirementSyncMessage implements Serializable {
     /** 所属系统 */
     private String systemName;
 
+    /** 需求规格说明书链接 */
+    private String docUrl;
+
     /** 预计上线时间（毫秒时间戳） */
     private Long upTime;
 
@@ -67,6 +70,18 @@ public class RequirementSyncMessage implements Serializable {
 
     /** 消息事件时间（毫秒时间戳），用于幂等和乱序判断 */
     private Long eventTime;
+
+    /** 测试计划ID，审批结果回传时使用 */
+    private String planId;
+
+    /** 测试计划审批结果：APPROVED/REJECTED */
+    private String approvalStatus;
+
+    /** 测试计划审批意见 */
+    private String approvalComment;
+
+    /** 测试计划审批时间（毫秒时间戳） */
+    private Long approvalTime;
 
     /** 追踪ID，全链路问题排查 */
     private String traceId;
