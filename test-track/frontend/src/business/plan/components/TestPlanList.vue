@@ -7,7 +7,28 @@
           @search="search"
           @create="testPlanCreate"
           :create-tip="$t('test_track.plan.create_plan')"
-      />
+      >
+        <template v-slot:button>
+          <el-popover
+              placement="bottom-start"
+              width="430"
+              trigger="hover"
+          >
+            <div class="int-stage-help-content">
+              <div class="int-stage-help-title">INT 测试流程</div>
+              <div class="int-stage-help-text">
+                全流程平台同步需求后，由测试平台自动创建对应测试计划，不需要从需求池手工创建。
+              </div>
+              <div class="int-stage-help-flow">需求已接收 → 测试计划 → 测试准备 → 测试执行 → 办结</div>
+              <div class="int-stage-help-item"><b>测试计划：</b>结合需求规格说明书和开发计划完成时间编制计划，并提交审批。</div>
+              <div class="int-stage-help-item"><b>测试准备：</b>计划审批通过后，开始用例编制和用例评审。</div>
+              <div class="int-stage-help-item"><b>测试执行：</b>收到开发实际完成时间后，开展冒烟测试、用例执行、缺陷跟踪和复测。</div>
+              <div class="int-stage-help-item"><b>办结：</b>测试完成并分享报告后，回传实际执行结束时间和报告链接。</div>
+            </div>
+            <i slot="reference" class="el-icon-question int-stage-help-icon"></i>
+          </el-popover>
+        </template>
+      </ms-table-header>
     </template>
 
     <ms-table
@@ -68,16 +89,17 @@
         </ms-table-column>
         <ms-table-column
             prop="status"
-            :filters="statusFilters"
-            :filtered-value="['Prepare', 'Underway', 'Finished', 'Completed', 'Cancelled']"
-            column-key="status"
             :field="item"
             :fields-width="fieldsWidth"
-            min-width="70px"
-            :label="$t('test_track.plan.plan_status')"
+            min-width="90px"
+            label="当前阶段"
         >
           <template v-slot:default="scope">
-            <span @click.stop="clickt = 'stop'">
+            <int-plan-stage-tag
+                v-if="scope.row.requirementNumber"
+                :plan="scope.row"
+            />
+            <span v-else @click.stop="clickt = 'stop'">
               <el-dropdown class="test-case-status" @command="statusChange">
                 <span class="el-dropdown-link">
                   <plan-status-table-item :value="scope.row.status"/>
@@ -502,6 +524,7 @@ import MsTableOperatorButton from "metersphere-frontend/src/components/MsTableOp
 import MsTableOperator from "metersphere-frontend/src/components/MsTableOperator";
 import PlanStatusTableItem from "../../common/tableItems/plan/PlanStatusTableItem";
 import PlanStageTableItem from "../../common/tableItems/plan/PlanStageTableItem";
+import IntPlanStageTag from "./IntPlanStageTag";
 import MsDeleteConfirm from "metersphere-frontend/src/components/MsDeleteConfirm";
 import {TEST_PLAN_CONFIGS} from "metersphere-frontend/src/components/search/search-components";
 import {
@@ -556,6 +579,7 @@ export default {
   components: {
     ReviewOrPlanBatchMove,
     TestPlanExport,
+    IntPlanStageTag,
     MsTagsColumn,
     TestPlanReportReview,
     MsTag,
@@ -1031,6 +1055,9 @@ export default {
       this.showExecute = false;
     },
     statusChange(data) {
+      if (data.item && data.item.requirementNumber) {
+        return;
+      }
       if (!hasPermission("PROJECT_TRACK_PLAN:READ+EDIT")) {
         return;
       }
@@ -1340,10 +1367,39 @@ export default {
 .table-card :deep(.operator-btn-group ) {
   margin-left: 10px;
 }
+
+.int-stage-help-icon {
+  margin-left: 8px;
+  color: #909399;
+  font-size: 16px;
+  cursor: help;
+  vertical-align: middle;
+}
 </style>
 
 <style>
 .plan-table div.el-table__empty-block {
   width: 80% !important;
+}
+
+.int-stage-help-title {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.int-stage-help-text,
+.int-stage-help-item {
+  line-height: 1.7;
+  color: #606266;
+}
+
+.int-stage-help-flow {
+  margin: 10px 0;
+  padding: 8px 10px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  color: #303133;
+  font-weight: 500;
 }
 </style>
