@@ -8,6 +8,8 @@ public interface RequirementTestPlanSyncMapper {
 
     TestPlan selectByRequirementNumber(@Param("requirementNumber") String requirementNumber);
 
+    TestPlan selectById(@Param("id") String id);
+
     RequirementSystemMapping selectEnabledSystemMapping(@Param("systemKey") String systemKey);
 
     int insertSyncedTestPlan(@Param("plan") TestPlan plan);
@@ -17,6 +19,9 @@ public interface RequirementTestPlanSyncMapper {
     int cancelSyncedTestPlan(@Param("id") String id,
                              @Param("eventTime") Long eventTime,
                              @Param("updateTime") Long updateTime);
+
+    int markApprovalSubmitted(@Param("id") String id,
+                              @Param("updateTime") Long updateTime);
 
     int updateApproval(@Param("id") String id,
                        @Param("approvalStatus") String approvalStatus,

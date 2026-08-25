@@ -1,9 +1,34 @@
 <template>
-  <ms-tag :type="meta.type" :content="meta.label"/>
+  <div class="int-stage-cell">
+    <ms-tag :type="meta.type" :content="meta.label"/>
+    <span v-if="waitingApproval" class="approval-note">等待审批</span>
+    <el-tooltip
+        v-else-if="approvalRejected"
+        :content="plan.requirementApprovalComment || '审批已驳回，请修改计划后重新提交'"
+        placement="top"
+    >
+      <el-button
+          v-if="hasEditPermission"
+          type="text"
+          size="mini"
+          class="approval-action"
+          @click.stop="submitApproval"
+      >重新提交审批</el-button>
+    </el-tooltip>
+    <el-button
+        v-else-if="canSubmitApproval"
+        type="text"
+        size="mini"
+        class="approval-action"
+        @click.stop="submitApproval"
+    >提交审批</el-button>
+  </div>
 </template>
 
 <script>
 import MsTag from "metersphere-frontend/src/components/MsTag";
+import {hasPermission} from "metersphere-frontend/src/utils/permission";
+import {submitRequirementPlanApproval} from "@/api/requirement-plan-workflow";
 
 const STAGE_META = {
   RECEIVED: {label: "需求已接收", type: "info"},
@@ -31,7 +56,6 @@ export default {
     meta() {
       const plan = this.plan || {};
 
-      // 取消和归档是明确的终止状态，优先于业务阶段显示。
       if (plan.status === "Cancelled") {
         return STAGE_META.CANCELLED;
       }
@@ -39,13 +63,11 @@ export default {
         return STAGE_META.ARCHIVED;
       }
 
-      // 全流程平台驱动的明确业务阶段优先，不能再被旧执行状态覆盖。
       const explicitStage = plan.intStage || plan.requirementFlowStage || plan.workflowStage;
       if (explicitStage && STAGE_META[explicitStage]) {
         return STAGE_META[explicitStage];
       }
 
-      // 兼容历史数据：只有没有明确INT阶段时，才用原执行状态兜底。
       if (plan.status === "Underway") {
         return STAGE_META.TEST_EXECUTION;
       }
@@ -57,6 +79,63 @@ export default {
       }
       return STAGE_META.TEST_PLAN;
     },
+    hasEditPermission() {
+      return hasPermission("PROJECT_TRACK_PLAN:READ+EDIT");
+    },
+    isPlanStage() {
+      return this.meta.label === "测试计划";
+    },
+    waitingApproval() {
+      return this.isPlanStage && this.plan.requirementApprovalStatus === "SUBMITTED";
+    },
+    approvalRejected() {
+      return this.isPlanStage && this.plan.requirementApprovalStatus === "REJECTED";
+    },
+    canSubmitApproval() {
+      const approvalStatus = this.plan.requirementApprovalStatus;
+      return this.hasEditPermission
+          && this.isPlanStage
+          && !!this.plan.requirementNumber
+          && (!approvalStatus || approvalStatus === "NONE");
+    },
+  },
+  methods: {
+    submitApproval() {
+      this.$confirm(
+          "确认将当前测试计划提交到全流程平台审批？",
+          "提交审批",
+          {
+            confirmButtonText: "提交",
+            cancelButtonText: "取消",
+            type: "warning",
+          }
+      ).then(() => {
+        submitRequirementPlanApproval(this.plan.id).then(() => {
+          this.$set(this.plan, "requirementApprovalStatus", "SUBMITTED");
+          this.$set(this.plan, "requirementApprovalComment", null);
+          this.$success("测试计划已提交审批");
+        });
+      }).catch(() => {});
+    },
   },
 };
 </script>
+
+<style scoped>
+.int-stage-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.approval-note {
+  color: #909399;
+  font-size: 12px;
+}
+
+.approval-action {
+  padding: 0;
+  font-size: 12px;
+}
+</style>

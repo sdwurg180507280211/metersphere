@@ -20,6 +20,13 @@
         limit 1
     </select>
 
+    <select id="selectById" resultMap="RequirementPlanResultMap">
+        select *
+        from test_plan
+        where id = #{id}
+        limit 1
+    </select>
+
     <select id="selectEnabledSystemMapping" resultType="io.metersphere.requirement.sync.dto.RequirementSystemMapping">
         select id,
                system_key as systemKey,
@@ -72,6 +79,16 @@
             actual_start_time = null,
             actual_end_time = null,
             requirement_sync_event_time = #{eventTime},
+            update_time = #{updateTime}
+        where id = #{id}
+    </update>
+
+    <update id="markApprovalSubmitted">
+        update test_plan
+        set requirement_approval_status = 'SUBMITTED',
+            requirement_approval_comment = null,
+            requirement_approval_time = null,
+            int_stage = 'TEST_PLAN',
             update_time = #{updateTime}
         where id = #{id}
     </update>
