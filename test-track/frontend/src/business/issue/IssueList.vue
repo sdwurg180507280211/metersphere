@@ -920,7 +920,7 @@ export default {
         return;
       }
       this.userGroupFilterKeys.forEach(key => {
-        this.$delete(this.page.condition.filters, key);
+        Vue.delete(this.page.condition.filters, key);
       });
       this.userGroupFilterKeys = [];
     },
