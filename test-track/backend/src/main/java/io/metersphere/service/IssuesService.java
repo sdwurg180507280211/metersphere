@@ -402,12 +402,24 @@ public class IssuesService {
                 if (StringUtils.isBlank(targetStatus)) {
                     targetStatus = getIssueStatusValue(addFields, statusField.getId());
                 }
-                if (StringUtils.isNotBlank(targetStatus)
-                        && !StringUtils.equals(issueStatusTransitionService.getCurrentStatus(currentIssue), targetStatus)) {
+                String currentStatus = issueStatusTransitionService.getCurrentStatus(currentIssue);
+                boolean statusChanged = StringUtils.isNotBlank(targetStatus)
+                        && !StringUtils.equals(currentStatus, targetStatus);
+                boolean transitionToReopened = statusChanged && StringUtils.equals(targetStatus, "reopened");
+                if (statusChanged) {
                     issueStatusTransitionService.transitionStatus(currentIssue.getId(), targetStatus, null);
                 }
                 editFields = removeIssueStatusField(editFields, statusField.getId());
                 addFields = removeIssueStatusField(addFields, statusField.getId());
+
+                if (transitionToReopened) {
+                    CustomField retestCountField = baseCustomFieldService.getCustomFieldByName(
+                            currentIssue.getProjectId(), SystemCustomField.ISSUE_RETEST_COUNT);
+                    if (retestCountField != null) {
+                        editFields = removeCustomFieldById(editFields, retestCountField.getId());
+                        addFields = removeCustomFieldById(addFields, retestCountField.getId());
+                    }
+                }
             }
         }
 
@@ -479,6 +491,15 @@ public class IssuesService {
         }
         return fields.stream()
                 .filter(field -> !isIssueStatusField(field, statusFieldId))
+                .collect(Collectors.toList());
+    }
+
+    private List<CustomFieldResourceDTO> removeCustomFieldById(List<CustomFieldResourceDTO> fields, String fieldId) {
+        if (CollectionUtils.isEmpty(fields)) {
+            return fields;
+        }
+        return fields.stream()
+                .filter(field -> field == null || !StringUtils.equals(field.getFieldId(), fieldId))
                 .collect(Collectors.toList());
     }
 
