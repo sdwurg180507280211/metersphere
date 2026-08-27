@@ -382,9 +382,6 @@ public class IssuesService {
     }
 
     public IssuesWithBLOBs updateIssues(IssuesUpdateRequest issuesRequest) {
-        IssuesWithBLOBs before = issuesService.getIssue(issuesRequest.getId());
-
-        PlatformIssuesUpdateRequest platformIssuesUpdateRequest = JSON.parseObject(JSON.toJSONString(issuesRequest), PlatformIssuesUpdateRequest.class);
         Project project = baseProjectService.getProjectById(issuesRequest.getProjectId());
         if (StringUtils.isNotBlank(project.getPlatform()) && StringUtils.isNotBlank(issuesRequest.getPlatform()) &&
                 !StringUtils.equals(project.getPlatform(), issuesRequest.getPlatform())) {
@@ -392,6 +389,31 @@ public class IssuesService {
             issuesService.handleTestCaseIssues(issuesRequest);
             MSException.throwException(Translator.get("platform_not_match"));
         }
+
+        List<CustomFieldResourceDTO> editFields = issuesRequest.getEditFields();
+        List<CustomFieldResourceDTO> addFields = issuesRequest.getAddFields();
+        IssuesWithBLOBs currentIssue = issuesMapper.selectByPrimaryKey(issuesRequest.getId());
+        if (currentIssue != null && (StringUtils.isBlank(currentIssue.getPlatform())
+                || StringUtils.equalsIgnoreCase(currentIssue.getPlatform(), IssuesManagePlatform.Local.toString()))) {
+            CustomField statusField = baseCustomFieldService.getCustomFieldByName(
+                    currentIssue.getProjectId(), SystemCustomField.ISSUE_STATUS);
+            if (statusField != null) {
+                String targetStatus = getIssueStatusValue(editFields, statusField.getId());
+                if (StringUtils.isBlank(targetStatus)) {
+                    targetStatus = getIssueStatusValue(addFields, statusField.getId());
+                }
+                if (StringUtils.isNotBlank(targetStatus)
+                        && !StringUtils.equals(issueStatusTransitionService.getCurrentStatus(currentIssue), targetStatus)) {
+                    issueStatusTransitionService.transitionStatus(currentIssue.getId(), targetStatus, null);
+                }
+                editFields = removeIssueStatusField(editFields, statusField.getId());
+                addFields = removeIssueStatusField(addFields, statusField.getId());
+            }
+        }
+
+        // 状态流转由专用服务记录，普通字段快照从流转完成后开始，避免重复记录状态和复测次数。
+        IssuesWithBLOBs before = issuesService.getIssue(issuesRequest.getId());
+        PlatformIssuesUpdateRequest platformIssuesUpdateRequest = JSON.parseObject(JSON.toJSONString(issuesRequest), PlatformIssuesUpdateRequest.class);
         if (PlatformPluginService.isPluginPlatform(project.getPlatform())) {
             Platform platform = platformPluginService.getPlatform(project.getPlatform());
             if (platform.isAttachmentUploadSupport()) {
@@ -426,13 +448,43 @@ public class IssuesService {
             });
         }
 
-        customFieldIssuesService.editFields(issuesRequest.getId(), issuesRequest.getEditFields());
-        customFieldIssuesService.addFields(issuesRequest.getId(), issuesRequest.getAddFields());
+        customFieldIssuesService.editFields(issuesRequest.getId(), editFields);
+        customFieldIssuesService.addFields(issuesRequest.getId(), addFields);
 
         IssuesWithBLOBs after = issuesService.getIssue(issuesRequest.getId());
         this.trySaveIssueChangeLog(before, after);
 
         return after;
+    }
+
+    private String getIssueStatusValue(List<CustomFieldResourceDTO> fields, String statusFieldId) {
+        if (CollectionUtils.isEmpty(fields)) {
+            return null;
+        }
+        for (CustomFieldResourceDTO field : fields) {
+            if (isIssueStatusField(field, statusFieldId)) {
+                String value = field.getValue();
+                if (StringUtils.isBlank(value) || StringUtils.equalsAny(value, "null", "[]")) {
+                    return null;
+                }
+                return JSON.parseObject(value, String.class);
+            }
+        }
+        return null;
+    }
+
+    private List<CustomFieldResourceDTO> removeIssueStatusField(List<CustomFieldResourceDTO> fields, String statusFieldId) {
+        if (CollectionUtils.isEmpty(fields)) {
+            return fields;
+        }
+        return fields.stream()
+                .filter(field -> !isIssueStatusField(field, statusFieldId))
+                .collect(Collectors.toList());
+    }
+
+    private boolean isIssueStatusField(CustomFieldResourceDTO field, String statusFieldId) {
+        return field != null && (StringUtils.equals(field.getFieldId(), statusFieldId)
+                || StringUtils.equals(field.getName(), SystemCustomField.ISSUE_STATUS));
     }
 
     public void saveFollows(String issueId, List<String> follows) {
