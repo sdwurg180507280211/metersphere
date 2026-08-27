@@ -31,7 +31,7 @@ const message = {
     page_info: '{start}-{end} of {total}',
     detail: 'Save',
     pool: 'Public Pool',
-    upload_pool: 'Query Settings',
+    upload_pool: 'More',
     pool_search_placeholder: 'Search title, summary, description, or SQL',
     pool_only_mine: 'Only mine',
     pool_upload_current: 'Upload Current SQL',
