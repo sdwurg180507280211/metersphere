@@ -31,7 +31,7 @@ const message = {
     page_info: '第 {start}-{end} 條，共 {total} 條',
     detail: '儲存',
     pool: '公共池',
-    upload_pool: '查詢設定',
+    upload_pool: '更多',
     pool_search_placeholder: '搜尋標題、簡介、描述或 SQL',
     pool_only_mine: '只看我上傳',
     pool_upload_current: '上傳目前 SQL',

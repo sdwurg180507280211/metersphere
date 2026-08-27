@@ -19,6 +19,19 @@ const MIN_EDITOR_HEIGHT = 140;
 const FALLBACK_TOOLBAR_HEIGHT = 64;
 const FALLBACK_RESIZER_HEIGHT = 8;
 const RESULT_COLLAPSE_THRESHOLD = 24;
+const TOOLBAR_BUTTON_ICON_CLASS_MAP = {
+  'el-icon-document-checked': 'sql-query-detail-button',
+  'el-icon-collection': 'sql-query-pool-button',
+  'el-icon-upload2': 'sql-query-more-button',
+  'el-icon-refresh': 'sql-query-refresh-button',
+  'el-icon-magic-stick': 'sql-query-format-button',
+  'el-icon-delete': 'sql-query-clear-button',
+  'el-icon-video-play': 'sql-query-run-button'
+};
+const ADVANCED_SETTING_CLASS_LIST = [
+  'sql-query-limit-setting',
+  'sql-query-timeout-setting'
+];
 const originalOpenPoolForm = SqlQuery.methods.openPoolForm;
 const originalExecute = SqlQuery.methods.execute;
 const originalInsertSqlAsDraft = SqlQuery.methods.insertSqlAsDraft;
@@ -32,12 +45,65 @@ const OptimizedSqlQuery = Vue.extend({
     };
   },
   mounted() {
+    this.applySqlQueryDomClasses();
     window.addEventListener('resize', this.handleResultPanelResize);
+  },
+  updated() {
+    this.$nextTick(this.applySqlQueryDomClasses);
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResultPanelResize);
   },
   methods: {
+    /**
+     * 原始 SqlQuery 模板仍由基础组件维护，这里只为已有 DOM 补充稳定 class。
+     * 后续样式和交互判断均依赖语义 class，避免继续依赖 nth-of-type。
+     */
+    applySqlQueryDomClasses() {
+      this.applyToolbarButtonClasses();
+      this.applyAdvancedSettingClasses();
+      this.applyPoolDialogClasses();
+    },
+
+    applyToolbarButtonClasses() {
+      const toolbar = this.$el && this.$el.querySelector('.toolbar-actions');
+      if (!toolbar) {
+        return;
+      }
+      Object.keys(TOOLBAR_BUTTON_ICON_CLASS_MAP).forEach(iconClass => {
+        const icon = toolbar.querySelector(`.${iconClass}`);
+        const button = icon && icon.closest('.el-button');
+        if (button) {
+          button.classList.add(TOOLBAR_BUTTON_ICON_CLASS_MAP[iconClass]);
+        }
+      });
+    },
+
+    applyAdvancedSettingClasses() {
+      const toolbar = this.$el && this.$el.querySelector('.toolbar-actions');
+      if (!toolbar) {
+        return;
+      }
+      Array.from(toolbar.querySelectorAll('.toolbar-number')).forEach((item, index) => {
+        item.classList.add('sql-query-advanced-setting');
+        if (ADVANCED_SETTING_CLASS_LIST[index]) {
+          item.classList.add(ADVANCED_SETTING_CLASS_LIST[index]);
+        }
+      });
+    },
+
+    applyPoolDialogClasses() {
+      const poolToolbar = document.querySelector('.sql-pool-dialog .pool-toolbar');
+      if (!poolToolbar) {
+        return;
+      }
+      const refreshIcon = poolToolbar.querySelector('.el-icon-refresh');
+      const refreshButton = refreshIcon && refreshIcon.closest('.el-button');
+      if (refreshButton) {
+        refreshButton.classList.add('sql-pool-refresh-button');
+      }
+    },
+
     /**
      * 顶部原“上传公共池”入口改为“更多”下拉开关。
      * 公共池弹窗内的“上传当前 SQL”仍复用原逻辑。
@@ -257,7 +323,7 @@ export default {
         return;
       }
 
-      const moreButton = toolbar.querySelector('.el-button:nth-of-type(3)');
+      const moreButton = toolbar.querySelector('.sql-query-more-button');
       if (this.isEventInsideElement(event, moreButton) || this.isEventInsideMoreMenu(event, toolbar)) {
         return;
       }
@@ -267,7 +333,7 @@ export default {
       return !!(element && (element === event.target || element.contains(event.target)));
     },
     isEventInsideMoreMenu(event, toolbar) {
-      const menuItems = Array.from(toolbar.querySelectorAll('.toolbar-number'));
+      const menuItems = Array.from(toolbar.querySelectorAll('.sql-query-advanced-setting'));
       if (menuItems.some(item => this.isEventInsideElement(event, item))) {
         return true;
       }
@@ -318,16 +384,16 @@ export default {
   position: relative;
 }
 
-/* 顶部第三个按钮作为“更多”下拉开关，隐藏原上传图标，文案直接使用 i18n。 */
-.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3) {
+/* 顶部“更多”下拉开关，隐藏原上传图标，文案直接使用 i18n。 */
+.sql-query-optimized /deep/ .sql-query-more-button {
   min-width: 64px;
 }
 
-.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3) i {
+.sql-query-optimized /deep/ .sql-query-more-button i {
   display: none;
 }
 
-.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(3)::after {
+.sql-query-optimized /deep/ .sql-query-more-button::after {
   content: '▾';
   display: inline-block;
   margin-left: 4px;
@@ -337,14 +403,14 @@ export default {
 }
 
 /* 清空按钮不再展示。 */
-.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(6) {
+.sql-query-optimized /deep/ .sql-query-clear-button {
   display: none !important;
 }
 
 /* 默认隐藏更多菜单中的刷新连接、格式化、行数与超时设置。 */
-.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(4),
-.sql-query-optimized /deep/ .toolbar-actions > .el-button:nth-of-type(5),
-.sql-query-optimized /deep/ .toolbar-actions > .toolbar-number {
+.sql-query-optimized /deep/ .sql-query-refresh-button,
+.sql-query-optimized /deep/ .sql-query-format-button,
+.sql-query-optimized /deep/ .sql-query-advanced-setting {
   display: none;
 }
 
@@ -364,7 +430,7 @@ export default {
   box-shadow: 0 6px 18px rgba(31, 45, 61, 0.14);
 }
 
-.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number {
+.sql-query-optimized.show-advanced-options /deep/ .sql-query-advanced-setting {
   display: flex !important;
   align-items: center;
   justify-content: space-between;
@@ -380,22 +446,22 @@ export default {
   color: #606266;
 }
 
-.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number:nth-of-type(1) {
+.sql-query-optimized.show-advanced-options /deep/ .sql-query-limit-setting {
   top: 44px;
 }
 
-.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number:nth-of-type(2) {
+.sql-query-optimized.show-advanced-options /deep/ .sql-query-timeout-setting {
   top: 86px;
 }
 
-.sql-query-optimized.show-advanced-options /deep/ .toolbar-actions > .toolbar-number .el-input-number {
+.sql-query-optimized.show-advanced-options /deep/ .sql-query-advanced-setting .el-input-number {
   width: 120px;
 }
 </style>
 
 <style>
 /* 公共池弹窗 append-to-body，需使用全局样式隐藏重复刷新按钮。 */
-.sql-pool-dialog .pool-toolbar > .el-button:first-of-type {
+.sql-pool-dialog .sql-pool-refresh-button {
   display: none !important;
 }
 </style>
