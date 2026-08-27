@@ -7,6 +7,7 @@
 
     <ms-main-container>
       <requirement-workflow-workbench
+        v-if="isRequirementWorkflowWorkbenchVisible"
         ref="requirementWorkflowWorkbench"
         @open-report="openTestPlanReport"
       />
@@ -34,8 +35,10 @@ import RequirementWorkflowWorkbench from './components/RequirementWorkflowWorkbe
 import MsContainer from "metersphere-frontend/src/components/MsContainer";
 import MsAsideContainer from "metersphere-frontend/src/components/MsAsideContainer";
 import MsMainContainer from "metersphere-frontend/src/components/MsMainContainer";
-import {getCurrentProjectID} from "metersphere-frontend/src/utils/token";
+import {getCurrentProjectID, getCurrentUserId} from "metersphere-frontend/src/utils/token";
 import TestCaseReviewList from "@/business/review/components/TestCaseReviewList.vue";
+
+const REQUIREMENT_WORKFLOW_VISIBLE_USER_ID = 'kjls_zhaozhiwei001';
 
 export default {
   name: "TestPlan",
@@ -55,6 +58,9 @@ export default {
   computed: {
     projectId() {
       return getCurrentProjectID();
+    },
+    isRequirementWorkflowWorkbenchVisible() {
+      return getCurrentUserId() === REQUIREMENT_WORKFLOW_VISIBLE_USER_ID;
     },
   },
   mounted() {
