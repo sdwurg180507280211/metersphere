@@ -703,8 +703,8 @@ export default {
       if (field && field.name === "状态" && this.type !== "edit") {
         return true;
       }
-      // 如果是复测次数字段，始终禁用（该字段由系统自动管理）
-      if (field && field.name === "复测次数") {
+      // 如果是复测次数字段，并且是新增和复制页面，始终禁用（该字段由系统自动管理）
+      if (field && field.name === "复测次数" && this.type !== "edit") {
         return true;
       }
       // 其他字段使用readOnly控制
