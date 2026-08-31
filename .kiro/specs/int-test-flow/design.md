@@ -16,14 +16,15 @@
 
 1. `test_plan` 继续承担测试计划主记录、项目归属、目录归属以及现有用例/缺陷/报告入口。
 2. 新增 INT 扩展表保存总需求编号、需求编号、需求名称、INT 状态、开发时间和实际测试时间等业务真值。
-3. “所属系统”不是全研发入站字段，由测试平台通过“需求编号前缀 → 所属系统”固定映射得到。
-4. 测试平台业务目录为：`所属系统 > 总需求编号-需求名称 > 测试计划数据`。
-5. 新增计划版本和人员排期模型，准备和执行分别排期，历史版本保留，统计只读取最新有效版本。
-6. 缺陷继续复用现有 `issues`，测试计划是主关联对象，计划用例是可选关联对象。
-7. INT 状态机是业务真值；MeterSphere 原 `TestPlanStatus` 只承担兼容镜像。
-8. 全研发入站必须幂等；同一需求编号重复消息不能重复创建测试计划。
-9. 全研发出站统一通过适配层发送，业务服务不直接绑定 Topic、messageType 或具体中间件。
-10. 用例稳定 ID、评审后/最终双版本、最终 Excel 合并策略仍属于设计闸门，未确认前不得自行实现内容级合并算法。
+3. 全研发字段已明确：`parentWfinstCode` = 总需求编号、`dmpNum` = 需求编号、`name1` = 需求名称。
+4. “所属系统”不是全研发入站字段，由测试平台通过 `dmpNum` 的需求编号前缀和固定映射得到。
+5. 测试平台业务目录为：`所属系统 > 总需求编号-需求名称 > 测试计划数据`。
+6. 新增计划版本和人员排期模型，准备和执行分别排期，历史版本保留，统计只读取最新有效版本。
+7. 缺陷继续复用现有 `issues`，测试计划是主关联对象，计划用例是可选关联对象。
+8. INT 状态机是业务真值；MeterSphere 原 `TestPlanStatus` 只承担兼容镜像。
+9. 全研发入站必须幂等；同一 `dmpNum` 重复消息不能重复创建测试计划。
+10. 全研发出站统一通过适配层发送，业务服务不直接绑定 Topic、messageType 或具体中间件。
+11. 用例稳定 ID、评审后/最终双版本、最终 Excel 合并策略仍属于设计闸门，未确认前不得自行实现内容级合并算法。
 
 ---
 
@@ -50,8 +51,8 @@
 ```mermaid
 flowchart LR
     RD[全研发流程平台] --> IN[INT 入站适配层]
-    IN --> IDEM[幂等与字段更新]
-    IDEM --> MAP[需求编号前缀映射]
+    IN --> IDEM[字段转换/幂等更新]
+    IDEM --> MAP[dmpNum 前缀映射]
     MAP --> DIR[目录绑定服务]
     DIR --> PLAN[test_plan]
     PLAN --> EXT[int_test_plan_ext]
@@ -134,23 +135,26 @@ INT 计划继续进入现有测试计划体系，不单独恢复历史 spec 的�
 
 ## 4. 业务主键与字段语义
 
-### 4.1 总需求编号、需求编号、所属系统
+### 4.1 全研发字段与内部标准字段
 
-| 业务字段 | 含义 | 技术真值 |
-|---|---|---|
-| 总需求编号 | 一条原始需求的上层编号，可跨多个系统 | `int_test_plan_ext.total_demand_number` |
-| 需求编号 | 具体系统需求编号；前缀决定所属系统 | `int_test_plan_ext.demand_number` |
-| 需求名称 | 原始需求名称 | `int_test_plan_ext.demand_name` |
-| 所属系统 | 测试平台前缀映射结果 | `int_system_mapping` + `system_mapping_id` |
+全研发当前已明确三项核心字段：
 
-为避免现有字段语义不清，本设计不再把 `test_plan.requirement_number` 作为新 INT 业务数据的唯一真值。
+| 业务含义 | 全研发字段 | 内部标准字段 | INT 技术真值 |
+|---|---|---|---|
+| 总需求编号 | `parentWfinstCode` | `totalDemandNumber` | `int_test_plan_ext.total_demand_number` |
+| 需求编号 | `dmpNum` | `demandNumber` | `int_test_plan_ext.demand_number` |
+| 需求名称 | `name1` | `demandName` | `int_test_plan_ext.demand_name` |
+| 所属系统 | 全研发不传 | `systemMapping` | `int_system_mapping` + `system_mapping_id` |
 
-建议：
+字段转换必须发生在 `IntRequirementInboundGateway`，核心业务服务只使用内部标准字段，避免将 `parentWfinstCode`、`dmpNum`、`name1` 分散到状态机、目录、排期等业务代码中。
 
-- `int_test_plan_ext.demand_number` 为 INT 需求编号权威值；
-- 如确认现有 `test_plan.requirement_number` 的业务含义与“需求编号”一致，则同步镜像，供现有列表/搜索/回调兼容；
-- `RequirementCallbackMessage.dmpNum` 现有语义需要结合全研发实际字段契约确认，只能映射“需求编号”或作为旧兼容字段，绝不能承载总需求编号；
-- 总需求编号始终单独存储、单独出站。
+明确约束：
+
+1. `parentWfinstCode` 只能解释为总需求编号。
+2. `dmpNum` 只能解释为需求编号，不得再作为总需求编号使用。
+3. `name1` 解释为需求名称。
+4. 所属系统由 `dmpNum` 前缀解析，不从全研发 DTO 取 `systemName`。
+5. `RequirementCallbackMessage.dmpNum` 如继续复用，语义固定为“需求编号”；总需求编号必须使用独立字段，不得塞入 `dmpNum`。
 
 ### 4.2 幂等业务键
 
@@ -160,9 +164,9 @@ requirements 已明确“同一需求编号重复同步不得重复创建测试�
 (workspace_id, demand_number) UNIQUE
 ```
 
-作为 INT 入站业务幂等键。
+其中 `demand_number` 来源于全研发 `dmpNum`。
 
-如果部署模型能保证一个全研发租户只落入单一 workspace，也仍保留 workspace 维度，避免不同工作空间之间互相污染。
+作为 INT 入站业务幂等键。如果部署模型能保证一个全研发租户只落入单一 workspace，也仍保留 workspace 维度，避免不同工作空间之间互相污染。
 
 ### 4.3 `test_plan` 兼容字段
 
@@ -172,7 +176,7 @@ requirements 已明确“同一需求编号重复同步不得重复创建测试�
 | `project_id` | 技术承载项目，由系统映射决定 |
 | `node_id` | 指向“总需求编号-需求名称”二级目录 |
 | `name` | 页面只读；生成来源仍为【待确认】，不得由设计自行固定 |
-| `requirement_number` | 可作为需求编号兼容镜像，不作为唯一真值 |
+| `requirement_number` | 可镜像需求编号 `dmpNum`，不作为唯一真值 |
 | `stage` | INT 页面隐藏 |
 | `status` | 原 MeterSphere 粗粒度兼容状态 |
 | `planned_start_time` | 最新有效计划最早准备开始日期的镜像 |
@@ -194,6 +198,7 @@ requirements 已明确：计划名称、负责人在计划编制页面置灰，�
 
 - 自动创建测试计划时必须能得到一个合法的 `test_plan.name`；
 - 页面不允许在当前计划编制动作中修改；
+- 全研发 `name1` 是“需求名称”，但目前不能直接等同于“测试计划名称”；
 - 具体来源/拼接规则仍为【待确认】。
 
 在该规则确认前，`IntRequirementSyncService` 只预留 `IntPlanMetadataResolver.resolvePlanName(...)` 扩展点，不固化算法。
@@ -225,7 +230,7 @@ requirements 已明确：计划名称、负责人在计划编制页面置灰，�
 | `id` | 主键 |
 | `workspace_id` | 工作空间 |
 | `project_id` | INT 计划实际落地项目 |
-| `demand_prefix` | 固定需求编号前缀 |
+| `demand_prefix` | `dmpNum` 的固定需求编号前缀 |
 | `system_code` | 可选系统内部编码 |
 | `system_name` | 所属系统名称 |
 | `test_group_id` | 测试用户组 |
@@ -257,8 +262,8 @@ requirements 已明确：计划名称、负责人在计划编制页面置灰，�
 |---|---|
 | `id` | 主键 |
 | `system_mapping_id` | 所属系统映射 |
-| `total_demand_number` | 总需求编号 |
-| `demand_name_snapshot` | 建目录时名称快照 |
+| `total_demand_number` | 总需求编号，来源 `parentWfinstCode` |
+| `demand_name_snapshot` | 建目录时需求名称快照，来源 `name1` |
 | `node_id` | 二级目录节点 ID |
 | `create_time/update_time` | 审计字段 |
 
@@ -270,17 +275,17 @@ requirements 已明确：计划名称、负责人在计划编制页面置灰，�
 
 目录创建流程：
 
-1. 通过需求编号前缀确定 `int_system_mapping`。
+1. 通过 `dmpNum` 前缀确定 `int_system_mapping`。
 2. 定位/创建一级“所属系统”目录。
-3. 按 `(system_mapping_id, total_demand_number)` 定位二级目录绑定。
-4. 不存在时创建 `总需求编号-需求名称` 二级目录。
+3. 按 `(system_mapping_id, parentWfinstCode)` 对应的内部标准值定位二级目录绑定。
+4. 不存在时使用 `parentWfinstCode-name1` 的业务含义创建“总需求编号-需求名称”二级目录。
 5. 创建测试计划时使用绑定的 `node_id`。
 
 因为 requirements 允许人工修改目录，后续定位不能依赖目录名称，必须依赖绑定 ID。
 
 ### 7.1 需求名称后续变化
 
-全研发后续更新需求名称时：
+全研发后续更新 `name1` 时：
 
 - `int_test_plan_ext.demand_name` 更新为最新值；
 - `int_demand_directory` 可记录最新名称与创建时快照；
@@ -297,9 +302,9 @@ requirements 已明确：计划名称、负责人在计划编制页面置灰，�
 |---|---|
 | `plan_id` | PK，关联 `test_plan.id` |
 | `workspace_id` | 用于业务幂等隔离 |
-| `total_demand_number` | 总需求编号 |
-| `demand_number` | 需求编号 |
-| `demand_name` | 最新需求名称 |
+| `total_demand_number` | 总需求编号，来源 `parentWfinstCode` |
+| `demand_number` | 需求编号，来源 `dmpNum` |
+| `demand_name` | 最新需求名称，来源 `name1` |
 | `demand_type` | 原始业务需求/系统优化等 |
 | `system_mapping_id` | 所属系统映射结果 |
 | `business_zip_url` | 业务需求 ZIP 链接 |
@@ -328,28 +333,38 @@ INDEX(system_mapping_id, int_status)
 
 ## 9. 入站幂等与字段更新
 
-### 9.1 标准内部命令
+### 9.1 外部 DTO 到标准内部命令
+
+全研发入站适配层先完成固定字段转换：
+
+```text
+parentWfinstCode → totalDemandNumber
+name1            → demandName
+dmpNum           → demandNumber
+```
+
+随后转换成内部命令：
 
 ```text
 DemandUpsertCommand
-  totalDemandNumber
-  demandName
+  totalDemandNumber   # parentWfinstCode
+  demandName          # name1
   demandType
-  demandNumber
+  demandNumber        # dmpNum
   businessZipUrl
   sourceEventId
   sourceTime
 
 SpecSyncCommand
-  demandNumber
+  demandNumber        # dmpNum
   specUrl
 
 PlannedDevCompleteCommand
-  demandNumber
+  demandNumber        # dmpNum
   plannedDevCompleteTime
 
 ActualDevCompleteCommand
-  demandNumber
+  demandNumber        # dmpNum
   actualDevCompleteTime
 ```
 
@@ -357,7 +372,7 @@ ActualDevCompleteCommand
 
 ### 9.2 `DemandUpsertCommand` 处理
 
-按 `(workspace_id, demandNumber)` 查询：
+按 `(workspace_id, demandNumber)` 查询，其中 `demandNumber = dmpNum`：
 
 - 不存在：解析系统 → 创建/定位目录 → 创建 INT 计划；
 - 已存在：更新允许由全研发维护的字段，不创建第二条计划。
@@ -366,7 +381,7 @@ ActualDevCompleteCommand
 
 ### 9.3 后续字段补充
 
-`SpecSyncCommand`、`PlannedDevCompleteCommand`、`ActualDevCompleteCommand` 都只更新同一需求编号对应的 INT 计划。
+`SpecSyncCommand`、`PlannedDevCompleteCommand`、`ActualDevCompleteCommand` 都只更新同一 `dmpNum` 对应的 INT 计划。
 
 其中：
 
@@ -917,16 +932,17 @@ EXECUTION_STARTED
 INT_COMPLETED
 ```
 
-每个事件统一携带：
+每个事件统一携带内部标准字段：
 
 - `planId`
-- `totalDemandNumber`
-- `demandNumber`
+- `totalDemandNumber` → 对外映射 `parentWfinstCode`
+- `demandNumber` → 对外映射 `dmpNum`
+- `demandName` → 如对外事件需要需求名称，则映射 `name1`
 - 当前最新计划版本数据（适用时）
 - 对应实际时间（适用时）
 - 报告链接（办结时）
 
-外部 DTO、Topic、messageType 由 `IntRequirementOutboundGateway` 适配。
+`parentWfinstCode`、`dmpNum`、`name1` 的语义已确定。其他外部字段、Topic、messageType 仍由 `IntRequirementOutboundGateway` 适配。
 
 ---
 
@@ -946,6 +962,14 @@ INT_COMPLETED
 | `error_message` | 错误 |
 | `retry_count` | 重试次数 |
 | `create_time/update_time` | 时间 |
+
+入站日志建议同时保留原始字段和标准化字段，至少可追溯：
+
+```text
+parentWfinstCode ↔ totalDemandNumber
+dmpNum           ↔ demandNumber
+name1            ↔ demandName
+```
 
 出站建议采用“业务事务 + 本地 Outbox 记录”，事务提交后异步发送：
 
@@ -1049,9 +1073,10 @@ INT_COMPLETED
 ```text
 计划名称（只读，来源待确认）
 负责人（只读，来源待确认）
-总需求编号（只读）
-需求编号（只读）
-所属系统（只读，前缀映射）
+总需求编号（只读，来源 parentWfinstCode）
+需求编号（只读，来源 dmpNum）
+需求名称（只读，来源 name1）
+所属系统（只读，根据 dmpNum 前缀映射）
 需求规格说明书
 开发计划预期完成时间
 开发实际完成时间
@@ -1112,8 +1137,8 @@ INT_COMPLETED
 3. 不批量把历史普通测试计划转换成 INT 计划。
 4. 上线前必须先维护“需求编号前缀 → 所属系统 → project → 测试组”映射。
 5. 历史 `test_workflow_*` 方案不再继续扩展。
-6. 现有 `test_plan.requirement_number` 如确认语义一致，可作为需求编号兼容镜像；不承载总需求编号。
-7. 旧需求完成回调对 INT 计划隔离。
+6. 现有 `test_plan.requirement_number` 如确认语义一致，可镜像 `dmpNum`；不承载 `parentWfinstCode`。
+7. 旧需求完成回调对 INT 计划隔离；其中旧 `dmpNum` 字段继续按需求编号理解。
 8. 新增 INT 表必须使用独立迁移脚本，不改写已上线 migration。
 
 ---
@@ -1122,11 +1147,11 @@ INT_COMPLETED
 
 | 场景 | 处理 |
 |---|---|
-| 需求编号前缀无映射 | 不猜测；记录失败；最终拒绝/挂起待业务确认 |
+| `dmpNum` 前缀无映射 | 不猜测；记录失败；最终拒绝/挂起待业务确认 |
 | 前缀配置歧义 | 配置阶段禁止保存 |
 | 系统/需求目录被人工改名 | 通过绑定 ID 定位，不依赖名称 |
 | 目录被删除 | 记录绑定失效；按修复策略重新建绑 |
-| 同一需求重复推送 | 幂等更新，不重复建计划 |
+| 同一 `dmpNum` 重复推送 | 幂等更新，不重复建计划 |
 | 旧消息晚到 | 结合 sourceTime/version 防止覆盖新数据 |
 | 规格说明书/计划预期时间只到一项 | 保持待介入 |
 | 人员排期冲突 | 提示，允许保存 |
@@ -1146,34 +1171,36 @@ INT_COMPLETED
 
 重点覆盖：
 
-1. 总需求编号与需求编号严格分离。
-2. `(workspace, demandNumber)` 幂等。
-3. 需求编号前缀解析和歧义校验。
-4. 目录绑定幂等，不按名称反查。
-5. 入站后续字段更新不重复建计划。
-6. 待介入双条件自动流转。
-7. INT 状态机合法/非法流转。
-8. 状态动作角色权限。
-9. 计划版本生效/替换。
-10. 自然日期闭区间天数计算。
-11. 草稿内部准备/执行冲突。
-12. 草稿与其他计划冲突。
-13. 区间合并、空闲和冲突天数。
-14. 开始执行开发实际完成时间校验。
-15. 计划级缺陷无用例创建。
-16. 解除用例关联保留计划关联。
-17. FINAL 文件状态解析。
-18. 办结最终状态校验。
-19. 办结缺陷全关闭校验。
-20. Outbox 失败重试和事件幂等。
+1. `parentWfinstCode → totalDemandNumber` 映射。
+2. `dmpNum → demandNumber` 映射，且不得误作总需求编号。
+3. `name1 → demandName` 映射。
+4. `(workspace, dmpNum)` 对应内部幂等键。
+5. `dmpNum` 前缀解析和歧义校验。
+6. 目录绑定幂等，不按名称反查。
+7. 入站后续字段更新不重复建计划。
+8. 待介入双条件自动流转。
+9. INT 状态机合法/非法流转。
+10. 状态动作角色权限。
+11. 计划版本生效/替换。
+12. 自然日期闭区间天数计算。
+13. 草稿内部准备/执行冲突。
+14. 草稿与其他计划冲突。
+15. 区间合并、空闲和冲突天数。
+16. 开始执行开发实际完成时间校验。
+17. 计划级缺陷无用例创建。
+18. 解除用例关联保留计划关联。
+19. FINAL 文件状态解析。
+20. 办结最终状态校验。
+21. 办结缺陷全关闭校验。
+22. Outbox 失败重试和事件幂等。
 
 ### 30.2 集成测试
 
 ```text
-接收需求
-→ 前缀映射
+接收 parentWfinstCode + dmpNum + name1
+→ dmpNum 前缀映射
 → 自动目录
-→ 幂等创建计划
+→ 按 dmpNum 幂等创建计划
 → 待介入
 → 规格说明书 + 开发计划预期完成时间
 → 测试计划
@@ -1193,10 +1220,10 @@ INT_COMPLETED
 
 另测：
 
-- 同一总需求多个需求编号分批进入；
-- 同一需求编号重复消息；
-- 不同前缀落不同所属系统；
-- 需求名称更新但目录重命名规则未启用时不误建新目录；
+- 同一 `parentWfinstCode` 下多个 `dmpNum` 分批进入；
+- 同一 `dmpNum` 重复消息；
+- 不同 `dmpNum` 前缀落不同所属系统；
+- `name1` 更新但目录重命名规则未启用时不误建新目录；
 - 计划调整后统计/提醒只使用最新版本；
 - 人工改目录名称后仍正确绑定；
 - 普通非 INT 计划不受影响。
@@ -1220,11 +1247,11 @@ INT_COMPLETED
 
 以下内容不得由实现人员自行猜测：
 
-1. 无法匹配需求编号前缀时最终是拒绝还是挂起。
+1. 无法匹配 `dmpNum` 前缀时最终是拒绝还是挂起。
 2. 测试组多人后测试团队负责人确定规则及多人通知规则。
 3. 测试计划名称自动生成来源/命名规则。
 4. 测试计划负责人自动赋值来源。
-5. 需求名称变化后目录是否自动重命名。
+5. `name1` 变化后目录是否自动重命名。
 6. 冒烟测试需要记录的详细字段。
 7. REVIEWED/FINAL 是否作为正式双快照长期保存。
 8. 稳定用例 ID 最终来源。
@@ -1232,7 +1259,7 @@ INT_COMPLETED
 10. 是否实现评审后/最终版本自动差异比对。
 11. 最终报告数据源是现有计划用例还是独立 FINAL 快照。
 12. 右上角抽屉通知具体内部调用链。
-13. 全研发最终传输协议、Topic、messageType 和外部字段名称。
+13. 除 `parentWfinstCode`、`dmpNum`、`name1` 外，其余全研发字段、传输协议、Topic 和 messageType。
 
 其中第 3、4 项会阻塞“全自动创建 test_plan”的完整验收；第 8、9、11 项会阻塞“最终用例落库 + 报告数据源”的最终实现。
 
@@ -1242,7 +1269,7 @@ INT_COMPLETED
 
 ```text
 1. INT 扩展表 + 系统映射 + 目录绑定
-2. 入站标准命令 + 幂等/更新日志
+2. 全研发字段适配（parentWfinstCode/dmpNum/name1）+ 入站幂等/更新日志
 3. 确认计划名称和负责人规则
 4. 自动创建 test_plan + 待介入状态
 5. 待介入双条件自动流转
