@@ -1,96 +1,82 @@
 # INT 测试平台技术设计
 
 > 本设计以同目录 `requirements.md` 为唯一业务需求基线。
-> 历史 `.kiro/specs`、旧需求文档及现有代码只用于字段、兼容性和技术实现参考；与 `requirements.md` 冲突时，以 `requirements.md` 为准。
-> 对 `requirements.md` 中仍标记为【待确认】或【待技术评估】的事项，本设计只预留边界，不自行补全业务规则。
+> 历史 `.kiro/specs`、旧需求文档和现有代码仅用于字段、兼容性和技术实现参考；与 `requirements.md` 冲突时，以 `requirements.md` 为准。
+> `requirements.md` 中仍标记为【待确认】或【待技术评估】的事项，本设计只给出可兼容的技术边界，不擅自改变业务规则。
 
 ---
 
-## 1. 设计目标与总体结论
+## 1. 设计结论
 
-本次改造继续以 MeterSphere 现有 `test_plan` 为测试计划主对象，在其上增加 INT 扩展数据、独立状态机、计划版本、人员排期、外部同步、计划级缺陷和办结校验能力。
-
-不再沿用历史 `platform-transformation` 中“重新建设独立 `test_workflow` 主流程”的方案。
+本次继续以 MeterSphere 现有 `test_plan` 作为测试计划主对象，不再建设独立的 `test_workflow` 主流程。新版 INT 计划全部由全研发数据自动创建，并通过扩展表承载 INT 专属业务状态、需求信息、计划版本、人员排期、评审、用例版本、冒烟、通知和同步日志。
 
 核心结论：
 
-1. `test_plan` 继续承担测试计划主记录、项目归属、目录归属以及现有用例/缺陷/报告入口。
-2. 新增 INT 扩展表保存总需求编号、需求编号、需求名称、INT 状态、开发时间和实际测试时间等业务真值。
-3. 全研发字段已明确：`parentWfinstCode` = 总需求编号、`dmpNum` = 需求编号、`name1` = 需求名称。
-4. “所属系统”不是全研发入站字段，由测试平台通过 `dmpNum` 的需求编号前缀和固定映射得到。
-5. 测试平台业务目录为：`所属系统 > 总需求编号-需求名称 > 测试计划数据`。
-6. 新增计划版本和人员排期模型，准备和执行分别排期，历史版本保留，统计只读取最新有效版本。
-7. 缺陷继续复用现有 `issues`，测试计划是主关联对象，计划用例是可选关联对象。
-8. INT 状态机是业务真值；MeterSphere 原 `TestPlanStatus` 只承担兼容镜像。
-9. 全研发入站必须幂等；同一 `dmpNum` 重复消息不能重复创建测试计划。
-10. 全研发出站统一通过适配层发送，业务服务不直接绑定 Topic、messageType 或具体中间件。
-11. 用例稳定 ID、评审后/最终双版本、最终 Excel 合并策略仍属于设计闸门，未确认前不得自行实现内容级合并算法。
+1. `test_plan.id` 继续作为 MeterSphere 内部稳定主键；全研发 `dmpNum` 是全局唯一的外部业务 ID，一个 `dmpNum` 永远只对应一个新版 INT 测试计划。
+2. 全研发固定字段：`parentWfinstCode` = 总需求编号、`dmpNum` = 需求编号、`name1` = 需求名称。
+3. 全研发不传所属系统；测试平台使用 `dmpNum` 最长前缀匹配本地已启用系统映射。
+4. 只有匹配到已启用映射的数据进入 INT；未匹配或停用映射的数据只记过滤日志，不创建目录和测试计划。
+5. 测试计划名称固定取最新 `name1`；负责人固定取系统映射中的测试团队负责人；创建人使用配置的系统服务账号。
+6. INT 页面只展示并使用 INT 主状态；MeterSphere 原 `TestPlanStatus` 只允许作为内部兼容镜像，不能参与 INT 筛选、按钮、权限或流转判断。
+7. 测试计划排期采用独立版本模型；V1、V2、V3 每个版本都必须提交并独立审批，调整版本审批过程中测试计划主状态不回退。
+8. 评审后 Excel 必须结构化导入当前计划用例，并形成固定“首次评审后用例基线”；最终 Excel 必须基于稳定计划用例 ID 做差异比较和全量同步。
+9. 冒烟测试不增加主状态，但需要独立轮次记录；需要冒烟时，最近一次冒烟未通过前禁止正式用例执行。
+10. 缺陷继续复用现有 `issues`；办结判断读取缺陷“状态”自定义字段，只有 `closed/已关闭` 或 `cancelled/已取消` 允许办结。
+11. 历史普通测试计划不迁移，不复用旧需求池的一对一计划流转逻辑。
 
 ---
 
-## 2. 当前代码可复用能力
-
-| 现有能力 | 当前实现 | 本次设计 |
-|---|---|---|
-| 测试计划主对象 | `TestPlanController`、`TestPlanService` | 继续复用 `test_plan` |
-| 计划目录 | `TestPlan.nodeId` | 用于绑定“总需求编号-需求名称”二级目录 |
-| 计划编辑/查询 | `/test/plan/*` | 普通计划继续使用；INT 关键动作走新增 INT API |
-| 计划关联缺陷 | `GET /issues/plan/get/{planId}` | 作为计划级缺陷列表基础 |
-| 用例级缺陷 | 现有计划用例缺陷关联 | 保留计划 + 用例双关联 |
-| 报告 | `TestPlanReportService` | 优先复用；最终数据源取决于用例导入方案 |
-| 通知 | `@SendNotice` 等现有能力 | 通过通知适配服务复用 |
-| Kafka | `TestPlanService` 已使用 | 作为现有基础设施，不写死为 INT 通知方案 |
-| 需求回传 | `RequirementCallbackMessageSender` | 作为现有回传模式参考，新增 INT 出站适配层 |
-
-当前 `TestPlanService` 在原计划进入 `Completed` 时已有需求完成回调。INT 办结后如果仍镜像 `test_plan.status=Completed`，必须对 INT 计划隔离旧回调，避免新旧两套回传同时发送。
-
----
-
-## 3. 总体架构
+## 2. 总体架构
 
 ```mermaid
 flowchart LR
     RD[全研发流程平台] --> IN[INT 入站适配层]
-    IN --> IDEM[字段转换/幂等更新]
-    IDEM --> MAP[dmpNum 前缀映射]
-    MAP --> DIR[目录绑定服务]
+    IN --> MAP[字段标准化]
+    MAP --> FILTER[系统白名单/最长前缀匹配]
+    FILTER -->|未匹配/停用| FLOG[过滤记录]
+    FILTER -->|已启用| IDEM[dmpNum 幂等]
+    IDEM --> DIR[自动目录]
     DIR --> PLAN[test_plan]
     PLAN --> EXT[int_test_plan_ext]
 
-    EXT --> FLOW[INT 状态机]
-    FLOW --> VER[计划版本]
+    EXT --> FLOW[INT 主状态机]
+    EXT --> VER[计划版本/独立审批]
     VER --> ASSIGN[人员排期]
-    FLOW --> CASE[用例文件/用例数据适配]
+    FLOW --> REVIEW[线下评审登记/结构化导入]
+    REVIEW --> CASE[用例基线/最终版本/差异]
+    FLOW --> SMOKE[冒烟轮次]
     FLOW --> ISSUE[计划级缺陷]
-    FLOW --> REPORT[报告适配]
-    FLOW --> NOTICE[通知]
+    FLOW --> REPORT[报告]
+    FLOW --> NOTICE[站内通知]
 
-    ASSIGN --> RESOURCE[空闲/占用/冲突统计]
-    RESOURCE --> EXCEL[Excel 导出]
-
-    FLOW --> OUTBOX[INT 出站事件]
-    OUTBOX --> OUT[全研发出站适配层]
-    OUT --> RD
+    ASSIGN --> RESOURCE[人员空闲/冲突]
+    FLOW --> OUTBOX[全研发出站事件]
 ```
 
-### 3.1 后端模块建议
+### 2.1 后端模块建议
 
 ```text
 test-track/backend/src/main/java/io/metersphere/inttest/
   controller/
     IntSystemMappingController.java
+    IntInboundRecordController.java
     IntTestPlanController.java
-    IntPlanScheduleController.java
+    IntPlanVersionController.java
     IntPlanResourceController.java
+    IntPlanReviewController.java
+    IntPlanCaseController.java
+    IntSmokeController.java
   service/
     IntSystemMappingService.java
-    IntPlanDirectoryService.java
     IntRequirementSyncService.java
+    IntPlanDirectoryService.java
     IntTestPlanService.java
     IntPlanFlowService.java
     IntPlanVersionService.java
     IntPlanResourceService.java
+    IntPlanReviewService.java
     IntPlanCaseService.java
+    IntSmokeService.java
     IntPlanIssueService.java
     IntPlanCompletionService.java
     IntPlanNoticeService.java
@@ -102,312 +88,301 @@ test-track/backend/src/main/java/io/metersphere/inttest/
   job/
     IntPlanReminderJob.java
     IntIntegrationRetryJob.java
-  dto/
-  request/
-  constant/
 ```
 
-外部通信协议只存在于 `integration` 层；核心状态机只处理标准化内部命令。
-
-### 3.2 前端模块建议
-
-```text
-test-track/frontend/src/business/plan/int/
-  components/
-    IntPlanStatusTag.vue
-    IntPlanScheduleEditor.vue
-    IntPlanApprovalPanel.vue
-    IntPlanFlowActions.vue
-    IntPlanIssueList.vue
-    IntPlanCaseUpload.vue
-  resource/
-    IntPersonnelSchedule.vue
-    IntPersonnelScheduleDetail.vue
-  settings/
-    IntSystemMapping.vue
-
-test-track/frontend/src/api/int-test-plan.js
-```
-
-INT 计划继续进入现有测试计划体系，不单独恢复历史 spec 的“需求测试流程”主页面。
+外部 MQ/HTTP、Topic、messageType 只存在于 `integration` 层；核心业务服务只接收内部标准字段。
 
 ---
 
-## 4. 业务主键与字段语义
+## 3. 上游字段与内部语义
 
-### 4.1 全研发字段与内部标准字段
-
-全研发当前已明确三项核心字段：
-
-| 业务含义 | 全研发字段 | 内部标准字段 | INT 技术真值 |
+| 业务含义 | 全研发字段 | 内部字段 | 技术真值 |
 |---|---|---|---|
 | 总需求编号 | `parentWfinstCode` | `totalDemandNumber` | `int_test_plan_ext.total_demand_number` |
 | 需求编号 | `dmpNum` | `demandNumber` | `int_test_plan_ext.demand_number` |
 | 需求名称 | `name1` | `demandName` | `int_test_plan_ext.demand_name` |
-| 所属系统 | 全研发不传 | `systemMapping` | `int_system_mapping` + `system_mapping_id` |
+| 所属系统 | 不传 | `systemMapping` | `int_system_mapping` |
 
-字段转换必须发生在 `IntRequirementInboundGateway`，核心业务服务只使用内部标准字段，避免将 `parentWfinstCode`、`dmpNum`、`name1` 分散到状态机、目录、排期等业务代码中。
-
-明确约束：
+固定约束：
 
 1. `parentWfinstCode` 只能解释为总需求编号。
-2. `dmpNum` 只能解释为需求编号，不得再作为总需求编号使用。
-3. `name1` 解释为需求名称。
-4. 所属系统由 `dmpNum` 前缀解析，不从全研发 DTO 取 `systemName`。
-5. `RequirementCallbackMessage.dmpNum` 如继续复用，语义固定为“需求编号”；总需求编号必须使用独立字段，不得塞入 `dmpNum`。
+2. `dmpNum` 只能解释为需求编号，并作为新版 INT 的全局唯一外部业务 ID。
+3. `name1` 作为需求名称，同时作为测试计划名称来源。
+4. 所属系统只由 `dmpNum` 前缀映射得到。
+5. `test_plan.requirement_number` 如需兼容现有页面，可镜像 `dmpNum`；不得承载 `parentWfinstCode`。
+6. 核心业务代码不得直接使用 `parentWfinstCode/dmpNum/name1` 字段名，统一在入站/出站 Gateway 做转换。
 
-### 4.2 幂等业务键
+### 3.1 幂等键
 
-requirements 已明确“同一需求编号重复同步不得重复创建测试计划”。技术上建议使用：
+因为 `dmpNum` 已确认全局唯一，INT 主业务幂等键直接使用：
 
 ```text
-(workspace_id, demand_number) UNIQUE
+UNIQUE(demand_number)
 ```
 
-其中 `demand_number` 来源于全研发 `dmpNum`。
+不再把 `workspace_id` 拼入业务唯一键。
 
-作为 INT 入站业务幂等键。如果部署模型能保证一个全研发租户只落入单一 workspace，也仍保留 workspace 维度，避免不同工作空间之间互相污染。
+同一 `dmpNum` 再次收到消息时：
 
-### 4.3 `test_plan` 兼容字段
-
-| MeterSphere 字段 | INT 使用方式 |
-|---|---|
-| `id` | INT 测试计划 ID |
-| `project_id` | 技术承载项目，由系统映射决定 |
-| `node_id` | 指向“总需求编号-需求名称”二级目录 |
-| `name` | 页面只读；生成来源仍为【待确认】，不得由设计自行固定 |
-| `requirement_number` | 可镜像需求编号 `dmpNum`，不作为唯一真值 |
-| `stage` | INT 页面隐藏 |
-| `status` | 原 MeterSphere 粗粒度兼容状态 |
-| `planned_start_time` | 最新有效计划最早准备开始日期的镜像 |
-| `planned_end_time` | 最新有效计划最晚执行结束日期的镜像 |
-| `actual_start_time` | 实际测试执行开始时间镜像 |
-| `actual_end_time` | 实际测试执行结束时间镜像 |
+- 不创建第二个测试计划；
+- `name1` 等允许更新字段更新原计划；
+- 规格说明书、开发计划预期完成时间、开发实际完成时间按字段补充/更新处理；
+- 如果同一 `dmpNum` 携带不同 `parentWfinstCode`，视为上游归属一致性异常，记录同步失败，不自动迁移总需求目录。
 
 ---
 
-## 5. 仍需先确认的两个计划创建字段
+## 4. 系统映射与接入白名单
 
-requirements 已明确：计划名称、负责人在计划编制页面置灰，但它们的自动来源尚未确认。
+### 4.1 `int_system_mapping`
 
-因此设计不采用“默认取需求名称”“默认取测试组第一个人”等隐式规则。
-
-### 5.1 计划名称
-
-当前只确定：
-
-- 自动创建测试计划时必须能得到一个合法的 `test_plan.name`；
-- 页面不允许在当前计划编制动作中修改；
-- 全研发 `name1` 是“需求名称”，但目前不能直接等同于“测试计划名称”；
-- 具体来源/拼接规则仍为【待确认】。
-
-在该规则确认前，`IntRequirementSyncService` 只预留 `IntPlanMetadataResolver.resolvePlanName(...)` 扩展点，不固化算法。
-
-### 5.2 负责人
-
-当前只确定：
-
-- 页面展示负责人并置灰；
-- 所属系统可关联测试组/用户组；
-- “测试组未来多人后如何确定负责人”仍为【待确认】。
-
-因此不允许简单用“用户组第一个成员”作为负责人。
-
-预留 `IntPlanMetadataResolver.resolvePrincipal(...)`，最终规则确认后再落地。
-
-### 5.3 实施闸门
-
-自动创建 `test_plan` 的开发任务在进入正式实现前，必须先把“计划名称生成规则”和“负责人赋值来源”两个待确认项关闭；否则只能完成入站解析、映射和目录准备，不能宣称计划自动创建功能验收完成。
-
----
-
-## 6. 系统映射设计
-
-新增 `int_system_mapping`：
+建议字段：
 
 | 字段 | 说明 |
 |---|---|
 | `id` | 主键 |
-| `workspace_id` | 工作空间 |
-| `project_id` | INT 计划实际落地项目 |
-| `demand_prefix` | `dmpNum` 的固定需求编号前缀 |
-| `system_code` | 可选系统内部编码 |
-| `system_name` | 所属系统名称 |
-| `test_group_id` | 测试用户组 |
-| `system_node_id` | 一级“所属系统”目录节点 ID |
-| `enabled` | 是否启用 |
+| `demand_prefix` | `dmpNum` 前缀 |
+| `system_name` | 所属系统 |
+| `test_group_id` | 测试组/用户组 |
+| `team_leader_id` | 测试团队负责人 |
+| `enabled` | 是否允许进入 INT |
+| `target_project_id` | MeterSphere 技术承载项目，可空，最终关系待确认 |
+| `target_workspace_id` | 技术承载工作空间，可空，最终关系待确认 |
+| `system_node_id` | 一级所属系统目录节点 ID |
 | `create_time/update_time` | 审计字段 |
 
-唯一约束：
+精确相同的 `demand_prefix` 不允许重复；前缀包含关系允许存在，例如 `DR-INER` 与 `DR-INER-MT` 可以同时配置。
+
+### 4.2 最长前缀匹配
+
+解析步骤：
 
 ```text
-(workspace_id, demand_prefix) UNIQUE
+取全部 enabled=true 映射
+→ demandNumber.startsWith(demand_prefix)
+→ 按前缀长度倒序
+→ 取最长匹配项
 ```
 
-要求：
+例如：
 
-1. 一个可用前缀只能唯一对应一个所属系统。
-2. 配置保存时校验前缀冲突。
-3. 解析可采用“规范化前缀 + 最长匹配”方式，保证类似 `CMS-`、`CMS2.0-` 能稳定区分。
-4. 解析失败时不猜测所属系统，不自动创建未知系统。
-5. `test_group_id` 用于通知和后续人员范围匹配，不等价于“负责人”。
+```text
+DR-INER-MT-001 → DR-INER-MT
+CMS2.0-001     → CMS2.0
+```
+
+不得因为存在短前缀而提前匹配。
+
+### 4.3 系统映射校验
+
+启用映射前至少校验：
+
+- 前缀非空；
+- 所属系统非空；
+- 测试组非空；
+- 测试团队负责人非空且属于有效用户；
+- 同一精确前缀不存在另一条启用记录。
+
+工作空间/项目与所属系统的最终对应方式仍属于 requirements 的待确认事项，因此字段可预留，但不把当前假设写成业务唯一规则。
 
 ---
 
-## 7. 目录绑定设计
+## 5. 过滤记录与人工重试
 
-新增 `int_demand_directory`：
+全研发会发送所有系统的数据，未匹配或映射停用的数据不进入 INT，但必须可追溯。
+
+新增 `int_inbound_filter_record`：
+
+| 字段 | 说明 |
+|---|---|
+| `id` | 主键 |
+| `demand_number` | `dmpNum` |
+| `total_demand_number` | `parentWfinstCode` |
+| `demand_name` | `name1` |
+| `matched_prefix` | 匹配到但停用时记录前缀，可空 |
+| `reason` | NO_MAPPING / MAPPING_DISABLED / MAPPING_INVALID |
+| `raw_payload` | 原始消息 |
+| `status` | FILTERED / RETRYING / SUCCEEDED / FAILED |
+| `retry_count` | 重试次数 |
+| `last_error` | 最近错误 |
+| `create_time/update_time` | 时间 |
+
+人工补齐或启用映射后，可对过滤记录执行重试。重试必须重新走“最长前缀匹配 → dmpNum 幂等 → 自动目录 → 自动创建计划”完整流程，不能绕过校验直接插入计划。
+
+---
+
+## 6. 自动目录
+
+业务目录：
+
+```text
+所属系统
+└─ parentWfinstCode-name1
+   └─ 测试计划
+```
+
+### 6.1 `int_demand_directory`
 
 | 字段 | 说明 |
 |---|---|
 | `id` | 主键 |
 | `system_mapping_id` | 所属系统映射 |
-| `total_demand_number` | 总需求编号，来源 `parentWfinstCode` |
-| `demand_name_snapshot` | 建目录时需求名称快照，来源 `name1` |
+| `total_demand_number` | `parentWfinstCode` |
+| `demand_name_snapshot` | 首次建目录时的 `name1` |
 | `node_id` | 二级目录节点 ID |
-| `create_time/update_time` | 审计字段 |
+| `create_time` | 创建时间 |
 
 唯一约束：
 
 ```text
-(system_mapping_id, total_demand_number) UNIQUE
+UNIQUE(system_mapping_id, total_demand_number)
 ```
 
-目录创建流程：
+### 6.2 目录创建规则
 
-1. 通过 `dmpNum` 前缀确定 `int_system_mapping`。
-2. 定位/创建一级“所属系统”目录。
-3. 按 `(system_mapping_id, parentWfinstCode)` 对应的内部标准值定位二级目录绑定。
-4. 不存在时使用 `parentWfinstCode-name1` 的业务含义创建“总需求编号-需求名称”二级目录。
-5. 创建测试计划时使用绑定的 `node_id`。
+1. 通过 `dmpNum` 最长前缀确定系统映射。
+2. 定位/创建一级所属系统目录。
+3. 按 `(system_mapping_id, parentWfinstCode)` 定位二级目录绑定。
+4. 不存在时使用创建时 `name1` 生成 `parentWfinstCode-name1` 目录。
+5. 新测试计划使用绑定的 `node_id`。
 
-因为 requirements 允许人工修改目录，后续定位不能依赖目录名称，必须依赖绑定 ID。
+### 6.3 目录保护
 
-### 7.1 需求名称后续变化
+新版 INT 自动业务目录在标准页面中：
 
-全研发后续更新 `name1` 时：
+- 不提供修改名称入口；
+- 不提供移动入口；
+- 不提供删除入口；
+- 不提供人工新增测试计划入口。
 
-- `int_test_plan_ext.demand_name` 更新为最新值；
-- `int_demand_directory` 可记录最新名称与创建时快照；
-- 是否自动重命名已经存在的“总需求编号-需求名称”目录仍为【待确认】；
-- 在业务确认前，目录服务不得把“自动重命名”写成固定行为。
+可以通过绑定表/目录扩展属性标记 `managed_type=INT_AUTO`，供前端隐藏相关操作。
+
+如果目录被数据库脚本、旧接口等非标准方式修改或删除，本期不做自动修复、自动还原、名称兼容或数据纠错。
+
+### 6.4 `name1` 后续变化
+
+同一 `dmpNum` 收到新的 `name1`：
+
+- 更新 `int_test_plan_ext.demand_name`；
+- 更新 `test_plan.name`；
+- 原二级目录保持创建时名称，不重命名；
+- 不因名称变化创建第二个目录或第二个计划。
+
+---
+
+## 7. 自动创建测试计划
+
+新版 INT 不允许人工创建测试计划。
+
+自动创建时：
+
+```text
+test_plan.name              = name1
+test_plan.requirementNumber = dmpNum（兼容镜像）
+test_plan.nodeId            = 自动二级目录 nodeId
+负责人                       = int_system_mapping.team_leader_id
+创建人                       = 配置的系统服务账号
+```
+
+系统服务账号建议通过配置项，例如：
+
+```text
+int.test-plan.system-user-id
+```
+
+具体用户 ID 仍待业务配置确认；启动/接入前应做配置有效性检查，避免出现无法归属创建人的计划。
+
+自动创建成功后同时插入 `int_test_plan_ext`，初始状态 `WAIT_INTERVENE`。
 
 ---
 
 ## 8. INT 计划扩展表
 
-新增 `int_test_plan_ext`，与 `test_plan` 一对一：
+`int_test_plan_ext` 与 `test_plan` 一对一：
 
 | 字段 | 说明 |
 |---|---|
 | `plan_id` | PK，关联 `test_plan.id` |
-| `workspace_id` | 用于业务幂等隔离 |
-| `total_demand_number` | 总需求编号，来源 `parentWfinstCode` |
-| `demand_number` | 需求编号，来源 `dmpNum` |
-| `demand_name` | 最新需求名称，来源 `name1` |
-| `demand_type` | 原始业务需求/系统优化等 |
-| `system_mapping_id` | 所属系统映射结果 |
-| `business_zip_url` | 业务需求 ZIP 链接 |
-| `spec_url` | 需求规格说明书链接 |
+| `demand_number` | `dmpNum`，全局唯一 |
+| `total_demand_number` | `parentWfinstCode` |
+| `demand_name` | 最新 `name1` |
+| `demand_type` | 需求类型 |
+| `system_mapping_id` | 所属系统映射 |
+| `business_zip_url` | 业务需求 ZIP |
+| `spec_url` | 需求规格说明书 |
 | `planned_dev_complete_time` | 开发计划预期完成时间 |
 | `actual_dev_complete_time` | 开发实际完成时间 |
-| `int_status` | INT 状态 |
-| `smoke_required` | 是否需要冒烟 |
-| `current_plan_version_id` | 当前有效计划版本 |
-| `actual_prep_start_time` | 实际准备开始时间 |
-| `actual_prep_end_time` | 实际准备结束时间 |
-| `actual_exec_start_time` | 实际执行开始时间 |
-| `actual_exec_end_time` | 实际执行结束时间 |
-| `revision` | 乐观锁版本号 |
-| `create_time/update_time` | 审计字段 |
+| `int_status` | INT 主状态 |
+| `smoke_required` | 是否冒烟 |
+| `current_plan_version_id` | 当前 EFFECTIVE 排期版本 |
+| `actual_prep_start_time` | 实际准备开始 |
+| `actual_prep_end_time` | 实际准备结束 |
+| `actual_exec_start_time` | 实际执行开始 |
+| `actual_exec_end_time` | 实际执行结束 |
+| `revision` | 乐观锁 |
+| `create_time/update_time` | 时间 |
 
 索引：
 
 ```text
-UNIQUE(workspace_id, demand_number)
+UNIQUE(demand_number)
 INDEX(total_demand_number)
 INDEX(system_mapping_id, int_status)
 ```
 
 ---
 
-## 9. 入站幂等与字段更新
+## 9. 入站字段更新与待介入自动流转
 
-### 9.1 外部 DTO 到标准内部命令
-
-全研发入站适配层先完成固定字段转换：
-
-```text
-parentWfinstCode → totalDemandNumber
-name1            → demandName
-dmpNum           → demandNumber
-```
-
-随后转换成内部命令：
+内部命令：
 
 ```text
 DemandUpsertCommand
-  totalDemandNumber   # parentWfinstCode
-  demandName          # name1
+  totalDemandNumber
+  demandNumber
+  demandName
   demandType
-  demandNumber        # dmpNum
   businessZipUrl
   sourceEventId
   sourceTime
 
 SpecSyncCommand
-  demandNumber        # dmpNum
+  demandNumber
   specUrl
 
 PlannedDevCompleteCommand
-  demandNumber        # dmpNum
+  demandNumber
   plannedDevCompleteTime
 
 ActualDevCompleteCommand
-  demandNumber        # dmpNum
+  demandNumber
   actualDevCompleteTime
 ```
 
-入站 DTO 不包含所属系统。
+`DemandUpsertCommand` 先做系统白名单过滤，再按 `demandNumber=dmpNum` 幂等处理。
 
-### 9.2 `DemandUpsertCommand` 处理
+后续三个命令只更新同一 `dmpNum` 的既有计划，不新建第二条计划。
 
-按 `(workspace_id, demandNumber)` 查询，其中 `demandNumber = dmpNum`：
-
-- 不存在：解析系统 → 创建/定位目录 → 创建 INT 计划；
-- 已存在：更新允许由全研发维护的字段，不创建第二条计划。
-
-重复消息、MQ 重投、HTTP 重试都必须得到相同业务结果。
-
-### 9.3 后续字段补充
-
-`SpecSyncCommand`、`PlannedDevCompleteCommand`、`ActualDevCompleteCommand` 都只更新同一 `dmpNum` 对应的 INT 计划。
-
-其中：
+自动流转条件：
 
 ```text
-spec_url != null
+int_status == WAIT_INTERVENE
+AND spec_url != null
 AND planned_dev_complete_time != null
-AND int_status == WAIT_INTERVENE
 ```
 
-时自动触发：
+满足后：
 
 ```text
 WAIT_INTERVENE → PLANNING
 ```
 
+并通知映射对应测试组成员。
+
 `actual_dev_complete_time` 到达只更新字段，不自动进入测试执行。
-
-### 9.4 字段更新归属
-
-为避免旧消息覆盖新值，建议入站记录 `source_time`/`source_event_id`，字段更新适配器按外部事件时间或版本号判断新旧；若外部无法提供可靠顺序信息，则至少保留完整同步日志并使用“最后成功消息”策略。
 
 ---
 
-## 10. INT 状态机
-
-### 10.1 状态枚举
+## 10. INT 主状态机
 
 ```text
 WAIT_INTERVENE          待介入
@@ -420,124 +395,162 @@ EXECUTION               测试执行
 COMPLETED               办结
 ```
 
-### 10.2 流转表
+### 10.1 V1 主链
 
-| 当前状态 | 动作/条件 | 下一状态 | 关键校验 | 主要副作用 |
-|---|---|---|---|---|
-| 待介入 | 规格说明书 + 开发计划预期完成时间齐全 | 测试计划 | 两字段非空 | 通知测试组 |
-| 测试计划 | 提交计划 | 待审批 | 所有可填写项完整、准备/执行排期完整 | 写状态日志 |
-| 待审批 | 审批通过 | 待测试准备 | 当前初始版本合法 | 初始版本生效、同步全研发 |
-| 待审批 | 审批驳回 | 测试计划 | 当前状态合法 | 记录审批意见 |
-| 待测试准备 | 开始测试准备 | 测试准备 | 当前状态合法 | 写实际准备开始时间、同步全研发 |
-| 测试准备 | 完成测试准备 | 待测试执行 | 评审结果、评审人员、评审后文件齐全 | 写实际准备结束时间、同步全研发 |
-| 待测试执行 | 开始测试执行 | 测试执行 | 开发实际完成时间存在 | 写实际执行开始、镜像 Underway、同步全研发 |
-| 测试执行 | 办结 | 办结 | 最终用例合法、计划缺陷全关闭、报告成功 | 写实际执行结束、镜像 Completed、同步全研发 |
+| 当前状态 | 动作/条件 | 下一状态 |
+|---|---|---|
+| 待介入 | 规格书 + 开发计划预期完成时间齐全 | 测试计划 |
+| 测试计划 | V1 提交审批 | 待审批 |
+| 待审批 | V1 审批通过 | 待测试准备 |
+| 待审批 | V1 审批驳回 | 测试计划 |
+| 待测试准备 | 开始测试准备 | 测试准备 |
+| 测试准备 | 评审通过且结构化导入成功 | 待测试执行 |
+| 待测试执行 | 开始测试执行且开发实际完成时间存在 | 测试执行 |
+| 测试执行 | 办结校验通过 | 办结 |
 
-### 10.3 与 MeterSphere 原状态兼容
+### 10.2 MeterSphere 原状态兼容
+
+INT 主状态是唯一业务真值。原 `test_plan.status` 如现有报告/页面底层必须依赖，可只做兼容镜像：
 
 ```text
-WAIT_INTERVENE
-PLANNING
-PENDING_APPROVAL
-PENDING_PREPARATION
-PREPARATION
-PENDING_EXECUTION
-    → TestPlanStatus.Prepare
-
+WAIT_INTERVENE / PLANNING / PENDING_APPROVAL /
+PENDING_PREPARATION / PREPARATION / PENDING_EXECUTION
+    → Prepare
 EXECUTION
-    → TestPlanStatus.Underway
-
+    → Underway
 COMPLETED
-    → TestPlanStatus.Completed
+    → Completed
 ```
 
-INT 状态为业务真值。
+但所有新版 INT：
 
-### 10.4 禁止绕过
+- 列表筛选读取 `int_test_plan_ext.int_status`；
+- 页面状态展示读取 `int_status`；
+- `availableActions` 读取 `int_status + 权限`；
+- 状态流转只走 INT API；
+- 原状态下拉框和修改入口隐藏。
 
-对于存在 `int_test_plan_ext` 的计划：
-
-1. 原 `/test/plan/edit/status/{id}` 不得推进 INT 状态。
-2. 原通用编辑接口不得修改 INT 保护字段。
-3. 前端按钮只根据后端返回的 `availableActions` 展示。
-4. 所有状态校验必须在后端执行。
-
----
-
-## 11. 角色与权限设计
-
-按 requirements 的业务角色控制：
-
-| 动作 | 业务角色 | 技术权限建议 |
-|---|---|---|
-| 查看 INT 计划 | 测试相关人员 | 复用计划 READ |
-| 编制/保存计划 | 测试团队负责人 | `INT_PLAN_EDIT` |
-| 提交待审批 | 测试团队负责人 | `INT_PLAN_SUBMIT` |
-| 审批通过/驳回 | 测试总负责人 | `INT_PLAN_APPROVE` |
-| 开始/完成测试准备 | 测试人员 | `INT_PREPARATION_OPERATE` |
-| 开始测试执行 | 测试人员 | `INT_EXECUTION_START` |
-| 缺陷操作 | 具备缺陷权限的测试人员 | 复用现有缺陷权限 |
-| 办结 | 具备办结权限的测试人员 | `INT_PLAN_COMPLETE` |
-| 维护系统映射 | 管理人员 | `INT_SYSTEM_MAPPING_MANAGE` |
-| 查看人员排期 | 测试负责人/授权人员 | `INT_RESOURCE_READ` |
-| 导出人员排期 | 测试负责人/授权人员 | `INT_RESOURCE_EXPORT` |
-
-是否新建独立权限点，优先根据现有 MeterSphere 权限粒度评估；如果现有权限无法区分“计划提交”和“测试总负责人审批”，则必须增加 INT 专用权限。
-
-用户组用于确定通知/候选人员范围，不直接替代权限体系。
+原状态镜像不能反向推动 INT 状态。
 
 ---
 
-## 12. 计划版本
+## 11. 角色、多人操作与权限
+
+| 动作 | 允许角色/人员 |
+|---|---|
+| 编制、保存、提交计划 | 测试团队负责人 |
+| V1/V2/V3 审批 | 测试总负责人 |
+| 开始测试准备 | 当前准备阶段已分配人员或测试团队负责人 |
+| 完成测试准备 | 测试团队负责人或具备 INT 准备完成权限的人员 |
+| 开始测试执行 | 当前执行阶段已分配人员或测试团队负责人 |
+| 正式用例执行 | 当前执行人员/具备执行权限人员，且满足冒烟门禁 |
+| 办结 | 测试团队负责人或具备 INT 办结权限人员 |
+| 系统映射维护 | 管理权限人员 |
+| 过滤记录重试 | 管理权限人员 |
+
+计划级“开始/完成”动作只执行一次，不要求每名参与人员分别确认；每次动作记录实际操作人和时间。
+
+建议 INT 专用权限点：
+
+```text
+INT_PLAN_EDIT
+INT_PLAN_SUBMIT
+INT_PLAN_APPROVE
+INT_PREPARATION_START
+INT_PREPARATION_COMPLETE
+INT_EXECUTION_START
+INT_PLAN_COMPLETE
+INT_SYSTEM_MAPPING_MANAGE
+INT_INBOUND_RETRY
+INT_RESOURCE_READ
+INT_RESOURCE_EXPORT
+```
+
+现有缺陷权限继续复用。
+
+---
+
+## 12. 计划版本与独立审批
+
+计划主状态和计划版本审批状态分离。
 
 ### 12.1 `int_plan_version`
 
 | 字段 | 说明 |
 |---|---|
 | `id` | 主键 |
-| `plan_id` | 测试计划 |
+| `plan_id` | 稳定测试计划 |
 | `version_no` | 1、2、3... |
 | `version_type` | INITIAL / ADJUSTMENT |
-| `version_status` | DRAFT / EFFECTIVE / SUPERSEDED |
-| `adjustment_reason` | 调整原因 |
-| `overall_start_date` | 最早准备开始日期 |
-| `overall_end_date` | 最晚执行结束日期 |
-| `creator` | 创建人 |
+| `version_status` | DRAFT / PENDING_APPROVAL / EFFECTIVE / REJECTED / SUPERSEDED |
+| `adjustment_reason` | V2+ 必填 |
+| `overall_start_date` | 最早准备开始 |
+| `overall_end_date` | 最晚执行结束 |
+| `creator_id` | 创建版本人员 |
 | `effective_time` | 生效时间 |
-| `create_time/update_time` | 审计字段 |
+| `create_time/update_time` | 时间 |
 
 ```text
 UNIQUE(plan_id, version_no)
 ```
 
-一个计划最多存在一个 `EFFECTIVE` 版本。
+同一计划最多一个 `EFFECTIVE` 版本。
 
-### 12.2 初始版本
+### 12.2 V1
 
-1. 第一次进入“测试计划”创建 V1 DRAFT。
-2. 保存只修改当前 DRAFT。
-3. 提交待审批时仍为 DRAFT。
-4. 审批通过后 V1 → EFFECTIVE。
-5. 审批驳回继续编辑同一个 V1，不新增版本。
+```text
+V1 DRAFT
+→ 提交：V1 PENDING_APPROVAL，同时主状态 PLANNING → PENDING_APPROVAL
+→ 通过：V1 EFFECTIVE，同时主状态 → PENDING_PREPARATION
+→ 驳回：V1 REJECTED，同时主状态 → PLANNING
+→ 修改：仍是 V1，回到 DRAFT
+→ 再提交：V1 新审批轮次
+```
 
-### 12.3 调整版本
+### 12.3 V2/V3 调整
 
-1. 复制当前 EFFECTIVE 为 N+1 DRAFT。
-2. 修改人员/日期并填写调整原因。
-3. 保存并确认调整后旧版本 → SUPERSEDED，新版本 → EFFECTIVE。
-4. 更新 `current_plan_version_id`。
-5. 重新镜像整体计划周期。
-6. 同步最新计划和调整原因给全研发。
-7. 不因调整动作立即发送人员通知。
-8. 后续提醒、冲突、空闲统计只使用最新 EFFECTIVE。
+```text
+当前 V1 EFFECTIVE
+→ 创建 V2 DRAFT
+→ 提交 V2 PENDING_APPROVAL
+   （测试计划主状态保持当前状态）
+→ 通过：V1 SUPERSEDED，V2 EFFECTIVE
+→ 驳回：V1 仍 EFFECTIVE，V2 REJECTED
+→ 修改 V2：V2 DRAFT，再提交新审批轮次
+```
 
-requirements 未要求调整计划重新审批，本设计不额外增加审批流程。
+V2/V3 未审批通过前：
+
+- 不参与正式人员占用统计；
+- 不参与 09:00 提醒；
+- 不对外同步计划调整；
+- 当前 EFFECTIVE 版本继续生效；
+- 但保存/提交草稿时仍执行冲突提示。
+
+审批通过后才更新 `current_plan_version_id`、镜像整体计划周期并同步全研发。
+
+### 12.4 审批记录
+
+`int_plan_approval_record`：
+
+| 字段 | 说明 |
+|---|---|
+| `id` | 主键 |
+| `plan_id` | 测试计划 |
+| `plan_version_id` | 计划版本 |
+| `round_no` | 同一版本审批轮次 |
+| `action` | SUBMIT / APPROVE / REJECT |
+| `operator_id` | 提交人/审批人 |
+| `comment` | 审批意见，可空；驳回意见按 requirements 规则处理 |
+| `create_time` | 时间 |
+
+每次提交、通过、驳回都新增记录，不覆盖历史。
 
 ---
 
-## 13. 人员排期模型
+## 13. 人员排期与冲突统计
 
-### 13.1 `int_plan_assignment`
+`int_plan_assignment`：
 
 | 字段 | 说明 |
 |---|---|
@@ -547,215 +560,276 @@ requirements 未要求调整计划重新审批，本设计不额外增加审批�
 | `user_id` | 人员 |
 | `start_date` | 自然日开始 |
 | `end_date` | 自然日结束 |
-| `sort` | 页面行顺序 |
+| `sort` | 页面顺序 |
 
-优先使用数据库 `DATE` 类型。
-
-日期区间采用**首尾日期都计入**的闭区间语义：
+日期区间为闭区间：
 
 ```text
 占用天数 = end_date - start_date + 1
 ```
 
-### 13.2 整体计划周期
+正式统计源只读取：
 
 ```text
-overall_start_date = 所有 PREPARATION 中最早 start_date
-overall_end_date   = 所有 EXECUTION 中最晚 end_date
-```
-
-同步镜像：
-
-```text
-test_plan.planned_start_time ← overall_start_date
-test_plan.planned_end_time   ← overall_end_date
-```
-
----
-
-## 14. 人员空闲、占用和冲突统计
-
-### 14.1 统计源
-
-```text
-INT 未办结计划
+未办结 INT 计划
 +
-每个计划最新 EFFECTIVE 版本
+各计划当前 EFFECTIVE 版本
 +
-PREPARATION / EXECUTION 全部 assignment
+全部 PREPARATION/EXECUTION assignment
 ```
 
-### 14.2 保存当前草稿时的冲突源
+保存/提交 DRAFT 时额外比较：
 
-保存/提交一个 DRAFT 时，要同时检查：
+1. 当前草稿内部 assignment 互相重叠；
+2. 当前草稿与其他计划 EFFECTIVE assignment 重叠。
 
-1. 当前草稿内部不同 assignment 之间的重叠；
-2. 当前草稿与其他未办结计划最新 EFFECTIVE assignment 的重叠。
+冲突只提示，不阻止保存/提交。
 
-不能因为排除了“当前计划旧版本”，就漏掉当前草稿中准备阶段和执行阶段互相撞期的问题。
+人员汇总仍采用区间合并后计算占用天数，空闲日期 = 查询范围 - 合并后的占用日期；同一自然日并发 assignment 数 `>=2` 记冲突日。
 
-### 14.3 区间算法
-
-对于查询范围 `[QStart, QEnd]`：
-
-1. 查询 `start_date <= QEnd AND end_date >= QStart`。
-2. 裁剪到查询范围。
-3. 按开始日期排序。
-4. 合并重叠或连续区间，得到占用区间。
-5. 查询范围减去占用区间得到空闲区间。
-6. 对原始 assignment 做边界扫描，同一自然日并发数 `>=2` 记为冲突日。
-
-准备和执行统一参与人员资源占用判断。
-
-### 14.4 保存规则
-
-冲突结果只警告，不阻塞保存和提交。
-
-返回至少包含：人员、相关计划、阶段、冲突起止日期。
-
-### 14.5 Excel 导出
-
-使用项目 EasyExcel 能力，建议两个 Sheet：
+Excel 导出建议：
 
 ```text
-Sheet1：人员汇总
-Sheet2：排期明细
+Sheet1 人员汇总
+Sheet2 排期明细
 ```
 
-字段覆盖 requirements 要求，并可额外带总需求编号和冲突区间。
-
 ---
 
-## 15. 审批记录
+## 14. 实际时间
 
-新增 `int_plan_approval_record`：
-
-| 字段 | 说明 |
+| 字段 | 写入时机 |
 |---|---|
-| `id` | 主键 |
-| `plan_id` | 测试计划 |
-| `plan_version_id` | 被审批版本 |
-| `decision` | APPROVED / REJECTED |
-| `comment` | 可空 |
-| `approver_id` | 审批人 |
-| `create_time` | 审批时间 |
-
-审批意见通过/驳回均可填写，均不强制必填。
-
----
-
-## 16. 实际时间
-
-| INT 字段 | 写入时机 |
-|---|---|
-| `actual_prep_start_time` | 点击“开始测试准备” |
-| `actual_prep_end_time` | “完成测试准备”校验成功 |
-| `actual_exec_start_time` | “开始测试执行”且开发实际完成时间存在 |
+| `actual_prep_start_time` | 第一次成功点击“开始测试准备” |
+| `actual_prep_end_time` | 某一评审轮次“通过 + Excel 全量结构化导入成功” |
+| `actual_exec_start_time` | 第一次成功点击“开始测试执行”且已有开发实际完成时间 |
 | `actual_exec_end_time` | 办结全部校验和报告成功 |
 
-为了兼容 MeterSphere：
+重复请求不得覆盖首次真实时间。
 
-- 只在开始测试执行时镜像 `test_plan.actual_start_time`；
-- 只在办结时镜像 `test_plan.actual_end_time`；
-- 准备阶段实际时间不写入原 `actual_start_time/actual_end_time`。
+为了兼容原 MeterSphere，可在开始测试执行时镜像 `test_plan.actual_start_time`，办结时镜像 `test_plan.actual_end_time`；准备阶段实际时间只保存在 INT 扩展表。
 
 ---
 
-## 17. 用例文件与导入边界
+## 15. 测试准备评审轮次
 
-### 17.1 文件记录
+INT 不复用 MeterSphere 原“用例评审”模块作为主流程入口，只在“完成测试准备”弹窗登记线下评审结果。
 
-新增 `int_plan_case_file`：
+### 15.1 `int_plan_review_round`
 
 | 字段 | 说明 |
 |---|---|
 | `id` | 主键 |
 | `plan_id` | 测试计划 |
-| `file_type` | REVIEWED / FINAL |
-| `file_meta_id` | 附件/文件元数据 ID |
-| `upload_user` | 上传人 |
-| `upload_time` | 上传时间 |
-| `parse_status` | PENDING / SUCCESS / FAILED |
-| `parse_message` | 解析结果 |
-
-文件本体继续复用现有附件能力。
-
-### 17.2 解析批次建议
-
-为了不在稳定 ID 方案确认前错误覆盖现有计划用例，建议将每次 Excel 上传先解析为独立批次：
-
-`int_plan_case_import_batch`
-
-| 字段 | 说明 |
-|---|---|
-| `id` | 批次 ID |
-| `plan_id` | 测试计划 |
-| `case_file_id` | 文件记录 |
-| `version_type` | REVIEWED / FINAL |
-| `row_count` | 行数 |
-| `status` | PARSED / FAILED / APPLIED |
+| `round_no` | 1、2、3... |
+| `result` | PASS / FAIL |
+| `reviewer_ids` | 评审人员关联或 JSON |
+| `comment` | 评审意见 |
+| `case_file_id` | 本轮 Excel，可空（不通过时允许为空） |
+| `operator_id` | 操作人 |
 | `create_time` | 时间 |
 
-`int_plan_case_import_row`
+规则：
+
+- 通过：评审人员必填、Excel 必填、意见可选；
+- 不通过：评审人员必填、意见必填、Excel 可不传；
+- 不通过只新增评审轮次，主状态保持 `PREPARATION`；
+- 通过后先解析并结构化导入，只有全部成功才写实际准备结束时间并进入 `PENDING_EXECUTION`；
+- 文件级或行级任意错误都视为失败，本轮记录可保留错误，但不能完成准备。
+
+---
+
+## 16. 用例稳定 ID、基线、最终版本与全量同步
+
+该部分已从“可选技术评估”升级为业务必需能力，设计必须直接支持。
+
+### 16.1 稳定计划用例 ID
+
+为每条 INT 计划用例维护不随排序变化的 `stable_case_id`，推荐使用平台生成 UUID，并通过 Excel 导出列暴露给测试人员。
+
+原则：
+
+- Excel 行号、页面序号、排序不参与身份识别；
+- 首次评审后 Excel 无稳定 ID 时，平台为每行生成；
+- 平台结构化导入成功后提供“带计划用例 ID”的标准 Excel 导出，测试人员后续基于该文件维护；
+- 最终 Excel 有 ID：必须属于当前计划且唯一；
+- 最终 Excel 无 ID：按新增用例处理并生成新 ID；
+- 重复 ID、其他计划 ID、未知格式 ID：整批失败，不做模糊匹配。
+
+### 16.2 用例版本数据
+
+建议新增：
+
+`int_plan_case_version`
+
+| 字段 | 说明 |
+|---|---|
+| `id` | 版本 ID |
+| `plan_id` | 测试计划 |
+| `version_type` | BASELINE / FINAL |
+| `source_file_id` | 上传文件 |
+| `import_round` | 上传轮次 |
+| `status` | PARSING / SUCCESS / FAILED |
+| `total_count` | 用例数量 |
+| `create_time` | 时间 |
+
+`int_plan_case_snapshot`
 
 | 字段 | 说明 |
 |---|---|
 | `id` | 主键 |
-| `batch_id` | 上传批次 |
-| `source_row_no` | Excel 原行号，仅用于定位错误，不作为用例 ID |
-| `stable_case_id` | 可空，等待稳定 ID 方案确认 |
-| `case_status` | 最终状态等标准化字段 |
-| `raw_data` | 标准化后的行 JSON |
-| `parse_error` | 行级错误 |
+| `version_id` | 基线/最终版本 |
+| `stable_case_id` | 稳定计划用例 ID |
+| `definition_json` | 标准化用例定义字段 |
+| `execution_status` | 执行状态 |
+| `sort_no` | 当前排序，仅展示使用 |
+| `row_hash` | 定义字段规范化哈希，可用于快速比较 |
 
-### 17.3 当前可以确定的行为
+首次“评审通过 + 导入成功”的版本固定标记为 BASELINE，后续不覆盖。
 
-“完成测试准备”可以确定：
+每次最终 Excel 成功解析形成新的 FINAL 版本历史；最新成功 FINAL 用于全量同步。
 
-1. 校验评审结果、评审人员。
-2. 保存 REVIEWED 文件。
-3. 完成文件结构解析和基础字段校验。
-4. 解析成功后记录实际准备结束时间并进入待测试执行。
+### 16.3 Excel 字段分类与比较范围
 
-最终文件可以确定：
-
-1. 保存 FINAL 文件。
-2. 解析最终执行状态。
-3. 校验状态集合是否包含未执行/不通过/阻塞。
-
-### 17.4 当前不能自行确定的行为
-
-在稳定 ID 和导入策略确认前，不设计以下自动动作：
-
-- 按 Excel 行号覆盖已有用例；
-- 按文本相似度猜测“修改”；
-- 自动把缺少稳定 ID 的行与旧用例合并；
-- 自动判断一行是“删除后重建”还是“修改”；
-- 强制把 REVIEWED/FINAL 两批数据合并为一套现有计划用例记录。
-
-因此 `IntPlanCaseService` 分为：
+为避免把执行结果或排序变化误算成“用例修改”，导入模板的每个结构化列在映射配置中必须标记一种类别：
 
 ```text
-parse()      文件解析与验证，当前可实现
-apply()      映射/覆盖/新增/删除，待技术评估确认后实现
-compare()    两版本差异，待稳定 ID 后实现
+IDENTITY    稳定计划用例 ID
+ORDER       行号/页面排序
+DEFINITION  用例定义字段
+EXECUTION   执行状态等执行结果字段
+METADATA    导入时间、批次等系统字段
 ```
 
-### 17.5 报告数据源设计闸门
+“修改”比较只比较全部 `DEFINITION` 字段：
 
-如果最终选择把 FINAL 数据稳定映射回现有计划用例，可继续直接复用现有 `test_plan_report` 统计。
+```text
+比较字段 = 所有映射为 DEFINITION 的结构化业务列
+排除字段 = IDENTITY + ORDER + EXECUTION + METADATA
+```
 
-如果最终选择保留独立用例快照，则报告层需要通过 `IntPlanReportDataProvider` 从最终批次提供统计数据，再决定复用现有报告模板还是增加 INT 报告适配。
+因此：
 
-在该技术结论确认前，不把“现有 test_plan_report 一定能够直接满足最终报告”写死。
+- 单纯调整 Excel 行顺序不算修改；
+- 把“未执行”改为“通过”不单独计入用例定义修改；
+- 用例定义内容变化才计入“修改”。
+
+字段级差异至少保存/展示：字段名称、基线值、最终值。
+
+具体 Excel 列名与现有功能用例字段的映射仍按 requirements 的技术评估项结合当前模板落地，但比较范围规则已经固定。
+
+### 16.4 差异结果
+
+`int_plan_case_diff`：
+
+| 字段 | 说明 |
+|---|---|
+| `id` | 主键 |
+| `plan_id` | 测试计划 |
+| `baseline_version_id` | 固定基线 |
+| `final_version_id` | 本次 FINAL |
+| `stable_case_id` | 用例 ID |
+| `diff_type` | ADDED / DELETED / MODIFIED |
+| `field_diff_json` | 修改字段明细 |
+| `create_time` | 时间 |
+
+识别规则与 requirements 一致：
+
+- FINAL 新 ID/空 ID 新行 → ADDED；
+- BASELINE 有、FINAL 无 → DELETED；
+- ID 相同且 DEFINITION 字段变化 → MODIFIED。
+
+每次 FINAL 都重新与固定 BASELINE 比较，并保存新增/删除/修改数量。
+
+### 16.5 全量同步到当前计划用例
+
+FINAL 完成解析和差异后，必须在事务中全量同步当前计划用例：
+
+- 新增：创建计划用例并绑定新 `stable_case_id`；
+- 修改：按 `stable_case_id` 更新；
+- 删除：按 `stable_case_id` 删除当前有效关系或逻辑失效；
+- 未变化：保持原稳定 ID；
+- 任一步失败：整次同步失败，不允许办结使用部分数据。
+
+“删除采用物理删除还是逻辑失效”仍需结合现有计划用例模型评估，但无论选择哪种方式，BASELINE/FINAL 快照与 diff 历史必须永久保留，不依赖当前计划用例记录保存历史。
+
+### 16.6 办结数据源
+
+办结用例状态、统计和报告只读取：
+
+```text
+最新成功 FINAL
+→ 已全量同步成功
+→ 当前测试计划用例
+```
+
+不得直接读取附件、临时解析行或未完成同步的批次。
+
+---
+
+## 17. 开始测试执行与冒烟门禁
+
+### 17.1 开始执行
+
+```text
+POST /int/test-plan/{planId}/execution/start
+```
+
+校验：
+
+1. INT 主状态 = `PENDING_EXECUTION`；
+2. `actual_dev_complete_time != null`；
+3. 操作者是当前执行人员、测试团队负责人或具备权限人员。
+
+成功后：
+
+- 写首次 `actual_exec_start_time`；
+- INT 主状态 → `EXECUTION`；
+- 记录操作日志；
+- 产生实际执行开始出站事件。
+
+开发实际完成时间消息本身不自动推进状态。
+
+### 17.2 `int_smoke_record`
+
+| 字段 | 说明 |
+|---|---|
+| `id` | 主键 |
+| `plan_id` | 测试计划 |
+| `round_no` | 冒烟轮次 |
+| `result` | PASS / FAIL |
+| `executor_id` | 实际执行人 |
+| `executed_at` | 执行时间 |
+| `remark` | 备注 |
+| `create_time` | 时间 |
+
+冒烟缺陷继续创建/关联到当前测试计划；如需要精确回溯某轮冒烟与缺陷关系，可增加 `int_smoke_issue_rel(smoke_record_id, issue_id)`。
+
+### 17.3 正式执行门禁
+
+```text
+if smoke_required == false:
+    允许正式用例执行
+else:
+    仅当最新 smoke_record.result == PASS 时允许正式用例执行
+```
+
+门禁必须后端校验，不能只隐藏前端按钮。
+
+冒烟 FAIL：
+
+- 主状态仍为 `EXECUTION`；
+- 本轮记录保留；
+- 可创建/关联缺陷；
+- 后续重新冒烟形成新轮次，不覆盖历史。
+
+报告需要包含冒烟轮次、最近结论和关联缺陷。
 
 ---
 
 ## 18. 计划级缺陷
 
-### 18.1 数据原则
-
-继续使用现有 `issues`：
+继续复用现有 `issues`，关系语义：
 
 ```text
 缺陷
@@ -763,215 +837,130 @@ compare()    两版本差异，待稳定 ID 后实现
 └─ planCaseId   可选
 ```
 
-测试计划“关联缺陷”页按 `planId` 查询全部缺陷。
+从计划新增：只要求 `planId`；从具体计划用例新增：同时写 `planId + planCaseId`。
 
-### 18.2 从计划新增
+解除用例关系时只解除 `planCaseId` 关系，保留计划归属。
 
-计划级新增时：
-
-- 当前 `planId` 必须写入；
-- `planCaseId/addResourceIds` 允许为空；
-- 无明确用例归属的环境、部署、数据、冒烟类问题仍属于测试计划。
-
-### 18.3 从用例新增
-
-继续保留现有：
+现有后端若默认要求 `addResourceIds` 非空，需要改造为：
 
 ```text
-planId + planCaseId
+planId 必须
+addResourceIds 可空
+仅 addResourceIds 非空时处理用例关系和用例缺陷计数
 ```
-
-### 18.4 后端改造
-
-当前缺陷新增服务存在按 `addResourceIds` 处理用例缺陷计数的逻辑，改造时必须允许集合为空：
-
-```text
-if addResourceIds 非空:
-    创建/更新具体用例关系及计数
-else:
-    只保留计划级关系
-```
-
-解除用例关联时只删除用例关系，不能删除缺陷的计划归属。
 
 ---
 
-## 19. 开始测试执行
+## 19. 缺陷办结状态解析
 
-接口：
+办结不能读取 `issues.status` 旧列作为最终判断，必须读取缺陷管理页面当前“状态”自定义字段实际选项值。
+
+允许办结值：
 
 ```text
-POST /int/test-plan/{planId}/execution/start
+closed     已关闭
+cancelled  已取消
 ```
 
-事务：
+其余状态均阻塞办结。
 
-1. 校验 INT 状态为 `PENDING_EXECUTION`。
-2. 校验 `actual_dev_complete_time != null`。
-3. 缺失时返回：`开发实际完成时间未提供，不能流转`。
-4. 写 `actual_exec_start_time`。
-5. INT 状态 → `EXECUTION`。
-6. 镜像 `test_plan.status=Underway` 和 `actual_start_time`。
-7. 记录状态日志。
-8. 事务提交后生成“实际执行开始”出站事件。
+`IntPlanIssueService` 建议提供：
 
-开发实际完成时间消息本身不触发状态流转。
+```text
+getPlanIssues(planId)
+resolveCurrentCustomStatus(issue)
+isClosable(statusValue) = statusValue in {closed, cancelled}
+```
+
+返回办结失败信息时至少包含：缺陷编号/标题、当前状态、阻塞数量。
+
+如果项目中存在多个同名“状态”字段，实施时必须根据当前缺陷模板/字段定义 ID 精确定位，不可只按中文名称猜字段。
 
 ---
 
-## 20. 冒烟测试
-
-当前仅固化：
-
-```text
-smoke_required: boolean
-```
-
-冒烟是测试执行阶段前置过程，不新增主状态。
-
-结论、人员、时间、备注、关联缺陷等仍为【待确认】，因此当前不建立固定 `int_smoke_record` 结构；待业务字段确认后再扩展。
-
----
-
-## 21. 办结
-
-接口：
+## 20. 办结与报告
 
 ```text
 POST /int/test-plan/{planId}/complete
 ```
 
-### 21.1 校验顺序
+后端校验顺序：
 
-1. INT 状态必须为 `EXECUTION`。
-2. FINAL 文件必须上传并解析成功。
-3. 从最终可验证数据源确认不存在未执行/不通过/阻塞状态。
-4. 按 `planId` 查询计划全部缺陷。
-5. 所有计划缺陷必须为“已关闭”。
-6. 生成/保存/分享报告成功。
-7. 写实际执行结束时间。
-8. INT 状态 → `COMPLETED`。
-9. 镜像 `test_plan.status=Completed`、`actual_end_time`。
-10. 生成 INT 办结出站事件。
+1. 主状态必须为 `EXECUTION`；
+2. 如果 `smoke_required=true`，最近冒烟必须 PASS；
+3. 必须存在最新成功 FINAL；
+4. FINAL 必须已完成差异比较和全量同步；
+5. 当前计划用例只能为“通过/跳过”；
+6. 当前计划全部缺陷的自定义状态必须为 `closed` 或 `cancelled`；
+7. 生成/保存/分享报告成功；
+8. 写 `actual_exec_end_time`；
+9. INT 主状态 → `COMPLETED`；
+10. 产生 INT_COMPLETED 出站事件。
 
-“最终可验证数据源”由第 17 节用例导入技术结论决定，不允许用 Excel 行号临时拼出身份关系。
+报告至少从当前计划数据汇总：
 
-### 21.2 报告失败
+- 最终用例统计；
+- 基线 vs FINAL 新增/删除/修改数量；
+- 计划全部缺陷及状态统计；
+- 冒烟记录；
+- 计划/实际时间；
+- 报告链接。
 
-报告生成失败时，不得写办结状态和实际执行结束时间。
+如复用现有 `test_plan_report`，必须保证其数据源已是 FINAL 全量同步后的当前计划用例；否则由 `IntPlanReportDataProvider` 适配后再生成报告。
 
-### 21.3 旧回调隔离
-
-对 INT 计划：
-
-```text
-legacy requirement completed callback = 禁用
-INT_COMPLETED → IntRequirementCallbackService
-```
-
-普通 MeterSphere 测试计划保持原行为。
+报告失败不能写办结状态和实际结束时间。
 
 ---
 
-## 22. 通知与 09:00 提醒
+## 21. 通知
 
-### 22.1 待介入 → 测试计划
+通知场景至少包括：
 
-自动流转完成后：
+1. `WAIT_INTERVENE → PLANNING`：通知系统映射对应测试组成员；
+2. V1/V2/V3 每次提交审批：通知测试总负责人；
+3. 最新 EFFECTIVE 准备排期开始日 09:00：通知对应准备人员；
+4. 最新 EFFECTIVE 执行排期开始日 09:00：通知对应执行人员。
 
-1. 通过 `system_mapping_id` 找到测试用户组。
-2. 获取用户组成员。
-3. 通过 `IntPlanNoticeService` 发送站内通知。
+调整草稿创建/保存不通知测试人员。
 
-不在业务服务中直接操作 Kafka Topic。
-
-### 22.2 排期提醒
-
-`IntPlanReminderJob` 每天 09:00 执行。
-
-准备提醒条件：
+`int_notice_log`：
 
 ```text
-int_status = PENDING_PREPARATION
-最新 EFFECTIVE PREPARATION assignment.start_date = today
+UNIQUE(plan_id, plan_version_id, user_id, notice_type, notice_key)
 ```
 
-执行提醒条件：
+用于防止任务重跑和多实例重复通知。
 
-```text
-int_status = PENDING_EXECUTION
-最新 EFFECTIVE EXECUTION assignment.start_date = today
-```
-
-开发实际完成时间尚未提供，也不改变计划执行日期提醒。
-
-### 22.3 防重复
-
-新增 `int_notice_log`：
-
-```text
-UNIQUE(plan_id, plan_version_id, user_id, notice_type, notice_date)
-```
-
-用于任务重跑和多实例防重。
-
-具体右上角抽屉通知调用链继续保持【待技术确认】。
+具体站内抽屉通知调用链仍待代码确认，业务服务通过 `IntPlanNoticeService` 适配，不直接绑定 Kafka。
 
 ---
 
-## 23. 全研发出站
+## 22. 全研发出站与 Outbox
 
 内部事件：
 
 ```text
 PLAN_APPROVED
-PLAN_ADJUSTED
+PLAN_ADJUSTED_APPROVED
 PREPARATION_STARTED
 PREPARATION_COMPLETED
 EXECUTION_STARTED
 INT_COMPLETED
 ```
 
-每个事件统一携带内部标准字段：
+只有计划版本审批通过后才发送计划/调整排期信息；草稿保存、提交审批、审批驳回不对全研发发送最新有效排期。
+
+统一携带：
 
 - `planId`
-- `totalDemandNumber` → 对外映射 `parentWfinstCode`
-- `demandNumber` → 对外映射 `dmpNum`
-- `demandName` → 如对外事件需要需求名称，则映射 `name1`
-- 当前最新计划版本数据（适用时）
-- 对应实际时间（适用时）
+- `totalDemandNumber` → `parentWfinstCode`
+- `demandNumber` → `dmpNum`
+- `demandName` → `name1`（外部需要时）
+- 最新 EFFECTIVE 排期和人员（适用时）
+- 实际时间（适用时）
 - 报告链接（办结时）
 
-`parentWfinstCode`、`dmpNum`、`name1` 的语义已确定。其他外部字段、Topic、messageType 仍由 `IntRequirementOutboundGateway` 适配。
-
----
-
-## 24. 同步日志、Outbox 与重试
-
-新增 `int_integration_log`：
-
-| 字段 | 说明 |
-|---|---|
-| `id` | 主键 |
-| `direction` | IN / OUT |
-| `event_type` | 事件类型 |
-| `business_key` | 业务键 |
-| `source_event_id` | 上游事件 ID，可空 |
-| `payload` | 原始/标准化 JSON |
-| `status` | PENDING / SUCCESS / FAILED |
-| `error_message` | 错误 |
-| `retry_count` | 重试次数 |
-| `create_time/update_time` | 时间 |
-
-入站日志建议同时保留原始字段和标准化字段，至少可追溯：
-
-```text
-parentWfinstCode ↔ totalDemandNumber
-dmpNum           ↔ demandNumber
-name1            ↔ demandName
-```
-
-出站建议采用“业务事务 + 本地 Outbox 记录”，事务提交后异步发送：
+出站采用业务事务 + Outbox：
 
 ```text
 业务事务成功
@@ -981,309 +970,302 @@ name1            ↔ demandName
 → FAILED 定时重试
 ```
 
-这样全研发瞬时不可用不会回滚本地已经完成的“开始准备/开始执行”等真实业务动作。
-
-办结本身的用例、缺陷和报告校验失败仍必须回滚/阻止本地办结。
+全研发瞬时失败不回滚已经发生的真实本地操作。
 
 ---
 
-## 25. 状态审计与并发控制
+## 23. 同步与状态审计
 
-新增 `int_plan_status_log`：
+### 23.1 `int_integration_log`
 
-| 字段 | 说明 |
-|---|---|
-| `id` | 主键 |
-| `plan_id` | 测试计划 |
-| `from_status` | 原状态 |
-| `to_status` | 新状态 |
-| `action` | 动作 |
-| `operator_id` | 操作人；自动流转可为空 |
-| `remark` | 备注 |
-| `create_time` | 时间 |
+至少记录：方向、事件类型、业务键、原始/标准化 payload、状态、错误、重试次数、时间。
 
-所有状态操作：
+入站日志应能追溯：
 
-1. 查询并锁定/校验 `int_test_plan_ext`。
-2. 使用 `revision` 乐观锁或行锁。
-3. 校验 from 状态。
-4. 校验操作者权限。
-5. 执行业务前置校验。
-6. 更新业务数据和状态。
-7. 写状态日志。
-8. 写出站 Outbox（需要时）。
-9. 提交事务。
+```text
+parentWfinstCode ↔ totalDemandNumber
+dmpNum           ↔ demandNumber
+name1            ↔ demandName
+```
 
-双击、MQ 重放、多实例任务不能重复写实际时间或重复推进状态。
+### 23.2 `int_plan_status_log`
+
+记录主状态变化：planId、from/to、action、operator、remark、time。
+
+计划版本审批历史单独写 `int_plan_approval_record`，不要把 V2/V3 审批硬塞进主状态日志。
+
+所有主状态操作使用乐观锁/行锁，重复点击不能重复推进状态或覆盖首次实际时间。
 
 ---
 
-## 26. API 设计
+## 24. API 设计
 
-### 26.1 INT 计划
+### 24.1 系统映射/过滤
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/int/test-plan/{planId}` | INT 计划详情 + availableActions |
-| PUT | `/int/test-plan/{planId}/draft` | 保存当前计划草稿 |
-| POST | `/int/test-plan/{planId}/submit` | 提交待审批 |
-| POST | `/int/test-plan/{planId}/approve` | 审批通过 |
-| POST | `/int/test-plan/{planId}/reject` | 审批驳回 |
-| POST | `/int/test-plan/{planId}/adjust` | 保存并生效调整版本 |
-| POST | `/int/test-plan/{planId}/preparation/start` | 开始测试准备 |
-| POST | `/int/test-plan/{planId}/preparation/complete` | 完成测试准备 |
-| POST | `/int/test-plan/{planId}/execution/start` | 开始测试执行 |
-| POST | `/int/test-plan/{planId}/complete` | 办结 |
-| GET | `/int/test-plan/{planId}/history` | 状态/审批/版本历史 |
+| GET | `/int/system-mapping/list` | 映射列表 |
+| POST | `/int/system-mapping/add` | 新增映射 |
+| POST | `/int/system-mapping/update` | 修改映射 |
+| POST | `/int/system-mapping/enable` | 启停映射 |
+| POST | `/int/system-mapping/validate` | 校验精确前缀、负责人等 |
+| POST | `/int/inbound/filter/list` | 查询过滤记录 |
+| POST | `/int/inbound/filter/{id}/retry` | 人工重试 |
 
-### 26.2 人员排期
+### 24.2 INT 主流程
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/int/test-plan/{planId}` | INT 详情 + availableActions |
+| POST | `/int/test-plan/{planId}/preparation/start` | 开始准备 |
+| POST | `/int/test-plan/{planId}/preparation/review` | 提交一轮评审结果/Excel |
+| POST | `/int/test-plan/{planId}/execution/start` | 开始执行 |
+| POST | `/int/test-plan/{planId}/smoke` | 提交冒烟轮次 |
+| POST | `/int/test-plan/{planId}/complete` | 办结 |
+| GET | `/int/test-plan/{planId}/history` | 主状态历史 |
+
+不提供新版 INT 人工创建计划接口。
+
+### 24.3 计划版本
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/int/test-plan/{planId}/versions` | 版本列表 |
+| PUT | `/int/test-plan/{planId}/version/{versionId}` | 保存 DRAFT |
+| POST | `/int/test-plan/{planId}/version` | 从当前有效版本创建调整 DRAFT |
+| POST | `/int/test-plan/{planId}/version/{versionId}/submit` | 提交审批 |
+| POST | `/int/test-plan/{planId}/version/{versionId}/approve` | 审批通过 |
+| POST | `/int/test-plan/{planId}/version/{versionId}/reject` | 审批驳回 |
+| GET | `/int/test-plan/{planId}/version/{versionId}/approval-history` | 审批轮次 |
+
+V1 同样使用版本 API；V1 提交/审批时额外驱动测试计划主状态。
+
+### 24.4 用例文件
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/int/test-plan/{planId}/case/baseline/import` | 评审通过后结构化导入并建立基线 |
+| GET | `/int/test-plan/{planId}/case/baseline/export` | 导出带稳定计划用例 ID 的 Excel |
+| POST | `/int/test-plan/{planId}/case/final/import` | FINAL 解析、diff、全量同步 |
+| GET | `/int/test-plan/{planId}/case/final/history` | 最终上传历史 |
+| GET | `/int/test-plan/{planId}/case/diff/{finalVersionId}` | 新增/删除/修改及字段差异 |
+
+### 24.5 人员排期
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | POST | `/int/resource/schedule/query` | 汇总 + 明细 |
-| POST | `/int/resource/schedule/conflicts` | 冲突校验 |
+| POST | `/int/resource/schedule/conflicts` | 草稿冲突校验 |
 | POST | `/int/resource/schedule/export` | Excel 导出 |
-
-### 26.3 系统映射
-
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| GET | `/int/system-mapping/list` | 查看映射 |
-| POST | `/int/system-mapping/add` | 新增 |
-| POST | `/int/system-mapping/update` | 修改 |
-| POST | `/int/system-mapping/enable` | 启停 |
-| POST | `/int/system-mapping/validate` | 前缀冲突校验 |
-
-### 26.4 用例文件
-
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| POST | `/int/test-plan/{planId}/case-file/reviewed` | 上传/解析评审后用例 |
-| POST | `/int/test-plan/{planId}/case-file/final` | 上传/解析最终用例 |
-| GET | `/int/test-plan/{planId}/case-file/history` | 上传批次历史 |
-
-`apply/compare` 接口待稳定 ID 和最终 Excel 策略确认后再增加。
 
 ---
 
-## 27. 前端交互
+## 25. 前端交互
 
-### 27.1 INT 基础信息区
+### 25.1 新版 INT 列表/详情
+
+只展示：
 
 ```text
-计划名称（只读，来源待确认）
-负责人（只读，来源待确认）
-总需求编号（只读，来源 parentWfinstCode）
-需求编号（只读，来源 dmpNum）
-需求名称（只读，来源 name1）
-所属系统（只读，根据 dmpNum 前缀映射）
+待介入 / 测试计划 / 待审批 / 待测试准备 /
+测试准备 / 待测试执行 / 测试执行 / 办结
+```
+
+不展示原 MeterSphere 状态筛选或状态修改入口。
+
+新版 INT 目录/列表不显示“新增测试计划”。历史普通测试计划保持原页面能力。
+
+### 25.2 计划基础信息
+
+```text
+计划名称：只读，name1
+负责人：只读，系统映射.team_leader
+总需求编号：只读，parentWfinstCode
+需求编号：只读，dmpNum
+所属系统：只读，dmpNum 前缀映射
 需求规格说明书
 开发计划预期完成时间
 开发实际完成时间
 是否需要冒烟
 ```
 
-计划编制时隐藏原“测试阶段”。
+隐藏原“测试阶段”和原状态入口。
 
-### 27.2 排期编辑
+### 25.3 版本与审批
 
-```text
-测试准备安排
-  人员 | 开始日期 | 结束日期 | +/-
+主页面显示当前 EFFECTIVE 版本；调整时单独进入 V2/V3 草稿。
 
-测试执行安排
-  人员 | 开始日期 | 结束日期 | +/-
-```
-
-所有当前可填写项按 requirements 做必填校验。
-
-### 27.3 冲突提示
+审批中的调整版本应明确显示：
 
 ```text
-存在排期冲突
-张三：计划 A，测试执行，9/10-9/12
-[返回调整] [仍然保存/提交]
+当前有效：V1
+审批中：V2
+测试计划主状态：测试执行（示例）
 ```
 
-冲突不阻断保存。
+避免把版本审批状态误认为测试计划主状态。
 
-### 27.4 状态动作
+### 25.4 评审与用例
 
-前端只使用后端 `availableActions`：
+“完成测试准备”弹窗支持通过/不通过、多轮历史；通过时上传 Excel 并显示文件/行级错误。
 
-```json
-{
-  "status": "PENDING_EXECUTION",
-  "availableActions": ["START_EXECUTION"]
-}
-```
+首次基线成功后提供“导出带计划用例 ID 的 Excel”。
 
-`availableActions` 同时受状态和当前用户权限控制。
+FINAL 上传后展示：新增数、删除数、修改数，并支持查看字段级差异。
 
-### 27.5 关联缺陷
+### 25.5 冒烟
 
-在 `TestPlanView.vue` 增加“关联缺陷”Tab，复用现有缺陷列表和编辑能力。
-
-### 27.6 人员排期
-
-测试计划列表附近增加“人员排期”入口：日期范围、人员筛选、系统筛选、汇总、明细、Excel 导出。
+`smoke_required=true` 时，测试执行页在正式用例操作前展示冒烟区域。最近一次未通过时禁用正式执行操作，同时允许再次冒烟和关联缺陷。
 
 ---
 
-## 28. 数据迁移与兼容
+## 26. 数据迁移与兼容
 
-1. 只有存在 `int_test_plan_ext` 的计划才受 INT 状态机管理。
-2. 普通 MeterSphere 测试计划保持原逻辑。
-3. 不批量把历史普通测试计划转换成 INT 计划。
-4. 上线前必须先维护“需求编号前缀 → 所属系统 → project → 测试组”映射。
-5. 历史 `test_workflow_*` 方案不再继续扩展。
-6. 现有 `test_plan.requirement_number` 如确认语义一致，可镜像 `dmpNum`；不承载 `parentWfinstCode`。
-7. 旧需求完成回调对 INT 计划隔离；其中旧 `dmpNum` 字段继续按需求编号理解。
-8. 新增 INT 表必须使用独立迁移脚本，不改写已上线 migration。
+1. 只有存在 `int_test_plan_ext` 的计划才进入新版 INT。
+2. 历史普通测试计划不批量转换。
+3. 不迁移、复用旧需求池的一对一测试计划业务流转。
+4. 现有 `test_plan.requirement_number` 仅可镜像 `dmpNum`。
+5. 原 `test_plan.status` 对新版 INT 仅兼容镜像并隐藏，不作为业务判断依据。
+6. 旧需求完成回调对新版 INT 隔离，由 `IntRequirementCallbackService` 统一回传。
+7. 新表使用新增 migration，不修改已经上线的历史 migration。
+8. 上线前必须先准备：系统映射、测试团队负责人、系统服务账号；工作空间/项目落位关系按最终确认方案配置。
 
 ---
 
-## 29. 异常处理
+## 27. 异常处理
 
 | 场景 | 处理 |
 |---|---|
-| `dmpNum` 前缀无映射 | 不猜测；记录失败；最终拒绝/挂起待业务确认 |
-| 前缀配置歧义 | 配置阶段禁止保存 |
-| 系统/需求目录被人工改名 | 通过绑定 ID 定位，不依赖名称 |
-| 目录被删除 | 记录绑定失效；按修复策略重新建绑 |
+| `dmpNum` 无已启用前缀 | 记录 FILTERED，不建目录/计划 |
+| 映射停用 | 记录 FILTERED，不建目录/计划 |
+| 过滤记录补齐映射 | 人工重试完整接入流程 |
 | 同一 `dmpNum` 重复推送 | 幂等更新，不重复建计划 |
-| 旧消息晚到 | 结合 sourceTime/version 防止覆盖新数据 |
-| 规格说明书/计划预期时间只到一项 | 保持待介入 |
-| 人员排期冲突 | 提示，允许保存 |
+| 同一 `dmpNum` 变更 `name1` | 更新计划名称，不改目录 |
+| 同一 `dmpNum` 变更 `parentWfinstCode` | 记录一致性异常，不自动迁移 |
+| 自动目录被非标准方式修改/删除 | 不自动修复，本期不兼容 |
+| V2 审批中 | V1 继续生效，主状态不回退 |
+| V2 驳回 | V1 继续生效，V2 可修改重提 |
+| 评审不通过 | 留评审轮次，保持测试准备 |
+| 评审 Excel 行级错误 | 整批失败，不写准备结束时间 |
+| FINAL 重复/跨计划稳定 ID | 整批失败，不模糊匹配 |
+| FINAL 全量同步失败 | 整批失败，不允许办结 |
 | 开发实际完成时间缺失 | 禁止开始测试执行 |
-| 用例文件解析失败 | 禁止完成对应阶段动作 |
-| 最终用例存在非法状态 | 禁止办结 |
-| 存在未关闭计划缺陷 | 禁止办结 |
+| 冒烟未通过 | 禁止正式用例执行，主状态仍测试执行 |
+| 缺陷状态不是 closed/cancelled | 禁止办结 |
 | 报告失败 | 禁止办结 |
 | 全研发出站失败 | 本地动作保留，Outbox 重试 |
-| 重复状态请求 | 状态/乐观锁拦截，不重复写时间 |
 
 ---
 
-## 30. 测试设计
+## 28. 测试设计
 
-### 30.1 单元测试
+### 28.1 单元测试重点
 
-重点覆盖：
+1. `parentWfinstCode/dmpNum/name1` 固定字段映射。
+2. `dmpNum` 全局幂等。
+3. 最长前缀匹配，含前缀包含关系。
+4. 映射停用/缺失过滤。
+5. 过滤记录人工重试。
+6. 自动目录幂等和 `name1` 更新不重命名目录。
+7. 自动计划名称、负责人、系统服务账号赋值。
+8. INT 主状态合法/非法流转。
+9. 原 `test_plan.status` 不能反向驱动 INT。
+10. V1 审批驱动主状态。
+11. V2/V3 独立审批且主状态不回退。
+12. 审批驳回同版本重提及审批轮次。
+13. 人员自然日闭区间、占用、空闲、冲突。
+14. 评审不通过保留轮次。
+15. 评审通过结构化导入原子性。
+16. 稳定计划用例 ID 生成、归属和重复校验。
+17. BASELINE 固定不覆盖。
+18. FINAL 与 BASELINE 新增/删除/修改识别。
+19. ORDER/EXECUTION 字段不误算定义修改。
+20. FINAL 全量同步事务。
+21. 冒烟门禁和多轮记录。
+22. 计划级缺陷无 planCaseId 创建。
+23. 缺陷自定义状态 closed/cancelled 办结判断。
+24. Outbox 重试和重复事件防护。
 
-1. `parentWfinstCode → totalDemandNumber` 映射。
-2. `dmpNum → demandNumber` 映射，且不得误作总需求编号。
-3. `name1 → demandName` 映射。
-4. `(workspace, dmpNum)` 对应内部幂等键。
-5. `dmpNum` 前缀解析和歧义校验。
-6. 目录绑定幂等，不按名称反查。
-7. 入站后续字段更新不重复建计划。
-8. 待介入双条件自动流转。
-9. INT 状态机合法/非法流转。
-10. 状态动作角色权限。
-11. 计划版本生效/替换。
-12. 自然日期闭区间天数计算。
-13. 草稿内部准备/执行冲突。
-14. 草稿与其他计划冲突。
-15. 区间合并、空闲和冲突天数。
-16. 开始执行开发实际完成时间校验。
-17. 计划级缺陷无用例创建。
-18. 解除用例关联保留计划关联。
-19. FINAL 文件状态解析。
-20. 办结最终状态校验。
-21. 办结缺陷全关闭校验。
-22. Outbox 失败重试和事件幂等。
-
-### 30.2 集成测试
+### 28.2 集成主链
 
 ```text
-接收 parentWfinstCode + dmpNum + name1
-→ dmpNum 前缀映射
+全研发消息
+→ 已启用系统前缀
 → 自动目录
-→ 按 dmpNum 幂等创建计划
+→ dmpNum 幂等创建计划
 → 待介入
-→ 规格说明书 + 开发计划预期完成时间
+→ 规格书 + 开发计划预期完成时间
 → 测试计划
-→ 编制计划
-→ 待审批
-→ 审批
-→ 开始/完成准备
-→ 待执行
-→ 开发实际完成时间校验
-→ 执行
-→ 最终用例
-→ 缺陷关闭
+→ V1 编制/提交/审批
+→ 待测试准备
+→ 开始准备
+→ 评审不通过（可多轮）
+→ 评审通过 + 基线结构化导入
+→ 待测试执行
+→ 开发实际完成校验
+→ 开始执行
+→ 冒烟（需要时）
+→ FINAL 上传 + diff + 全量同步
+→ 缺陷 closed/cancelled
 → 报告
 → 办结
 → 全研发回传
 ```
 
-另测：
+同时验证：
 
-- 同一 `parentWfinstCode` 下多个 `dmpNum` 分批进入；
-- 同一 `dmpNum` 重复消息；
-- 不同 `dmpNum` 前缀落不同所属系统；
-- `name1` 更新但目录重命名规则未启用时不误建新目录；
-- 计划调整后统计/提醒只使用最新版本；
-- 人工改目录名称后仍正确绑定；
-- 普通非 INT 计划不受影响。
-
-### 30.3 前端 E2E
-
-覆盖：
-
-- 合法状态与角色按钮；
-- 审批通过/驳回；
-- 冲突提示但允许保存；
-- 完成准备必填和文件上传；
-- 开始执行缺开发实际时间提示；
-- 计划级新增缺陷时用例可空；
-- 办结失败原因展示；
-- 人员排期查询与导出。
+- 同一总需求多个 `dmpNum` 分批进入；
+- 未启用系统被过滤后重试；
+- V2 在测试准备/执行阶段提交审批，主状态不变；
+- V2 通过后提醒/统计只读取 V2；
+- 历史普通计划不受影响。
 
 ---
 
-## 31. 当前设计闸门/未定事项
+## 29. 当前仍需确认/评估
 
-以下内容不得由实现人员自行猜测：
+只保留 requirements 当前仍未关闭的事项。
 
-1. 无法匹配 `dmpNum` 前缀时最终是拒绝还是挂起。
-2. 测试组多人后测试团队负责人确定规则及多人通知规则。
-3. 测试计划名称自动生成来源/命名规则。
-4. 测试计划负责人自动赋值来源。
-5. `name1` 变化后目录是否自动重命名。
-6. 冒烟测试需要记录的详细字段。
-7. REVIEWED/FINAL 是否作为正式双快照长期保存。
-8. 稳定用例 ID 最终来源。
-9. FINAL Excel 对已有用例采用覆盖、合并、新增、删除的具体识别策略。
-10. 是否实现评审后/最终版本自动差异比对。
-11. 最终报告数据源是现有计划用例还是独立 FINAL 快照。
-12. 右上角抽屉通知具体内部调用链。
-13. 除 `parentWfinstCode`、`dmpNum`、`name1` 外，其余全研发字段、传输协议、Topic 和 messageType。
+### 29.1 业务待确认
 
-其中第 3、4 项会阻塞“全自动创建 test_plan”的完整验收；第 8、9、11 项会阻塞“最终用例落库 + 报告数据源”的最终实现。
+1. 所属系统与 MeterSphere 工作空间、项目之间的最终对应关系。
+2. 自动创建测试计划使用的系统服务账号具体 MeterSphere 用户 ID。
+
+### 29.2 技术评估
+
+1. 计划级缺陷新增接口如何支持只关联测试计划。
+2. 解除用例关系时如何保留计划缺陷关系。
+3. 站内抽屉通知具体复用链路及 Kafka 使用情况。
+4. 系统映射与现有项目/模块字段如何落位。
+5. 外部消息幂等、字段更新、过滤记录和失败重试的具体接入实现。
+6. 评审后 Excel 模板与现有功能用例字段映射、稳定 ID 导出方式。
+7. FINAL 删除采用物理删除还是逻辑失效。
+8. 现有功能用例具体字段如何映射为 `DEFINITION/EXECUTION` 分类并展示字段差异。
+9. V2/V3 独立审批与现有权限/通知组件的兼容实现。
 
 ---
 
-## 32. 推荐实施顺序
+## 30. 推荐实施顺序
 
 ```text
-1. INT 扩展表 + 系统映射 + 目录绑定
-2. 全研发字段适配（parentWfinstCode/dmpNum/name1）+ 入站幂等/更新日志
-3. 确认计划名称和负责人规则
-4. 自动创建 test_plan + 待介入状态
-5. 待介入双条件自动流转
-6. INT 状态机 + 角色权限
-7. 计划版本 + 准备/执行排期 + 审批
-8. 人员空闲/占用/冲突统计 + Excel
-9. 开始/完成测试准备 + REVIEWED 文件解析
-10. 开始测试执行 + 开发实际完成时间校验
-11. 计划级关联缺陷
-12. 确认稳定用例 ID、FINAL 导入和报告数据源方案
-13. FINAL 文件落地 + 办结校验 + 报告
-14. 站内通知 + 09:00 提醒
-15. 全研发多节点出站 + Outbox 重试
-16. 用例双版本差异比对（仅确认后实施）
+1. 新表与 INT 扩展模型
+2. 系统映射 + 最长前缀 + 启停白名单
+3. 过滤记录 + 人工重试
+4. parentWfinstCode/dmpNum/name1 入站适配 + dmpNum 幂等
+5. 自动目录 + 自动创建 test_plan（name1/负责人/系统账号）
+6. INT 主状态机 + 原状态隐藏/隔离
+7. V1/V2/V3 版本模型 + 独立审批历史
+8. 人员排期 + 冲突统计 + Excel
+9. 测试准备评审轮次 + REVIEWED 结构化导入
+10. 稳定计划用例 ID + BASELINE 导出
+11. FINAL 解析 + diff + 全量同步
+12. 开始执行 + 开发实际完成时间校验
+13. 冒烟记录 + 正式执行门禁
+14. 计划级缺陷 + 自定义状态办结判断
+15. 报告 + 办结
+16. 站内通知 + 09:00 提醒
+17. 全研发多节点出站 + Outbox 重试
+18. 完整回归历史普通测试计划不受影响
 ```
 
-这个顺序把仍未确认的业务/技术事项作为明确闸门，避免开发过程中用代码结构或个人猜测替代 requirements。
+该顺序优先把业务身份、接入白名单、自动创建和状态/版本两套状态机制稳定下来，再进入用例、缺陷和报告，避免后续因为业务主键或审批语义变化反复返工。
