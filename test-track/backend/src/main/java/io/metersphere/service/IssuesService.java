@@ -555,6 +555,8 @@ public class IssuesService {
         issueRequest.setCaseResourceId(caseResourceId);
         issueRequest.setOrders(ServiceUtils.getDefaultOrder(issueRequest.getOrders(),"relate_time"));
         issueRequest.setRefType(refType);
+        // fix(缺陷管理): 398e14cf9f 引入跨项目权限过滤后，projectId 为空时必须携带 userId，否则关联缺陷列表恒为空
+        issueRequest.setUserId(SessionUtils.getUserId());
         List<IssuesDao> issues = extIssuesMapper.getIssuesByCaseId(issueRequest);
         Map<String, User> userMap = getUserMap(issues);
         issues.forEach(issue -> {
@@ -1598,6 +1600,8 @@ public class IssuesService {
     public List<IssuesDao> getIssuesByPlanId(String planId) {
         IssuesRequest issueRequest = new IssuesRequest();
         issueRequest.setPlanId(planId);
+        // fix(缺陷管理): 398e14cf9f 引入跨项目权限过滤后，projectId 为空时必须携带 userId，否则计划缺陷列表恒为空
+        issueRequest.setUserId(SessionUtils.getUserId());
         List<IssuesDao> planIssues = extIssuesMapper.getPlanIssues(issueRequest);
 
         buildCustomField(planIssues);
