@@ -14,6 +14,8 @@ import com.alibaba.excel.write.metadata.style.WriteCellStyle;
 import io.metersphere.commons.constants.CustomFieldScene;
 import io.metersphere.commons.constants.CustomFieldType;
 import io.metersphere.commons.utils.JSON;
+import io.metersphere.constants.IssueStatus;
+import io.metersphere.constants.SystemCustomField;
 import io.metersphere.dto.CustomFieldDao;
 import io.metersphere.dto.CustomFieldOptionDTO;
 import io.metersphere.excel.constants.IssueExportHeadField;
@@ -36,6 +38,8 @@ public class IssueTemplateHeadWriteHandler implements RowWriteHandler, SheetWrit
     private Map<String, String> memberMap;
     private Map<Integer, String> headCommentIndexMap = new HashMap<>();
     private Map<Integer, String> dateFieldIndexMap = new HashMap<>();
+    private Integer issueStatusColumnIndex;
+    private List<CustomFieldOptionDTO> issueStatusOptions = Collections.emptyList();
 
     public IssueTemplateHeadWriteHandler(Map<String, String> memberMap, List<List<String>> headList, List<CustomFieldDao> customFields) {
         this.memberMap = memberMap;
@@ -68,6 +72,11 @@ public class IssueTemplateHeadWriteHandler implements RowWriteHandler, SheetWrit
                         customFieldDao = null;
                     }
                 }
+                if (isIssueStatusField(customFieldDao)) {
+                    issueStatusColumnIndex = index;
+                    List<CustomFieldOptionDTO> options = JSON.parseArray(customFieldDao.getOptions(), CustomFieldOptionDTO.class);
+                    issueStatusOptions = options == null ? Collections.emptyList() : options;
+                }
                 headCommentIndexMap.put(index, customFieldDao == null ? StringUtils.EMPTY : getCommentByCustomField(customFieldDao));
                 index++;
             }
@@ -94,6 +103,39 @@ public class IssueTemplateHeadWriteHandler implements RowWriteHandler, SheetWrit
             dataFormatData.setIndex(dataFormat.getFormat("@"));
             writeCellStyle.setDataFormatData(dataFormatData);
         }
+        if (!Boolean.TRUE.equals(isHead)
+                && issueStatusColumnIndex != null
+                && issueStatusColumnIndex.equals(cell.getColumnIndex())
+                && cell.getCellType() == CellType.STRING) {
+            cell.setCellValue(getIssueStatusText(cell.getStringCellValue()));
+        }
+    }
+
+    private boolean isIssueStatusField(CustomFieldDao field) {
+        return field != null
+                && Boolean.TRUE.equals(field.getSystem())
+                && StringUtils.equals(field.getName(), SystemCustomField.ISSUE_STATUS);
+    }
+
+    private String getIssueStatusText(String status) {
+        if (StringUtils.isBlank(status)) {
+            return status;
+        }
+        String value = status.replace("\"", StringUtils.EMPTY).trim();
+        for (CustomFieldOptionDTO option : issueStatusOptions) {
+            if (!StringUtils.equals(value, option.getValue())) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(option.getSystem())) {
+                IssueStatus statusEnum = IssueStatus.getEnumByName(value);
+                if (statusEnum != null) {
+                    return Translator.get(statusEnum.getI18nKey());
+                }
+            }
+            return option.getText();
+        }
+        IssueStatus statusEnum = IssueStatus.getEnumByName(value);
+        return statusEnum == null ? value : Translator.get(statusEnum.getI18nKey());
     }
 
     private String getCommentByCustomField(CustomFieldDao field) {

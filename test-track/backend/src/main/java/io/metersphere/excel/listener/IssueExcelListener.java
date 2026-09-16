@@ -12,11 +12,15 @@ import io.metersphere.base.domain.Issues;
 import io.metersphere.commons.constants.CustomFieldType;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.*;
+import io.metersphere.constants.IssueStatus;
+import io.metersphere.constants.SystemCustomField;
 import io.metersphere.dto.CustomFieldDao;
 import io.metersphere.dto.CustomFieldItemDTO;
+import io.metersphere.dto.CustomFieldOptionDTO;
 import io.metersphere.dto.CustomFieldResourceDTO;
 import io.metersphere.excel.constants.IssueExportHeadField;
 import io.metersphere.excel.domain.ExcelErrData;
+import io.metersphere.excel.domain.ExcelResponse;
 import io.metersphere.excel.domain.IssueExcelData;
 import io.metersphere.excel.domain.IssueExcelDataFactory;
 import io.metersphere.excel.utils.ExcelImportType;
@@ -102,6 +106,7 @@ public class IssueExcelListener extends AnalysisEventListener<Map<Integer, Strin
         dataClass = clazz;
         this.isThirdPlatform = isThirdPlatform;
         this.customFields = customFields;
+        localizeIssueStatusOptions();
         issuesService = CommonBeanFactory.getBean(IssuesService.class);
         this.memberMap = memberMap;
         this.platformStatusList = platformStatusList;
@@ -109,6 +114,36 @@ public class IssueExcelListener extends AnalysisEventListener<Map<Integer, Strin
         // 初始化所属系统映射
         // 目的是：Excel导入时能将系统名称/简称转换为系统ID，确保高级搜索能正确匹配
         initAssociatedSystemMap();
+    }
+
+    /**
+     * 将系统状态选项的国际化Key转换为当前语言文本。
+     * value 保持不变，因此导入时既能识别中文显示名，也继续兼容旧Excel中的英文状态值。
+     */
+    private void localizeIssueStatusOptions() {
+        if (CollectionUtils.isEmpty(customFields)) {
+            return;
+        }
+        customFields.stream()
+                .filter(field -> field != null
+                        && Boolean.TRUE.equals(field.getSystem())
+                        && StringUtils.equals(field.getName(), SystemCustomField.ISSUE_STATUS)
+                        && StringUtils.isNotBlank(field.getOptions()))
+                .forEach(field -> {
+                    List<CustomFieldOptionDTO> options = JSON.parseArray(field.getOptions(), CustomFieldOptionDTO.class);
+                    if (CollectionUtils.isEmpty(options)) {
+                        return;
+                    }
+                    options.forEach(option -> {
+                        if (Boolean.TRUE.equals(option.getSystem())) {
+                            IssueStatus status = IssueStatus.getEnumByName(option.getValue());
+                            if (status != null) {
+                                option.setText(Translator.get(status.getI18nKey()));
+                            }
+                        }
+                    });
+                    field.setOptions(JSON.toJSONString(options));
+                });
     }
 
     /**
@@ -179,7 +214,7 @@ public class IssueExcelListener extends AnalysisEventListener<Map<Integer, Strin
                 return;
             }
             if (issueExcelData.getNum() == null) {
-                // ID为空或不存在, 新增
+                // ID为空或不存在, 则新增
                 issueExcelData.setAddFlag(Boolean.TRUE);
                 insertList.add(issueExcelData);
             } else {
@@ -768,7 +803,7 @@ public class IssueExcelListener extends AnalysisEventListener<Map<Integer, Strin
 
     /**
      * 解析多选所属系统字段值（名称/简称/ID数组 -> 系统ID数组）
-     * 目的是：将Excel中用户填写的多个系统名称、简称或ID统一转换为系统ID数组
+     * 目的是：将Excel中填写的多个系统名称/简称或ID统一转换为系统ID数组
      *
      * @param tarVal Excel中填写的值（JSON数组格式）
      * @return 系统ID数组的JSON字符串
