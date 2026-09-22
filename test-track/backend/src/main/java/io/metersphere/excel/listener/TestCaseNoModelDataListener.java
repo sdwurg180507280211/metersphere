@@ -404,9 +404,31 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         }
     }
 
+    static String normalizeNodePath(String nodePath) {
+        if (nodePath == null) {
+            return null;
+        }
+
+        String normalizedNodePath = Arrays.stream(nodePath.split("/", -1))
+                .map(String::trim)
+                .collect(Collectors.joining("/"));
+
+        if (!normalizedNodePath.startsWith("/")) {
+            normalizedNodePath = "/" + normalizedNodePath;
+        }
+        if (normalizedNodePath.length() > 1 && normalizedNodePath.endsWith("/")) {
+            normalizedNodePath = normalizedNodePath.substring(0, normalizedNodePath.length() - 1);
+        }
+        return normalizedNodePath;
+    }
+
     private void validateDbExist(TestCaseExcelData data, StringBuilder stringBuilder) {
-        //  校验模块是否存在，没有存在则新建一个模块
-        testCaseNodeService.createNodeByNodePath(data.getNodePath(), request.getProjectId(), nodeTrees, pathMap);
+        String normalizedNodePath = normalizeNodePath(data.getNodePath());
+        data.setNodePath(normalizedNodePath);
+
+        // 校验模块是否存在，没有存在则新建一个模块。
+        // 查重和保存必须使用同一份规范化路径，否则 pathMap 取不到 nodeId 时会退化为项目级查重。
+        testCaseNodeService.createNodeByNodePath(normalizedNodePath, request.getProjectId(), nodeTrees, pathMap);
         if (isUpdateModel()) {
             return;
         }
@@ -426,7 +448,15 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
             testCase.setSteps(steps);
         }
 
-        testCase.setNodeId(pathMap.get(testCase.getNodePath()));
+        String nodeId = pathMap.get(normalizedNodePath);
+        if (StringUtils.isBlank(nodeId)) {
+            stringBuilder.append(Translator.get("test_case_create_module_fail"))
+                    .append(":")
+                    .append(normalizedNodePath)
+                    .append(ERROR_MSG_SEPARATOR);
+            return;
+        }
+        testCase.setNodeId(nodeId);
         boolean dbExist = testCaseService.exist(testCase);
         // @Data 重写了 equals 和 hashCode 方法
         boolean excelExist = excelDataList.contains(data);
