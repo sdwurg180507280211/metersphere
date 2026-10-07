@@ -5,11 +5,45 @@ on:
       - v2.10
   pull_request:
     types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build and analyze
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
     steps:
+      - name: Validate SonarCloud credentials and project configuration
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, urllib.request, urllib.parse
+          def fail(message):
+              print("::error title=SonarCloud configuration::" + message)
+              raise SystemExit(1)
+          for key in ("SONAR_TOKEN", "SONAR_PROJECT_KEY", "SONAR_ORGANIZATION"):
+              if not os.environ.get(key):
+                  fail(key + " is missing. Configure the repository secret/variables; no quality result was produced.")
+          auth = base64.b64encode((os.environ["SONAR_TOKEN"] + ":").encode()).decode()
+          def get(path):
+              request = urllib.request.Request("https://sonarcloud.io/api/" + path,
+                                               headers={"Authorization": "Basic " + auth})
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      return json.load(response)
+              except Exception:
+                  fail("Authentication/project preflight failed. Check token, project key and access; no quality result was produced.")
+          if not get("authentication/validate").get("valid"):
+              fail("SONAR_TOKEN is invalid; no quality result was produced.")
+          project = get("components/show?" + urllib.parse.urlencode({"component": os.environ["SONAR_PROJECT_KEY"]}))
+          if project.get("component", {}).get("key") != os.environ["SONAR_PROJECT_KEY"]:
+              fail("Configured project could not be resolved; no quality result was produced.")
+          print("Credential/project lookup passed. Scanner must still verify organization and analysis permission.")
+          PY
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
@@ -30,8 +64,11 @@ jobs:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
-      - name: Build and analyze
+      # Backend verification skips tests and excludes frontend modules.
+      # Workstation templates/build are checked by workstation-frontend.yml.
+      - name: Backend build (tests skipped)
+        run: mvn -B verify -DskipTests -DskipAntRunForJenkins -pl "!framework/sdk-parent/frontend,!api-test/frontend,!performance-test/frontend,!project-management/frontend,!report-stat/frontend,!system-setting/frontend,!test-track/frontend,!workstation/frontend"
+      - name: SonarCloud analysis and quality gate
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=metersphere_metersphere -DskipTests -DskipAntRunForJenkins -pl "!framework/sdk-parent/frontend,!api-test/frontend,!performance-test/frontend,!project-management/frontend,!report-stat/frontend,!system-setting/frontend,!test-track/frontend,!workstation/frontend"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey="$SONAR_PROJECT_KEY" -Dsonar.organization="$SONAR_ORGANIZATION" -Dsonar.qualitygate.wait=true -DskipTests -DskipAntRunForJenkins -pl "!framework/sdk-parent/frontend,!api-test/frontend,!performance-test/frontend,!project-management/frontend,!report-stat/frontend,!system-setting/frontend,!test-track/frontend,!workstation/frontend"
