@@ -1,0 +1,44 @@
+name: Workstation frontend validation
+on:
+  pull_request:
+    paths:
+      - 'workstation/frontend/**'
+      - 'framework/sdk-parent/frontend/**'
+      - '.github/workflows/workstation-frontend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Vue 2 templates and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: workstation/frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.8.1'
+      - name: Match repository npm version
+        run: npm install --global npm@8.4.0
+      - name: SQL workbench logic tests
+        run: node --test tests/sql-query-workbench.test.mjs
+      # Neither package currently has a lockfile; npm ci is not applicable.
+      # The linked SDK source also resolves dependencies from its own directory.
+      - name: Install shared SDK dependencies
+        working-directory: framework/sdk-parent/frontend
+        run: npm install --no-audit --no-fund
+      - name: Install workstation dependencies
+        run: npm install --no-audit --no-fund
+      - name: Compile SQL query Vue 2 templates
+        run: node tests/check-sql-query-template.cjs
+      - name: Build complete workstation frontend
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: npm run build
