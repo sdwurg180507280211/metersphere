@@ -28,7 +28,7 @@ jobs:
       - name: Match repository npm version
         run: npm install --global npm@8.4.0
       - name: SQL workbench logic tests
-        run: node --test tests/sql-query-workbench.test.mjs
+        run: node --test tests/sql-query-*.test.mjs
       # Neither package currently has a lockfile; npm ci is not applicable.
       # The linked SDK source also resolves dependencies from its own directory.
       - name: Install shared SDK dependencies

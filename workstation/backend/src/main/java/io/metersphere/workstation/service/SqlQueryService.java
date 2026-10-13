@@ -93,6 +93,24 @@ public class SqlQueryService {
         return result;
     }
 
+    /** Batch endpoint; the legacy single-result query contract remains unchanged. */
+    public SqlQueryBatchExecutor.Batch<SqlQueryResult> queryBatch(String sql, Integer limit, Integer timeoutSeconds) throws SQLException {
+        if (sql != null && sql.length() > SqlQueryBatchExecutor.MAX_SQL_LENGTH) {
+            throw new IllegalArgumentException("SQL 脚本长度超过上限");
+        }
+        List<String> statements = normalizeExecutableStatements(sql);
+        SqlQueryBatchExecutor.validateStatements(statements);
+        int safeLimit = normalizeLimit(limit);
+        int safeTimeout = normalizeQueryTimeoutSeconds(timeoutSeconds);
+        try (Connection connection = getQueryConnection()) {
+            connection.setReadOnly(true);
+            return new SqlQueryBatchExecutor().execute(connection, statements, safeLimit, safeTimeout, (statement, allowedRows) -> {
+                SqlQueryResult result = readCurrentResultSet(statement, allowedRows);
+                return new SqlQueryBatchExecutor.ReadResult<>(result, result.getRowCount());
+            });
+        }
+    }
+
     public SqlConnectionStatus status() {
         SqlConnectionStatus status = new SqlConnectionStatus();
         try (Connection connection = getQueryConnection()) {
