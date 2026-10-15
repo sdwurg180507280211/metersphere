@@ -248,6 +248,8 @@ import MsMarkDownText from "metersphere-frontend/src/components/MsMarkDownText";
 import MsReviewTableItem from "@/business/issue/MsReviewTableItem";
 import {setIssuePlatformComponent} from "@/business/issue/issue";
 
+const DEVELOPER_PENDING_STATUSES = ['new', 'accepted', 'on_hold', 'reopened'];
+
 export default {
   name: "IssueList",
   components: {
@@ -318,6 +320,7 @@ export default {
       syncDisable: false,
       currentUserGroupId: null,
       userGroupFilterKeys: [],
+      issueListScope: 'default',
       columns: {
         num: {
           sortable: true,
@@ -361,6 +364,9 @@ export default {
     }
   },
   activated() {
+    // 重新进入页面恢复默认待办视图，已保存的高级搜索条件仍可从弹窗恢复。
+    this.issueListScope = 'default';
+    this.page.condition.combine = undefined;
     if (this.$route.params.dataSelectRange) {
       this.dataSelectRange = this.$route.params.dataSelectRange;
     } else {
@@ -559,7 +565,11 @@ export default {
       if (this.$refs.table) this.$refs.table.reloadTable();
     },
     search(event = {}) {
-      if (event.source === 'advanced' && event.action === 'search') {
+      if (event.source === 'advanced') {
+        this.issueListScope = event.action === 'search' ? 'advanced' : 'default';
+      }
+      // 高级搜索之后的关键字搜索、表头筛选不再自动恢复默认待办过滤。
+      if (this.issueListScope === 'advanced') {
         this.clearUserGroupFilter();
       } else {
         this.applyUserGroupFilter();
@@ -899,20 +909,31 @@ export default {
         this.$set(this.page.condition, 'filters', {});
       }
 
-      let filterKey;
+      const userId = getCurrentUserId();
       if (this.currentUserGroupId === 'developer') {
-        const handlerField = (this.issueTemplate.customFields || [])
-          .find(field => field.name === '处理人');
+        const customFields = this.issueTemplate.customFields || [];
+        const handlerField = customFields.find(field => field.name === '处理人');
         if (!handlerField) {
           return;
         }
-        filterKey = generateColumnKey(handlerField);
-      } else {
-        filterKey = 'creator';
-      }
+        const handlerKey = generateColumnKey(handlerField);
+        this.$set(this.page.condition.filters, handlerKey, [userId]);
+        this.userGroupFilterKeys.push(handlerKey);
 
-      this.$set(this.page.condition.filters, filterKey, [getCurrentUserId()]);
-      this.userGroupFilterKeys = [filterKey];
+        // 本地缺陷八大状态保存在 custom_field_issues，而不是 issues.status。
+        // 已解决、无效后交由测试人员处理，已关闭、已取消则不再需要开发人员处理。
+        if (!this.isThirdPart) {
+          const statusField = customFields.find(field => field.name === '状态');
+          if (statusField) {
+            const statusKey = generateColumnKey(statusField);
+            this.$set(this.page.condition.filters, statusKey, [...DEVELOPER_PENDING_STATUSES]);
+            this.userGroupFilterKeys.push(statusKey);
+          }
+        }
+      } else {
+        this.$set(this.page.condition.filters, 'creator', [userId]);
+        this.userGroupFilterKeys = ['creator'];
+      }
     },
     clearUserGroupFilter() {
       if (!this.page.condition.filters) {
