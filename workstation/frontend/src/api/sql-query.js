@@ -10,6 +10,11 @@ export function executeSqlQuery(sql, limit = 1000, timeoutSeconds = 30) {
   return post(`${BASE_URL}/execute`, { sql, limit, timeoutSeconds });
 }
 
+// Do not retry against /execute on errors: doing so could execute the script twice.
+export function executeSqlQueryBatch(sql, limit = 1000, timeoutSeconds = 30) {
+  return post(`${BASE_URL}/execute-batch`, { sql, limit, timeoutSeconds });
+}
+
 export function getSqlQueryHistory() {
   return get(`${BASE_URL}/history`);
 }

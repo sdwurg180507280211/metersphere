@@ -1,0 +1,31 @@
+name: Workstation SQL query backend validation
+on:
+  pull_request:
+    paths:
+      - 'workstation/backend/**'
+      - 'framework/sdk-parent/**'
+      - '.github/workflows/workstation-sql-query-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: JDBC contracts and workstation backend compilation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Run production JDBC executor contracts
+        run: bash workstation/backend/tests/run-sql-query-batch-tests.sh
+      # This compilation gate is independent of SonarCloud credentials.
+      - name: Compile workstation backend and required reactor dependencies
+        run: mvn -B -pl workstation/backend -am -DskipTests -DskipAntRunForJenkins test-compile

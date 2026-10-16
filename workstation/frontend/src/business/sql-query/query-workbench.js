@@ -63,6 +63,49 @@ TEXT['zh-TW'] = {
   leave: '存在未能寫入瀏覽器的草稿，離開將遺失這些修改。確認離開嗎？'
 };
 
+Object.assign(TEXT['zh-CN'], {
+  batchDetails: '逐语句执行记录', batchSuccess: '脚本执行完成，共 {count} 条语句。',
+  batchError: '第 {index} 条语句失败；已完成的结果已保留，后续语句未执行。',
+  batchLimit: '已达到整批返回上限，部分结果或后续语句未完成。请缩小查询范围或拆分执行。',
+  resultTab: '语句 {statement} · 结果 {result}', resultSql: '当前结果 SQL',
+  filterPlaceholder: '在当前结果内筛选（不会查询数据库）',
+  filterCount: '显示 {visible} / 已返回 {total} 行', noMatch: '没有匹配结果，请调整或清空筛选。',
+  copyFiltered: '复制筛选结果', exportFiltered: '仅导出当前结果中筛选后的 {count} 行。不会查询数据库或导出其他结果集，是否继续？',
+  batchPolicy: '每批最多 20 条语句、20 个 JDBC 结果、合计 5,000 行；超时为整批 JDBC 执行预算，不含建立连接。',
+  SUCCESS: '成功', ERROR: '失败', LIMIT: '达到上限', SKIPPED: '未执行',
+  statementNumber: '语句序号', returnedRows: '已返回行数', resultCount: '结果集数',
+  updateCounts: 'JDBC 更新计数', duration: '耗时（毫秒）', errorDetail: '说明 / 错误',
+  emptyBatch: '本批没有表格结果，请查看逐语句执行记录。', legacy: '旧接口结果，仅显示最后一个结果集。'
+});
+Object.assign(TEXT['en-US'], {
+  batchDetails: 'Statement log', batchSuccess: 'Script completed: {count} statements.',
+  batchError: 'Statement {index} failed. Completed results are retained; subsequent statements were not executed.',
+  batchLimit: 'Batch output limit reached. Some results or subsequent statements are incomplete. Narrow or split the script.',
+  resultTab: 'Statement {statement} · Result {result}', resultSql: 'SQL for this result',
+  filterPlaceholder: 'Filter this result locally (no database query)', filterCount: 'Showing {visible} / {total} returned rows',
+  noMatch: 'No matching rows. Change or clear the filter.', copyFiltered: 'Copy filtered results',
+  exportFiltered: 'Export only the {count} filtered rows in this result? This does not query the database or export other result sets.',
+  batchPolicy: 'At most 20 statements, 20 JDBC results and 5,000 rows per batch. Timeout covers batch JDBC execution, not connection setup.',
+  SUCCESS: 'Success', ERROR: 'Failed', LIMIT: 'Limit reached', SKIPPED: 'Not executed',
+  statementNumber: 'Statement', returnedRows: 'Returned rows', resultCount: 'Result sets',
+  updateCounts: 'JDBC update counts', duration: 'Time (ms)', errorDetail: 'Details / error',
+  emptyBatch: 'No tabular results. Check the statement log.', legacy: 'Legacy response: only the last result set is available.'
+});
+Object.assign(TEXT['zh-TW'], {
+  batchDetails: '逐語句執行記錄', batchSuccess: '指令碼執行完成，共 {count} 條語句。',
+  batchError: '第 {index} 條語句失敗；已完成的結果已保留，後續語句未執行。',
+  batchLimit: '已達到整批傳回上限，部分結果或後續語句未完成。請縮小查詢範圍或分批執行。',
+  resultTab: '語句 {statement} · 結果 {result}', resultSql: '目前結果 SQL',
+  filterPlaceholder: '在目前結果內篩選（不會查詢資料庫）', filterCount: '顯示 {visible} / 已傳回 {total} 列',
+  noMatch: '沒有符合的結果，請調整或清空篩選。', copyFiltered: '複製篩選結果',
+  exportFiltered: '僅匯出目前結果中篩選後的 {count} 列。不會查詢資料庫或匯出其他結果集，是否繼續？',
+  batchPolicy: '每批最多 20 條語句、20 個 JDBC 結果、合計 5,000 列；逾時為整批 JDBC 執行預算，不含建立連線。',
+  SUCCESS: '成功', ERROR: '失敗', LIMIT: '達到上限', SKIPPED: '未執行',
+  statementNumber: '語句序號', returnedRows: '已傳回列數', resultCount: '結果集數',
+  updateCounts: 'JDBC 更新計數', duration: '耗時（毫秒）', errorDetail: '說明 / 錯誤',
+  emptyBatch: '本批沒有表格結果，請查看逐語句執行記錄。', legacy: '舊介面結果，僅顯示最後一個結果集。'
+});
+
 export function workbenchMessage(locale, key, values = {}) {
   const language = TEXT[locale] || (/^zh/i.test(locale || '') ? TEXT['zh-CN'] : TEXT['en-US']);
   return (language[key] || TEXT['en-US'][key] || key).replace(/\{(\w+)\}/g, (match, name) =>
@@ -168,22 +211,81 @@ export async function copyText(text) {
   }
 }
 
+// The new endpoint is opt-in. Legacy response decoding is retained for callers/tests, never for automatic retries.
+export function decodeQueryResponse(data) {
+  const validResult = result => result && Array.isArray(result.columns) && Array.isArray(result.rows);
+  if (data && !data.statements && validResult(data)) {
+    return { batch: null, status: 'SUCCESS', totalRows: data.rows.length, statementLog: [],
+      results: [{ key: 'legacy', statementIndex: 1, resultIndex: 1, sql: '', data }] };
+  }
+  const invalid = () => { throw new Error('invalidResponse'); };
+  if (!data || data.protocolVersion !== 1 || !['SUCCESS', 'ERROR', 'LIMIT'].includes(data.status)
+      || !Array.isArray(data.statements) || !data.statements.length || data.statements.length > 20) invalid();
+  const results = [];
+  const statementLog = [];
+  for (const [position, entry] of data.statements.entries()) {
+    if (!entry || entry.index !== position + 1 || typeof entry.sql !== 'string'
+        || !['SUCCESS', 'ERROR', 'LIMIT', 'SKIPPED'].includes(entry.status)
+        || !Array.isArray(entry.results) || !Array.isArray(entry.updateCounts)
+        || !entry.results.every(validResult) || (entry.status === 'SKIPPED' && (entry.results.length || entry.updateCounts.length))) invalid();
+    if (data.status === 'SUCCESS' && entry.status !== 'SUCCESS') invalid();
+    entry.results.forEach((result, index) => results.push({
+      key: `${entry.index}:${index + 1}`, statementIndex: entry.index, resultIndex: index + 1, sql: entry.sql,
+      data: { ...result, executionTime: entry.executionTime }
+    }));
+    statementLog.push({ index: entry.index, status: entry.status, executionTime: entry.executionTime,
+      rowCount: entry.results.reduce((count, result) => count + result.rows.length, 0), resultCount: entry.results.length,
+      updateCounts: entry.updateCounts, message: entry.message, sqlState: entry.sqlState, errorCode: entry.errorCode });
+  }
+  const totalRows = results.reduce((count, result) => count + result.data.rows.length, 0);
+  const jdbcResults = data.statements.reduce((count, entry) => count + entry.results.length + entry.updateCounts.length, 0);
+  const hasError = statementLog.some(entry => entry.status === 'ERROR');
+  if (hasError !== (data.status === 'ERROR') || totalRows !== data.totalRows || totalRows > 5000 || jdbcResults > 20) invalid();
+  return { batch: data, status: data.status, totalRows, statementLog, results };
+}
+
+export function filterQueryResult(result, keyword) {
+  if (!result) return null;
+  const search = String(keyword || '').trim().toLocaleLowerCase();
+  const keys = result.columns.map((column, index) => typeof column === 'object' ? column.key || `col_${index + 1}` : column);
+  const rows = !search ? result.rows : result.rows.filter(row => keys.some(key => {
+    const value = row[key];
+    const text = value == null ? 'NULL' : (typeof value === 'object' ? JSON.stringify(value) : String(value));
+    return text.toLocaleLowerCase().includes(search);
+  }));
+  // Never mutate the source result: clearing a filter must restore the complete returned snapshot.
+  return { ...result, rows, rowCount: rows.length };
+}
+
 // Keep the existing editor, history dialogs, XLSX writer and public SQL pool in one place.
 // The route composes this extended component rather than copying the large base template.
 export function createWorkbenchCore(base, executeSqlQuery, saveSqlQueryHistory) {
   return {
     name: 'SqlQueryWorkbenchCore',
     extends: base,
+    // Override only this console's obsolete single-result hint, without mutating global translations.
+    i18n: {
+      silentFallbackWarn: true,
+      messages: {
+        'zh-CN': { sql_query: { empty: '输入 SQL 后运行查询，可切换查看本次执行的多个结果集。' } },
+        'zh-TW': { sql_query: { empty: '輸入 SQL 後執行查詢，可切換查看本次執行的多個結果集。' } },
+        'en-US': { sql_query: { empty: 'Run SQL, then switch between the result sets returned by this execution.' } }
+      }
+    },
     data() {
       return {
         queryGeneration: 0, executionSequence: 0, runningExecution: null, lastExecution: null,
         elapsedSeconds: 0, executionTimer: null, storageWriteFailed: false,
-        storageWarningShown: false, workbenchDisposed: false
+        storageWarningShown: false, workbenchDisposed: false,
+        queryBatch: null, resultOptions: [], activeResultKey: '', sourceResult: null, resultFilter: ''
       };
     },
     computed: {
       resultIsStale() { return !!(this.lastExecution && this.sql !== this.lastExecution.editorSql); },
-      executionLog() { return this.localHistory.filter(item => item && item.execution).map(item => item.execution); }
+      executionLog() { return this.localHistory.filter(item => item && item.execution).map(item => item.execution); },
+      activeResult() { return this.resultOptions.find(item => item.key === this.activeResultKey) || null; },
+      batchFailure() { return this.queryBatch && this.queryBatch.statements.find(item => item.status === 'ERROR'); },
+      returnedRowCount() { return this.sourceResult ? this.sourceResult.rows.length : 0; }
     },
     mounted() { window.addEventListener('beforeunload', this.guardWorkbenchUnload); },
     beforeDestroy() {
@@ -220,6 +322,11 @@ export function createWorkbenchCore(base, executeSqlQuery, saveSqlQueryHistory) 
         this.result = null;
         this.error = '';
         this.lastExecution = null;
+        this.queryBatch = null;
+        this.resultOptions = [];
+        this.activeResultKey = '';
+        this.sourceResult = null;
+        this.resultFilter = '';
         this.currentPage = 1;
       },
       async execute(mode = 'auto') {
@@ -251,14 +358,21 @@ export function createWorkbenchCore(base, executeSqlQuery, saveSqlQueryHistory) 
         let outcome;
         try {
           const response = await executeSqlQuery(snapshot.sql, snapshot.limit, snapshot.timeoutSeconds);
-          const result = response && response.data;
-          if (!result || !Array.isArray(result.rows) || !Array.isArray(result.columns)) {
-            throw new Error(this.workbenchText('invalidResponse'));
-          }
-          outcome = { ...snapshot, finishedAt: Date.now(), success: true, rowCount: result.rows.length };
+          let decoded;
+          try { decoded = decodeQueryResponse(response && response.data); }
+          catch (error) { throw new Error(this.workbenchText('invalidResponse')); }
+          const failure = decoded.statementLog.find(item => item.status === 'ERROR');
+          outcome = { ...snapshot, finishedAt: Date.now(), success: decoded.status === 'SUCCESS',
+            status: decoded.status, protocolVersion: decoded.batch ? 1 : 0, rowCount: decoded.totalRows, statementLog: decoded.statementLog,
+            error: failure ? failure.message : '' };
           if (!this.workbenchDisposed && snapshot.generation === this.queryGeneration) {
-            this.result = result;
+            this.queryBatch = decoded.batch;
+            this.resultOptions = decoded.results;
             this.lastExecution = outcome;
+            const last = decoded.results[decoded.results.length - 1];
+            if (last) this.selectQueryResult(last.key);
+            else if (failure) this.error = failure.message || this.$t('sql_query.failed');
+            else this.result = { columns: [], rows: [], rowCount: 0, executionTime: decoded.batch.executionTime };
           }
         } catch (error) {
           const detail = error && (error.message || error.data);
@@ -278,6 +392,22 @@ export function createWorkbenchCore(base, executeSqlQuery, saveSqlQueryHistory) 
             this.saveHistory(snapshot.sql, outcome);
           }
         }
+      },
+      selectQueryResult(key) {
+        const option = this.resultOptions.find(item => item.key === key);
+        if (!option) return;
+        this.activeResultKey = key;
+        this.sourceResult = option.data;
+        this.resultFilter = '';
+        this.result = filterQueryResult(this.sourceResult, '');
+        this.currentPage = 1;
+        this.expandResultArea();
+      },
+      filterCurrentResult(keyword) {
+        if (!this.sourceResult) return;
+        this.resultFilter = String(keyword || '');
+        this.result = filterQueryResult(this.sourceResult, this.resultFilter);
+        this.currentPage = 1;
       },
       handleKeydown(event) {
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -428,7 +558,7 @@ export function createWorkbenchCore(base, executeSqlQuery, saveSqlQueryHistory) 
         if (item.sourceId) return `${item.title || this.workbenchText('draft')} (${this.workbenchText('workingCopy')})`;
         if (item.title) return item.title;
         const summary = (item.sql || '').replace(/\s+/g, ' ').trim().slice(0, 70);
-        if (item.execution) return `${this.workbenchText(item.execution.success ? 'success' : 'failed')} · ${summary}`;
+        if (item.execution) return `${this.workbenchText(item.execution.status || (item.execution.success ? 'success' : 'failed'))} · ${summary}`;
         return summary || this.workbenchText('draft');
       },
       closeResult() {
@@ -438,9 +568,9 @@ export function createWorkbenchCore(base, executeSqlQuery, saveSqlQueryHistory) 
       async exportXlsx() {
         if (!this.hasRows) return;
         const result = this.result;
-        if (result.truncated || this.resultIsStale) {
+        if (result.truncated || this.resultIsStale || this.resultFilter.trim()) {
           try {
-            await this.$confirm(this.workbenchText('exportScope', { count: result.rows.length }),
+            await this.$confirm(this.workbenchText(this.resultFilter.trim() ? 'exportFiltered' : 'exportScope', { count: result.rows.length }),
               this.$t('sql_query.export_xlsx'), { type: 'warning' });
           } catch (error) { return; }
         }

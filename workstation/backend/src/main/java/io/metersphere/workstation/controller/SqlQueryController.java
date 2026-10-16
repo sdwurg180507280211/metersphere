@@ -53,6 +53,16 @@ public class SqlQueryController {
         }
     }
 
+    @PostMapping("/execute-batch")
+    public ResultHolder executeBatch(@RequestBody SqlQueryRequest request) {
+        try {
+            checkAccess();
+            return ResultHolder.success(sqlQueryService.queryBatch(request.getSql(), request.getLimit(), request.getTimeoutSeconds()));
+        } catch (Exception e) {
+            return ResultHolder.error(e.getMessage());
+        }
+    }
+
     @GetMapping("/history")
     public ResultHolder history() {
         try {
