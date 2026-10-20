@@ -16,7 +16,6 @@
     <result column="selenium_server" jdbcType="VARCHAR" property="seleniumServer" />
     <result column="last_project_id" jdbcType="VARCHAR" property="lastProjectId" />
     <result column="create_user" jdbcType="VARCHAR" property="createUser" />
-    <result column="need_change_password" jdbcType="BIT" property="needChangePassword" />
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="io.metersphere.base.domain.User">
     <result column="platform_info" jdbcType="LONGVARCHAR" property="platformInfo" />
@@ -81,7 +80,7 @@
   </sql>
   <sql id="Base_Column_List">
     id, `name`, email, `password`, `status`, create_time, update_time, `language`, last_workspace_id, 
-    phone, `source`, selenium_server, last_project_id, create_user, need_change_password
+    phone, `source`, selenium_server, last_project_id, create_user
   </sql>
   <sql id="Blob_Column_List">
     platform_info
@@ -188,9 +187,6 @@
       <if test="createUser != null">
         create_user,
       </if>
-      <if test="needChangePassword != null">
-        need_change_password,
-      </if>
       <if test="platformInfo != null">
         platform_info,
       </if>
@@ -234,9 +230,6 @@
       </if>
       <if test="createUser != null">
         #{createUser,jdbcType=VARCHAR},
-      </if>
-      <if test="needChangePassword != null">
-        #{needChangePassword,jdbcType=BIT},
       </if>
       <if test="platformInfo != null">
         #{platformInfo,jdbcType=LONGVARCHAR},
@@ -290,9 +283,6 @@
       </if>
       <if test="record.createUser != null">
         create_user = #{record.createUser,jdbcType=VARCHAR},
-      </if>
-      <if test="record.needChangePassword != null">
-        need_change_password = #{record.needChangePassword,jdbcType=BIT},
       </if>
       <if test="record.platformInfo != null">
         platform_info = #{record.platformInfo,jdbcType=LONGVARCHAR},
@@ -379,9 +369,6 @@
       </if>
       <if test="createUser != null">
         create_user = #{createUser,jdbcType=VARCHAR},
-      </if>
-      <if test="needChangePassword != null">
-        need_change_password = #{needChangePassword,jdbcType=BIT},
       </if>
       <if test="platformInfo != null">
         platform_info = #{platformInfo,jdbcType=LONGVARCHAR},

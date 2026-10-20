@@ -99,12 +99,8 @@ public class BaseUserService {
         // 默认1:启用状态
         user.setStatus(UserStatus.NORMAL);
         user.setSource(UserSource.LOCAL.name());
-        user.setNeedChangePassword(true);
-        // 密码使用 BCrypt
-        if (!PasswordEncoder.validateComplexity(user.getPassword())) {
-            MSException.throwException(Translator.get("password_complexity_invalid"));
-        }
-        user.setPassword(PasswordEncoder.encode(user.getPassword()));
+        // 密码使用 MD5
+        user.setPassword(CodingUtil.md5(user.getPassword()));
         checkEmailIsExist(user.getEmail());
         userMapper.insertSelective(user);
     }
@@ -307,7 +303,7 @@ public class BaseUserService {
     }
 
     /**
-     * 密码校验：直接读 hash，统一判断 MD5/BCrypt（selectPasswordById 返回 String，不受脱敏拦截器影响）
+     * 登录时兼容旧 MD5 和历史已写入的 BCrypt 密码，但不自动升级密码。
      */
     public boolean checkUserPassword(String userId, String password) {
         if (StringUtils.isBlank(userId)) {
@@ -316,32 +312,7 @@ public class BaseUserService {
         if (StringUtils.isBlank(password)) {
             MSException.throwException(Translator.get("password_is_null"));
         }
-        String storedPassword = baseUserMapper.selectPasswordById(userId);
-        if (storedPassword == null) {
-            return false;
-        }
-        if (storedPassword.startsWith("$2")) {
-            return PasswordEncoder.matches(password, storedPassword);
-        }
-        // MD5 老密码
-        if (CodingUtil.md5(password).equals(storedPassword)) {
-            // 自动升级为 BCrypt
-            User user = new User();
-            user.setId(userId);
-            user.setPassword(PasswordEncoder.encode(password));
-            user.setUpdateTime(System.currentTimeMillis());
-            user.setNeedChangePassword(false);
-            baseUserMapper.updatePassword(user);
-            return true;
-        }
-        return false;
-    }
-
-    private User getUserById(String userId) {
-        UserExample example = new UserExample();
-        example.createCriteria().andIdEqualTo(userId);
-        List<User> users = userMapper.selectByExample(example);
-        return CollectionUtils.isEmpty(users) ? null : users.get(0);
+        return PasswordEncoder.matches(password, baseUserMapper.selectPasswordById(userId));
     }
 
     public void setLanguage(String lang) {
@@ -357,45 +328,21 @@ public class BaseUserService {
     /*修改当前用户用户密码*/
     private User updateCurrentUserPwd(EditPassWordRequest request) {
         String userId = SessionUtils.getUser().getId();
-        String oldPassword = request.getPassword();
-        // 直接读 hash，统一判断 MD5/BCrypt
         String storedPassword = baseUserMapper.selectPasswordById(userId);
-        if (storedPassword == null) {
+        if (!PasswordEncoder.matches(request.getPassword(), storedPassword)) {
             MSException.throwException(Translator.get("password_modification_failed"));
             return null;
         }
-        boolean oldPasswordOk;
-        if (storedPassword.startsWith("$2")) {
-            oldPasswordOk = PasswordEncoder.matches(oldPassword, storedPassword);
-        } else {
-            // MD5 老密码
-            oldPasswordOk = CodingUtil.md5(oldPassword).equals(storedPassword);
-            if (oldPasswordOk) {
-                // 自动升级为 BCrypt
-                User upgradeUser = new User();
-                upgradeUser.setId(userId);
-                upgradeUser.setPassword(PasswordEncoder.encode(oldPassword));
-                upgradeUser.setUpdateTime(System.currentTimeMillis());
-                upgradeUser.setNeedChangePassword(false);
-                baseUserMapper.updatePassword(upgradeUser);
-            }
-        }
-        if (!oldPasswordOk) {
-            MSException.throwException(Translator.get("password_modification_failed"));
-            return null;
-        }
-        if (!PasswordEncoder.validateComplexity(request.getNewpassword())) {
-            MSException.throwException(Translator.get("password_complexity_invalid"));
-        }
-        String newPassword = PasswordEncoder.encode(request.getNewpassword());
-        // 新旧密码相同则不允许修改
         if (PasswordEncoder.matches(request.getNewpassword(), storedPassword)) {
             return null;
         }
-        User user = getUserById(userId);
-        user.setPassword(newPassword);
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user == null) {
+            MSException.throwException(Translator.get("password_modification_failed"));
+            return null;
+        }
+        user.setPassword(CodingUtil.md5(request.getNewpassword()));
         user.setUpdateTime(System.currentTimeMillis());
-        user.setNeedChangePassword(false);
         return user;
     }
 
@@ -406,14 +353,10 @@ public class BaseUserService {
 
     /*管理员修改用户密码*/
     private User updateUserPwd(EditPassWordRequest request) {
-        if (!PasswordEncoder.validateComplexity(request.getNewpassword())) {
-            MSException.throwException(Translator.get("password_complexity_invalid"));
-        }
         User user = userMapper.selectByPrimaryKey(request.getId());
-        String newPassword = PasswordEncoder.encode(request.getNewpassword());
-        user.setPassword(newPassword);
+        String newPassword = request.getNewpassword();
+        user.setPassword(CodingUtil.md5(newPassword));
         user.setUpdateTime(System.currentTimeMillis());
-        user.setNeedChangePassword(true);
         return user;
     }
 
@@ -762,37 +705,15 @@ public class BaseUserService {
         return map;
     }
 
-    /**
-     * 检查用户是否需要强制修改密码（在登录中自动升级之前调用）
-     * - 管理员创建的新用户（needChangePassword = true）
-     * - 密码匹配已知弱密码 abcdMS123%/Abc123.
-     * - admin 使用默认密码 metersphere
-     * <p>
-     * 注意：老用户的自定义 MD5 密码不在此强制，会在 checkUserPassword 中静默升级
-     */
     public boolean checkWhetherChangePasswordOrNot(LoginRequest request) {
-        String userId = request.getUsername();
-        if (StringUtils.isBlank(userId)) {
-            return false;
+        // 升级之后 admin 还使用弱密码也提示修改
+        if (StringUtils.equals("admin", request.getUsername())) {
+            UserExample example = new UserExample();
+            example.createCriteria().andIdEqualTo("admin")
+                    .andPasswordEqualTo(CodingUtil.md5("metersphere"));
+            return userMapper.countByExample(example) > 0;
         }
-        // 检查是否需要强制修改密码（管理员创建的新用户）
-        User user = userMapper.selectByPrimaryKey(userId);
-        if (user != null && Boolean.TRUE.equals(user.getNeedChangePassword())) {
-            return true;
-        }
-        String storedPassword = baseUserMapper.selectPasswordById(userId);
-        if (storedPassword == null) {
-            return false;
-        }
-        // 已知弱密码 → 需要强制修改
-        if (PasswordEncoder.matches("abcdMS123%", storedPassword)
-                || PasswordEncoder.matches("Abc123.", storedPassword)) {
-            return true;
-        }
-        // admin 使用默认密码 metersphere → 需要强制修改
-        if (StringUtils.equals("admin", userId)) {
-            return PasswordEncoder.matches("metersphere", storedPassword);
-        }
+
         return false;
     }
 

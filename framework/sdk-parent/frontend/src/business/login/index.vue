@@ -45,21 +45,6 @@
                   maxlength="65"
                   show-word-limit />
               </el-form-item>
-              <el-form-item prop="captcha" v-if="captchaEnabled">
-                <div class="captcha-row">
-                  <el-input
-                    v-model="form.captcha"
-                    :placeholder="$t('login.captcha_placeholder')"
-                    autocomplete="off"
-                    maxlength="4" />
-                  <img
-                    class="captcha-img"
-                    :src="captchaImg"
-                    :title="$t('login.captcha_click_refresh')"
-                    alt="captcha"
-                    @click="refreshCaptcha" />
-                </div>
-              </el-form-item>
             </el-form>
           </div>
           <div v-if="showQrCodeTab">
@@ -102,7 +87,6 @@ import {
   checkLdapOpen,
   getAuthSource,
   getAuthSources,
-  getCaptcha,
   getDisplayInfo,
   getLanguage,
   getSystemTheme,
@@ -142,11 +126,7 @@ export default {
         username: '',
         password: '',
         authenticate: 'LOCAL',
-        captcha: '',
       },
-      captchaEnabled: true,
-      captchaId: '',
-      captchaImg: '',
       preheat: true,
       rules: this.getDefaultRules(),
       msg: '',
@@ -172,12 +152,6 @@ export default {
         }
       },
       immediate: true,
-    },
-    preheat: function (val) {
-      // 登录表单渲染完成后，若验证码仍为空则重新加载
-      if (!val && this.captchaEnabled && !this.captchaImg) {
-        this.refreshCaptcha();
-      }
     },
   },
   beforeCreate() {
@@ -262,11 +236,6 @@ export default {
     }
   },
 
-  mounted() {
-    // 进入页面即加载验证码，同时获取验证码启用状态
-    this.refreshCaptcha();
-  },
-
   destroyed() {
     document.removeEventListener('keydown', this.watchEnter);
   },
@@ -303,7 +272,6 @@ export default {
           { required: true, message: this.$t('commons.input_password'), trigger: 'blur' },
           { min: 6, max: 65, message: this.$t('commons.input_limit', [6, 65]), trigger: 'blur' },
         ],
-        captcha: [{ required: true, message: this.$t('login.captcha_required'), trigger: 'blur' }],
       };
     },
     checkRedirectUrl() {
@@ -366,45 +334,17 @@ export default {
         username: publicKeyEncrypt(this.form.username, publicKey),
         password: publicKeyEncrypt(this.form.password, publicKey),
         authenticate: this.form.authenticate,
-        captchaId: this.captchaId,
-        captcha: this.form.captcha,
       };
 
-      userStore.userLogin(form)
-        .then((response) => {
-          sessionStorage.setItem('loginSuccess', 'true');
-          sessionStorage.setItem('changePassword', response.message);
-          localStorage.setItem('AuthenticateType', this.form.authenticate);
-          this.getLanguage(response.data.language);
-          this.setMaxUploadSize();
-          // 检查登录用户的权限
-          this.checkRedirectUrl();
-        })
-        .catch((error) => {
-          // 登录失败时，仅在启用验证码的情况下刷新验证码
-          if (this.captchaEnabled) {
-            this.refreshCaptcha();
-            this.form.captcha = '';
-          }
-          if (error && error.success === false && error.message) {
-            this.$message.error(error.message);
-          }
-        });
-    },
-    refreshCaptcha() {
-      getCaptcha()
-        .then((response) => {
-          this.captchaEnabled = response.data.enabled !== false;
-          if (!this.captchaEnabled) {
-            this.captchaId = '';
-            this.captchaImg = '';
-            this.form.captcha = '';
-            return;
-          }
-          this.captchaId = response.data.captchaId;
-          this.captchaImg = response.data.img;
-        })
-        .catch(() => {});
+      userStore.userLogin(form).then((response) => {
+        sessionStorage.setItem('loginSuccess', 'true');
+        sessionStorage.setItem('changePassword', response.message);
+        localStorage.setItem('AuthenticateType', this.form.authenticate);
+        this.getLanguage(response.data.language);
+        this.setMaxUploadSize();
+        // 检查登录用户的权限
+        this.checkRedirectUrl();
+      });
     },
     getLanguage(language) {
       if (!language) {
@@ -539,7 +479,7 @@ export default {
 .title img {
   width: 293px;
   max-height: 60px;
-  margin-top: 130px;
+  margin-top: 165px;
 }
 
 .title-img {
@@ -556,7 +496,7 @@ export default {
 
 .welcome {
   margin-top: 12px;
-  margin-bottom: 40px;
+  margin-bottom: 75px;
   font-size: 14px;
   color: var(--primary_color);
   line-height: 14px;
@@ -587,7 +527,7 @@ export default {
 }
 
 .el-form-item:first-child {
-  margin-top: 25px;
+  margin-top: 60px;
 }
 
 :deep(.el-radio__input.is-checked .el-radio__inner) {
@@ -611,24 +551,6 @@ export default {
 .el-input,
 .el-button {
   width: 443px;
-}
-
-.captcha-row {
-  display: flex;
-  align-items: center;
-}
-
-.captcha-row .el-input {
-  width: 310px;
-  margin-right: 12px;
-}
-
-.captcha-img {
-  width: 121px;
-  height: 48px;
-  border-radius: 8px;
-  cursor: pointer;
-  flex-shrink: 0;
 }
 
 :deep(.el-input__inner:focus) {

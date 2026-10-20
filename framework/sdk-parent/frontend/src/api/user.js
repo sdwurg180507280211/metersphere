@@ -5,10 +5,6 @@ export function login(url, data) {
   return post(url, data)
 }
 
-export function getCaptcha() {
-  return get("/captcha")
-}
-
 export function logout() {
   return get("/signout");
 }

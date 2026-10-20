@@ -17,6 +17,7 @@ public interface BaseUserMapper {
 
     String getDefaultLanguage(String paramKey);
 
+    // 直接读取存储值以兼容历史 BCrypt 密码
     String selectPasswordById(String id);
 
     List<User> searchUser(String condition);
