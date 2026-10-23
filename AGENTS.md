@@ -1,6 +1,11 @@
 # AGENTS.md
 
-本文件为 Codex（Codex.ai/code）在本仓库中工作提供指导。
+本文件为 Codex 在本仓库中工作提供指导。
+
+## 工作约定
+
+- INT 测试进度相关工作（需求、计划表、每周周报），先读 `.kiro/specs/int-test-flow/handoff.md`。
+- 提交说明只写改动内容，不加任何署名或 Co-Authored-By 行。
 
 ## 项目概览
 
